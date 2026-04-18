@@ -1,68 +1,69 @@
-# book-template-astro
+# book-scaffold-astro
 
-Scaffold for long-form technical books with Tufte-inspired typography, typed pedagogical callouts, mobile-first responsive design, and PDF export from the same source.
+**GitHub template** for long-form technical books. Astro + MDX +
+Paged.js + Pagefind with Tufte-inspired typography,
+Koller-Friedman chapter pedagogy, and comparative-convergence
+dashboards.
 
-This is the **template repository** — future books will be bootstrapped from this scaffold and customize content. The scaffold itself is maintained here as the canonical artifact.
+## Use this template
 
-## Status — Stage 0 complete
+Click **Use this template** above (or the green "Use this template"
+button on the repo's main page on GitHub) to create a new repository
+from this scaffold. Or run the Claude skill that wraps the bootstrap:
 
-All 19 commits of Stage 0 have landed. Tagged as `v0.1-stage0-complete`.
+```bash
+~/.claude/skills/book-scaffold-astro/create-book.sh <your-book-name>
+```
 
-- ✅ Astro 6 + MDX + Preact
-- ✅ Warm Tol palette as CSS custom properties (light + dark)
-- ✅ Tufte 2-column desktop layout; inline-flow asides on mobile (CSS-only)
-- ✅ 9 typed callout components (Skill / CaseStudy / Concept / KeyIdea / TryThis / Recovery / Convergence / Divergence / Citation)
-- ✅ 4 content collections with Zod schemas (chapters / sources / changelog / patterns)
-- ✅ Dynamic chapter routing + prev/next nav + collapsed TOC
-- ✅ Shiki syntax highlighting in CSS-variables mode
-- ✅ Pagefind static search
-- ✅ Preact island proof (version selector)
-- ✅ Paged.js PDF pipeline
-- ✅ Cloudflare Pages deploy workflow (pending account setup)
+Then read [TEMPLATE_README.md](TEMPLATE_README.md) in your new repo
+for the bootstrap checklist.
 
-Next: Stage 1 ports Ch 5 "Context as Currency" from the LaTeX book to
-validate the pedagogy on real content. See
-`~/.claude/plans/i-believe-this-project-generic-sphinx.md` for the full
-roadmap.
+## What's in the box
 
-## Architecture (planned)
+- Astro 6 + MDX content collections with Zod-validated frontmatter
+- Tufte-inspired 2-column desktop layout + Gwern-style inline mobile
+  asides (pure CSS, no JS)
+- 8 typed pedagogical callouts (SkillBox, CaseStudy, ConceptBox,
+  KeyIdea, TryThis, Recovery, Convergence, Divergence)
+- Freshness badges (volatility-aware staleness computation)
+- Chapter index + tool filter UI (Preact island + CSS attribute
+  filter)
+- Auto-rendered source archive grouped by tier
+- Convergence dashboard (per-pattern adoption timelines across tools)
+- Warm Tol 5-hue palette (colorblind-safe; light + dark modes)
+- Pagefind full-text search + Paged.js PDF export
+- Cloudflare Pages deploy workflow
 
-- **Astro** + **MDX** — content as structured components
-- **Content Collections** with Zod schemas — frontmatter validation
-- **Tufte-inspired 2-column layout** — main text + right-margin sidenotes on desktop; inline-flow asides on mobile (CSS-only, no JS)
-- **9 typed MDX callout components** — SkillBox, CaseStudy, ConceptBox, Convergence, Divergence, KeyIdea, TryThis, Recovery, Citation
-- **Pagefind** — static search, <100KB in-browser index
-- **Shiki** in CSS-variables mode — syntax highlighting mapped to warm palette
-- **Paged.js** — PDF export from the same HTML/CSS
-- **Cloudflare Pages** — hosting, free, unlimited bandwidth
-- **Version branches → subpath deploys** — `/v1.0/`, `/v1.1/`, old versions stay live
+## Pedagogy
+
+The scaffold encodes three opinionated decisions:
+
+1. **Chapters follow Koller-Friedman structure**
+   (Representation / Operation / Evolution) — see
+   [`pedagogy/kf-chapter-shape.md`](pedagogy/kf-chapter-shape.md).
+2. **Every chapter declares a volatility class** — see
+   [`pedagogy/volatility-classes.md`](pedagogy/volatility-classes.md).
+3. **Every source carries a trust tier** — see
+   [`pedagogy/source-tiers.md`](pedagogy/source-tiers.md).
+
+## Provenance
+
+This scaffold was extracted from the book
+*Agentic Coding: Principles and Practices* at v0.2-stage3-complete
+(2026-04-18). Methodology for volatility classes and source tiers
+migrated conceptually from the LaTeX book *Claude Best Practices* at
+v2.9 (2026-03-27), now in maintenance-only mode.
 
 ## Commands
 
 ```sh
-npm run dev        # localhost:4321 (Astro dev server)
-npm run build      # Astro build + Pagefind indexing → dist/
-npm run preview    # preview the built site locally
-npm run pdf        # boot preview, run Paged.js against /print/,
-                   # output dist-pdf/book.pdf
+npm install            # once, after cloning
+npm run dev            # localhost:4321
+npm run build          # Astro build + Pagefind index → dist/
+npm run preview        # preview the built site locally
+npm run pdf            # boot preview + Paged.js → dist-pdf/book.pdf
 ```
 
-## Hosting (Cloudflare Pages)
+## License
 
-Deploy via the committed GitHub Action at `.github/workflows/deploy.yml`.
-One-time setup:
-
-1. Create a Cloudflare Pages project named `book-template-astro`.
-2. Create a Cloudflare API token with the **Edit Cloudflare Pages**
-   permission (Cloudflare Dashboard → My Profile → API Tokens).
-3. Add the following secrets to the GitHub repo (Settings → Secrets
-   and variables → Actions):
-   - `CLOUDFLARE_API_TOKEN` — the token from step 2
-   - `CLOUDFLARE_ACCOUNT_ID` — visible on any Cloudflare dashboard page
-4. Push to `main`. The workflow builds, indexes with Pagefind, and
-   uploads to Cloudflare Pages. Subsequent pushes to `v*` branches
-   deploy as versioned preview URLs.
-
-## First book built on this scaffold
-
-`agentic-coding-best-practices` — at `~/Claude/agentic-coding-best-practices/` (to be bootstrapped from this template in Stage 3).
+Pending — attach a `LICENSE` file to your bootstrapped repo.
