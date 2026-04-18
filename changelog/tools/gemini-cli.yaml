@@ -1,14 +1,8 @@
 # changelog/tools/gemini-cli.yaml — Gemini CLI release timeline.
+#
+# Template placeholder: empty version list. Populate or delete as your
+# book's scope requires.
 
 tool: gemini-cli
 
-versions:
-  - version: "0.8"
-    date: 2026-03-05
-    changes:
-      - pattern: plan-mode
-        kind: added
-        note: "Read-only plan mode added; restricts itself to reading + proposing without writing."
-      - pattern: briefing-docs
-        kind: added
-        note: "GEMINI.md top-level instruction file — mirrors Claude's CLAUDE.md pattern."
+versions: []

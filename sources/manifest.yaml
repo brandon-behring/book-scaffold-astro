@@ -1,7 +1,12 @@
 # sources/manifest.yaml — canonical index of every external source cited.
 #
+# Template placeholder: the two entries below (gwern-sidenote, tufte-css)
+# are preserved because `_example-chapter.mdx` cites them to demonstrate
+# Citation resolution. Replace them with your book's real sources before
+# your first real chapter ships.
+#
 # Each entry is a single citable source. The `id` is a slug used as the
-# citation key in chapter MDX (e.g. <Citation src="gwern-sidenote" />).
+# citation key in chapter MDX (e.g. <Citation src="my-source" />).
 #
 # The full Playwright capture of each source lives in sources/cache/<hash>/
 # and is gitignored (for drift detection only — never published). Public-
@@ -14,6 +19,7 @@
 #   T4-conjecture      — blog posts, tweets, or unverified claims
 #
 # Validation: see `sources` collection in src/content.config.ts.
+# Methodology: see ~/.claude/skills/book-scaffold-astro/pedagogy/source-tiers.md
 
 - id: gwern-sidenote
   url: https://gwern.net/sidenote

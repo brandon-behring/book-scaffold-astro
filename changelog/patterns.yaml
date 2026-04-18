@@ -1,34 +1,29 @@
-# changelog/patterns.yaml — Shared registry of agentic-coding patterns.
+# changelog/patterns.yaml — registry of patterns tracked on /convergence/.
 #
-# Each entry names a pattern that one or more tools may adopt. The
-# changelog/tools/*.yaml files reference these by `id`. The convergence
-# dashboard (Stage 3) joins the two to produce per-pattern timelines:
-# "when did each tool adopt this pattern?"
+# Template placeholder: no patterns yet. The /convergence/ page renders
+# honest "no patterns tracked" empty-state against an empty registry,
+# so deleting every entry here is safe.
 #
-# convergence_date: null means not yet adopted by all three tools. A
-# value means the date the last tool to adopt it landed the pattern —
-# signals the pattern has crossed from open-design-space to stable.
+# If your book does NOT use convergence tracking, you can delete this
+# file and remove the `patterns` + `changelog` collections from
+# src/content.config.ts. The /convergence/ page would then fail to
+# build; remove src/pages/convergence.astro and
+# src/components/PatternTimeline.astro to complete the removal.
+#
+# If your book DOES use convergence tracking, add entries below. Each
+# entry names a pattern that one or more tools may adopt; the per-tool
+# changelog files (changelog/tools/*.yaml) reference these by `id`.
+#
+# Example (uncomment and adapt):
+#
+# - id: my-pattern
+#   name: "My pattern"
+#   description: >-
+#     One-paragraph description of what the pattern is and why it matters.
+#   category: safety       # one of: safety, scale, context, interaction, extension, other
+#   convergence_date: null # null = not yet adopted by all tracked tools;
+#                          #        set to the date the last tool adopted it
 
-- id: plan-mode
-  name: "Plan mode"
-  description: >-
-    A read-only phase where the agent reads, analyzes, and proposes a plan
-    without writing files. Mitigates premature action on unclear intent.
-  category: safety
-  convergence_date: 2026-03-05
-
-- id: subagents
-  name: "Subagent delegation"
-  description: >-
-    Spawning a child agent with its own context and tools to handle a
-    bounded sub-task, returning a summary to the parent.
-  category: scale
-  convergence_date: null
-
-- id: briefing-docs
-  name: "Top-level briefing document"
-  description: >-
-    A conventional filename at the repo root (CLAUDE.md / GEMINI.md / AGENTS.md)
-    where authors encode project context for stateless agents.
-  category: context
-  convergence_date: 2026-03-05
+# Empty-array literal keeps the file valid YAML when you have no
+# patterns yet. Remove this line when you add your first entry above.
+[]
