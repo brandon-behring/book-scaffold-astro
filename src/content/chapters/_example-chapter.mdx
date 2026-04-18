@@ -1,0 +1,120 @@
+---
+title: "Example chapter — how a real chapter is shaped"
+part: 1
+chapter: 1
+volatility: feature-surface
+tools_compared: [cross-tool]
+last_verified: 2026-04-18
+sources: [gwern-sidenote, tufte-css]
+description: "A worked example of the Koller-Friedman Representation / Operation / Evolution skeleton. Read this once to learn the shape, then delete it and write real chapters. The leading underscore and draft:true flag exclude it from the build so it doesn't ship to readers."
+draft: true
+updated: 2026-04-18
+---
+
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import CaseStudy from '../../components/callouts/CaseStudy.astro';
+import ConceptBox from '../../components/callouts/ConceptBox.astro';
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+import Recovery from '../../components/callouts/Recovery.astro';
+import Convergence from '../../components/callouts/Convergence.astro';
+import Divergence from '../../components/callouts/Divergence.astro';
+import Sidenote from '../../components/Sidenote.astro';
+import Citation from '../../components/Citation.astro';
+
+*This chapter is an exemplar, not content. Its purpose is to show the
+full shape — frontmatter, section order, callouts, citations — so a
+new author can copy the skeleton and replace the prose. Delete the
+file once you have a real chapter 1 in place. The `draft: true`
+frontmatter and leading-underscore filename keep it out of the build
+while you reference it.*
+
+## Representation
+
+What is the thing, conceptually? This section defines the object the
+chapter is about. Give its structural properties, its type signature,
+the invariants that make it itself.<Sidenote>Sidenotes float to the right margin on desktop and reflow inline as colored asides on mobile. Citations resolve via `<Citation src="slug" />` to entries in `sources/manifest.yaml`; try the two example citations below.</Sidenote>
+
+A chapter on *hooks* (to use a concrete example from agentic coding)
+would define here: what a hook is as a computational object; what
+distinguishes a hook from a regular script; what invariants (event
+type, payload shape, timeout budget) every hook carries.
+
+<ConceptBox term="Koller-Friedman skeleton">
+Three sections per chapter, always in this order: Representation
+(what is it?), Operation (how does it behave?), Evolution (how does
+it change over time?). The uniform shape defends against drift and
+makes the book legible at a glance. See the scaffold skill's
+`pedagogy/kf-chapter-shape.md` for the full argument.
+</ConceptBox>
+
+## Operation
+
+How does the thing behave? Show the dynamics — how it's used, how it
+fails, how it composes. Include the verification or testing
+perspective. A well-formed Operation section leaves the reader able
+to recognize the object in the wild and not surprised by its failure
+modes.
+
+<SkillBox title="Audit your frontmatter before writing">
+Every chapter's frontmatter drives the freshness badge, tool filter,
+and source archive. Before adding prose, confirm `volatility`,
+`tools_compared`, and `last_verified` are honest. Wrong metadata
+lies to readers about how much to trust the chapter.
+</SkillBox>
+
+The typography is Tufte-inspired<Citation src="tufte-css" /> with
+always-visible sidenotes following Gwern's "no effort"
+principle<Citation src="gwern-sidenote" />. Both citations resolve
+at build time against `sources/manifest.yaml`; a missing slug fails
+the build with a precise error.
+
+<TryThis title="Edit this frontmatter">
+Change `last_verified` to `2025-10-01` and rebuild. The freshness
+badge in the chapter header should flip from "Fresh" to "Stale"
+because we're past the 90-day threshold for feature-surface
+chapters. (Revert when done.)
+</TryThis>
+
+## Evolution
+
+How does the thing change over time? Show comparative and historical
+evidence. This is where Convergence and Divergence callouts belong.
+
+<Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+When multiple tools adopt the same pattern, the Convergence callout
+signals that a reader can rely on this claim across the ecosystem
+rather than hedging per-tool. Gold palette, solid left-bar.
+</Convergence>
+
+<Divergence axis="failure-mode of the example pattern">
+When tools disagree on a design choice, the Divergence callout
+spells out the axis explicitly. Dashed left-bar on gold signals
+instability — this is still an open design space, not settled
+practice.
+</Divergence>
+
+<Recovery
+  pattern="Stale frontmatter"
+  symptom="The chapter's freshness badge says 'Fresh' but the prose references tool behavior that changed three months ago."
+>
+Update `last_verified` to today's date — but only after you have
+actually re-read the chapter against current tool docs. Bumping the
+date without the re-verification defeats the whole point of the
+freshness system.
+</Recovery>
+
+<CaseStudy date="2026-04-18">
+This chapter ships with every new book-scaffold-astro repo as a
+literal copy-template. The author of a new book reads it once,
+copies the frontmatter + section skeleton for chapter 1, then
+deletes this file. If it's still in your repo a week after bootstrap,
+delete it now.
+</CaseStudy>
+
+<KeyIdea>
+The KF skeleton is load-bearing. If a chapter resists the shape —
+"this chapter is really only about Operation" — that's a signal the
+chapter should be two chapters, or that it's documenting a
+feature-surface rather than arguing a pattern. Trust the shape.
+</KeyIdea>
