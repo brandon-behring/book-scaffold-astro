@@ -1,0 +1,217 @@
+---
+title: Starting and refactoring projects
+part: 4
+chapter: 10
+volatility: architectural-pattern
+tools_compared: [claude-code, gemini-cli, codex-cli]
+last_verified: 2026-04-17
+sources: []
+description: "Projects have lifecycles. Agent collaboration works differently on a week-old greenfield repo than on a five-year-old brownfield codebase. This chapter is the protocols — day-one bootstrap for new projects, characterization-first onboarding for existing ones, incremental refactoring for anything mid-life."
+draft: false
+---
+
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import CaseStudy from '../../components/callouts/CaseStudy.astro';
+import ConceptBox from '../../components/callouts/ConceptBox.astro';
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+import Recovery from '../../components/callouts/Recovery.astro';
+import Convergence from '../../components/callouts/Convergence.astro';
+import Divergence from '../../components/callouts/Divergence.astro';
+import Sidenote from '../../components/Sidenote.astro';
+
+*Projects have ages. A week-old greenfield repo, a two-year-old codebase in stabilization, a ten-year-old legacy system with accumulated patterns — each demands a different collaboration strategy with the agent. The practices that work at inception break at scale; the practices that work on legacy code suffocate a prototype. This chapter is about matching the protocol to the phase.*
+
+## Representation
+
+Every project moves through recognizable phases. Agent collaboration works differently at each. The mistake is treating the agent as phase-agnostic — applying inception practices to legacy code (over-generation, surprises) or legacy practices to inception (premature rigor that kills exploration).
+
+<ConceptBox term="Project lifecycle phases">
+  **Inception** — days 0–30. Shape is still forming; conventions aren't yet established; tests are minimal.
+  **Stabilization** — months 1–6. Architecture is settling; test coverage is rising; the pattern vocabulary is getting documented.
+  **Maintenance** — years 1–3. Conventions are set; additions happen within established shape; refactoring is incremental.
+  **Legacy** — years 3+. Significant accumulated history; original authors may have left; the codebase *is* the specification.
+
+  Orthogonal to phase is **mode** — greenfield (you're building it) vs brownfield (you're working on something already there). The matrix of phase × mode gives the eight combinations this chapter covers, collapsed into three practical groupings.
+</ConceptBox>
+
+### The three practical modes
+
+Eight phase-mode combinations collapse cleanly into three protocols:
+
+**Greenfield inception.** You start from nothing; the agent helps you build the initial shape. Goal: establish conventions and rigor-boundaries early so later phases inherit them.
+
+**Brownfield onboarding.** You inherit an existing codebase; the agent must learn the codebase *before* editing it. Goal: avoid the biggest failure mode — the agent edits according to patterns that don't match the real code.
+
+**Incremental refactoring.** The codebase is alive and in use; you're improving it without breaking it. Goal: each step commit-sized, always-working, reversible.
+
+<KeyIdea>
+  The agent's best collaborator is a codebase with a clearly declared phase and a clean briefing doc. Every protocol in this chapter is about producing those two conditions. A greenfield repo with no briefing doc is inviting the agent to invent patterns. A legacy codebase with no phase declaration is inviting the agent to apply greenfield rigor to legacy constraints. Phase + briefing doc are the minimum scaffolding the agent needs; everything else follows.
+</KeyIdea>
+
+### Why this is architectural-pattern, not stable-principle
+
+The phase concept is old — software engineering has recognized lifecycle stages for decades. What's new is the *protocols* — how to set up an agent-assisted greenfield in 2026, how to onboard an agent to a brownfield codebase in 2026. Those specifics will drift as tooling evolves (auto-scaffolding agents, automated briefing-doc generation, first-class characterization-test helpers are all in flight). The phase taxonomy is durable; the protocols have a half-life of a year or two.
+
+## Operation
+
+Three protocols, each with a specific goal and a specific failure mode.
+
+### Protocol 1: Greenfield inception
+
+**Goal**: establish convention and rigor-boundaries early.
+
+**Day one** is the single highest-leverage day of a project's lifecycle. The decisions you make now — which tests are mandatory, where the briefing doc sits, which anti-patterns are pre-blocked — compound for the project's entire future. Three concrete steps:
+
+```text
+1. Create CLAUDE.md (or GEMINI.md / AGENTS.md) before the first
+   real feature.
+   - Architecture: 10 lines. Stack, layers, non-obvious shape.
+   - Conventions: 15 lines. Style, error handling, testing posture.
+   - Constraints: 10 lines. Hard bounds.
+   - Verification: 10 lines. Exact commands.
+   - Phase declaration: "Phase: INCEPTION (until <date>).
+     Tests manual OK. Graduation criteria: ..."
+
+2. Configure minimum viable hooks.
+   - PreToolUse on Bash: gate `git commit` on lint passing.
+     (Tests not required yet; phase is inception.)
+   - PostToolUse on Edit|Write: auto-format.
+
+3. First commit.
+   - Message the shape of future commits.
+   - Sets the agent's example for tone.
+```
+
+What you *don't* do on day one: coverage thresholds, exhaustive type hints, production-grade error handling. Inception phase is for shape-finding, not rigor. The anti-pattern from [Ch 11](/11-antipatterns-recovery/) — premature rigor killing exploration — is specifically warning against front-loading this.
+
+<SkillBox title="Day one greenfield — 60 minutes of setup">
+  Create the briefing doc with explicit phase declaration. Configure two hooks (lint-on-commit, format-on-write). Make the first commit. Only then start the first real feature. Teams that skip this 60 minutes often spend the first month without them — and then discover at month 3 that their codebase taught the agent a dozen habits they now need to un-teach. The 60 minutes is the cheapest investment you will make in the project's entire lifespan.
+</SkillBox>
+
+### Protocol 2: Brownfield onboarding
+
+**Goal**: agent learns the codebase *before* editing it.
+
+The single biggest brownfield failure mode: the agent edits according to conventions that don't match the actual code, because nobody told it what the actual conventions are. The codebase-is-the-curriculum principle from [Ch 1](/01-agent-mental-model/) means the agent *will* learn from the codebase — either from your guided tour, or from whatever files it happens to read first. A guided tour is cheaper.
+
+```text
+Session 1 — Discovery (plan mode; read-only).
+  "Read the top-level structure. Report:
+   - What each top-level directory is for.
+   - Which test runner / lint config / build tool is used.
+   - The three most-modified files in the last 90 days.
+   - Any CODE_OF_CONDUCT, CONTRIBUTING, or arch-docs that
+     describe the project's conventions.
+   Do not edit anything."
+
+Session 2 — Conventions.
+  "Based on session 1, write a CLAUDE.md (or equivalent) that
+   captures: architecture, conventions, constraints, verification.
+   Flag claims you're uncertain about. Do not edit anything else."
+
+Session 3 — Characterization tests.
+  "Pick the 3 highest-risk functions (most callers, most recent
+   bugs, most business-critical). Write characterization tests
+   that pin current behavior. Don't refactor. The goal is a
+   safety net, not cleanup."
+
+Session 4+ — Productive edits.
+  Now the agent has a briefing doc reflecting reality, and a
+  test safety net for the most important functions. Productive
+  edits can begin without surprise.
+```
+
+This three-session onboarding feels expensive. It's not — it's three sessions that pay back dozens. The alternative is a single productive session that ships a subtle regression because the agent didn't know pattern B was mandatory.
+
+<SkillBox title="Characterization tests before any refactor">
+  A characterization test is one that pins *current* behavior, correct or not. It is not a specification; it is a signature. Its purpose is to fail if a refactor changes behavior — intentional or accidental. Write the characterization test first; do the refactor; if the test fails, the refactor changed something. If the test needs updating, the change was intentional; if it doesn't, the change was a regression. The pattern is especially important for brownfield refactoring where "what the code *should* do" is less clear than "what the code *currently* does."
+</SkillBox>
+
+### Protocol 3: Incremental refactoring
+
+**Goal**: each step commit-sized, always-working, reversible.
+
+The big-bang refactoring anti-pattern from [Ch 11](/11-antipatterns-recovery/) is the specific failure this protocol prevents. The counterpattern is four steps, applied repeatedly to small scopes:
+
+**Extract.** Pull one function or one module out of the existing shape. Same behavior, new location. Run tests; confirm nothing broke. Commit.
+
+**Test.** Add characterization tests for the extracted unit. Focus on the interface, not the internals. Commit.
+
+**Harden.** Improve the extracted unit — better types, tighter error handling, clearer naming. Tests continue to pass because the interface is pinned. Commit.
+
+**Promote.** If other callers should use the new pattern, migrate them one at a time. Each migration is its own commit. Old pattern stays until migration is complete.
+
+Four steps, four commits, always-shippable state. If step 3 or 4 goes wrong, step 2's test catches it immediately; if they go right, the improvement lands without the codebase ever being broken.
+
+### Four failure layers of a refactor
+
+When a refactor goes sideways, diagnose by layer — same pattern as the four-layer diagnosis from [Ch 11](/11-antipatterns-recovery/), applied to refactoring specifically:
+
+1. **Scope.** Is the refactor too big? If the change touches more than ~5 files in a single step, it's almost certainly not going to land cleanly. Decompose.
+2. **Dependencies.** Do the changed files have un-characterized downstream consumers? Run `grep -r` for the public interface; write characterization tests for each consumer before editing.
+3. **Test coverage.** Are the tests pinning the right invariants? A refactor can pass unit tests and still change observable behavior (performance, ordering, error timing). If you're unsure, add tests for the invariant that worries you.
+4. **Rollback.** Can you revert cleanly if something breaks after deploy? If no — if this refactor is entangled with feature work or mixed-concern commits — stop. Finish the current feature, then do the refactor in isolation.
+
+<Recovery
+  pattern="Agent breaking existing behavior in brownfield"
+  symptom="You asked the agent to add a feature to an existing codebase. The feature landed; three unrelated tests started failing; some previously-working behavior is now different."
+>
+  The agent learned from the codebase but not from your intent — the new code reinterpreted a convention or introduced a pattern the existing code wasn't following. Fix: (1) revert the change. (2) Audit your briefing doc: does it name the specific convention the agent violated? If not, add it with an example. (3) Write a characterization test for the now-broken behavior so the next attempt fails loudly rather than silently. (4) Retry. The pattern: every surprise regression earns a test + a briefing-doc line.
+</Recovery>
+
+<Recovery
+  pattern="Refactor scope creep"
+  symptom="You asked for a clean refactor of one module. The diff touches fifteen files. Some are 'drive-by improvements' you didn't request."
+>
+  The scope constraints from [Ch 3](/03-prompting-as-specification/) weren't applied. Revert the unsolicited changes (don't just accept the extras as bonus improvements — they weren't reviewed for the original refactor's contract). Re-prompt with explicit file list and "don't touch other files without asking" constraint. If the agent did identify a real problem in a different file, capture it as a follow-up task rather than bundling it into the current change.
+</Recovery>
+
+<TryThis title="Phase-audit your most active project">
+  Open your most active repo. Write one sentence that answers each question: (1) Which phase is this project in today? (2) Does the briefing doc explicitly declare the phase? (3) Are the rigor expectations (test coverage, type discipline) appropriate for the declared phase? If the briefing doc doesn't say, declare the phase now — update the briefing doc, run the smoke test ("ask the agent what phase the project is in without mentioning the briefing doc"), confirm the rule is in force. This takes fifteen minutes and usually catches at least one rigor mismatch.
+</TryThis>
+
+## Evolution
+
+Lifecycle phases are an old concept; agent-specific protocols are new.
+
+<Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+  Phase-appropriate rigor is a tool-agnostic concept — all three CLIs benefit equally from explicit phase declaration in the briefing doc. Characterization-test-first before refactoring is universal. Incremental-refactoring protocols (extract → test → harden → promote) do not depend on any specific tool's features. Practices in this chapter port across tools with essentially no translation.
+</Convergence>
+
+**Convergence: characterization tests as the brownfield-onboarding primitive.** The insight that you should pin current behavior before trying to change it is older than agentic coding, but agent-assisted refactoring makes it *more* important because the agent's "helpful improvements" can alter observable behavior in ways no human reviewer would miss in code review but that a test run catches immediately. All three CLIs handle characterization-test generation well when prompted for it.
+
+<Divergence axis="auto-scaffolding support">
+  Claude Code ships `/new` and scaffold-style skills that produce briefing docs + hook configs + project skeleton in one command. Gemini CLI has scaffolding via its extensions ecosystem. Codex CLI leans on MCP servers for project-template generation. For "start a new project in 60 seconds," Claude is fastest today; for "scaffold against my team's specific template," all three work but require setup. If greenfield bootstrap speed matters to your workflow, Claude's built-ins save real time.
+</Divergence>
+
+<Divergence axis="brownfield onboarding tooling">
+  Claude Code's subagent system (the Task tool) lets the three-session onboarding protocol compress into one parent session that delegates each discovery phase to a subagent, returning only summaries to the parent. Gemini and Codex do not yet have equivalent in-CLI delegation; the three-session protocol runs sequentially rather than as delegated sub-tasks. The onboarding *pattern* is identical; the tool ergonomics for applying it to large codebases differ.
+</Divergence>
+
+**Emerging: automated briefing-doc generation.** The two-step "discover the codebase → write a briefing doc reflecting what you found" pattern is an obvious automation target. Early versions exist — scripts that prompt an agent to walk a codebase and emit a draft briefing doc — but the outputs are uneven. Good briefing docs encode judgments about what's *important*; agents can draft the factual shell (directory purposes, test tooling, build setup) but still need human editing for the convention + constraint sections. Expect this to mature substantially in 2026-2027.
+
+**Emerging: repo-level phase enforcement.** Some teams are experimenting with CI hooks that verify phase-appropriate standards are met before allowing merge — no coverage check for `inception` phase, strict coverage check for `production`. The infrastructure is ad-hoc today; first-class product support would turn "phase-appropriate rigor" from a discipline into a tooling guarantee.
+
+<CaseStudy date="2026-02">
+  A team onboarding an agent to a 120K-line legacy codebase followed the three-session protocol literally: session 1 for discovery, session 2 for briefing-doc authorship, session 3 for characterization tests on the 5 most-changed modules. Total setup investment: about a day. Over the next quarter, their regression rate on agent-assisted changes was materially lower than a peer team that had skipped the onboarding and dove directly into productive edits. The peer team spent an accumulating amount of time post-hoc fixing surprise regressions; by month three, they were effectively doing the characterization-test work anyway, but reactively and under deadline pressure. Pattern signal: brownfield onboarding pays back faster than it looks like it will.
+</CaseStudy>
+
+### When none of these protocols fits
+
+Edge cases worth naming:
+
+- **Exploration spikes.** You're not really starting a project; you're building a throwaway to test an idea. Skip the briefing doc; skip the hooks; just use the agent. The output is the insight, not the code. If the spike survives, promote to greenfield inception; if it doesn't, delete.
+- **Fork-and-diverge.** You're branching a codebase to take it in a different direction. Neither greenfield (existing history matters) nor classic brownfield (existing conventions are being deliberately violated). The protocol is hybrid — keep the old codebase's briefing doc as a reference; write a new briefing doc describing what's deliberately different.
+- **Agent-to-agent handoffs.** You're inheriting a codebase that was largely agent-written by a previous team. The existing briefing doc might actually be better than average (recent teams write good ones), but the code may encode more agent-generated patterns than human ones — characterization tests are more important here, not less.
+
+## Quick reference
+
+- Projects have phases (inception → stabilization → maintenance → legacy) and modes (greenfield / brownfield). Match the protocol to the phase-and-mode.
+- Greenfield inception: 60-minute day-one setup — briefing doc with explicit phase declaration, minimum viable hook set, first commit.
+- Brownfield onboarding: three-session protocol — discovery (read-only), briefing-doc authorship, characterization tests on highest-risk code. Don't edit productively until all three are done.
+- Incremental refactoring: four steps — extract, test, harden, promote. Each commit-sized, always-working, reversible.
+- Four failure layers of a refactor: scope, dependencies, test coverage, rollback. Diagnose by layer.
+- Characterization tests pin *current* behavior. Write before refactoring, not after. They catch the unintended behavior changes agent-helpful "improvements" introduce.
+- Phase-appropriate rigor: every failure recipe in [Ch 11](/11-antipatterns-recovery/) maps to a phase-mismatch.
+- Premature rigor kills exploration; missing rigor kills production. The phase declaration in the briefing doc is how you avoid both.

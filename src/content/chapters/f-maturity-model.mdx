@@ -1,0 +1,132 @@
+---
+title: "Appendix F — Maturity model"
+part: 6
+chapter: 6
+volatility: stable-principle
+tools_compared: [cross-tool]
+last_verified: 2026-04-17
+sources: []
+description: "A five-level maturity model for agentic coding practice, across six dimensions. The model is diagnostic rather than prescriptive — most teams do not and should not aim for the highest level on every dimension. The right level depends on your team's risk surface, team size, and regulatory context. The value of the model is in self-locating (*where are we?*) and in roadmap sequencing (*what's the next natural move?*)."
+draft: false
+---
+
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import ConceptBox from '../../components/callouts/ConceptBox.astro';
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+
+*Maturity models get a bad reputation from their overuse in management consulting — "your Level 2 team should be aiming at Level 4" applied regardless of whether the climb actually serves anyone. This one is shaped to avoid that trap. The right level for a dimension depends on what that dimension is load-bearing for; a solo practitioner has no reason to reach the team-governance level on team dimensions; a regulated enterprise cannot operate below a certain level on compliance dimensions. The model's job is diagnostic — showing you where you are — and sequencing — showing you what the next natural move is. It is not a finish line.*
+
+## Six dimensions
+
+An agentic-coding practice matures along six mostly-independent axes.
+
+1. **Individual discipline** — the practitioner's own workflow habits: briefing hygiene, session management, audit cadence.
+2. **Briefing and context** — how shared context is authored, owned, maintained, and pruned.
+3. **Extension surface** — how deeply the team invests in skills, commands, hooks, MCP servers.
+4. **Automation** — how much agent work happens without interactive human supervision: CI, scheduled runs, event-triggered pipelines.
+5. **Governance** — team-level ownership, review discipline, permission policy.
+6. **Audit and maintenance** — explicit self-review cadences, drift detection, artifact deprecation.
+
+The dimensions are mostly independent because moving on one does not force moving on another. A team can have sophisticated automation (L3) with primitive governance (L1) — in fact, that combination is the most common source of incident. The model's diagnostic value is showing you dimensions that have advanced out of step with each other.
+
+## Levels
+
+Five levels, each defined by observable practice rather than by intent.
+
+### Level 0 — Ad-hoc
+
+The agent is used occasionally by individuals with no persistent context. Each session starts from scratch; no briefing doc exists; no commands or skills are codified; there is no audit discipline. This is where nearly every team starts.
+
+**Observable signals.** Agent invocations happen without a briefing file in the repo. Team members independently discover the same prompts and patterns. There is no shared vocabulary for what the agent is good at. Recurring tasks are re-prompted from scratch each time.
+
+**When this level is appropriate.** Early exploration, non-critical experimentation, single-person use of the agent for tasks that don't repeat. Staying at L0 beyond the experimentation phase is a waste of compounding leverage.
+
+### Level 1 — Individual discipline
+
+Individual practitioners have personalized their workflow: personal commands, personal skills, personal briefing preferences in `~/.claude/CLAUDE.md` or equivalent. But nothing is shared with the team. Each engineer has an effective but private practice.
+
+**Observable signals.** Individuals speak about their workflow competently; they invoke slash commands and skills reflexively. But when asked to share, the sharing is ad-hoc — a colleague watches over the shoulder, a DM with a paste of commands, no repo-committed artifact.
+
+**When this level is appropriate.** Solo work, or a team where the agent is one of several competing tools and the team has not yet consolidated. This is a stable equilibrium for many practitioners; the move to L2 requires shared intent.
+
+### Level 2 — Team-shared
+
+Shared artifacts exist in the repo: a committed briefing doc with an owner, team-tier skills and commands, basic permission policy. Agent-assisted review happens via a GitHub Action. The team has converged on some shared vocabulary.
+
+**Observable signals.** `CLAUDE.md` or equivalent at the repo root is on the review path; changes go through PR. The `.claude/commands/` or `.gemini/commands/` directory has meaningful content. New team members are onboarded to the agent infrastructure as part of repo onboarding.
+
+**When this level is appropriate.** Most teams doing nontrivial shared work. L2 is the most common target; it captures most of the agent's team-scale leverage with manageable governance overhead.
+
+### Level 3 — Automated
+
+Agent work escapes the interactive session: CI integration triggers agents on PRs or issues, scheduled agents run maintenance tasks, structured logging ties agent runs back to humans and correlates with model-endpoint access logs. The team has moved from "agent helps me write code" to "agent runs parts of the workflow."
+
+**Observable signals.** `.github/workflows/` contains agent actions. Scheduled cron jobs invoke agents. Structured log pipelines capture each agent invocation. A human on-call rotation owns the automation, not just the underlying code.
+
+**When this level is appropriate.** Teams operating at a scale where interactive-only agent use leaves compounding leverage on the table — typically 5+ engineers, frequent repetitive tasks (dependency bumps, documentation updates, triage), or growing repos. The move from L2 to L3 is where most teams encounter the failure modes of Ch 12 (unexpected egress, credential leakage, scheduled-agent drift); plan for them before shipping automation.
+
+### Level 4 — Governed
+
+Policy-as-code, audit-log integration with enterprise SIEM, compliance-reviewed deployment envelope, formal change-control for agent tooling updates, quarterly drift-detection workflow. The agent infrastructure is treated as production-grade shared infrastructure.
+
+**Observable signals.** The permission configuration is version-controlled and gates on CI tests. Policy changes require formal review. Audit logs ship to the enterprise's central logging; an auditor can reconstruct any agent action. There is a named person accountable for the agent infrastructure, not just for the code it produces.
+
+**When this level is appropriate.** Regulated environments, enterprise contexts (Ch 14), any setting where the blast radius of an unchecked agent action is incompatible with the team's risk tolerance. L4 is not an aspirational goal for every team — the overhead is meaningful — but it is not optional for some.
+
+## The six-dimension matrix
+
+The meaningful use of the model is populating this matrix for your own practice. For each dimension, name the level that best describes you today:
+
+| Dimension | L0 | L1 | L2 | L3 | L4 |
+| --- | --- | --- | --- | --- | --- |
+| Individual discipline | Ad-hoc | Personal workflow | Shared vocabulary | Practice-pattern expertise | Teaches others |
+| Briefing and context | None | Personal only | Committed briefing doc | Versioned + quarterly-trimmed | Policy-reviewed |
+| Extension surface | None | Personal scripts | Team skill registry | MCP servers + hooks | Curated, versioned, policy-bound |
+| Automation | None | One-shot scripts | Occasional CI | Scheduled + event-driven | Formal SRE-grade operations |
+| Governance | None | Informal | CODEOWNERS + PR review | Policy config in repo | Policy-as-code + SIEM |
+| Audit and maintenance | None | Ad-hoc reflection | Quarterly-ish review | Systematic cadences | Automated drift detection |
+
+<KeyIdea>
+  The value of the matrix is in the gaps it shows. A team at L3 automation with L1 governance is telling you where the next incident will come from; a team at L4 governance with L0 individual discipline is telling you the compliance surface is secure but the leverage is being left on the table. Advancing the *weakest* dimension typically yields more value than advancing a dimension that is already ahead of the others.
+</KeyIdea>
+
+<SkillBox title="Using the matrix diagnostically">
+  Four steps. (1) *Locate honestly* — be generous to yourself about what you actually do vs. what you aspire to. A dimension is at the level of the practice that reliably happens, not the level of the practice someone once did once. (2) *Look for gaps of 2+ levels between dimensions* — these are the places where next-period failure is most likely. (3) *Pick one dimension to advance* — by one level, not by two. Multi-level jumps rarely stick. (4) *Revisit in six months* — the matrix is a snapshot, not a fixture; use it repeatedly, not once.
+</SkillBox>
+
+## Progression signals
+
+The question readers most often have from a maturity model is *how do I know we're ready to move to the next level?* Brief signals for each transition:
+
+**L0 → L1.** You find yourself retyping the same prompt for the third time. You have read at least one tool's documentation past the quickstart. You have stopped being surprised by the agent's basic behaviors. *Move to L1 by writing your first personal skill or command.*
+
+**L1 → L2.** Two colleagues are doing similar work with the agent and neither knows what the other has. You have explained your setup to a teammate more than once. A new team member has been onboarded and there is nothing to show them. *Move to L2 by committing a briefing doc and promoting one personal skill to team-tier.*
+
+**L2 → L3.** Your team does the same repetitive task weekly that the agent could handle with minimal prompting. A mechanical PR review pattern is slowing reviewers down. You've asked "could the agent do this on a cron?" and had no infrastructure to point at. *Move to L3 by shipping one scheduled or CI-triggered agent with structured logging.*
+
+**L3 → L4.** Your automated agent runs have produced a near-miss incident (or a real one) that a policy engine would have prevented. Your compliance team has asked for an audit trail you cannot produce. The agent has been given a credential broader than it needed. *Move to L4 by formalizing policy-as-code and wiring audit logs to your central logging.*
+
+## When to stay put
+
+The honest counterpart: progression is not always the right move.
+
+- A solo practitioner at L1 with no team is not at a deficit. There is no L2 to reach because L2 requires sharing.
+- A small team at L2 on a low-stakes codebase should usually not chase L4 governance. The overhead will slow them down without commensurate risk reduction.
+- A team at L3 automation that has not yet stabilized its governance should fix governance before pushing further into automation. Advancing unevenly is riskier than staying put.
+
+The model is a map, not a gradient to climb. The question it answers is *given where we are, where is the next move most valuable?* — not *how do we get to the top?*
+
+<TryThis title="Populate your matrix">
+  Spend 20 minutes doing the honest locate. For each of the six dimensions, mark your current level and your team's current level (they may differ). Highlight any pair of dimensions where the gap is 2+ levels. For the largest gap, write one sentence naming what next-period failure it makes most likely. The exercise is not useful unless you show it to a teammate; share it and compare. Different teammates see the same team differently, and the delta is information.
+</TryThis>
+
+## Quick reference
+
+- Six dimensions: individual discipline, briefing and context, extension surface, automation, governance, audit/maintenance.
+- Five levels: L0 ad-hoc, L1 individual, L2 team-shared, L3 automated, L4 governed.
+- Dimensions are mostly independent; gaps of 2+ levels between dimensions signal where the next incident will come from.
+- Advance the weakest dimension, not the one already ahead.
+- Progression is not universally correct. Solo practitioners at L1, small teams at L2, or regulated enterprises at L4 can all be at the right level for their context.
+- The matrix is diagnostic (where are we?) and sequencing (what's the next natural move?), not prescriptive.
+- Volatility: stable-principle — the shape of maturity progression is durable; the specific tools and practices at each level change over time. Audit annually alongside the rest of Part V's meta-discipline.

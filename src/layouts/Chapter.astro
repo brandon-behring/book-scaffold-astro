@@ -1,0 +1,37 @@
+---
+/**
+ * Chapter.astro — layout for a single chapter page.
+ *
+ * Wraps Base.astro with a chapter-specific structure:
+ *   <article.prose>
+ *     <ChapterHeader />     ← frontmatter metadata
+ *     <ChapterTOC />        ← collapsed "On this page"
+ *     <slot />              ← the rendered MDX body
+ *     <ChapterNav />        ← prev / next
+ *   </article.prose>
+ *
+ * Driven by a CollectionEntry<'chapters'> passed in Astro.props.entry
+ * plus the `headings` array Astro's MDX renderer provides.
+ */
+import type { CollectionEntry } from 'astro:content';
+import type { MarkdownHeading } from 'astro';
+import Base from './Base.astro';
+import ChapterHeader from '../components/ChapterHeader.astro';
+import ChapterTOC from '../components/ChapterTOC.astro';
+import ChapterNav from '../components/ChapterNav.astro';
+
+interface Props {
+  entry: CollectionEntry<'chapters'>;
+  headings: MarkdownHeading[];
+}
+const { entry, headings } = Astro.props;
+---
+
+<Base title={entry.data.title} description={entry.data.description}>
+  <article class="prose">
+    <ChapterHeader data={entry.data} />
+    <ChapterTOC headings={headings} />
+    <slot />
+    <ChapterNav currentId={entry.id} />
+  </article>
+</Base>

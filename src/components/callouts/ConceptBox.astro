@@ -1,0 +1,26 @@
+---
+/**
+ * ConceptBox — durable vocabulary / definition. The textbook definition
+ * slot. Used when a term first appears and needs a precise fix.
+ *
+ * The `term` prop is the defined word/phrase and renders in the title;
+ * the body is the definition. By convention, definitions stay in
+ * Representation sections of a chapter (per the Koller-Friedman
+ * decomposition).
+ *
+ * Usage:
+ *   <ConceptBox term="Context rot">
+ *     The degradation of agent output quality as the KV-cache fills,
+ *     observable as drift, loss of early-context references, or
+ *     incoherent code.
+ *   </ConceptBox>
+ */
+interface Props {
+  term: string;
+}
+const { term } = Astro.props;
+---
+<aside class="callout callout-concept" role="note" aria-label={`Concept: ${term}`}>
+  <strong class="callout-title">Concept · {term}</strong>
+  <div class="callout-body"><slot /></div>
+</aside>

@@ -1,0 +1,38 @@
+# sources/manifest.yaml — canonical index of every external source cited.
+#
+# Each entry is a single citable source. The `id` is a slug used as the
+# citation key in chapter MDX (e.g. <Citation src="gwern-sidenote" />).
+#
+# The full Playwright capture of each source lives in sources/cache/<hash>/
+# and is gitignored (for drift detection only — never published). Public-
+# facing pages only render the metadata below plus the Perma.cc link.
+#
+# Tier scale:
+#   T1-official        — vendor-official documentation or release notes
+#   T2-release-notes   — release blog or changelog (less formal than docs)
+#   T3-practitioner    — respected community writing with durable argument
+#   T4-conjecture      — blog posts, tweets, or unverified claims
+#
+# Validation: see `sources` collection in src/content.config.ts.
+
+- id: gwern-sidenote
+  url: https://gwern.net/sidenote
+  title: "Sidenotes In Web Design"
+  author: Gwern Branwen
+  publish_date: 2020-02-01
+  captured_at: 2026-04-17T13:00:00Z
+  tier: T3-practitioner
+  tool: cross-tool
+  perma_cc: null
+  local_cache: null
+
+- id: tufte-css
+  url: https://edwardtufte.github.io/tufte-css/
+  title: "Tufte CSS"
+  author: Dave Liepmann
+  publish_date: 2014-01-01
+  captured_at: 2026-04-17T13:00:00Z
+  tier: T3-practitioner
+  tool: cross-tool
+  perma_cc: null
+  local_cache: null

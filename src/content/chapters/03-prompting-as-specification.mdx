@@ -1,0 +1,195 @@
+---
+title: Prompting as specification
+part: 1
+chapter: 3
+volatility: architectural-pattern
+tools_compared: [claude-code, gemini-cli, codex-cli]
+last_verified: 2026-04-17
+sources: []
+description: "Prompts are specifications — the input side of a stateful loop. Five levers shape how the agent interprets a prompt — precision, scope, structure, depth, and cost. This chapter treats prompting as an engineering activity, not a conversational art."
+draft: false
+---
+
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import CaseStudy from '../../components/callouts/CaseStudy.astro';
+import ConceptBox from '../../components/callouts/ConceptBox.astro';
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+import Recovery from '../../components/callouts/Recovery.astro';
+import Convergence from '../../components/callouts/Convergence.astro';
+import Divergence from '../../components/callouts/Divergence.astro';
+import Sidenote from '../../components/Sidenote.astro';
+
+*Your prompts work, but they're inconsistent. Sometimes the agent nails it on the first try; sometimes you spend three rounds correcting misunderstandings. The gap is not randomness — it is precision. A prompt is the specification half of a contract; the agent's output is the implementation half. Vague specs produce vague implementations. The rest follows.*
+
+## Representation
+
+A prompt is a specification, not a request. It declares the task, the constraints, the acceptable outputs, and the verification criteria — the same shape a well-written function signature has. When this framing clicks, most prompting problems dissolve: the fix is never "try a different phrasing" but "say what you actually want."
+
+<ConceptBox term="The prompting levers">
+  Five independent dimensions shape how the agent interprets a prompt:
+
+  - **Precision** — how ambiguous is the vocabulary?
+  - **Scope** — which files, directories, or systems may be touched?
+  - **Structure** — how is the prompt organized (plain prose, XML tags, sections)?
+  - **Depth** — how much reasoning should the agent do before producing output?
+  - **Cost** — which model, which batching strategy, which cache configuration?
+
+  Changing any one lever changes the output. Confusing them produces unpredictable results. Naming them separately makes it possible to debug which lever was wrong on a failed prompt.
+</ConceptBox>
+
+### Precision: the vocabulary problem
+
+Natural language is ambiguous on purpose. "Clean this data" could mean drop nulls, impute, validate schema, deduplicate, standardize types, or all five. The agent picks one interpretation and runs with it; three rounds of correction later, you converge on what you actually meant.
+
+The fix is a shared precision vocabulary — a small, stable set of verbs that mean *exactly* one thing in your project.
+
+| Natural language | Precise specification |
+| --- | --- |
+| "Clean this data" | `validate schema → impute nulls with median → drop rows where target is NaN` |
+| "Train a model" | `fit XGBoost on train split → evaluate AUC on val → log params to MLflow` |
+| "Check if this works" | `run pytest → check no data leakage → verify feature distributions match prod` |
+| "Add error handling" | `add validation to build_features() → raise ValueError on schema mismatch → log and skip rows with >50% NaN` |
+
+<KeyIdea>
+  Precision compounds. A shared vocabulary between you and the agent reduces correction rounds not linearly but exponentially as the vocabulary stabilizes. The first twenty prompts of a project teach you the vocabulary; the next two hundred benefit from it. The briefing doc is where the vocabulary lives so every session starts aligned.
+</KeyIdea>
+
+### Scope: the boundary problem
+
+Agents are helpful by default — they read broadly, notice related issues, and fix them. This is useful until it's scope creep: the agent modifies a file you weren't working on, refactors a function you didn't mention, or "improves" code that was intentionally written that way.
+
+Scope is a spectrum:
+
+- **Too restrictive**: "Only modify line 42 of `auth.py`." The agent can't fix related issues the change requires.
+- **Too permissive**: "Fix the auth system." The agent may rewrite half the codebase.
+- **Right scope**: "Fix the session expiry bug in `src/auth/session.py`. You may also modify `src/auth/middleware.py` if the fix requires it. Don't touch other files without asking."
+
+Scope creep is a prompting gap, not a model deficiency. The fix is always in the prompt — name the files, separate discovery from action, or use plan mode. Never hope the agent will guess your boundaries.
+
+### Structure: the organization problem
+
+For complex prompts, plain prose mixes concerns. Task, context, constraints, and verification run together and the agent has to infer structure. A lightweight markup — XML tags, numbered sections, or just clear paragraph separators — gives the agent that structure for free.
+
+```xml
+<context>
+The churn model uses features from src/features/customer.py.
+Current AUC is 0.72 on validation.
+</context>
+
+<task>
+Add recency features: days since last purchase,
+days since last login. Compute from the events table.
+</task>
+
+<constraints>
+- No data leakage: features must use only pre-churn data.
+- Must work with the existing FeatureStore interface.
+- Include unit tests for the new features.
+</constraints>
+
+<verification>
+Run: pytest tests/features/ -v
+All existing tests must still pass.
+Verify: no future-dated features in test set.
+</verification>
+```
+
+The XML tags are not magic — they're a convention the agent's training reinforced. Any consistent structure works: numbered sections, Markdown headings, a table. The point is to make the shape of the specification explicit so the agent can parse it mechanically rather than guess.
+
+### Depth: the reasoning problem
+
+Complex tasks benefit from the agent thinking before producing output. Trivial tasks do not; extra thinking burns context and latency for no gain. Each agent exposes this differently:
+
+- Claude Code: `low` / `medium` / `high` / `max` effort levels; `ultrathink` keyword escalates one turn.
+- Gemini CLI: thinking is adaptive by default with less granular user override.
+- Codex CLI: reasoning depth tied to model selection; less in-session control.
+
+The principle is stable: match reasoning depth to problem complexity. Debugging a subtle concurrency issue needs deep thinking; renaming a variable does not. The controls vary; the judgment doesn't.
+
+### Cost: the economics problem
+
+Every prompt has a token price. The levers that reduce it:
+
+- **Prompt caching** — repeat content across calls hits a cache at substantial discount.
+- **Batch APIs** — bulk operations run asynchronously at a discount.
+- **Model selection** — use a smaller model for simpler tasks.
+
+The biggest wins come from workflow design, not from squeezing individual prompts: a stable briefing doc that hits the cache on every turn saves more than any single-prompt optimization.
+
+## Operation
+
+The three CLI-agents expose the prompting levers with different surface area. The table maps what's broadly available; check your tool's current docs for the exact command.
+
+| Lever | Claude Code | Gemini CLI | Codex CLI |
+| --- | --- | --- | --- |
+| File reference | `@path/to/file` | `@path/to/file` | `@path/to/file` |
+| Directory reference | `@dir/` | `@dir/` | `@dir/` |
+| Stdin pipe | `cat x \| claude -p '...'` | `gemini -p "..." < x` | `codex exec "..." < x` |
+| Image input | drag, paste, or `@screenshot.png` | drag or `@screenshot.png` | `@screenshot.png` |
+| Plan / dry-run | Shift+Tab plan mode | `/plan` (v0.8+) | `--dry-run` |
+| Reasoning depth | `/effort {low\|medium\|high\|max}` | adaptive; limited override | via model choice |
+| Prompt caching | automatic + explicit breakpoints | automatic | automatic |
+| Batch API | Anthropic Batch API (50% off) | Vertex AI Batch | OpenAI Batch API (50% off) |
+
+<SkillBox title="The anatomy of a prompt that doesn't need correction">
+  Five elements, in order: *context* (what the agent needs to know about the system), *task* (what you want changed, specifically), *constraints* (what it must or must not do), *files* (which paths are in scope; which are off-limits), *verification* (how both of you will know it worked). A prompt missing any of these is an invitation to correction rounds. The more boring the prompt, the better the result.
+</SkillBox>
+
+<SkillBox title="Separate discovery from action">
+  For unfamiliar code, never ask the agent to fix before it has analyzed. "Read `src/payments/` and tell me what needs to change to support refunds — do not make changes yet." Review the analysis. Then approve specific changes. This costs one extra turn and saves an entire session's worth of wrong-direction corrections. Plan mode (Shift+Tab in Claude, `/plan` in Gemini, `--dry-run` in Codex) formalizes the same pattern.
+</SkillBox>
+
+<Recovery
+  pattern="Unsolicited file modifications"
+  symptom="You asked for a targeted change; the agent also modified files you didn't mention. Your diff has twice as many files as expected."
+>
+  Don't just undo the surprise edit — add a scope constraint to the next prompt: "Good fix for X. But you also changed `user_model.py` — please revert that. For the rest of this session, only modify files I explicitly name." The agent honors the constraint for the remainder of the session. If this keeps happening across sessions, the instruction belongs in the briefing doc, not every prompt.
+</Recovery>
+
+<TryThis title="Rewrite three real prompts">
+  Pull your last three non-trivial prompts from terminal history. For each:
+  1. Identify the vague verbs ("clean," "train," "check") and replace with precise specifications.
+  2. Add explicit verification criteria (what command the agent should run to confirm the result).
+  3. Name the files in scope; state what's off-limits.
+  4. Estimate how many correction rounds the rewrite would have saved.
+
+  Do this daily for a week. You'll notice your vocabulary stabilizing and your correction rate dropping.
+</TryThis>
+
+## Evolution
+
+Prompting is the most convergent surface of agentic coding — the core vocabulary (precision, scope, verification, structure, depth) has been stable across tools since 2025. Active divergence lives in the reasoning-depth controls and the cost-optimization surface.
+
+<Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+  All three tools accept `@file` and `@dir/` references, accept image inputs, support stdin piping for bulk operations, and ship some form of plan mode / dry-run. Structured prompts with explicit context / task / constraints / verification sections work identically across all three — this is a product of shared training on public prompting literature, not a product of coordination.
+</Convergence>
+
+**Convergence: the five-part prompt structure.** Context → task → constraints → files in scope → verification. This emerged as a practitioner pattern in 2024, was reinforced by Anthropic's official prompting guides in 2025, and has since been adopted by Gemini and OpenAI documentation. It's no longer a contested choice.
+
+**Convergence: prompt caching as implicit optimization.** All three tools cache repeated content automatically. The discounts vary (~90% for Claude, ~75% for Gemini, ~50% for Codex as of 2026), but the pattern — stable briefing doc, sticky tool definitions, repeated references — is the same.
+
+<Divergence axis="reasoning depth controls">
+  Claude Code exposes four explicit effort levels (`low` / `medium` / `high` / `max`) plus a session-scoped `ultrathink` escalator. Gemini CLI uses adaptive reasoning with limited per-prompt override. Codex CLI ties reasoning depth to model selection. If your workflow depends on surgical control over think-time (e.g., force minimal thinking on a boilerplate task to save latency), Claude's lever is the sharpest today.
+</Divergence>
+
+<Divergence axis="image input ergonomics">
+  Claude Code and Gemini CLI both support drag-and-drop screenshot paste directly into the terminal. Codex CLI currently requires a file reference (`@screenshot.png`) rather than direct paste. For debugging-by-screenshot workflows, this gap matters daily.
+</Divergence>
+
+**Emerging: structured output modes.** All three tools are shipping JSON-mode or schema-constrained output. Claude Code's `--output-format json` landed in 2025; Gemini's `responseSchema` parameter has been in the SDK since late 2025 and is reaching the CLI; Codex's structured-output support is partial. Practices that pipe agent output into downstream automation should expect this to be fully converged within a year.
+
+<CaseStudy date="2026-01">
+  Teams that adopt an explicit five-part prompt structure (context / task / constraints / files / verification) typically report a meaningful drop in correction rounds per task after a few weeks of practice. The cognitive overhead of structured prompts is real for the first few days; after that, the discipline becomes automatic and the precision pays back the investment. Pattern signal: prompt structure is a skill, and skills compound.
+</CaseStudy>
+
+## Quick reference
+
+- A prompt is a specification, not a conversation. Treat it like a function signature — declare inputs, constraints, and verification.
+- Five levers: precision, scope, structure, depth, cost. Debug a failed prompt by naming which lever was wrong.
+- Precision vocabulary compounds. Stabilize it in your briefing doc; every future session benefits.
+- Scope is always your responsibility. "Only modify files I explicitly name" is a reasonable default.
+- Structured prompts (five-part shape) reduce correction rounds substantially. The boredom is the point.
+- Plan mode (Shift+Tab / `/plan` / `--dry-run`) separates discovery from action for unfamiliar code — cheap, universally supported.
+- Reasoning depth should match problem complexity. The controls vary; the judgment doesn't.
+- Caching wins come from workflow stability, not from single-prompt optimization. A stable briefing doc beats a clever phrasing.

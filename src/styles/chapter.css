@@ -1,0 +1,209 @@
+/* chapter.css — Chapter-specific typography and structural styling.
+ * Uses tokens from tokens.css and the .prose wrapper from layout.css.
+ */
+
+/* ===== Chapter header ===== */
+.chapter-header {
+  margin-bottom: var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-6);
+}
+.chapter-header h1 {
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.chapter-description {
+  font-size: var(--text-lg);
+  color: var(--color-text-muted);
+  margin: var(--space-3) 0;
+  text-indent: 0;
+  font-style: italic;
+}
+.chapter-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  margin-bottom: var(--space-2);
+}
+.chapter-meta > span {
+  display: inline-flex;
+  gap: 0.3em;
+}
+.chapter-meta-label {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.75em;
+}
+
+/* Volatility + tool badges: reuse .tool-badge from callouts.css */
+.volatility-badge {
+  display: inline-block;
+  padding: 0.05em 0.45em;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  font-family: var(--font-code);
+  letter-spacing: 0;
+}
+.volatility-stable-principle {
+  background: var(--warm-green-tint);
+  color: var(--warm-green);
+  border: 1px solid var(--warm-green);
+}
+.volatility-architectural-pattern {
+  background: var(--warm-gold-tint);
+  color: var(--warm-gold);
+  border: 1px solid var(--warm-gold);
+}
+.volatility-feature-surface {
+  background: var(--warm-rose-tint);
+  color: var(--warm-rose);
+  border: 1px solid var(--warm-rose);
+}
+
+/* Freshness badge — inline with "Last verified" in chapter-meta.
+ * Three status bands map to the same warm palette as volatility:
+ *   fresh       → green  (last_verified is recent relative to volatility threshold)
+ *   verify-soon → gold   (75-100% of threshold elapsed)
+ *   stale       → rose   (past threshold; verify before trusting claims)
+ */
+.freshness-badge {
+  display: inline-block;
+  padding: 0.02em 0.45em;
+  border-radius: var(--radius-sm);
+  font-size: 0.85em;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.4;
+  vertical-align: baseline;
+  cursor: help;
+  /* Prevent the "2026-04-17 · Fresh" pair from breaking across lines when
+   * chapter-meta wraps on narrow viewports. */
+  white-space: nowrap;
+}
+.freshness-badge[data-status='fresh'] {
+  background: var(--warm-green-tint);
+  color: var(--warm-green);
+  border: 1px solid var(--warm-green);
+}
+.freshness-badge[data-status='verify-soon'] {
+  background: var(--warm-gold-tint);
+  color: var(--warm-gold);
+  border: 1px solid var(--warm-gold);
+}
+.freshness-badge[data-status='stale'] {
+  background: var(--warm-rose-tint);
+  color: var(--warm-rose);
+  border: 1px solid var(--warm-rose);
+  font-weight: 600;
+}
+
+.chapter-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.chapter-badge-row-label {
+  font-weight: 500;
+}
+
+/* ===== Chapter TOC (collapsed <details> at top) ===== */
+.chapter-toc {
+  margin: var(--space-4) 0 var(--space-6);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  font-size: var(--text-sm);
+}
+.chapter-toc > summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--color-link);
+  list-style: none;
+  padding: var(--space-1) 0;
+}
+.chapter-toc > summary::-webkit-details-marker {
+  display: none;
+}
+.chapter-toc > summary::before {
+  content: "▸ ";
+  display: inline-block;
+  transition: transform 120ms ease;
+}
+.chapter-toc[open] > summary::before {
+  content: "▾ ";
+}
+.chapter-toc ol {
+  list-style: none;
+  padding-left: 0;
+  margin: var(--space-2) 0 0;
+}
+.chapter-toc li {
+  margin: var(--space-1) 0;
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--color-border);
+}
+.chapter-toc li.toc-h3 {
+  padding-left: var(--space-6);
+}
+.chapter-toc a {
+  text-decoration: none;
+  color: var(--color-text);
+}
+.chapter-toc a:hover {
+  text-decoration: underline;
+  color: var(--color-link);
+}
+
+/* ===== Chapter nav (prev/next at bottom) ===== */
+.chapter-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-top: var(--space-12);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+.chapter-nav a {
+  display: block;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--color-text);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.chapter-nav a:hover {
+  border-color: var(--color-link);
+  background: var(--color-bg-subtle);
+}
+.chapter-nav a .nav-label {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25em;
+}
+.chapter-nav a .nav-title {
+  font-weight: 500;
+  color: var(--color-link);
+}
+.chapter-nav .prev { text-align: left; }
+.chapter-nav .next { text-align: right; grid-column: 2; }
+.chapter-nav .prev:only-child { grid-column: 1; }
+
+@media (max-width: 48rem) {
+  .chapter-nav {
+    grid-template-columns: 1fr;
+  }
+  .chapter-nav .next { grid-column: 1; text-align: left; }
+}

@@ -1,0 +1,27 @@
+# changelog/tools/claude-code.yaml — Claude Code release timeline.
+#
+# One `changes` entry per (version, pattern) pair. The `pattern` slug
+# references entries in changelog/patterns.yaml. The `source_key` slug
+# (optional) references entries in sources/manifest.yaml so readers can
+# click through from the convergence dashboard to the authoritative
+# release note.
+
+tool: claude-code
+
+versions:
+  - version: "2.5"
+    date: 2025-11-10
+    changes:
+      - pattern: plan-mode
+        kind: added
+        note: "First-class plan mode introduced as a read-only planning phase before edits."
+      - pattern: subagents
+        kind: added
+        note: "Subagent delegation primitives (Task tool + subagent_type selector)."
+
+  - version: "2.9"
+    date: 2026-03-27
+    changes:
+      - pattern: briefing-docs
+        kind: changed
+        note: "CLAUDE.md hub-and-spoke pattern documented as default architecture."

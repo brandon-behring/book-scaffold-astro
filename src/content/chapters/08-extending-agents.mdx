@@ -1,0 +1,216 @@
+---
+title: Extending agents
+part: 3
+chapter: 8
+volatility: feature-surface
+tools_compared: [claude-code, gemini-cli, codex-cli]
+last_verified: 2026-04-17
+sources: []
+description: "Commands, skills, hooks, MCP — the four axes by which an agent becomes more than the defaults it ships with. This is the most divergent surface in the category; get the mental model right and the command names become secondary."
+draft: false
+---
+
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import CaseStudy from '../../components/callouts/CaseStudy.astro';
+import ConceptBox from '../../components/callouts/ConceptBox.astro';
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+import Recovery from '../../components/callouts/Recovery.astro';
+import Convergence from '../../components/callouts/Convergence.astro';
+import Divergence from '../../components/callouts/Divergence.astro';
+import Sidenote from '../../components/Sidenote.astro';
+
+*Out of the box, every CLI-agent is just a general-purpose shell for a model. That's where it stops being useful. The agent that ships with defaults is the agent that loses to the agent with your repo's conventions wired in, your team's verification gates running automatically, your private knowledge base reachable as a tool. This chapter is about the four axes on which agents become extended — and why extensibility is also the surface where tools diverge most sharply.*
+
+## Representation
+
+Extension is how a CLI-agent stops being a general-purpose coder and becomes *your* agent. Every tool this book covers supports extension, but they divide the work differently. The right mental model is not "which tool has the most features" — it's "which extension axis does my need actually live on?"
+
+<ConceptBox term="The four extension axes">
+  **Commands / Skills** — reusable behaviors, templates, and workflows the user invokes by name (e.g. `/deploy`, `/review`).
+
+  **Hooks** — lifecycle callbacks fired at specific points in the agent loop, enabling enforcement, observation, or state management.
+
+  **Permissions / guardrails** — harness-level allow-lists or deny-rules the agent cannot override, regardless of prompt or briefing-doc content.
+
+  **Protocols (MCP)** — external servers that expose tools, resources, and prompts to the agent via a standardized wire format.
+
+  Each axis has a different cost-benefit profile. Picking the wrong axis is the most common extension anti-pattern — writing a command when you wanted a hook, or writing a hook when you wanted an MCP server.
+</ConceptBox>
+
+### When to use which axis
+
+The decision tree is short:
+
+**Use a command / skill** when a *workflow* is repeatable and the user should decide when to invoke it. Deploy checks, code review templates, chapter-porting workflows. Cost: minutes to write a markdown file. Guarantee: the agent runs the workflow *when asked*.
+
+**Use a hook** when a *standard* is non-negotiable and the user should not have to remember it. Tests before commit, lint on write, secrets-scan on edit. Cost: a shell script and some config. Guarantee: fires on the matching event regardless of what the agent or user wants.
+
+**Use a permission / guardrail** when a *prohibition* is load-bearing. The agent must never read `.env`; commits to `main` require approval; writes outside `src/` are forbidden. Cost: one config entry. Guarantee: the agent *cannot* violate the rule without operator override.
+
+**Use an MCP server** when an *external system* needs to become part of the agent's working surface. Your company's ticket tracker, internal knowledge base, custom deployment platform. Cost: stand up a server implementing the protocol. Guarantee: the external system's tools appear alongside the built-in ones and are usable via the same prompt shape.
+
+<KeyIdea>
+  The right extension lives at the layer of its guarantee. Advisory content goes in the briefing doc; invoked-on-demand workflows become commands/skills; always-fires enforcement becomes a hook; absolute-prohibition becomes a permission; external-system integration becomes an MCP server. Picking the wrong layer is the most common extension failure mode — and it is almost always recoverable by moving the content to the right layer.
+</KeyIdea>
+
+### Why this chapter is volatile
+
+The four-axis model is stable. The specific names, file formats, and configuration surfaces are not. Expect churn quarterly — this is `feature-surface` in a book otherwise dominated by `architectural-pattern` and `stable-principle`. Verify commands and file paths against current docs before relying on them.
+
+## Operation
+
+### Extension-surface comparison
+
+The tri-tool map of what's supported where:
+
+| Axis | Claude Code | Gemini CLI | Codex CLI |
+| --- | --- | --- | --- |
+| User commands | `.claude/skills/<name>/SKILL.md` (or a single `.md`) → `/name` | `.gemini/commands/<name>.toml` → `/name` | slash commands via config / plugins |
+| Reusable skills | merged with commands — a skill-with-a-directory is the richer form of a command | via extensions | via MCP server + registered tools |
+| Hooks | 9+ events: `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Notification`, `Stop`, `SubagentStop`, `PreCompact`, `SessionStart`, `SessionEnd` | lighter; pre/post tool callbacks | command-approval config in `~/.codex/config.toml` |
+| Permissions | `settings.json` with allow-list / deny-rules; enforced by harness | tool-level allow-lists | approval modes (`--suggest` / `-a on-request` / `--full-auto`) |
+| MCP support | first-class; shipped with Claude Code from early | first-class (2025+); 200+ extension ecosystem | first-class; `codex mcp` CLI + `~/.codex/config.toml` |
+| MCP transports | stdio + HTTP/SSE | stdio + HTTP | stdio + streamable HTTP |
+
+Two observations before the details:
+
+1. **MCP is convergent.** All three tools support the protocol with interoperable server implementations. An MCP server written for one client works for all three, modulo tiny transport-config differences. This is the single biggest extensibility story of 2025–2026.
+
+2. **Everything non-MCP diverges.** Skills, command authoring, hooks — each tool's surface is incompatible with the others. Practices that lean on specific command-file formats or hook-event names do not port; practices that lean on "what the extension does" do.
+
+### Commands and skills: the invoked layer
+
+A command is the simplest extension. You write a markdown file describing a workflow; the agent reads it when invoked. Claude Code recently merged its `commands/` and `skills/` directories — both now produce the same `/slash-command` interface. A "skill" is just the richer form: a directory with a `SKILL.md` entry point plus supporting reference files.
+
+```text
+# Claude Code — simple command form
+.claude/skills/review.md
+  ---
+  name: review
+  description: Run the team's PR review checklist
+  ---
+  1. Run `git diff main...HEAD`
+  2. For each changed file, check:
+     - Does it match the precision-vocabulary in the briefing doc?
+     - Are error paths handled explicitly?
+     - ...
+
+# Claude Code — richer skill form
+.claude/skills/deploy/
+  SKILL.md             # required entry point, frontmatter + instructions
+  checklist.md         # supporting reference
+  examples/            # sample outputs
+```
+
+Gemini CLI uses TOML-based custom commands in `.gemini/commands/`; Codex CLI ships a built-in slash-command set and leans on MCP servers to add custom verbs. The mental model is the same everywhere: a named, invocable workflow.
+
+<SkillBox title="Write a command the first time a workflow repeats">
+  The marginal cost of a command is a markdown file; the cumulative benefit is every future invocation. Rule of thumb: the second time you type the same multi-step workflow by hand, it should become a command. Name it as a verb (`/deploy`, `/review`, `/port-chapter`). Keep the body short and structured — describe the steps, not the prose. Use the briefing doc's precision vocabulary inside so the command's outputs match the project's voice.
+</SkillBox>
+
+### Hooks: the always-fires layer
+
+A hook is a script that runs automatically at a specific lifecycle point, regardless of what the user or agent is doing. Hooks are how you make a standard *non-negotiable*: "always run tests before commit" is an advisory line in the briefing doc that the agent may forget in a long session; as a `PreToolUse` hook matching `Bash` commands that contain `git commit`, it fires every time.
+
+Claude Code has the richest hook surface — nine lifecycle events covering prompt submission, tool invocation (before/after), compaction, session start/end, sub-agent lifecycle, and generic notifications. Each hook can match specific tool names or patterns and run arbitrary shell commands. Gemini CLI has a lighter set focused on pre/post tool invocation. Codex CLI's model is command-approval configuration — the agent's operations are gated by approval policy rather than by event hooks.
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [{
+      "matcher": "Bash",
+      "hooks": [{
+        "type": "command",
+        "command": ".claude/hooks/pre-commit-gate.sh",
+        "description": "Block git commit if tests fail"
+      }]
+    }]
+  }
+}
+```
+
+<SkillBox title="Match the layer to the guarantee">
+  Advisory content ("try to run tests before commit") goes in the briefing doc — the agent may follow it, may forget it. Always-fires content ("tests must run before commit") goes in a hook — the agent's intention doesn't matter; the hook fires before the operation completes. Absolute-prohibition content ("this command never runs") goes in harness-level permissions — the agent cannot run it regardless of hooks. Three escalating layers, each backed by stronger guarantees. Match the layer to the stakes.
+</SkillBox>
+
+### MCP: the external-system layer
+
+Model Context Protocol is the shared wire format for agent ↔ external-system communication. An MCP server exposes *tools* (functions the agent can call), *resources* (read-only content the agent can retrieve), and *prompts* (pre-structured templates the agent can invoke). Once connected, the server's capabilities appear in the agent's surface alongside the built-ins — a Jira MCP server adds `create_ticket` and `search_tickets` tools; a Postgres MCP server adds `query` and `describe_schema`; a company-knowledge MCP server adds `search_docs`.
+
+All three CLIs now support MCP as first-class. Configuration mechanisms differ:
+
+- Claude Code: `.claude/settings.json` or global config, with stdio + HTTP/SSE transport.
+- Gemini CLI: `mcpServers` entry in Gemini config; 200+-extension ecosystem at `geminicli.com/extensions`; includes official remote MCP servers for Google Workspace, Google Cloud services, etc.
+- Codex CLI: `~/.codex/config.toml` + the `codex mcp` CLI for add/list/remove operations; supports stdio and streamable HTTP transports.
+
+```toml
+# ~/.codex/config.toml — adding an MCP server
+[mcp_servers.jira]
+command = "jira-mcp-server"
+args = ["--workspace", "acme"]
+env = { JIRA_API_KEY = "..." }
+```
+
+<SkillBox title="MCP as the cross-tool extension path">
+  When you're writing an extension that might be used by more than one team member or across more than one CLI, implement it as an MCP server. The server works unchanged across Claude, Gemini, and Codex; the CLIs differ only in configuration syntax, not runtime behavior. This is the one extension axis where you genuinely write-once-run-everywhere — commands and hooks do not port across tools, MCP does.
+</SkillBox>
+
+<Recovery
+  pattern="Wrong extension layer"
+  symptom="Your extension works some of the time. The agent sometimes follows the rule, sometimes skips it. You've wrapped the instruction in increasingly urgent prose."
+>
+  The layer is wrong. Advisory content in the briefing doc isn't enforced; a workflow as a briefing-doc line isn't invocable on demand. Work the ladder: (1) if the instruction is "the agent should do X when asked", write a command; (2) if it's "the agent should always do X when Y happens", write a hook; (3) if it's "the agent must never do Z", write a permission/deny-rule; (4) if it's "the agent needs access to external system W", write an MCP server. The symptom — "sometimes works" — is the signature of advisory content where you wanted enforcement.
+</Recovery>
+
+<Recovery
+  pattern="Extension sprawl"
+  symptom="You have 30+ commands, a dozen hooks, three MCP servers. Nobody on the team knows what's there. Some are broken but haven't been noticed."
+>
+  Extensions accumulate like cruft in `~/.bashrc`. Quarterly audit: (1) list every extension; (2) for each, check "has this been invoked / fired / used in the last month?"; (3) if no, delete it. Hooks deserve particular scrutiny because they run silently — a broken hook may be exiting 0 without doing its job. Run the smoke test on every non-negotiable hook you still believe in.
+</Recovery>
+
+<TryThis title="Find your next extension candidate">
+  Open your terminal history for the last week. Scan for multi-line repeated sequences — the same `pytest && ruff && mypy && commit` dance, the same `git log --oneline | head -20` check, the same "write a test, run it, fix, re-run" loop. The first pattern you find that's been repeated 3+ times is your candidate. Pick one and write it as a command today. The second-order benefit — the team adopts it, the pattern becomes shared vocabulary — is usually larger than the time saved on the workflow itself.
+</TryThis>
+
+## Evolution
+
+Extension is simultaneously the most convergent part of the category (on MCP as protocol) and the most divergent (on everything else). Both stories are still in motion.
+
+<Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+  Model Context Protocol is the single biggest convergence of 2025–2026. An MCP server written against the spec works unchanged across all three major CLI-agents. The transports vary slightly (stdio is universal; HTTP/SSE is the most common streaming option), but the capability surface — tools, resources, prompts — is identical. MCP has become the *de facto* standard for "add external system to agent" in the same way HTTP became the *de facto* standard for "expose service to the network."
+</Convergence>
+
+**Convergence: slash commands as the invocation surface.** All three tools converged on `/command-name` as the user-invocable extension syntax. The file format for defining a command differs (Claude's skill-merged markdown, Gemini's TOML, Codex's plugin system), but the user experience — type a slash, pick from autocomplete, invoke — is identical across tools.
+
+**Convergence: custom commands merging with richer skills/extensions.** Claude Code's 2026 merge of `.claude/commands/` into `.claude/skills/` formalized a pattern that was already implicit: a "command" is just the simple form of a "reusable skill with optional supporting files." Gemini's extensions and Codex's MCP-as-command-source follow the same logic at different layers of abstraction.
+
+<Divergence axis="hook-system depth">
+  Claude Code ships nine distinct hook events covering the full agent lifecycle. Gemini CLI has a lighter set focused on tool invocation. Codex CLI's model is command-approval configuration rather than event hooks — the enforcement happens at the "should this command run at all" layer. For non-negotiable standards that need event-specific firing (e.g. auto-lint on every `Edit`, auto-test before every `git commit`), Claude's depth is decisively ahead. For teams comfortable with "every command requires approval" as the enforcement paradigm, Codex's simpler model is sufficient.
+</Divergence>
+
+<Divergence axis="skill / extension ecosystem">
+  Gemini CLI's 200+-extension ecosystem is the largest; Claude Code's skill ecosystem is active and curated; Codex leans on MCP servers as the extension unit. Each ecosystem has different quality curves and discoverability. For now, practices written to "install the skill that does X" port badly — check your tool's ecosystem directly, and be prepared to write the extension yourself if the shared catalog lacks it.
+</Divergence>
+
+<Divergence axis="permission / guardrail granularity">
+  Claude Code's `settings.json` allow-list / deny-rule mechanism is the most granular — permit `Read` on `src/**` while denying `Bash` commands matching `rm -rf`, etc. Gemini CLI uses tool-level allow-lists (whole tool on or off). Codex CLI's approval-mode flow is per-command-at-runtime rather than per-pattern-at-config. For security-critical workflows requiring fine-grained prohibition, Claude's mechanism is strongest; for smaller projects where "ask me before any destructive operation" is sufficient, Codex's simpler approval model is fine.
+</Divergence>
+
+**Emerging: cross-tool skill registries.** A few community projects in 2026 are experimenting with CLI-agnostic skill formats that translate into each tool's native format on install. None are mature; all face the fundamental divergence of hook/permission semantics that no translation layer can paper over. The write-once-everywhere story will arrive for commands (already close) before hooks (genuinely hard).
+
+<CaseStudy date="2026-03">
+  A team running agent-assisted deployment workflows across Claude Code and Gemini CLI (different engineers preferred different tools) adopted a strict rule: any extension worth keeping gets implemented as an MCP server; commands and hooks are tool-local and not shared. After one quarter, their shared MCP layer included a deploy-coordinator server, a changelog-generator server, and a PR-review-checklist server — all usable from either CLI without modification. Tool-local commands continued to exist but represented individual preference, not team infrastructure. Pattern signal: when extensions need to be shared, MCP is the only axis that currently supports shared infrastructure cleanly.
+</CaseStudy>
+
+## Quick reference
+
+- Four extension axes: commands/skills (invoked), hooks (always-fires), permissions (guardrails), MCP (external systems). Match the axis to the guarantee you need.
+- Commands/skills are cheap and on-demand; hooks are medium-cost and always-fire; permissions are harness-enforced; MCP is the gateway to external systems.
+- MCP is the one cross-tool extension axis: write the server once, use it from any compliant CLI. Commands and hooks do not port.
+- Claude Code merged commands + skills into one system; a command is just the simple form of a skill.
+- Claude Code has the richest hook surface (nine events); Gemini has lighter hooks; Codex uses command-approval as its enforcement paradigm.
+- Quarterly extension audit: delete what hasn't been invoked in a month. Hooks especially — they fail silently.
+- Before writing a tool-specific extension, ask: could this be an MCP server instead? If the answer is yes and it would ever be shared, write the MCP server.
+- This is the most volatile chapter in the book. Verify command names, file formats, and event lists against current docs before relying on them for anything load-bearing.

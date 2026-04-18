@@ -1,0 +1,221 @@
+---
+title: Anti-patterns and recovery
+part: 4
+chapter: 11
+volatility: architectural-pattern
+tools_compared: [claude-code, gemini-cli, codex-cli]
+last_verified: 2026-04-17
+sources: []
+description: "Every tool has characteristic misuse patterns. This chapter catalogs eight of them with concrete recovery procedures, and introduces a four-layer diagnostic framework for when the agent keeps failing — so you fix the right layer instead of the wrong one."
+draft: false
+---
+
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import CaseStudy from '../../components/callouts/CaseStudy.astro';
+import ConceptBox from '../../components/callouts/ConceptBox.astro';
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+import Recovery from '../../components/callouts/Recovery.astro';
+import Convergence from '../../components/callouts/Convergence.astro';
+import Divergence from '../../components/callouts/Divergence.astro';
+import Sidenote from '../../components/Sidenote.astro';
+
+*Three hours in, the agent is hallucinating function names and ignoring rules that were working fine at session start. What went wrong? More importantly: how do you escape? This chapter is reactive — the catalog of characteristic failures every practitioner eventually hits, with a concrete recovery guide for each.*
+
+## Representation
+
+Every agentic-coding tool has characteristic misuse patterns. They're not model bugs or tool deficiencies — they arise from treating the agent as infinitely capable when it is in fact a bounded system with a finite context window, degrading attention, and no memory across sessions.
+
+<ConceptBox term="Anti-pattern">
+  A recognizable pattern of agent interaction that produces consistently worse results than alternatives. Each anti-pattern has a specific symptom (how you notice it), a root cause (the bounded-system constraint it violates), a prevention (how to avoid it next time), and a recovery (how to escape if you're already stuck).
+</ConceptBox>
+
+<KeyIdea>
+  Every anti-pattern below shares a common thread: they arise from treating the agent as infinitely capable rather than as a powerful but bounded system. Context is finite. Attention degrades. Verification is essential. Working *within* these constraints — not ignoring them — is what separates productive agentic coding from frustrating agentic coding.
+</KeyIdea>
+
+### The four failure layers
+
+When the agent keeps failing on the same problem across sessions, the temptation is to blame the model. Usually wrong. Work through the four layers in order — most failures resolve at Layer 1 or Layer 2.
+
+1. **The prompt.** Is the request ambiguous? Does it assume context the agent doesn't have? *Test:* rephrase with explicit constraints and an example of what "correct" looks like. If the agent succeeds, you had a specification problem, not a model problem.
+
+2. **The briefing doc** (CLAUDE.md / GEMINI.md / AGENTS.md). Is there a conflicting rule? A rule too vague to enforce? A rule the agent interprets differently than you intended? *Test:* temporarily move the briefing doc aside (`mv .claude/CLAUDE.md .claude/CLAUDE.md.bak`) and retry. If the problem disappears, a rule is interfering. Add rules back incrementally to isolate.
+
+3. **The codebase.** Does the existing code teach the wrong patterns? The [codebase-is-the-curriculum principle](/01-agent-mental-model/) applies in reverse here: if 50 existing functions use pattern A and you want pattern B, the agent will default to A regardless of instructions. *Test:* ask the agent *why* it chose its approach. If it cites existing code, the codebase is teaching patterns your instruction is supposed to override — make the instruction explicit about the exception.
+
+4. **The model.** Genuine limitations exist — certain reasoning patterns, mathematical computations, or domain-specific conventions the model gets wrong consistently. *Test:* try max reasoning depth; try a different model; if all fail the same way, accept the limitation and design a workaround (verification step, hook, or manual review).
+
+In practice, the large majority of persistent failures resolve at Layer 1 or Layer 2. Practitioners who jump to "the model is wrong" usually haven't verified their instructions are unambiguous and conflict-free.
+
+## Operation
+
+The catalog. Eight common anti-patterns, each with a Recovery box you can apply on the spot. Prevention links back to the chapter that covers it properly.
+
+### 1. Context overload
+
+**Symptom:** the agent ignores important rules. Instructions from the briefing doc are followed inconsistently. Behavior degrades over long sessions.
+
+**Root cause:** the briefing doc has grown to contain every rule, convention, and preference accumulated over months. Attention dilutes across all of it, and critical rules get the same weight as minor preferences.
+
+**Prevention:** hub-and-spoke architecture with path-scoped rule files. Keep the core briefing doc under ~300 lines. Non-negotiable standards become hooks, not advisory lines.
+
+<Recovery
+  pattern="Context overload"
+  symptom="Rules in your briefing doc are being ignored; instructions work at session start but fail after 30 minutes."
+>
+  (1) Count lines in your briefing doc. If over 300, split. (2) Move module-specific rules to path-scoped rule files (`.claude/rules/*.md` with `paths:` frontmatter, or equivalent for Gemini/Codex). (3) Move shared patterns to imports. (4) Move non-negotiable standards to hooks. (5) What remains in the hub should be project-wide essentials only.
+</Recovery>
+
+### 2. The kitchen-sink session
+
+**Symptom:** performance degrades midway through a session. The agent repeats itself, forgets earlier decisions, or produces lower-quality output.
+
+**Root cause:** multiple unrelated tasks in a single session. Each task's context remains, consuming tokens that contribute nothing to the current task. Covered in depth in [Ch 2 Context as Currency](/02-context-as-currency/).
+
+<Recovery
+  pattern="Kitchen-sink session"
+  symptom="You're 90 minutes into a session that started with debugging, moved to feature work, and now involves documentation. Responses are noticeably worse than at session start."
+>
+  Stop. Before clearing, note your current state in a handoff file (`CURRENT_WORK.md`) so you don't lose context. Then `/clear` (or equivalent) and start a fresh session for the current task only.
+</Recovery>
+
+### 3. Over-correcting
+
+**Symptom:** three or more rounds of "no, that's not what I meant" followed by increasingly desperate attempts at the same task.
+
+**Root cause:** each correction adds noise — the original error, your correction, the agent's acknowledgment, its retry. After three rounds, the context is dominated by failure patterns.
+
+**Prevention:** the two-failure rule (covered in [Ch 4 Session Loop](/04-session-loop/)). After two failed corrections, clear and re-prompt with precision.
+
+<Recovery
+  pattern="Over-correcting"
+  symptom="You're on correction round 4. The agent keeps making the same mistake with slight variations."
+>
+  (1) Clear the session immediately. (2) Before re-prompting, write down exactly what you want — on paper or in a scratch file. (3) Include: what the function should do, an example input/output pair, one specific constraint the agent kept violating. (4) Re-prompt with this more precise request. The cost is a few minutes; the cost of pushing through a fifth correction round is always higher.
+</Recovery>
+
+### 4. The permanent prototype
+
+**Symptom:** code has been "working" for weeks but has no tests, no type hints, no error handling. "We'll add those later" becomes permanent.
+
+**Root cause:** the exploration phase has no defined exit criteria. Without an explicit transition, the code accumulates users and dependencies while remaining at prototype quality.
+
+**Prevention:** explicit phase transitions in the briefing doc, with graduation checklists and target dates. Covered in [Ch 5 Edit-Test-Commit](/05-edit-test-commit/).
+
+<Recovery
+  pattern="Permanent prototype"
+  symptom="Your project has been in 'exploration' mode for six weeks. It has users. It has no tests."
+>
+  (1) Add a DEVELOPMENT phase to the briefing doc today, effective immediately. (2) Have the agent write characterization tests for the three most critical functions. (3) Add a hook that gates commits on those tests passing. (4) You now have a safety net. Refactor incrementally from here.
+</Recovery>
+
+### 5. The verification gap
+
+**Symptom:** agent-generated code accepted without testing. Subtle bugs surface in production weeks later.
+
+**Root cause:** AI-generated code *looks* correct. The syntax is clean, variable names reasonable, logic reads well. This appearance of correctness is precisely why verification is essential — the bugs are subtle, not obvious.
+
+**Prevention:** always provide verification criteria in the prompt, tests with code (not after), hook-enforced test requirements. Full treatment in [Ch 5 Edit-Test-Commit](/05-edit-test-commit/).
+
+<Recovery
+  pattern="Verification gap"
+  symptom="You have 1,500 lines of untested agent-generated code. It 'works' but you have zero confidence in it."
+>
+  (1) Do NOT try to test everything at once. (2) Identify the 3 most critical functions (highest risk, most dependencies). (3) Have the agent write tests for those 3 functions only. (4) Add a hook gating commits on tests. No new untested code from here on. (5) Expand coverage incrementally — 3 more functions per week until the backlog is cleared.
+</Recovery>
+
+### 6. Infinite exploration
+
+**Symptom:** you asked the agent to "investigate" something without scoping. It reads 40 files, filling the context window with exploration results that crowd out implementation.
+
+**Root cause:** unbounded investigation prompts give the agent no stopping criteria. Every related file gets read; context that should be reserved for the actual task is consumed.
+
+**Prevention:** scope investigations narrowly with explicit deliverables. Use subagents for exploration so research context doesn't consume your main session.
+
+<Recovery
+  pattern="Infinite exploration"
+  symptom="You asked the agent to 'look into' something and it has read 40 files. Your context is full of exploration results and you haven't started the actual task."
+>
+  (1) Clear the session immediately. (2) Re-prompt with a scoped question and explicit deliverables ("which files handle token refresh, what's the lifecycle, can I reuse existing code for Google OAuth — report in under 200 words"). (3) Or delegate to a subagent so exploration runs in isolated context and only the summary returns to your session.
+</Recovery>
+
+### 7. Big-bang refactoring
+
+**Symptom:** a large rewrite fails partway through, leaving the codebase broken.
+
+**Root cause:** the scope of the rewrite exceeds what can be held in context. The agent loses track of the original behavior and introduces regressions.
+
+**Prevention:** incremental refactoring — extract one function, write characterization tests, refactor, verify, commit. Each step independently shippable. Characterization-test mechanics are covered in [Ch 5 Edit-Test-Commit](/05-edit-test-commit/); the full four-step refactoring protocol (extract → test → harden → promote) is covered in [Ch 10 Starting and Refactoring Projects](/10-starting-and-refactoring/).
+
+<Recovery
+  pattern="Big-bang refactoring"
+  symptom="You're 3 hours into a rewrite. Half the tests fail. Old code and new code are tangled together."
+>
+  (1) `git stash` the current mess. (2) Return to the last working commit. (3) Start the incremental protocol: extract ONE function, write characterization tests, refactor, verify, commit. (4) Repeat. Each step takes ~25 minutes and always leaves the code in a working state.
+</Recovery>
+
+### 8. Trusting the briefing doc untested
+
+**Symptom:** you added a rule to your briefing doc weeks ago. You assume it's in force. It isn't.
+
+**Root cause:** a rule in the briefing doc is *advisory* — the agent is told to follow it, not prevented from violating it. Rules that are too vague, buried among competing rules, or contradicted by codebase patterns silently fail.
+
+**Prevention:** test every new rule immediately after adding it.
+
+<Recovery
+  pattern="Untested briefing-doc rule"
+  symptom="You find out weeks later that a rule in your briefing doc hasn't been working — the agent has been quietly violating it."
+>
+  Institute the smoke test + adversarial test as habit. **Smoke test:** after adding any rule, start a fresh session, ask the agent to do the thing the rule governs *without mentioning the rule*, check whether it's followed. **Adversarial test:** for security/compliance rules, ask the agent to do something the rule prohibits and check whether it refuses. If either test fails, the rule isn't working — make it more specific, move it into a hook, or use harness-level deny rules (`settings.json` in Claude; equivalent in your tool) for anything load-bearing.
+</Recovery>
+
+<SkillBox title="The smoke test for every new briefing-doc rule">
+  Every new rule is an assumption until tested. After adding a rule: (1) clear and start a fresh session; (2) ask for the behavior the rule governs without citing the rule; (3) observe whether the rule fires. If yes, ship it. If no, the rule is vague, buried, or contradicted — fix before moving on. Instituting this as habit saves weeks of silently-failing rules later.
+</SkillBox>
+
+<TryThis title="Audit your most active project">
+  Take ten minutes and run the four-part audit: (1) count lines in your briefing doc — over 300 flags for splitting; (2) check your last 5 sessions — how many had 3+ correction rounds? (3) is your project in an explicit development phase, or a permanent-prototype state with no tests? (4) identify the single anti-pattern above that's most affecting your productivity *right now* — apply its Recovery procedure today.
+</TryThis>
+
+## Evolution
+
+Anti-patterns are the *most* tool-agnostic territory in the book. The failure modes are properties of agent-as-bounded-system, not of any specific product.
+
+<Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+  Seven of the eight anti-patterns above occur on all three CLIs with essentially identical symptoms. Context overload, kitchen-sink sessions, over-correcting, permanent prototypes, verification gaps, infinite exploration, big-bang refactoring — these are bounded-system problems, not product problems. The recovery procedures port across tools with only minor command changes. Write your team's anti-pattern playbook once; it works everywhere.
+</Convergence>
+
+**Convergence: the four-layer diagnosis.** Prompt → briefing doc → codebase → model is universal. The briefing-doc filename changes (CLAUDE.md / GEMINI.md / AGENTS.md); the layer it represents doesn't. When a team has internalized the layered diagnosis, their debugging-the-agent time drops dramatically because they stop jumping to Layer 4 prematurely.
+
+<Divergence axis="enforcement mechanism for non-negotiables">
+  Claude Code offers deep hook surface (`PreToolUse`, `PostToolUse`, etc.) + `settings.json` deny rules enforced by the harness — non-negotiables can be made literally impossible to violate. Gemini CLI uses tool-level allowlists + lighter hooks. Codex CLI uses command-approval config. For the "briefing-doc rule keeps being ignored" anti-pattern, the escalation path differs: Claude → hook or deny-rule; Gemini → tighter allowlist; Codex → explicit per-command approval. Same principle, different hammers.
+</Divergence>
+
+<Divergence axis="session-clear cost">
+  The cost of `/clear` varies subtly across tools. Claude Code's session-resume story (`--continue`, `--from-pr`) makes clear-and-restart cheaper. Gemini's session persistence is newer; Codex's is minimal. If your recovery from the kitchen-sink anti-pattern is friction-heavy on your tool, that's a signal to invest in handoff-file discipline (CURRENT_WORK.md) so clearing carries less penalty.
+</Divergence>
+
+**Emerging: automated anti-pattern detection.** Some teams have started instrumenting their agent sessions to auto-flag anti-patterns in real time — "you've corrected the same issue three times, consider clearing" or "this session has touched 12 files; kitchen-sink warning." The tooling is hand-rolled in 2026; expect first-class product support by 2027.
+
+<CaseStudy date="2026-02">
+  A team that had been struggling with "the model keeps failing" on the same refactor problem worked through the four-layer diagnosis. Layer 1 (prompt): ambiguous. Rephrased — still failed. Layer 2 (briefing doc): no explicit rule about the pattern they wanted. Added a rule — still failed. Layer 3 (codebase): 200 lines of existing code using the anti-pattern; the agent was faithfully following the codebase teacher. Fix was to name the exception explicitly in the briefing doc: "Do NOT follow the pattern in `src/legacy/`. Use the pattern in `src/v2/` instead." Instant success. Before the layered diagnosis they would have concluded the model was wrong; after it, they found the codebase was teaching contradictory lessons.
+</CaseStudy>
+
+### How these anti-patterns scale
+
+These are *personal* anti-patterns. When you scale agent-assisted work to a team, new patterns emerge — and the solutions shift from personal discipline to organizational infrastructure. Shared briefing docs, team hook libraries, enforced phase transitions, code-review guidelines that surface verification gaps. That scope is beyond this chapter, but the pattern is: individual-level anti-patterns become team-level infrastructure requirements as you scale.
+
+## Quick reference
+
+- The agent is a powerful but **bounded** system. Most anti-patterns arise from forgetting the bounds.
+- Four-layer diagnosis: prompt → briefing doc → codebase → model. Most failures resolve at Layer 1 or 2 — check those before blaming the model.
+- **Context overload:** keep the hub briefing doc under 300 lines; offload specifics to path-scoped rules.
+- **Kitchen-sink session:** one session per logical task; clear between.
+- **Over-correcting:** two-failure rule; after two rounds, clear and re-prompt with precision.
+- **Permanent prototype:** declare phases explicitly; set graduation checklists.
+- **Verification gap:** every agent-generated change earns verification criteria; no exceptions.
+- **Infinite exploration:** scope investigations with deliverables; delegate unbounded research to subagents.
+- **Big-bang refactoring:** incremental protocol; each step independently shippable.
+- **Untested briefing-doc rule:** smoke-test every new rule before trusting it.
+- Most anti-patterns are tool-agnostic — the recovery procedures port across Claude, Gemini, and Codex with only minor command changes.

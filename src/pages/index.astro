@@ -1,0 +1,258 @@
+---
+// Stage 0 visual demo — Tufte layout + 6 callout components (commit 8).
+import Base from '../layouts/Base.astro';
+import SkillBox from '../components/callouts/SkillBox.astro';
+import CaseStudy from '../components/callouts/CaseStudy.astro';
+import ConceptBox from '../components/callouts/ConceptBox.astro';
+import KeyIdea from '../components/callouts/KeyIdea.astro';
+import TryThis from '../components/callouts/TryThis.astro';
+import Recovery from '../components/callouts/Recovery.astro';
+import Convergence from '../components/callouts/Convergence.astro';
+import Divergence from '../components/callouts/Divergence.astro';
+import Sidenote from '../components/Sidenote.astro';
+import Citation from '../components/Citation.astro';
+---
+
+<Base
+  title="book-template-astro · Stage 0 design tokens"
+  description="Scaffold for long-form technical books with Tufte-inspired typography, typed pedagogical callouts, and a mobile-first responsive reading experience."
+>
+  <article class="prose">
+    <h1>book-template-astro</h1>
+    <p>
+      <strong>Stage 0 · commit 3 of 19.</strong> This page now uses the
+      Tufte 2-column layout. On desktop, sidenotes live in the right
+      margin alongside their referencing paragraph. On mobile, they
+      reflow inline as visually-distinct asides — always visible,
+      nothing hidden, no tap required.
+    </p>
+
+    <h2>Tufte layout + sidenotes</h2>
+    <p>
+      This paragraph demonstrates the 2-column grid. The main text is
+      constrained to about <code>65ch</code> — the long-form reading
+      measure — while the right margin holds notes at
+      <code>28ch</code>.<Sidenote>This note sits in the right margin on desktop. Resize your browser below <code>48rem</code> and watch it reflow inline as a colored aside with a left-bar.</Sidenote>
+      The layout is pure CSS — no JavaScript is required to position
+      or reveal sidenotes. They are always present in the document
+      flow; the only thing that changes across breakpoints is where
+      they sit.
+    </p>
+    <p>
+      The philosophy is Gwern's<Citation src="gwern-sidenote" />
+      sidenotes should display by default, and any reader effort
+      defeats the point. Click-to-reveal patterns turn a sidenote
+      into an endnote with extra steps.
+    </p>
+    <p>
+      The typographic conventions that make this work trace back to
+      Edward Tufte's book design<Citation src="tufte-css" /> and
+      through Dave Liepmann's CSS port. On phone-width screens there
+      is no margin to float into, so the note becomes an inline aside
+      rather than being hidden behind a tap.
+    </p>
+
+    <h3>How it works</h3>
+    <p>
+      On desktop, <code>.sidenote</code> uses <code>float: right</code>
+      with a negative <code>margin-right</code> to push into the space
+      beyond the main text column. Below <code>48rem</code>, the media
+      query unsets the float and styles the element as a colored
+      inline block immediately after its position in the document.
+    </p>
+
+    <h2>Warm Tol palette</h2>
+    <p>
+      Five semantic hues inherited from the LaTeX book. Colorblind-safe
+      (Tol Bright base).
+    </p>
+    <div class="swatches">
+      <div class="swatch" style="background: var(--warm-blue)">
+        <strong>Blue</strong><br /><code>#3B6FA0</code><br /><small>structural · info</small>
+      </div>
+      <div class="swatch" style="background: var(--warm-rose)">
+        <strong>Rose</strong><br /><code>#C06858</code><br /><small>attention · warning</small>
+      </div>
+      <div class="swatch" style="background: var(--warm-green)">
+        <strong>Green</strong><br /><code>#4A7E3F</code><br /><small>positive · tip</small>
+      </div>
+      <div class="swatch" style="background: var(--warm-plum)">
+        <strong>Plum</strong><br /><code>#8A4E82</code><br /><small>authority · official</small>
+      </div>
+      <div class="swatch" style="background: var(--warm-gold)">
+        <strong>Gold</strong><br /><code>#C09840</code><br /><small>insight · convergence</small>
+      </div>
+    </div>
+
+    <h2>Callout tints</h2>
+    <p>Soft 6% blends with paper, used as callout backgrounds with a colored left-bar.</p>
+    <div class="callout-previews">
+      <div class="cp" style="background: var(--warm-blue-tint); border-left: 3px solid var(--warm-blue);">Info tint</div>
+      <div class="cp" style="background: var(--warm-rose-tint); border-left: 3px solid var(--warm-rose);">Warn tint</div>
+      <div class="cp" style="background: var(--warm-green-tint); border-left: 3px solid var(--warm-green);">Tip tint</div>
+      <div class="cp" style="background: var(--warm-plum-tint); border-left: 3px solid var(--warm-plum);">Official tint</div>
+      <div class="cp" style="background: var(--warm-gold-tint); border-left: 3px solid var(--warm-gold);">Insight tint</div>
+    </div>
+
+    <h2>Typography</h2>
+    <p>
+      Body text in Roboto Variable, self-hosted via
+      <code>@fontsource-variable</code>. Line height is <code>1.6</code>
+      — targeting long-form reading.<Sidenote>Variable fonts collapse 9 weight files into one, saving bandwidth. Self-hosted means no external CDN call at runtime.</Sidenote>
+      Paragraphs indent by <code>1em</code> with zero vertical gap,
+      except the first paragraph after a heading (standard book
+      typography).
+    </p>
+    <p>
+      This second paragraph indents at the start, visually marking it
+      as continuation rather than a fresh topic. Inline
+      <code>monospace code</code> renders in Source Code Pro Variable
+      with subtle background and border.
+    </p>
+
+    <h3>Code block</h3>
+    <pre><code>{`function greet(name: string): string {
+  return \`Hello, \${name}\`;
+}
+
+greet("reader");  // → "Hello, reader"`}</code></pre>
+
+    <h3>Blockquote</h3>
+    <blockquote>
+      Sidenotes should display by default — any user effort defeats the
+      point. — Gwern (on mobile footnote UX)
+    </blockquote>
+
+    <h3>Table</h3>
+    <table>
+      <thead>
+        <tr><th>Tool</th><th>Context window</th><th>Briefing file</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Claude Code</td><td>200K</td><td><code>CLAUDE.md</code></td></tr>
+        <tr><td>Gemini CLI</td><td>1M</td><td><code>GEMINI.md</code></td></tr>
+        <tr><td>Codex CLI</td><td>128K</td><td><code>AGENTS.md</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2>Callouts · batch 1</h2>
+    <p>
+      Six visual-block callouts. Each uses the palette's semantic role
+      (green = tip, blue = info, plum = authority, rose = warning)
+      plus shared padding and left-bar treatment.
+    </p>
+
+    <SkillBox title="Warm-cache workflow">
+      Before a long session, reserve the first ~40% of context for the
+      stable briefing materials (CLAUDE.md, project rules). Run
+      <code>/context</code> to confirm the budget before loading any
+      chapter-specific files.
+    </SkillBox>
+
+    <CaseStudy date="2026-02">
+      When Gemini shipped the 1M-token context window, several teams
+      immediately filled it to near-capacity and watched retrieval
+      accuracy collapse. The lesson: a bigger window doesn't mean you
+      should use it.
+    </CaseStudy>
+
+    <ConceptBox term="Context rot">
+      The progressive degradation of agent output as the KV-cache
+      fills. Observable as drift, forgotten early-context references,
+      or incoherent code. Distinct from context overflow.
+    </ConceptBox>
+
+    <KeyIdea>
+      Context is a budget, not an infinity. Treat it like a finite
+      resource: account for it, spend it deliberately, reclaim it
+      when drift sets in.
+    </KeyIdea>
+
+    <TryThis title="Audit your context budget">
+      Open a chapter from your current work and run <code>/context</code>.
+      What percentage is already filled? What would you evict first?
+    </TryThis>
+
+    <Recovery
+      pattern="CLAUDE.md bloat"
+      symptom="Compaction triggers every 3 turns; new features land with context rot; old rules get forgotten mid-session."
+    >
+      Split CLAUDE.md into hub-and-spoke. Move project specifics to
+      <code>.claude/rules/*.md</code> with path-scoped loading. Keep
+      the hub under 200 lines.
+    </Recovery>
+
+    <h2>Callouts · batch 2 (comparative)</h2>
+    <p>
+      Two callouts specifically for the Evolution cornerstone of each
+      chapter: Convergence (tools agree — stable principle) and
+      Divergence (tools differ — open design space). Both use the
+      gold palette; a dashed left-bar on Divergence signals instability.
+    </p>
+
+    <Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+      All three tools now treat context as a budgeted, decaying
+      resource, and each ships an explicit compaction command. You can
+      safely write practices that assume this.
+    </Convergence>
+
+    <Divergence axis="context window size">
+      Claude: 200K · Gemini: 1M · Codex: 128K. The tradeoff between
+      retrieval accuracy (smaller works better) and ceiling (larger
+      fits more) is not yet settled — practice still varies.
+    </Divergence>
+
+    <hr />
+
+    <h2>Status — Stage 0 complete</h2>
+    <p>
+      All 19 commits in Stage 0 have landed. The scaffold is at
+      v0.1-stage0-complete. Next: Stage 1 ports Ch 5 "Context as
+      Currency" from the existing LaTeX book to validate the
+      Koller-Friedman pedagogy on real content.
+    </p>
+    <p>
+      Browse <a href="/chapters/">all chapters</a> grouped by Part, with
+      volatility and freshness metadata on every card. The
+      <a href="/convergence/">convergence dashboard</a> tracks which
+      agentic-coding patterns have landed in which tools. Or visit
+      <a href="/00-design/">the design chapter</a> to see every component
+      through the routing pipeline. Open <a href="/search/">/search/</a>
+      to try full-text search. Toggle dark mode (top-right ☀/☾) or the
+      version dropdown (top-right v). Resize to phone width to watch
+      sidenotes reflow as inline asides.
+    </p>
+  </article>
+</Base>
+
+<style>
+  /* Demo-specific styles (palette swatches + callout tint previews).
+   * Real callout components arrive in commits 8–10. */
+  .swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: var(--space-2);
+    margin: var(--space-4) 0;
+  }
+  .swatch {
+    color: white;
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+  }
+  .swatch code {
+    background: rgba(0, 0, 0, 0.2);
+    color: white;
+    border: 0;
+  }
+  .callout-previews {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: var(--space-2);
+    margin: var(--space-4) 0;
+  }
+  .cp {
+    padding: var(--space-3) var(--space-4);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    font-size: var(--text-sm);
+  }
+</style>

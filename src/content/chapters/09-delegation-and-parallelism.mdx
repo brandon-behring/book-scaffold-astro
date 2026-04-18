@@ -1,0 +1,190 @@
+---
+title: Delegation and parallelism
+part: 3
+chapter: 9
+volatility: architectural-pattern
+tools_compared: [claude-code, gemini-cli, codex-cli]
+last_verified: 2026-04-17
+sources: []
+description: "The fix for context rot is not a bigger window — it is more, shorter conversations. This chapter is about the two mechanics that make horizontal scaling practical: subagent delegation within a session, and parallel sessions across worktrees. Go wide, not deep."
+draft: false
+---
+
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import CaseStudy from '../../components/callouts/CaseStudy.astro';
+import ConceptBox from '../../components/callouts/ConceptBox.astro';
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+import Recovery from '../../components/callouts/Recovery.astro';
+import Convergence from '../../components/callouts/Convergence.astro';
+import Divergence from '../../components/callouts/Divergence.astro';
+import Sidenote from '../../components/Sidenote.astro';
+
+*There is a ceiling on how much work a single session can do before context rot sets in. The instinct is to push the ceiling higher — use the 1M window, compact aggressively, add more discipline. The insight is the opposite: stop trying to scale the single session and scale the number of sessions instead. This chapter is about the two mechanics that make horizontal scaling practical — delegating within a session to a subagent, and running sessions side-by-side across isolated worktrees.*
+
+## Representation
+
+[Context as Currency](/02-context-as-currency/) made the case that context decays non-linearly. The consequence — understated there, fleshed out here — is that the best response to "this task is too big for one session" is almost never "make the session bigger." It is "make the tasks smaller and run more of them."
+
+<ConceptBox term="Horizontal scaling">
+  Running many short, focused sessions in parallel or sequence rather than one long session. Each short session starts with a clean attention budget, a focused context, and a specific deliverable. Durable artifacts (briefing doc, handoff files, git commits) bridge between sessions; the conversations themselves stay bounded.
+</ConceptBox>
+
+Two mechanics enable horizontal scaling:
+
+**Subagent delegation.** A child agent spawned from inside a session with its own isolated context, tools, and sometimes its own git worktree. The child works on a bounded sub-task and returns a summary; the research or exploration context does not pollute the parent. Delegation is *within-session* scaling.
+
+**Parallel sessions.** Multiple independent agent sessions running side-by-side, each with its own context, usually in its own git worktree to prevent file conflicts. Each session owns a logical workstream. This is *cross-session* scaling.
+
+<KeyIdea>
+  The context window is not a workspace; it is a conversation. Conversations degrade over time. The solution is not a bigger window; it is shorter, more focused conversations with durable artifacts bridging between them. Think of each session as a function call: clear inputs (briefing doc + handoff file), focused execution, clear outputs (commits + handoff for next session).
+</KeyIdea>
+
+### When to go wide vs when to go deep
+
+Not every task scales horizontally. Two legitimate shapes:
+
+**Go wide (multiple short sessions)** when the tasks are independent, can be serialized with handoff files, or naturally factor into parallelizable sub-problems. Examples: implementing separate features, reviewing multiple PRs, batch operations across files, porting chapters.
+
+**Go deep (one long session)** when the task requires continuous reasoning across many interconnected decisions that would lose coherence if split. Examples: debugging a subtle concurrency bug where every clue informs the next, designing a complex API where each endpoint's shape depends on the others, working through a proof or derivation.
+
+Default to wide. Most work decomposes into independent units better than practitioners expect. The two-minute overhead of writing a handoff file is almost always less than the cost of context degradation in a three-hour session.
+
+### The delegation economics
+
+Subagent delegation has a specific economic profile worth internalizing. Spawning a child agent costs:
+
+- **Startup overhead**: the child's briefing doc re-injection, its own system prompt, initial tool registration — usually ~8–15K tokens. Not cheap; not ruinous.
+- **Result summarization**: whatever the child did has to compress into a return value the parent can act on. Long child-sessions that produce vague summaries waste the delegation.
+- **Context switching**: the parent pays a small attention cost when re-engaging after the child returns.
+
+The delegation pays back when the avoided cost — the tokens the parent would have consumed doing the work itself — exceeds the startup + summary cost. For a well-scoped research task that would have taken the parent 40K tokens of file-reading, a subagent with 15K startup and a 2K summary saves ~23K tokens net. For a trivial task that would have taken the parent 3K tokens, delegation is a net loss.
+
+<KeyIdea>
+  Delegate when the task involves reading many files, exploring unfamiliar code, or running speculative experiments — the research has high context cost but can compress into a short summary. Do not delegate tasks where the outcome is itself the context the parent needs (e.g. making an edit that the parent will build on directly). The test: if the child's *result* is a few hundred tokens, the delegation pays. If the child's result is a thousand lines of code you need to keep working with, just do it in the parent session.
+</KeyIdea>
+
+## Operation
+
+### Tri-tool delegation surface
+
+| Primitive | Claude Code | Gemini CLI | Codex CLI |
+| --- | --- | --- | --- |
+| Spawn subagent within session | `Task` tool (with `subagent_type`) | agent-chaining via prompts | Agents SDK for programmatic; limited in-CLI |
+| Subagent context isolation | yes, first-class | prompt-level | via Agents SDK |
+| Subagent worktree isolation | `isolation: worktree` frontmatter | via explicit `git worktree add` | via explicit `git worktree add` |
+| Built-in git worktree flag | `--worktree` / `-w` (v2.1.49+) | manual `git worktree add` | manual `git worktree add` |
+| Agent-team coordination | Agent Teams feature | manual | Agents SDK |
+| Resume parallel session | `claude --continue` / `--resume` | `gemini --continue` | `codex resume` |
+
+### Subagent patterns
+
+The mental model: a subagent is a function call with bounded input, a clear contract, and a short return value.
+
+```text
+You:   "Delegate a search: use a subagent to find every file in
+        src/features/ that uses pandas (not polars). Report a
+        bullet list of paths plus the pattern used in each. Do
+        not edit anything."
+
+[Agent spawns subagent with Task(subagent_type='general-purpose', ...)]
+[Subagent reads src/features/, greps, builds list, returns summary]
+
+Agent: "Found 7 pandas usages: ..."
+       [200-token summary in parent context;
+        parent's context is unchanged from before the task]
+```
+
+The *contract* matters — the prompt to the subagent specifies exactly what the deliverable looks like ("bullet list of paths plus pattern"). Without a contract, the subagent may return 2,000 tokens of exploration results, and you've turned delegation into pollution.
+
+<SkillBox title="Subagent prompts are tighter than main prompts">
+  A prompt to a subagent should be *tighter* than a prompt to the main agent because the subagent has no session context to disambiguate against. It needs: (1) the exact scope (files, directories, or question), (2) the exact deliverable format ("return a bullet list of X; do not include Y"), (3) any hard constraints ("do not edit anything", "stop after 20 files"), (4) the success criterion ("return as soon as you have the list; don't try to analyze"). A subagent prompt that doesn't specify the return format ends up returning too much.
+</SkillBox>
+
+<SkillBox title="The research-delegate-return loop">
+  For any task that will involve substantial file-reading or exploration: (1) write the question you need answered in one sentence; (2) delegate the research to a subagent with that question + a deliverable format; (3) when the subagent returns, work in the parent session with the summary as input. This preserves the parent's attention for the actual decision or edit the question was in service of. Claude Code has first-class support via `Task`; Codex supports this via the Agents SDK; Gemini approximates with explicit prompt structuring.
+</SkillBox>
+
+### Parallel-session patterns
+
+Multiple independent agent sessions, each in its own git worktree, working on separate workstreams. Each session reads the same briefing doc (so conventions propagate automatically) and writes to an isolated branch.
+
+**The canonical flow**:
+
+1. Identify 3–5 independent tasks (fix bug A, add feature B, refactor module C).
+2. For each, spin up a worktree-isolated session: `claude --worktree fix-bug-a` (or `git worktree add` + agent launch for the other CLIs).
+3. Each session completes its task and commits. No file conflicts because worktrees isolate the filesystem.
+4. Merge each session's branch into main via PR or direct merge.
+
+Claude Code's v2.1.49 `--worktree` flag makes this a single command. Gemini and Codex require the manual `git worktree add` incantation but the outcome is the same.
+
+<SkillBox title="Handoff files for cross-session continuity">
+  When one session's output feeds the next, write a handoff file before clearing. The minimal shape: `CURRENT_WORK.md` with four sections — *Right now* (one-line state), *Why* (the reason this task exists), *Next step* (the specific thing the next session should do first), *Context when I return* (pointers to files, commits, or open questions). Two minutes to write; saves ten minutes of re-discovery on the next session. The handoff file is durable in a way session memory is not.
+</SkillBox>
+
+<Recovery
+  pattern="Subagent explosion"
+  symptom="You're spawning 10+ subagents per session; your main context is still growing from summaries; the agent is spending most of its time coordinating rather than producing."
+>
+  Delegation has a sweet spot. Too few subagents (do everything in parent) costs context; too many (delegate everything) costs coordination overhead. Recalibrate: subagents should be *rare but meaningful*. A single delegation for "investigate this 40-file question" is excellent; five delegations for small per-file questions is worse than doing them in the parent. Rule of thumb: one subagent per distinct research question, not one per file.
+</Recovery>
+
+<Recovery
+  pattern="Parallel sessions stepping on each other"
+  symptom="You have three sessions running; two are editing overlapping files; merge conflicts are starting to appear; one session's output is invalidating another's analysis."
+>
+  Worktree isolation is the right primitive. If you're running parallel sessions without worktrees, stop; each session should have its own isolated filesystem copy. With worktrees, the filesystem is clean, but *logical* conflicts can still appear (two sessions make architecturally-incompatible choices). Fix: up-front task decomposition. If two tasks edit the same subsystem, they are not actually parallelizable — run them sequentially with a handoff file between.
+</Recovery>
+
+<TryThis title="The five-session experiment">
+  Pick a working day with at least five independent tasks on your list. Instead of doing them sequentially in one session, run five parallel sessions in worktrees. Constraint: each session must complete or checkpoint within 30 minutes. Track what you notice: which tasks actually parallelized cleanly vs which had hidden dependencies, how often you context-switched between sessions, whether the aggregate throughput beat your usual sequential rhythm. Most practitioners find the answer is yes — meaningfully yes.
+</TryThis>
+
+## Evolution
+
+Horizontal scaling is a *practice* convergence ahead of a *product* convergence. The insight — many short sessions beat one long one — is now widely shared; the tooling to make it frictionless is still mostly Claude-first.
+
+<Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+  The *principle* — conversations degrade over time, bound them and bridge between them — is universal. All three CLIs support session resume, briefing-doc persistence, and git-workflow integration adequate for a horizontal-scaling practice. The handoff-file pattern is tool-agnostic. The *tooling* for delegation and parallelism is still more mature in Claude Code, but the practice ports: you can run the five-session workflow on Gemini or Codex today; you'll just manage some of the plumbing yourself.
+</Convergence>
+
+**Convergence: git worktrees as the filesystem-isolation primitive.** All three tools treat git worktrees as the right mechanism for filesystem-level parallelism. Claude Code has built-in CLI support (`--worktree` / `-w` since v2.1.49, Feb 2026). Gemini and Codex rely on `git worktree add` + manual session launch. The outcome is identical; the keystrokes differ.
+
+<Divergence axis="subagent support depth">
+  Claude Code ships subagents as first-class: a `Task` tool with `subagent_type` selector, frontmatter-configured isolation (`isolation: worktree`), and the Agent Teams feature (v2.1.32+) for coordinated multi-agent workflows. Codex has the Agents SDK — a programmatic API that's more SDK-than-CLI; excellent for automation, less ergonomic for interactive use. Gemini's subagent story is less formalized today; practitioners simulate via explicit prompt structuring. For interactive delegation workflows, Claude's surface is clearly ahead; for programmatic agent orchestration, Codex's Agents SDK is competitive.
+</Divergence>
+
+<Divergence axis="CLI worktree ergonomics">
+  Claude Code's `--worktree` flag is a single keystroke: `claude -w feature-x` creates the worktree, switches into it, and starts the agent with the worktree's filesystem visible. Gemini and Codex users run `git worktree add ../feature-x feature-x && cd ../feature-x && gemini` (or equivalent). For occasional parallel work, the extra commands are trivial; for developers who genuinely work in 5+ parallel streams daily, the Claude ergonomics compound.
+</Divergence>
+
+<Divergence axis="agent-team coordination">
+  Claude Code's Agent Teams feature formalizes multi-agent orchestration: a lead agent coordinates multiple worker agents, each in their own worktree, and merges their results. This is genuinely novel in 2026 and has no direct equivalent in Gemini or Codex. Those tools can simulate via MCP-coordinated external orchestrators, but the first-class team abstraction is Claude-specific. Expect imitation within 12 months; the pattern is too useful to remain sole-vendor.
+</Divergence>
+
+**Emerging: handoff-file automation.** A few practitioners are experimenting with auto-generated handoff files — the agent produces the *Right now / Why / Next step / Context* sections at session-end automatically, based on the session transcript. The output is uneven today; the human-written version is usually better. But as models improve at meta-cognition over their own sessions, expect automated handoff to become a viable shortcut.
+
+<CaseStudy date="2026-02">
+  A team running five-to-ten parallel sessions per developer adopted a discipline they called "one task, one worktree, one commit." Every workstream lives in its own worktree; every worktree produces exactly one commit to its branch; every branch merges via PR. After three months, the team reported that their *merge-conflict rate* had declined meaningfully despite the higher parallelism — because worktree isolation removed the conflict class, and because each session's scope was bounded enough that architectural collisions surfaced at the PR stage rather than in the filesystem. Lesson: horizontal scaling is not only a context-hygiene practice; it is a collaboration-hygiene practice.
+</CaseStudy>
+
+### When delegation goes wrong
+
+Three failure modes to watch for:
+
+**Over-delegation.** Spawning subagents for tasks the parent should have done directly. Signal: the parent's context keeps growing from summaries rather than work-in-progress. Fix: the decision rule above — delegate research, not implementation.
+
+**Under-contracted delegation.** Subagents that return too much. Signal: the parent gets a 2,000-token summary and has to re-summarize it. Fix: specify the deliverable format in the subagent prompt; treat it like an API call with a declared return shape.
+
+**Premature parallelization.** Running five sessions on tasks that turn out to be coupled. Signal: sessions start invalidating each other's analysis mid-work. Fix: decomposition gate. If you can't write a one-sentence summary of what each session will produce without referencing the others, they are not parallelizable — sequence with handoffs.
+
+## Quick reference
+
+- Horizontal scaling — many short sessions — beats vertical scaling — one long session — for most work.
+- Two mechanics: subagent delegation (within-session context isolation) and parallel sessions (cross-session filesystem isolation via worktrees).
+- Delegate when the task has high context cost (lots of files to read) and a compressible result (a short summary). Don't delegate when the output is itself what the parent needs to keep working with.
+- Subagent prompts are tighter than main prompts — specify the deliverable format explicitly.
+- Parallel sessions require worktree isolation. Without worktrees, "parallel" becomes "overlapping edits."
+- Handoff files (`CURRENT_WORK.md`) bridge between sessions cheaply. Two minutes to write saves ten minutes of re-discovery.
+- Claude Code has the most ergonomic surface for delegation + worktree workflows today. The *practice* ports to Gemini and Codex; the plumbing is more manual.
+- Go wide by default. Go deep only when the task genuinely needs continuous reasoning across interconnected decisions.

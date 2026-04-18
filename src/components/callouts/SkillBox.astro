@@ -1,0 +1,24 @@
+---
+/**
+ * SkillBox — tactical how-to. Bounded, practitioner-oriented.
+ *
+ * Used when a chapter teaches a concrete technique: "How to warm the
+ * cache before a long session", "How to audit CLAUDE.md bloat", etc.
+ * Deliberately narrower than the surrounding prose — a skill box is a
+ * recipe, not a principle.
+ *
+ * Usage:
+ *   <SkillBox title="Warm-cache workflow">
+ *     1. Run `/context` to see current budget.
+ *     2. ...
+ *   </SkillBox>
+ */
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+---
+<aside class="callout callout-skill" role="note" aria-label={`Skill: ${title}`}>
+  <strong class="callout-title">Skill · {title}</strong>
+  <div class="callout-body"><slot /></div>
+</aside>

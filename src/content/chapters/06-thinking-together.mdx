@@ -1,0 +1,277 @@
+---
+title: Thinking together
+part: 2
+chapter: 6
+volatility: stable-principle
+tools_compared: [claude-code, gemini-cli, codex-cli]
+last_verified: 2026-04-17
+sources: []
+description: "The shift from configure-delegate-verify to think-together-discover-build-better. How to use an agent as a thinking partner rather than a configurable tool — structuring collaboration to counteract sycophancy, surface hidden assumptions, and produce better decisions than either party alone."
+draft: false
+---
+
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import CaseStudy from '../../components/callouts/CaseStudy.astro';
+import ConceptBox from '../../components/callouts/ConceptBox.astro';
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+import Recovery from '../../components/callouts/Recovery.astro';
+import Convergence from '../../components/callouts/Convergence.astro';
+import Divergence from '../../components/callouts/Divergence.astro';
+import Sidenote from '../../components/Sidenote.astro';
+
+*Your prompts are precise, your briefing doc is tuned, your tests pass. But every interaction follows the same pattern — you delegate, the agent executes, you verify. Something is missing. You are using the agent as a tool you configure, not a collaborator you think with. The techniques in this chapter are about the shift: from configure-delegate-verify to think-together-discover-build-better.*
+
+## Representation
+
+Every chapter so far has answered *how do I get the agent to do what I want?* This one answers a different question: *how do I use the agent to think more clearly?*
+
+<ConceptBox term="The thinking mirror">
+  The agent reflects your codebase, your prompts, and your design back to you. Where the reflection is clear, your work is clear. Where it is distorted — where the agent misunderstands, guesses, or asks for clarification — you have found a documentation gap, a hidden assumption, or an unclear interface. The distortion is useful information, not a failure to handle.
+</ConceptBox>
+
+The shift from delegation to collaboration is subtle but consequential. A delegated task ends when the agent produces output. A collaborative task produces output *and* produces insight — about your code, your assumptions, your design. The insight is often the more valuable product.
+
+Three realities shape how collaboration actually works:
+
+**The agent has no sunk cost in your approach.** When a human colleague reviews your architecture decision, they inherit your preferences, your constraints, and usually some politeness. The agent inherits none of those. It will suggest the alternative you didn't consider — not because it's smarter, but because it has no investment in being polite about your first draft.
+
+**The agent agrees by default.** This is the most dangerous property to navigate. Present an approach with a preference attached ("I'm thinking Redis for caching") and the agent will explain why Redis is good. Present the same problem with a different preference and it will explain why that choice is good. Sycophancy is structural, not a quirk — the fix is not "ask for honesty" but "structure the prompt so honest comparison is the path of least resistance."
+
+**The agent has no memory between sessions** (and in long sessions, degraded memory within). Collaboration requires you to be explicit about context the agent cannot carry. The briefing doc is the always-loaded frame; handoff files carry session-to-session state; ADRs capture the reasoning so future sessions can re-derive decisions.
+
+<KeyIdea>
+  Articulation reveals gaps. The main cognitive benefit of working with an agent is not that it finds answers you can't — it's that explaining the problem precisely enough for the agent to work on it forces you to notice assumptions you hadn't stated. Rubber-duck debugging works because articulation is clarifying. Agent-as-duck works *better* because the duck talks back and asks questions you wouldn't ask yourself (because you already "know" the answer — and are sometimes wrong about what you know).
+</KeyIdea>
+
+### The honest caveat
+
+The agent is a thinking partner with no memory, a tendency to agree, and occasional confident wrongness. The techniques in this chapter work *because* they structure the collaboration to counteract those weaknesses — not despite them. Read every recommendation below as "do this to counter that failure mode," not "the agent is a brilliant collaborator and these are the etiquette rules."
+
+## Operation
+
+Five collaboration modes. Each is a prompt pattern, not a feature of any specific tool — they work across Claude Code, Gemini CLI, and Codex CLI because they operate on the *shape of the conversation*, not the tool's surface.
+
+### Mode 1: Hypothesis-driven debugging
+
+When a bug appears, the default instinct is to paste the traceback and say "fix this." This often works for shallow bugs. For deeper bugs, it produces patches that address symptoms rather than root causes.
+
+Structure the debugging conversation as hypothesis testing. Three hypotheses, one minimal test each, isolate which cause is real.
+
+```text
+I see a ValueError in feature_pipeline.py:47 — negative values in a
+feature that should be non-negative. Three hypotheses:
+  1. Log transform applied before clipping negative deltas.
+  2. Currency conversion introduces negatives for returns/refunds.
+  3. Timezone mismatch causes date subtraction overflow.
+
+Design a minimal test for each hypothesis. Run hypothesis 1 first —
+it's most likely given the stack trace.
+```
+
+The agent then runs the tests in order, and the first confirmation points to the root cause — not a symptom patch.
+
+<SkillBox title="Three hypotheses, minimal tests, isolate blame">
+  For any bug where the root cause isn't obvious: (a) name three hypotheses that could explain the symptom; (b) ask the agent to design the smallest possible test for each; (c) run the test for the most-likely hypothesis first; (d) when one confirms, fix the cause rather than patching the effect. This pattern compounds — the discipline of generating hypotheses before touching code is the skill, the agent just makes the tests cheap.
+</SkillBox>
+
+### Mode 2: Tests as thinking tools
+
+In [Ch 5](/05-edit-test-commit/), tests served verification: *does the code do what it claims?* Here, tests serve exploration: *what should the code do at all?*
+
+```text
+"Write tests for this function."                          ← verification framing
+"I'm not sure what should happen at the boundary. Write
+ 5 test cases exploring: empty input, single element,
+ duplicates, negatives, overflow. Which behaviors
+ surprise me?"                                            ← exploration framing
+```
+
+The second framing forces you to articulate expectations you hadn't stated. When a test case surprises you — the function does something you didn't expect — you've discovered a requirement that was implicit. The test didn't verify the code; it interrogated your assumptions.
+
+Property-based tests are particularly powerful here. "What invariants should *always* hold, regardless of input?" surfaces design decisions hiding as implementation details.
+
+### Mode 3: Surfacing hidden assumptions
+
+Every system rests on assumptions — about scale, usage patterns, what will never change. Most are invisible until they break.
+
+```text
+"Here is my feature store schema. I designed it assuming:
+  (1) features are computed daily in batch, not real-time,
+  (2) training and serving use the same feature computation,
+  (3) feature drift is monitored externally.
+ Which assumption is most likely wrong in 6 months,
+ and what breaks when it does?"
+```
+
+Two specific prompts that compound across projects:
+
+**The pre-mortem.** "Imagine this feature has failed in production six months from now. What are the three most likely causes? Work backwards from failure to the design flaw that enabled it." Pre-mortems are more effective than post-mortems because they cost nothing and can change the design before commitment.
+
+**The Feynman test.** "Explain my auth flow as if I just joined the team and need to modify it. Where did you have to guess because the code doesn't make intent clear?" Gaps in the agent's explanation are gaps in your documentation. What the agent cannot explain, a new hire cannot understand.
+
+### Mode 4: Anti-sycophancy structures
+
+The most important collaboration skill. Three techniques, in increasing rigor:
+
+**Present options without a preference.**
+
+```text
+"We need a caching layer. The options are Redis, Memcached, and an
+in-process LRU cache. For each option, list: (1) what it handles
+well, (2) what it handles poorly, and (3) one scenario where it
+would be the wrong choice. Then recommend one, with the specific
+tradeoff that makes it better for our use case."
+```
+
+This has no obvious "right" answer for the agent to pattern-match to — it must reason about tradeoffs. The first formulation ("I think we should use Redis — what do you think?") has a correct answer (agree), which is the one you'll get.
+
+**Argue the other side.** After the agent recommends an approach, explicitly ask it to argue against:
+
+```text
+"Good analysis. Now argue against your recommendation. What's the
+strongest case for NOT using Redis here? What would have to be
+true about our workload for Memcached to be the better choice?"
+```
+
+This forces the agent to find real weaknesses in its own recommendation. If the counterargument is weak, the recommendation is probably sound. If it's strong, you've discovered a genuine tradeoff worth investigating before committing.
+
+**The devil's-advocate session.** For critical decisions, open a *separate* session with an explicit adversarial role:
+
+```text
+"You are a senior engineer who believes our current architecture
+decision (Redis caching layer) is wrong. Make the strongest possible
+case against it. Don't hold back — I need to hear the real risks
+before we commit."
+```
+
+The separate session matters. The original session has accumulated context that biases toward the decision; a fresh session with an adversarial frame produces genuinely different analysis.
+
+<KeyIdea>
+  The pattern generalizes: for any important decision, generate the recommendation in one session and the critique in another. The divergence between them is the measure of decision quality. If both agree, proceed with confidence. If they disagree sharply, you've found the crux of the decision — and it deserves more investigation before commitment.
+</KeyIdea>
+
+### Mode 5: The interview pattern
+
+For larger features, have the agent interview *you* before implementation.
+
+```text
+"I want to build a feature-drift monitoring system. Interview me
+in detail. Ask about:
+  - Technical implementation
+  - Data sources and schemas
+  - Edge cases and failure modes
+  - Tradeoffs I might not have considered
+ Keep interviewing until we've covered everything, then write a
+ complete spec to SPEC.md."
+```
+
+Once the spec is complete, start a *fresh* session to implement it. The new session has clean context focused on implementation; you have a written spec to reference; the ADR-style artifact captures what was decided and why.
+
+### Quick wins: making the agent a better reader
+
+Five investments that take minutes and compound across every future session:
+
+<SkillBox title="Docstrings as triple-duty documentation">
+  A good docstring serves you (in six months), the agent (right now), and teammates (always). The Args / Returns / Raises / Note structure matters; the Note section is the highest-value addition — it explains a design decision that might look like a bug. When the agent knows the intent, it won't misinterpret the implementation.
+</SkillBox>
+
+<SkillBox title="Error messages that debug themselves">
+  An error message that includes what went wrong, what was expected, what was received, and what the caller can do about it saves the agent the same investigation time it saves you. This is the fail-fast principle from [Ch 1](/01-agent-mental-model/) applied to agent collaboration: every error message is a tiny briefing doc for the next turn.
+</SkillBox>
+
+**Type hints as contracts.** Five seconds to write, five minutes of debugging saved. `window: int = 30` tells the agent the type, the default, and the name in five characters. Without it, the agent may pass a string, a float, or a `timedelta`.
+
+**Code archaeology for brownfield.** Instead of assuming legacy code is wrong, assume it's explained by something you don't yet see:
+
+```text
+"Why might the original author have written this as a nested loop
+instead of a join? What constraint explains this design choice?"
+```
+
+The agent often finds the constraint — database limitation, legacy API, performance requirement — that made the original design rational.
+
+**README-driven development.** Write the README first. Then: *"Read this README. What questions does a new developer still have after reading it?"* Gaps in the answer are gaps in your documentation.
+
+### ADRs: capturing alternatives considered
+
+When you make an architecture decision *with* the agent, the conversation captures not just what you decided but why, and what alternatives were considered. An Architecture Decision Record preserves this reasoning for your future self.
+
+```markdown
+# ADR-007: Offline Feature Computation
+
+## Context
+Feature computation runs in nightly batch. Some features
+are stale by 12 hours at serving time.
+
+## Decision
+Keep batch for training features. Add streaming for 3
+real-time features (last-login recency, cart value,
+session count).
+
+## Alternatives Considered
+1. All streaming (rejected: ~10× infrastructure cost).
+2. Faster batch, hourly (rejected: still stale).
+3. Feature caching with TTL (rejected: cache-invalidation
+   complexity).
+
+## Consequences
+- Two feature computation paths to maintain.
+- Real-time features need drift monitoring.
+- Training/serving skew possible for 3 features.
+
+## Assumptions to Revisit
+- 3 real-time features sufficient for next 6 months.
+- Streaming infra handles peak load (Black Friday).
+- Drift alerts catch training/serving skew.
+```
+
+The **Alternatives Considered** section is the most valuable. The agent suggests alternatives you wouldn't — not because it's smarter, but because it has no investment in your preferred approach. A human colleague might hesitate to challenge your solution; the agent doesn't hesitate.
+
+<Recovery
+  pattern="Agent is agreeing with everything"
+  symptom="Three architecture conversations in a row, three recommendations that matched your initial preference. You're starting to wonder if you're getting real analysis."
+>
+  You almost certainly aren't. The sycophancy default is doing its work. Break it: (a) open a fresh session with an explicit adversarial role ("you are a senior engineer who believes my current plan is wrong; make the case"); (b) present your next decision as three options without a preference; (c) after any recommendation, always ask the agent to argue against it. Treat these as habits, not one-time interventions — the default doesn't stay broken.
+</Recovery>
+
+<TryThis title="Apply one mode to a real decision">
+  Pick the most important pending decision you have — architecture, technology choice, approach to a hard problem. Run *all three* anti-sycophancy techniques on it, in order: (1) present the options without preference; (2) ask the agent to argue against its recommendation; (3) open a fresh session with a devil's-advocate frame. If all three sessions converge on the same recommendation, ship it with confidence. If they diverge, the divergence *is* the decision — and you've surfaced it before committing.
+</TryThis>
+
+## Evolution
+
+Collaboration patterns are more stable than tool surfaces. The modes in this chapter — hypothesis debugging, assumption surfacing, anti-sycophancy — predate agentic coding (they come from code review culture, scientific method, devil's-advocate traditions). What agents changed is the *friction* of applying them.
+
+<Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+  The collaboration modes in this chapter are tool-agnostic. All five — hypothesis debugging, tests-as-thinking-tools, assumption surfacing, anti-sycophancy structures, the interview pattern — work identically across Claude Code, Gemini CLI, and Codex CLI because they operate on the shape of the conversation, not the tool's command surface. The core practices have converged because they're about how LLMs work, not about product design.
+</Convergence>
+
+**Convergence: the sycophancy default is universal.** All three models default to agreement in under-specified prompts. The anti-sycophancy techniques — present-options-without-preference, argue-the-other-side, devil's-advocate-session — are equally needed across tools. This is a property of instruction-following LLMs, not a tool-specific quirk; don't expect it to be "fixed" by any single release.
+
+**Convergence: ADR-style capture is universal good practice.** All three tools produce markdown naturally; all three can be asked to write an ADR; the value of the artifact is independent of which agent wrote it. ADRs are a 1990s pattern that agentic coding has quietly revived by making the marginal cost of writing them near zero.
+
+<Divergence axis="sycophancy severity">
+  Anecdotal but real: practitioners report that Codex CLI pushes back more readily than Claude Code or Gemini CLI on bad ideas — possibly a consequence of GPT-5's training choices. This is not a reason to switch tools; the anti-sycophancy techniques work on all three. But if you're running a high-stakes decision workflow, consider using a second tool's devil's-advocate session specifically to tap a different sycophancy profile.
+</Divergence>
+
+<Divergence axis="session-isolation ergonomics">
+  The "run recommendation and critique in separate sessions" pattern is easier on tools with fast session startup. Claude Code's `--resume` + named sessions, Gemini's lightweight history, and Codex's new-session speed all differ; for frequent adversarial-session workflows, the tool with the lowest session-switch overhead wins on ergonomics alone.
+</Divergence>
+
+**Emerging: multi-agent critique.** Instead of running a single agent in devil's-advocate mode, some practitioners run the recommendation and critique in *different* models (Claude recommends, Codex critiques, or vice versa). The cross-model version produces genuinely different signal because the models have different training and biases. This is still a hand-rolled workflow in 2026 — expect tooling support (explicit "second opinion" integrations) within 12–18 months.
+
+<CaseStudy date="2026-03">
+  A team decision-audit: for one quarter, every architecture decision went through the recommend-and-critique-in-different-session pattern. They tracked whether the final decision matched the first recommendation, adopted the critique's alternative outright, or landed at a third synthesis neither session had produced alone. Roughly half matched the initial recommendation; the remainder split between the critique's alternative and the synthesis, with the synthesis outcome being the more common of the two. The synthesis rate is the real value of the pattern — not catching wrong decisions (though some get caught), but generating *better* decisions by forcing the divergence to be reconciled. Collaboration as generative, not corrective.
+</CaseStudy>
+
+## Quick reference
+
+- The agent is a thinking mirror — distortions in what it understands reveal gaps in what you've documented.
+- Five collaboration modes: hypothesis debugging, tests as thinking tools, assumption surfacing, anti-sycophancy, interview-driven spec.
+- Anti-sycophancy is structural, not attitudinal. Present options without preference; ask it to argue against; run recommendation and critique in separate sessions.
+- The divergence between a recommendation session and a critique session is the measure of decision quality.
+- Quick wins: docstrings (the Note section), type hints, self-debugging error messages, code archaeology, README-first.
+- ADRs capture the *Alternatives Considered* — the highest-value section, usually skipped without an agent in the loop.
+- Collaboration patterns are tool-agnostic because they operate on conversation shape, not command surface.
+- When both recommendation and critique sessions agree, ship with confidence. When they diverge sharply, that's where the decision actually lives.

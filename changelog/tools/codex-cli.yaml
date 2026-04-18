@@ -1,0 +1,14 @@
+# changelog/tools/codex-cli.yaml — Codex CLI release timeline.
+
+tool: codex-cli
+
+versions:
+  - version: "1.2"
+    date: 2026-01-20
+    changes:
+      - pattern: plan-mode
+        kind: added
+        note: "Dry-run planning phase added to the Rust-native runtime."
+      - pattern: briefing-docs
+        kind: added
+        note: "AGENTS.md convention adopted as top-level instruction file."

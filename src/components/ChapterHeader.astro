@@ -1,0 +1,61 @@
+---
+/**
+ * ChapterHeader — renders the metadata block at the top of every chapter.
+ * Surfaces provenance signals the LaTeX book conveyed implicitly:
+ *   - Part + chapter number (position in the book)
+ *   - Volatility class (freshness calibration for the reader)
+ *   - Tools compared (scope signal)
+ *   - Last verified date (how stale are the claims?)
+ *
+ * Driven entirely from the chapter's frontmatter (see content.config.ts).
+ */
+import type { CollectionEntry } from 'astro:content';
+import { getFreshness, freshnessLabel } from '../lib/freshness';
+
+interface Props {
+  data: CollectionEntry<'chapters'>['data'];
+}
+const { data } = Astro.props;
+
+function formatDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+const freshness = getFreshness(data.last_verified, data.volatility);
+const freshnessText =
+  freshness.status === 'fresh'
+    ? 'Fresh'
+    : freshness.status === 'verify-soon'
+      ? 'Verify soon'
+      : 'Stale';
+---
+<header class="chapter-header">
+  <div class="chapter-meta">
+    <span>Part {data.part}</span>
+    <span>Chapter {data.chapter}</span>
+    <span>
+      Last verified {formatDate(data.last_verified)}
+      <span
+        class="freshness-badge"
+        data-status={freshness.status}
+        aria-label={freshnessLabel(freshness)}
+        title={freshnessLabel(freshness)}
+      >{freshnessText}</span>
+    </span>
+    {data.updated && <span>Updated {formatDate(data.updated)}</span>}
+  </div>
+  <h1>{data.title}</h1>
+  {data.description && <p class="chapter-description">{data.description}</p>}
+  <div class="chapter-badge-row">
+    <span class="chapter-badge-row-label">Volatility:</span>
+    <span class={`volatility-badge volatility-${data.volatility}`}>
+      {data.volatility}
+    </span>
+  </div>
+  {data.tools_compared.length > 0 && (
+    <div class="chapter-badge-row">
+      <span class="chapter-badge-row-label">Tools compared:</span>
+      {data.tools_compared.map((t) => <span class="tool-badge">{t}</span>)}
+    </div>
+  )}
+</header>

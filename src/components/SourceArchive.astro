@@ -1,0 +1,285 @@
+---
+/**
+ * SourceArchive — renders every entry in sources/manifest.yaml grouped
+ * by tier in descending authority (T1 → T4).
+ *
+ * Used from Appendix D (`d-source-archive-index.mdx`) to replace the
+ * static hand-maintained listing with an auto-generated view that
+ * always reflects the manifest.
+ *
+ * Empty-tier behavior: renders an honest placeholder ("No sources at
+ * this tier yet.") rather than hiding the section. This matches the
+ * pedagogy of Appendix D — the archive is intentionally sparse in the
+ * early book, and the gap is visible by design.
+ */
+import { sourceTiers } from '../content.config';
+import {
+  getSourcesByTier,
+  TIER_LABELS,
+  TIER_DESCRIPTIONS,
+} from '../lib/sources';
+
+const grouped = await getSourcesByTier();
+
+function formatDate(d: Date | undefined): string {
+  if (!d) return '—';
+  return d.toISOString().slice(0, 10);
+}
+
+function year(d: Date | undefined): string | null {
+  if (!d) return null;
+  return String(d.getUTCFullYear());
+}
+---
+<section class="source-archive" aria-label="Source archive">
+  {sourceTiers.map((tier) => {
+    const entries = grouped[tier];
+    const empty = entries.length === 0;
+    return (
+      <section
+        class="source-archive-tier"
+        data-tier={tier}
+        id={`tier-${tier}`}
+      >
+        <header class="source-archive-tier-header">
+          <h3 class="source-archive-tier-label">
+            <span class={`tier-badge tier-${tier}`}>{TIER_LABELS[tier]}</span>
+            <span class="source-archive-tier-count">
+              {empty ? 'no entries yet' : `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}`}
+            </span>
+          </h3>
+          <p class="source-archive-tier-description">{TIER_DESCRIPTIONS[tier]}</p>
+        </header>
+
+        {empty ? (
+          <p class="source-archive-empty">
+            No sources at this tier yet. Appendix D is intentionally sparse in the early book; this slot fills as chapters leave draft.
+          </p>
+        ) : (
+          <ol
+            class="source-archive-list"
+            role="list"
+            aria-label={`${TIER_LABELS[tier]} sources`}
+          >
+            {entries.map((entry) => {
+              const d = entry.data;
+              return (
+                <li class="source-archive-entry" id={`source-${entry.id}`}>
+                  <div class="source-archive-entry-title">
+                    <a href={d.url} rel="external noopener">{d.title}</a>
+                  </div>
+                  <div class="source-archive-entry-meta">
+                    {d.author && (
+                      <span class="source-archive-entry-author">{d.author}</span>
+                    )}
+                    {year(d.publish_date) && (
+                      <span class="source-archive-entry-year">{year(d.publish_date)}</span>
+                    )}
+                    <span class="source-archive-entry-captured">
+                      captured {formatDate(d.captured_at)}
+                    </span>
+                    <span class="source-archive-entry-tool">tool: {d.tool}</span>
+                  </div>
+                  <div class="source-archive-entry-links">
+                    <a href={d.url} rel="external noopener" class="source-archive-link">original</a>
+                    {d.perma_cc && (
+                      <a href={d.perma_cc} rel="external noopener" class="source-archive-link">archived (Perma.cc)</a>
+                    )}
+                    <code class="source-archive-slug">id: {entry.id}</code>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </section>
+    );
+  })}
+</section>
+
+<style>
+  .source-archive {
+    margin: var(--space-6) 0;
+  }
+  .source-archive-tier {
+    margin: var(--space-6) 0;
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .source-archive-tier:last-child {
+    border-bottom: none;
+  }
+
+  .source-archive-tier-header {
+    margin-bottom: var(--space-3);
+  }
+  .source-archive-tier-label {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-2) 0;
+    font-size: var(--text-lg);
+  }
+  .source-archive-tier-count {
+    font-family: var(--font-code);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    font-weight: 400;
+  }
+  .source-archive-tier-description {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    text-indent: 0;
+  }
+
+  /* Tier badges: muted palette, rendered at the heading level.
+   * Follows the citation-tier visual language so the archive and
+   * inline citations feel like the same system. */
+  .tier-badge {
+    display: inline-block;
+    padding: 0.1em 0.55em;
+    font-family: var(--font-code);
+    font-size: 0.8em;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+  .tier-T1-official {
+    background: var(--warm-plum-tint);
+    color: var(--warm-plum);
+    border-color: var(--warm-plum);
+  }
+  .tier-T2-release-notes {
+    background: var(--warm-blue-tint);
+    color: var(--warm-blue);
+    border-color: var(--warm-blue);
+  }
+  .tier-T3-practitioner {
+    background: var(--warm-green-tint);
+    color: var(--warm-green);
+    border-color: var(--warm-green);
+  }
+  .tier-T4-conjecture {
+    background: var(--warm-rose-tint);
+    color: var(--warm-rose);
+    border-color: var(--warm-rose);
+  }
+
+  .source-archive-empty {
+    color: var(--color-text-muted);
+    font-style: italic;
+    padding: var(--space-3);
+    background: var(--color-bg-subtle);
+    border-radius: var(--radius-sm);
+    text-indent: 0;
+  }
+
+  .source-archive-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: var(--space-3);
+  }
+  .source-archive-entry {
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    scroll-margin-top: var(--space-6); /* anchor targets clear of fixed chrome */
+    transition: border-color 120ms ease, background 120ms ease;
+  }
+  .source-archive-entry:hover {
+    border-color: var(--color-link);
+  }
+  .source-archive-entry:target {
+    border-color: var(--warm-blue);
+    background: var(--warm-blue-tint);
+  }
+  .source-archive-entry-title {
+    font-size: var(--text-lg);
+    font-weight: 500;
+    margin-bottom: var(--space-1);
+  }
+  .source-archive-entry-title a {
+    color: var(--color-link);
+    text-decoration: none;
+  }
+  .source-archive-entry-title a:hover {
+    text-decoration: underline;
+  }
+  .source-archive-entry-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    font-family: var(--font-code);
+    margin-bottom: var(--space-2);
+  }
+  .source-archive-entry-author {
+    color: var(--color-text);
+  }
+  .source-archive-entry-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    align-items: center;
+    font-size: var(--text-sm);
+  }
+  .source-archive-link {
+    color: var(--color-link);
+  }
+  .source-archive-slug {
+    font-family: var(--font-code);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    background: var(--color-bg-subtle);
+    padding: 0.1em 0.4em;
+    border-radius: var(--radius-sm);
+    border: 0;
+  }
+
+  @media (max-width: 48rem) {
+    .source-archive-tier-label {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-1);
+    }
+    .source-archive-entry-meta,
+    .source-archive-entry-links {
+      gap: var(--space-2);
+    }
+  }
+
+  /* Long URLs in the slug or author line can force horizontal scroll
+   * on narrow viewports. Let them wrap anywhere. */
+  .source-archive-entry a,
+  .source-archive-slug {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  /* Print: borders soften, hover/target highlighting off, slug code
+   * visible (readers of the printed edition still need the citation
+   * key to cross-reference chapters). */
+  @media print {
+    .source-archive-entry {
+      border-width: 0.5pt;
+      border-color: #aaa;
+      background: transparent !important;
+      break-inside: avoid;
+    }
+    .source-archive-entry:target {
+      background: transparent !important;
+      border-color: #aaa !important;
+    }
+    .source-archive-tier {
+      break-inside: avoid;
+    }
+  }
+</style>

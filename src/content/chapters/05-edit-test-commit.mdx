@@ -1,0 +1,193 @@
+---
+title: The edit-test-commit loop
+part: 2
+chapter: 5
+volatility: architectural-pattern
+tools_compared: [claude-code, gemini-cli, codex-cli]
+last_verified: 2026-04-17
+sources: []
+description: "AI-generated code's defining failure mode — it *looks* correct. The edit-test-commit loop exists to catch the subtle bugs the agent cannot catch on its own. Verification is not a quality gate; it is the single highest-leverage practice in agentic coding."
+draft: false
+---
+
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import CaseStudy from '../../components/callouts/CaseStudy.astro';
+import ConceptBox from '../../components/callouts/ConceptBox.astro';
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+import Recovery from '../../components/callouts/Recovery.astro';
+import Convergence from '../../components/callouts/Convergence.astro';
+import Divergence from '../../components/callouts/Divergence.astro';
+import Sidenote from '../../components/Sidenote.astro';
+
+*The agent just produced 200 lines of code that looks correct. The syntax is clean, the variable names are reasonable, the logic reads well. How do you know it actually works? AI-generated code has a specific failure mode human-written code does not: it *looks* correct. The appearance of correctness is precisely why verification is essential — the bugs are subtle, not obvious.*
+
+## Representation
+
+The edit-test-commit loop is the quality-preservation layer around the session loop. Where the [session loop](/04-session-loop/) handles *what does the agent do next*, this loop handles *how do we know the agent's output is correct*. The answer, overwhelmingly, is: the agent verifies its own work against criteria you specified, and you verify the criteria were adequate.
+
+<ConceptBox term="The verification principle">
+  An agent's output is untrusted by default. The developer's job is to specify verification criteria *before* code is generated, and the agent's job is to run those criteria *as part of* producing output. Verification is not a manual gate applied after the fact — it is a precondition the agent checks on every iteration. "Give the agent a way to verify its own work" is the single highest-leverage practice in agentic coding.
+</ConceptBox>
+
+### The six-layer validation architecture
+
+Not all verification is the same. A robust project layers defenses so that no single failure mode goes undetected:
+
+1. **Type safety** — static checking at compile time (mypy, TypeScript, Go's type checker, Rust's type system and borrow checker). The cheapest layer.
+2. **Input validation** — preconditions at function entry. Fail fast with explicit errors (the fail-fast principle from [Ch 1](/01-agent-mental-model/)).
+3. **Unit tests** — each function in isolation; happy path + error cases + edge cases.
+4. **Integration tests** — multi-function workflows with realistic data.
+5. **End-to-end tests** — complete user workflows from input to output.
+6. **Property-based tests** — invariants that should always hold; generated inputs catch edge cases you didn't think of.
+
+Layers 1–2 are cheap enough to add to any project today. Layers 3–4 are the production baseline. Layers 5–6 are for systems where correctness is load-bearing.
+
+### The missing seventh layer: domain correctness
+
+The six-layer model catches structural errors. It does *not* catch **domain-correctness failures** — code that is syntactically valid, passes all tests, and produces the wrong answer.
+
+Examples from practice that every working practitioner has seen:
+
+- **Data leakage.** A feature-engineering function uses future values during training. Tests pass because the function is deterministic. The model achieves unrealistic accuracy in validation and fails in production.
+- **Wrong aggregation.** A revenue calculation sums instead of averaging across time. Tests pass because the function produces a number. The number is wrong by an order of magnitude.
+- **Survivorship bias.** A cohort analysis excludes deleted records. Tests pass because the query runs. The results quietly mislead every downstream decision.
+- **Silent unit mismatch.** A function mixes daily and monthly rates. Tests pass because both are floats. The financial model is off by ~30×.
+
+These failures share a pattern: structural tests verify that the code *runs*; they do not verify that it *means* what you intended. No amount of AI-generated unit testing catches them because the agent doesn't know what the answer should look like — you do.
+
+<KeyIdea>
+  The agent can generate the test structure. You must specify the invariants. The agent does not know that monthly revenue times twelve should approximate annual revenue; that domain knowledge lives in you. Domain-invariant tests ("features at time t use only data from t-1 or earlier," "cohort counts sum to original record count") are the seventh layer — the one that catches the semantic failures the other six miss.
+</KeyIdea>
+
+### Phase-appropriate standards
+
+Not all code needs the same rigor. Applying production standards to a prototype kills velocity; applying prototype standards to production kills reliability. The fix is to be explicit about which standard applies *now*, and when to transition.
+
+| Phase | Testing | Code quality | Transition criteria |
+| --- | --- | --- | --- |
+| Exploration | Manual OK | Long functions OK | Hypothesis validated |
+| Development | Unit + integration | Style enforced, type hints | Coverage >60%, code review |
+| Production | Full 6-layer + domain invariants | Strict lint, immutability | Coverage >80%, zero critical warnings |
+
+The briefing doc is where phase membership lives. When a project graduates from exploration to development, the briefing doc changes and the agent's behavior changes with it.
+
+## Operation
+
+The test-first workflow with an agent follows a consistent four-step pattern across all three CLIs:
+
+1. **Describe the interface** — inputs, outputs, error cases, invariants.
+2. **Agent writes tests** from that interface description.
+3. **Agent writes implementation** that passes the tests.
+4. **Tests run automatically** via hooks / guards / CI.
+
+The test-first framing works because agents excel at test generation when given clear specifications. The tests then constrain the implementation, preventing the "looks correct but is subtly wrong" failure mode that plagues code-first generation.
+
+```text
+Prompt: "Create a FeatureValidator class.
+  Interface:
+    - Takes a DataFrame and a schema dict
+    - Validates column types, value ranges, null counts
+    - Returns ValidationResult with errors list
+    - Raises ValueError if required columns are missing
+  Write tests first, then implementation.
+  Include domain invariants:
+    - Empty DataFrame raises ValueError
+    - NaN-heavy inputs (>50% nulls) emit a warning but don't fail
+  Verify: pytest tests/ passes before you return."
+```
+
+### Tri-tool automation surface
+
+| Verification primitive | Claude Code | Gemini CLI | Codex CLI |
+| --- | --- | --- | --- |
+| Briefing-doc verification rules | `CLAUDE.md` `## Verification` section | `GEMINI.md` section | `AGENTS.md` section |
+| Run tests after edit (hooked) | `PostToolUse` matching `Edit\|Write` | tool-level allowlist + pre/post hooks | command-approval config |
+| Block commits on failure | `PreToolUse` matching `Bash` → gate on `git commit` | pre-run hook with exit code | commit-approval config |
+| Per-test output filtering | hooks can summarize / filter | hooks + prompt filtering | prompt filtering |
+| Property-based test generation | prompt-driven (Hypothesis / fast-check) | same | same |
+
+<SkillBox title="Verification criteria in the briefing doc">
+  The highest-leverage lines you'll write all month. A concrete `## Verification` section that says *"always run `pytest tests/` after code changes; never commit without passing `ruff check src/ && mypy src/`; include edge-case tests (empty DataFrames, NaN-heavy inputs) for every new function; coverage target 80% for `src/` modules"* becomes policy every session reads. Vague ("we use pytest; tests are important") is briefing-doc space wasted.
+</SkillBox>
+
+<SkillBox title="Hooks for non-negotiable standards">
+  `CLAUDE.md` can suggest; a hook *enforces*. If a standard must hold every single time — lint before commit, tests before push, format on write — make it a hook. The rule is architectural: advisory content goes in the briefing doc where the agent can reason about it; non-negotiable content goes in a hook where the agent cannot forget it. In long sessions with degraded context, the agent *will* forget advisories. Hooks are the memory-external enforcement layer.
+</SkillBox>
+
+### Property-based tests as a force multiplier
+
+Property-based testing is underused in agent-assisted workflows, and it should not be. A single Hypothesis (Python) or fast-check (JavaScript) test can replace dozens of hand-written edge-case tests and catch entire classes of bugs the agent would never have generated by enumeration.
+
+```python
+from hypothesis import given, settings
+from hypothesis import strategies as st
+
+@given(st.lists(
+    st.floats(allow_nan=True, allow_infinity=False),
+    min_size=1, max_size=100
+))
+@settings(max_examples=200)
+def test_feature_builder_invariants(values):
+    df = pd.DataFrame({"amount": values})
+    result = build_features(df)
+    # Schema invariant: output columns never change
+    assert set(result.columns) == {"amount", "log_amount", "is_missing"}
+    # Null invariant: NaN inputs produce is_missing=True
+    assert (df["amount"].isna() == result["is_missing"]).all()
+    # Range invariant: log_amount is never negative
+    assert (result["log_amount"].dropna() >= 0).all()
+```
+
+<Recovery
+  pattern="Tests pass but production is wrong"
+  symptom="All unit tests green, coverage number looks healthy, but an end-to-end check (stakeholder review, production metric, manual sanity check) reveals the code is producing the wrong answer."
+>
+  This is the domain-correctness failure. Your tests verified the code *runs*; they did not verify it *means* what you intended. Audit: for each computation in the failing path, write one domain-invariant test that encodes what the answer *should* look like in the aggregate (revenue ≈ monthly × 12; cohort counts = total records; features at time t use only t-1 data). Add these to the briefing doc's verification section so future work re-runs them.
+</Recovery>
+
+<Recovery
+  pattern="Premature rigor killing exploration"
+  symptom="You're three weeks into a research project; the test suite is 400 lines; each iteration takes ten minutes to run. The hypothesis isn't even validated yet."
+>
+  Phase mismatch. Exploration code should not be carrying production-grade tests. Update the briefing doc to declare explicit phase (`## Phase: EXPLORATION (until <date>)`), drop the coverage requirement, keep only the tests that catch catastrophic errors (data leakage, unit mismatch), document graduation criteria. When the hypothesis validates, the phase transitions and the test burden rises with it.
+</Recovery>
+
+<TryThis title="Verification upgrade in fifteen minutes">
+  Open your current project's briefing doc. Look at its `## Testing` or `## Verification` section. If it's vague ("use pytest", "write tests"), replace with four concrete lines: (1) the exact test command to run after code changes; (2) the exact lint/type-check command required before commit; (3) which edge cases are mandatory for new functions; (4) the coverage target for the current phase. Then run a real agent session and watch how much tighter the loop gets. Almost every project gains 20–30% session-quality from this one edit.
+</TryThis>
+
+## Evolution
+
+Verification-first is the single most convergent practice in agentic coding. The *principle* is universal across tools; what differs substantially is the *enforcement surface* — how a tool lets you make verification non-skippable at the harness level rather than just recommended at the prompt level.
+
+<Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+  All three tools name verification as their single highest-leverage practice. All three support the test-first workflow (interface → tests → implementation). All three let you declare verification criteria in the briefing doc that the agent re-reads every turn. The 2024–2025 debate about whether agents can write tests is settled: they can, given specifications. The open question is how much enforcement the platform guarantees on top.
+</Convergence>
+
+**Convergence: the six-layer model predates agentic coding.** The validation hierarchy (types → input → unit → integration → E2E → property) is pre-AI software engineering best practice. AI changes the enforcement economics — hooks make the layers automatic rather than aspirational — but the layers themselves are stable. Practices written to the six-layer shape will hold for the foreseeable future.
+
+<Divergence axis="hook system depth">
+  Claude Code ships the richest hook system: `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Notification`, `Stop`, `SubagentStop`, `PreCompact`, `SessionStart`, `SessionEnd` — each with matcher patterns for specific tool invocations. Gemini CLI has tool-level allowlists and basic pre/post hooks. Codex CLI uses command-approval configuration (`~/.codex/config.toml`) as its primary gate. For enforcing non-negotiable standards (run tests before commit, lint on write), Claude's hook depth is a real advantage; for teams who stay git-disciplined, Codex's simpler model is adequate.
+</Divergence>
+
+<Divergence axis="domain-invariant test generation">
+  No tool handles this automatically. All three can generate domain invariants when asked explicitly — "write tests that verify revenue aggregation preserves unit consistency" — but none infer which invariants matter without user prompting. This is a genuine limitation of current agents: they don't know your domain. Expect this to be the last frontier to close; possibly never fully automated.
+</Divergence>
+
+**Emerging: auto-repair loops.** When tests fail, some recent tool builds (Claude's `Stop` hook, Gemini's agent chaining) auto-loop the failure back into the agent for repair. The pattern is promising but unreliable — the failure diagnostic often doesn't surface the root cause, and the agent ends up repeatedly trying cosmetic fixes. Practice for 2026: if the auto-repair loop runs more than twice on the same failure, it's telling you something structural is wrong — intervene.
+
+<CaseStudy date="2026-01">
+  A production ML team tracked every agent-generated PR over six weeks, comparing periods with and without domain-invariant tests in the briefing doc. PRs generated when the briefing doc specified domain invariants (leakage checks, unit consistency, completeness assertions) had a small, single-digit revert rate. PRs generated without domain invariants reverted at several times that rate — and essentially every reverted failure was a domain-correctness bug that all unit tests had passed for. Pattern signal: domain invariants are not a best-practice add-on, they are the 6-layer model's necessary completion for any codebase where "correct" requires judgment. Which is most codebases.
+</CaseStudy>
+
+## Quick reference
+
+- AI-generated code *looks* correct. Verification is the core quality-preservation mechanism, not an optional add-on.
+- Six structural layers: types, input validation, unit, integration, E2E, property-based. Seventh semantic layer: domain invariants.
+- Domain invariants catch what the six-layer model cannot — the agent can generate structure, but only you know the invariants.
+- Phase-appropriate rigor: exploration / development / production each earn different standards. Make the current phase explicit in the briefing doc.
+- Test-first workflow outperforms code-first: interface → tests → implementation → run.
+- Briefing-doc verification rules improve every session; hooks enforce what can't be forgotten.
+- Property-based tests deserve wider use — single tests replace dozens of enumerated cases.
+- Hook-system depth varies across tools; the *practice* of making verification non-skippable is universal.

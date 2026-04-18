@@ -1,0 +1,87 @@
+---
+/**
+ * search.astro — full-page Pagefind search UI.
+ *
+ * The Pagefind index is generated at build time by `pagefind --site dist`
+ * (see package.json). This page is the interactive entry point: users
+ * land here via the header search icon and type queries; Pagefind's
+ * bundled UI renders results with excerpts from indexed chapters.
+ *
+ * CSS/JS paths (/pagefind/*) only exist after the build step, not in
+ * `astro dev`. See README for dev-search workflow.
+ */
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  title="Search · book-template-astro"
+  description="Full-text search across the book. Indexed via Pagefind at build time; all queries run in the browser."
+>
+  <link rel="stylesheet" href="/pagefind/pagefind-ui.css" slot="head" />
+
+  <main class="prose search-page">
+    <h1>Search</h1>
+    <p>
+      Full-text search runs in your browser. The index is generated at
+      build time and is less than 100 KB total — queries never leave
+      the page.
+    </p>
+    <div id="search"></div>
+  </main>
+
+  <script src="/pagefind/pagefind-ui.js" is:inline></script>
+  <script is:inline>
+    // Initialize after the Pagefind bundle has loaded.
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof window.PagefindUI === 'function') {
+        new window.PagefindUI({
+          element: '#search',
+          showImages: false,
+          showSubResults: true,
+          resetStyles: false,
+        });
+      } else {
+        document.getElementById('search').innerHTML =
+          '<p><em>Search index not found. Run <code>npm run build</code> first; dev mode does not include the index.</em></p>';
+      }
+    });
+  </script>
+
+  <style is:global>
+    /* Tame PagefindUI defaults to match the book's typography + palette. */
+    .pagefind-ui__form {
+      margin-top: var(--space-4);
+    }
+    .pagefind-ui__search-input {
+      font-family: var(--font-body) !important;
+      font-size: var(--text-base) !important;
+      padding: var(--space-3) !important;
+      border: 1px solid var(--color-border) !important;
+      border-radius: var(--radius-md) !important;
+      background: var(--color-bg-subtle) !important;
+      color: var(--color-text) !important;
+    }
+    .pagefind-ui__search-input:focus {
+      border-color: var(--color-link) !important;
+      outline: 2px solid color-mix(in srgb, var(--color-link) 30%, transparent);
+    }
+    .pagefind-ui__result {
+      border-bottom: 1px solid var(--color-border) !important;
+      padding: var(--space-3) 0 !important;
+    }
+    .pagefind-ui__result-link {
+      color: var(--color-link) !important;
+      font-weight: 500 !important;
+    }
+    .pagefind-ui__result-excerpt {
+      color: var(--color-text) !important;
+      font-size: var(--text-sm) !important;
+    }
+    .pagefind-ui__result-excerpt mark {
+      background: var(--warm-gold-tint);
+      color: var(--color-text);
+      padding: 0 0.15em;
+      border-radius: var(--radius-sm);
+    }
+  </style>
+</Base>

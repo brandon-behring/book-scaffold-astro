@@ -1,0 +1,32 @@
+---
+/**
+ * Divergence — where tools have NOT converged on a pattern. Signals:
+ * open design space; the choice is still live; practices may shift.
+ *
+ * Same color family as Convergence (gold = insight) but with a dashed
+ * left-bar as the visual signal of instability. Readers should
+ * calibrate confidence accordingly: a Divergence box says "the tradeoff
+ * is still being worked out."
+ *
+ * Props:
+ *   axis — the dimension on which tools differ (e.g. "window size",
+ *          "hook timing", "delegation granularity"). Required — a
+ *          divergence without a named axis is just hand-waving.
+ *
+ * Usage:
+ *   <Divergence axis="window size">
+ *     Claude: 200K · Gemini: 1M · Codex: 128K. The tradeoff between
+ *     retrieval accuracy and ceiling is not settled.
+ *   </Divergence>
+ */
+interface Props {
+  axis: string;
+}
+const { axis } = Astro.props;
+---
+<aside class="callout callout-divergence" role="note" aria-label={`Divergence: ${axis}`}>
+  <strong class="callout-title">
+    Divergence <span class="divergence-axis">· {axis}</span>
+  </strong>
+  <div class="callout-body"><slot /></div>
+</aside>

@@ -1,0 +1,96 @@
+---
+/**
+ * /convergence — dashboard of agentic-coding patterns across tools.
+ *
+ * For each category, renders every pattern in that category as a
+ * PatternTimeline card. Categories with no patterns render an honest
+ * placeholder so readers see the coverage gaps rather than inferring
+ * the registry is exhaustive.
+ *
+ * Driven entirely from changelog/patterns.yaml + changelog/tools/*.yaml.
+ * No code change is needed to grow the dashboard — add manifest rows.
+ */
+import Base from '../layouts/Base.astro';
+import PatternTimeline from '../components/PatternTimeline.astro';
+import {
+  getPatternsByCategory,
+  CATEGORY_LABELS,
+} from '../lib/patterns';
+import { patternCategories } from '../content.config';
+
+const grouped = await getPatternsByCategory();
+const totalPatterns = Object.values(grouped).reduce(
+  (n, arr) => n + arr.length,
+  0,
+);
+---
+<Base
+  title="Convergence — Agentic Coding"
+  description="Which agentic-coding patterns have converged across Claude Code, Gemini CLI, and Codex CLI — and when? A live timeline driven from the changelog manifest."
+>
+  <article class="prose convergence-dashboard">
+    <header class="convergence-header">
+      <h1>Convergence dashboard</h1>
+      <p class="convergence-lede">
+        Each card below tracks one agentic-coding pattern across the
+        three primary tools. A pattern is <em>converged</em> when all
+        three tools have shipped it. The timeline shows the sequence of
+        adoptions — who first, who followed, who has not yet.
+      </p>
+      <p class="convergence-metric">
+        <strong>{totalPatterns}</strong> pattern{totalPatterns === 1 ? '' : 's'}
+        {' '}currently tracked. The registry grows as new patterns
+        converge or as historical patterns get backfilled; expect the
+        count to drift upward, not the existing entries.
+      </p>
+    </header>
+
+    {patternCategories.map((cat) => {
+      const patterns = grouped[cat];
+      return (
+        <section class="convergence-category" data-category={cat} id={`category-${cat}`}>
+          <h2 class="convergence-category-heading">
+            <span class="convergence-category-label">{CATEGORY_LABELS[cat]}</span>
+            <span class="convergence-category-count">
+              {patterns.length === 0
+                ? 'no patterns'
+                : `${patterns.length} pattern${patterns.length === 1 ? '' : 's'}`}
+            </span>
+          </h2>
+          {patterns.length === 0 ? (
+            <p class="convergence-category-empty">
+              No tracked patterns in this category yet. This is a
+              coverage gap, not an assertion that nothing belongs here.
+            </p>
+          ) : (
+            <div class="convergence-card-list">
+              {patterns.map((p) => <PatternTimeline pattern={p} />)}
+            </div>
+          )}
+        </section>
+      );
+    })}
+
+    <section class="convergence-method">
+      <h2>How to read this</h2>
+      <p>
+        The registry lives at <code>changelog/patterns.yaml</code>.
+        Each tool's adoption timeline lives at
+        <code>changelog/tools/&lt;tool&gt;.yaml</code>. The dashboard
+        joins them at build time — no code edits needed to add new
+        patterns or new adoption events.
+      </p>
+      <p>
+        A pattern with <em>convergence_date: null</em> is either a
+        partial convergence (1 or 2 of 3 tools) or an open design
+        space where the right shape is still being argued. Either
+        way, it is information worth surfacing, not hiding.
+      </p>
+      <p>
+        Coverage is intentionally sparse in the early book — the
+        registry grows organically through quarterly audit cycles.
+        Pattern nominations are welcome via Issues.
+      </p>
+    </section>
+  </article>
+</Base>

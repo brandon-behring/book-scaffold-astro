@@ -1,0 +1,122 @@
+---
+title: "Appendix E — Glossary"
+part: 6
+chapter: 5
+volatility: architectural-pattern
+tools_compared: [claude-code, gemini-cli, codex-cli]
+last_verified: 2026-04-17
+sources: []
+description: "A cross-tool vocabulary. Each entry names a concept the book uses, gives a tool-agnostic definition, then maps the concept to the specific surface each of the three tools exposes it as. The glossary is the translation layer: if a body chapter talks about briefing docs and you only know GEMINI.md, the entry tells you they are the same thing."
+draft: false
+---
+
+*The body chapters use deliberately tool-agnostic vocabulary — briefing doc, extension surface, headless mode — because convergent concepts deserve convergent names. Readers coming in through a single tool's documentation know a different vocabulary. This glossary is the translation. Each entry: the book's name for the concept, a short definition, and the specific surface each tool exposes it as.*
+
+## Terms
+
+### Agent
+
+The runtime loop that consumes a prompt, decides what to do, calls tools, observes their output, and iterates until the task is complete. The **agent** is distinct from the underlying **model** (which produces text completions) and from the **tool** (which executes a specific capability like `Read` or `Bash`). Across Claude Code, Gemini CLI, and Codex CLI the agent loop has converged on the same shape; differences are in the primitives exposed to the operator.
+
+### Approval mode
+
+A permission model — Codex CLI's distinctive primitive — that configures agent autonomy along a depth axis: "ask every action" → "ask on request" → "ask on failure" → "never ask." Contrasts with Claude and Gemini's allow/deny-list models, which configure permission along a tool-scope axis. The two models describe overlapping territory; they are not semantically equivalent. See **Permission policy**.
+
+### Briefing doc
+
+A convention: a Markdown file at the repo root that stateless agents re-read on every session, encoding project-level context (build commands, conventions, current focus). The convergence point is cross-tool:
+
+- Claude Code: `CLAUDE.md`
+- Gemini CLI: `GEMINI.md`
+- Codex CLI: `AGENTS.md`
+
+All three tools resolve the briefing doc from the working directory upward. The file's role is identical; only the filename differs.
+
+### Context window
+
+The total token budget the model can attend to in a single turn: the briefing doc + conversation history + tool outputs + system prompt. Budget is finite and non-linear — content past certain positions effectively decays (see **Context rot**). Claude's production models ship a 200K-token window; Gemini's span multi-hundred-K to multi-million tokens; Codex-class models typically range around 272K at time of capture. The size difference matters less than it appears once **context rot** is accounted for.
+
+### Context rot
+
+The observation that attention quality degrades across a long context — not only at the window's hard edge but well before it. A claim made in turn 3 of a 50-turn session may effectively be invisible by turn 40 even if it technically still fits in the token budget. Ch 2 is the main treatment. The phenomenon is substrate-level; it applies to every CLI agent and every large-window model equally.
+
+### Convergence / Divergence
+
+Book vocabulary (Ch 15) for how tool behaviors align or differ. A pattern is **convergent** when all tracked tools have adopted it (e.g. briefing doc at repo root, headless print mode, MCP client support) — signal that the pattern is architecturally stable. A pattern is **divergent** when the tools diverge on implementation or are not all present (e.g. hook event granularity, approval-mode-vs-allow-list permissions) — signal of open design space. Convergence is a bet practitioners can safely make; divergence is a bet they cannot.
+
+### Extension surface
+
+The parts of a tool that operators can extend without modifying the tool itself — slash commands, skills, hooks, MCP servers. Each tool's extension surface has a different shape (Ch 8); this is the biggest divergence axis across the three tools.
+
+### Hook
+
+A user-defined shell command that fires in response to an agent lifecycle event (pre-tool-use, post-tool-use, session-start, etc.). Primarily a Claude Code primitive; Gemini and Codex have hook-adjacent but less-developed surfaces. See Appendix A for the current Claude event list.
+
+### Headless mode
+
+Invocation of the agent with no human present to observe, approve, or interrupt during the run. Ch 12 is the main treatment. Cross-tool naming:
+
+- Claude Code: `claude -p "<prompt>"` (print mode)
+- Gemini CLI: `gemini -p "<prompt>"` or piped stdin
+- Codex CLI: approval-mode flags chosen per invocation
+
+Convergent in shape (one-shot non-interactive run); divergent in permission configuration.
+
+### MCP (Model Context Protocol)
+
+A cross-tool protocol for exposing capabilities — tools, data sources, prompts — to an agent through a standardized server interface. MCP is one of the clearest convergence points in the field: all three agents are MCP clients; the same MCP server can be consumed by any of them. For Gemini, MCP is the primary extension model; for Claude and Codex, it is one of several extension surfaces.
+
+### Permission policy
+
+The set of rules that constrain what an agent can do without asking. In Claude Code: an allow/deny list at tool-name granularity, with glob and path-scoping support, configured in `settings.json`. In Gemini CLI: similar allow/deny structure with a dangerous `--yolo` override that bypasses everything. In Codex CLI: approval modes (see above). All three share the underlying abstraction — *what may the agent do unattended?* — but express it differently.
+
+### Plan mode
+
+A read-only agent phase where the agent analyzes, reads, and proposes a plan but cannot mutate files. A Claude Code primitive with a dedicated keyboard shortcut; on Gemini and Codex, closer to a convention operators impose via instructions rather than a first-class mode. Ch 6 treats the principle (think before acting); plan mode is the Claude-specific implementation.
+
+### Session
+
+A single bounded conversation between user and agent. Sessions have state (prompt history, context loaded, tools registered). `claude --resume`, `gemini /chat`, and Codex's equivalent let sessions be reattached across invocations. A session is distinct from a *workflow* (which may span multiple sessions) and from a *project* (which persists across all sessions).
+
+### Skill
+
+A named, self-contained capability the agent can invoke when a situation matches — a directory containing a `SKILL.md` describing when to use it plus any scripts or references the skill needs. Claude Code uses the term most explicitly and autonomously; Gemini and Codex have adjacent concepts (slash commands, prompt templates) that overlap but are not identical in intent — skills auto-fire, slash commands must be triggered. See Ch 8.
+
+### Slash command
+
+A user-invoked shortcut — a slash-prefixed name the operator types to trigger a prompt template or a built-in action. `/compact`, `/memory refresh`, `/plan` and similar. Conventional across the three tools; storage locations differ:
+
+- Claude Code: `.claude/commands/` (project) or `~/.claude/commands/` (user)
+- Gemini CLI: `.gemini/commands/` (project) or `~/.gemini/commands/` (user)
+- Codex CLI: project-level config at the repo root
+
+### Source tier
+
+One of four trust levels (T1-official → T4-conjecture) assigned to any cited external source per the methodology of Ch 15. The tier determines the audit cadence for claims resting on the source. See Appendix D for the archive index.
+
+### Subagent
+
+A child agent spawned by the main agent with its own context window, tool access, and prompt, which runs a bounded subtask and returns a summary to the parent. Claude Code implements this via the `Task` tool with configurable agent types (`.claude/agents/`). Gemini and Codex have partial parallels (MCP-based delegation, async task invocation) but not identical ergonomics. Ch 9 treats the principle.
+
+### Volatility class
+
+Book vocabulary (Ch 15) for how fast a claim is likely to date: `stable-principle`, `architectural-pattern`, or `feature-surface`. Every chapter carries a volatility class in frontmatter; audit cadences scale accordingly. See the book's `src/content.config.ts` for the canonical list.
+
+## Tool-to-concept translation table
+
+A compact reference for readers who know one tool's vocabulary and want to translate:
+
+| Concept | Claude Code | Gemini CLI | Codex CLI |
+| --- | --- | --- | --- |
+| Briefing doc | `CLAUDE.md` | `GEMINI.md` | `AGENTS.md` |
+| Project slash commands | `.claude/commands/` | `.gemini/commands/` | project config |
+| Autonomous capability | Skills (`.claude/skills/`) | MCP tools | Prompt templates |
+| Hook-style lifecycle | `.claude/settings.json` → `hooks` | Thin / convention-based | Wrapper scripts |
+| Subagent primitive | `Task` tool + `.claude/agents/` | Partial (MCP-based) | Partial |
+| Headless invocation | `claude -p` (print) | `gemini -p` | Approval-mode flags |
+| Permission model | Allow/deny with globs | Allow/deny + `--yolo` override | Approval modes |
+| Enterprise backend | Bedrock / Vertex | Vertex (native) | OpenAI / Azure |
+
+## Volatility note
+
+This glossary's tool-to-surface mappings are feature-surface volatility — paths, flag names, and specific commands will shift over time. The *concepts* (briefing doc, headless mode, permission policy, skill, subagent) are architectural-pattern volatility — the shape of the abstraction is durable even when the implementation moves. If a mapping below is stale, the concept is still the right thing to look up; translating to the current tool's surface is the quarterly audit task.

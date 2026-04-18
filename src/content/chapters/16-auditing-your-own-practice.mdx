@@ -1,0 +1,154 @@
+---
+title: Auditing your own practice
+part: 5
+chapter: 16
+volatility: stable-principle
+tools_compared: [claude-code, gemini-cli, codex-cli]
+last_verified: 2026-04-17
+sources: []
+description: "Ch 15 covered how to keep a book or a team's playbook current. This chapter is the same discipline applied to the single highest-leverage artifact most practitioners own: their own daily practice. Your workflows quietly rot. Commands you rely on get renamed. Habits ossify into superstitions. The audit discipline that catches field drift applies, scaled down, to the practitioner's own routine."
+draft: false
+---
+
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import CaseStudy from '../../components/callouts/CaseStudy.astro';
+import ConceptBox from '../../components/callouts/ConceptBox.astro';
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+import Recovery from '../../components/callouts/Recovery.astro';
+import Convergence from '../../components/callouts/Convergence.astro';
+import Divergence from '../../components/callouts/Divergence.astro';
+import Sidenote from '../../components/Sidenote.astro';
+
+*The previous chapter was about the field's evolution. This chapter is about yours. The same forces that make a book rot also rot your personal practice — but quieter, without the feedback loop a reader would provide, and so the rot goes on longer before it is noticed. This is the last methodological chapter because it is the one that matters the most to the reader: the methodology only pays off if you apply it to yourself.*
+
+## Representation
+
+Your practice has the same three dimensions as the book this methodology was built for.
+
+You have **sources you trust** — the docs, posts, colleagues, and past experiences that shape your mental model of what the agent will do. Some of those sources are current; some described the tool eighteen months ago and you never updated. Without explicit re-tiering, the weighting in your head drifts toward the sources you encountered first, not the sources that are most accurate now.
+
+You have **claims you rely on** — assertions about what works, what doesn't, what the agent is good at, what to avoid. Each claim has a volatility class, same as each claim in a book has one. Some of your operating claims are stable principles (*context is expensive*); some are architectural patterns (*briefing doc at the repo root*); some are feature-surface (*the `/compact` command does X*). You track zero of them as such unless you build the habit.
+
+You have **a repertoire of specific workflows** — the exact sequences of commands, prompts, and fallbacks you reach for without thinking. This is where the most personal rot lives. A workflow that was optimal last year remains in muscle memory even when the tool has grown a better primitive; a superstition that never mattered remains encoded because no one has re-examined it.
+
+<ConceptBox term="Practice rot">
+  The gap between what the practitioner does reflexively and what the current tool state makes optimal. Practice rot is cumulative, silent, and specific to the individual — your practice rots in ways your colleague's does not, because you reached stability along a different path. Unlike book rot, no external reader surfaces it; the only detection mechanism is deliberate self-audit.
+</ConceptBox>
+
+The uncomfortable observation: practice rot is not symmetric with tool change. The tools get better; some of your habits are still calibrated to the version where the tool was worse. Those habits continue to produce correct outputs — you do not hit an error — but they waste context, waste tokens, waste time, and cover up places where the new primitive would serve better.
+
+<KeyIdea>
+  Your personal practice ages along the same axes as any other source-dependent system: the authority of your reference points, the volatility of your operating claims, the shape of your repertoire. The methodology in Ch 15 is not a tool for writing books — it is a tool for maintaining coherence in any fast-changing domain. The reader who internalizes it but never applies it to themselves has missed the point.
+</KeyIdea>
+
+## Operation
+
+Four routines — a daily micro-audit, a weekly repertoire review, a quarterly belief audit, and an annual integration — handle the practice-rot problem at different time scales. None is costly on its own. The combination is what works; any single cadence in isolation either misses drift (too coarse) or creates friction (too fine).
+
+### Routine 1: daily micro-audit at session close
+
+At the end of a substantial agent session, spend ninety seconds on three questions: *What did I reach for that didn't work well? What did I want that the agent couldn't do? What surprised me?*
+
+These three questions surface different things.
+
+*Didn't work well* flags feature-surface rot — you reached for a command that has been superseded, a pattern the agent no longer handles cleanly, a workflow that was fine until a recent release changed something.
+
+*Wanted that the agent couldn't do* flags the boundary between what's possible now and what you thought was possible. Sometimes the gap is real (the tool cannot yet do this); sometimes it is your gap (the tool *can* do this and you haven't learned how). The question is whether you investigate before assuming the gap is the tool's.
+
+*Surprised me* flags anywhere the agent's behavior diverged from your model. This is the highest-information signal of the three. Surprise is evidence your mental model is incomplete or wrong; tracking surprises over weeks reveals the places your practice has rotted most.
+
+<SkillBox title="The surprise log">
+  Keep a plain text file — a week of rolling notes, a commit message appended at session end, a note in a dev journal, whichever matches your workflow — that records surprises. One line per surprise: what you expected, what happened, one-sentence hypothesis about why. Do not try to explain the surprises in the moment; let them accumulate. After two weeks, read the list. Patterns surface: *I keep being surprised that compaction is triggered earlier than I expect* — that is a belief about your current tool that has quietly decoupled from reality, and now you see it. The log costs thirty seconds per surprise; the pattern-recognition pays off compounding.
+</SkillBox>
+
+### Routine 2: weekly repertoire review
+
+Weekly, walk through the commands, skills, and prompts you reached for in the past week. For each, one question: *is this still the best way to do this?*
+
+<Divergence axis="repertoire scope across tools">
+  The exact surfaces to audit differ by tool. Claude Code practitioners review the slash commands in `.claude/commands/`, the skills in `.claude/skills/`, and the invocation patterns they use most. Gemini CLI practitioners review their slash commands (often stored in `.gemini/commands/`) and MCP-server integrations. Codex CLI practitioners review their approval-mode defaults and whatever repertoire they have built around its CLI surface. The specific artifacts vary; the *question* — *is this still the best way?* — is tool-independent.
+</Divergence>
+
+Three outcomes from the question:
+
+- **Still good** — no action. Skip to the next item.
+- **Still works but something new is better** — queue a migration. Update the skill, rewrite the command, change the habit.
+- **Broken or obsolete** — delete. A dead skill left in place is active misinformation; it will mislead you, mislead your agent if it reads your config, mislead future-you when you search for the right way to do something.
+
+The weekly cadence catches drift fast enough that the accumulated debt never becomes overwhelming. Teams that audit quarterly instead of weekly face a very different problem: twelve weeks of drift, the causes tangled with each other, and the cost of unwinding far higher than the sum of twelve individual weekly reviews would have been.
+
+### Routine 3: quarterly belief audit
+
+Quarterly, step up a level and audit your operating beliefs — the claims about what the agent is good at, what to avoid, when to use which tool.
+
+List your top-of-mind beliefs: *the agent is bad at X. Don't use tool Y for Z. Always do A before B.* For each, one question: *when did I last verify this, and against what source?*
+
+The audit reliably surfaces three classes of stale belief:
+
+- **Beliefs that were never grounded.** You picked them up from a blog post, a tweet, a colleague's offhand remark — and they hardened into operating principles without ever being tested against your actual workflow. Some will hold up; some will not. Either way, the audit promotes them from assumed-truth to tested-truth or rejects them.
+
+- **Beliefs that were grounded but have expired.** A limitation that was real six months ago has been fixed in a minor release and you never updated. The belief continues to bound your behavior — you avoid doing things the agent now handles perfectly — at real cost.
+
+- **Beliefs that were never even articulated.** Some of your practice is encoded as habit rather than belief. The audit is the time to surface those: *I always start agent sessions with a full file read — when did I decide that? Is it still helpful?* Half of these pass inspection; half do not.
+
+<Recovery
+  pattern="Your best practice was true, is now actively wrong"
+  symptom="You notice — often because a colleague demonstrates it, or because you read a release note — that something you were careful about is no longer necessary, and in fact the careful-version is now slower and more error-prone than the straightforward version the tool now supports directly."
+>
+  Three steps. (1) Verify with a real session; skepticism is warranted because release notes sometimes promise capabilities that only half-work. (2) Update the artifacts where the old belief lives: briefing docs, team skills, personal command files. (3) *Tell your team*. Stale beliefs spread socially — a colleague picked them up from you, or you from them, or both of you from a shared document. Updating your artifacts without updating the social channel leaves the rot in other heads. The fix is cheap individually; the compounding value is a team whose beliefs converge toward current reality instead of drifting apart.
+</Recovery>
+
+### Routine 4: annual integration
+
+Annually, do the cross-tool version of the quarterly audit. The question: *are the tools I use still the right tools for my work, or have I stayed on them out of inertia?*
+
+This is the rarest routine because the switching cost is high and the judgment is hard. But it is the one that catches the deepest form of practice rot: continuing to use a tool optimized for a problem shape that your work no longer has. A practitioner whose work shifted from greenfield creation to brownfield maintenance may be using a tool selected for the old shape; a practitioner whose team adopted a new language may be relying on tool primitives that predate the language.
+
+The annual integration does not require a tool switch. It requires *considering* a tool switch with a clear head — evaluating what you use, what the alternatives have become in the past year, whether any single change would materially improve your work. The answer is usually no. When it is yes, catching it within one year rather than three is the difference between a month of rebuilding practice and a quarter of it.
+
+<TryThis title="Run a surprise-log audit this week">
+  Keep the surprise log (Routine 1) for seven days. At the end, do three things. (1) *Group* — cluster the surprises by theme. Do three of them all relate to context handling? All relate to one specific tool's behavior? All relate to a kind of task you've recently started doing more? (2) *Investigate* — pick the largest cluster and spend thirty minutes investigating. Read the current tool docs for the feature in question; run a small targeted session that probes the behavior; check a recent release note. (3) *Update* — correct whatever artifact was carrying the stale belief (a briefing doc, a skill, a personal command file). Report back — to yourself — on how long the investigation took and how much material was out of date. The numbers will surprise you; that is the entire point of running the audit.
+</TryThis>
+
+### The link between personal audit and team audit
+
+Personal rot and team rot are coupled. Your surprises, once investigated, should feed the team's shared artifacts — briefing docs, skill registry, policy — so the investigation benefits everyone. A common anti-pattern: the individual notices rot, updates their personal config, but never updates the team-level artifact. Six months later, every new team member is still inheriting the stale state from the shared artifact. The audit closes only when the fix has propagated to the surface other people see.
+
+The inverse flow is also important. When the team updates a shared artifact, every individual's personal practice has a choice: align with the new shared state or drift away from it. Drift-away happens silently; alignment requires a small deliberate action. Building alignment into your weekly repertoire review (*what did the team change this week, and did I update?*) closes the loop in the other direction.
+
+## Evolution
+
+The self-audit discipline is the stable-principle core of this book, but the specific routines benefit from a light touch on current practice.
+
+<Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+  The *need* for self-audit is tool-independent. Every practitioner in every agentic workflow accumulates practice rot at roughly the same rate, regardless of tool. The specific surfaces to audit (what commands, what skills, what config files) differ; the cadence structure (daily micro, weekly repertoire, quarterly belief, annual integration) is universal across the three tools and across the practitioner populations using them. The routines in this chapter are not Claude-specific or Gemini-specific; they are the shape of maintaining coherence in any fast-moving domain.
+</Convergence>
+
+<Divergence axis="tooling support for self-audit">
+  Some tools ship primitives that support self-audit more than others. Session transcript exports, structured session history, per-command usage statistics — these are the raw material that a practitioner's audit routine can rely on. Claude Code has session resume and export mechanics; Gemini CLI has similar facilities; Codex CLI's session facilities are different in shape. No tool ships *explicit audit support* — surface-level analytics on what you've been doing. This is a gap; expect first-class audit dashboards within 12–18 months as practitioners articulate demand for them.
+</Divergence>
+
+<Divergence axis="audit vocabulary at personal scale">
+  The vocabulary for self-audit (surprise log, repertoire review, belief audit) is not standardized. Different practitioners use different names for overlapping structural ideas. The shape — regular review at multiple cadences, grounded in concrete signals (surprises, used-commands, stated beliefs) — is convergent; the specific language is not. Expect consolidation as the community settles, but the specific nomenclature is less important than the structure.
+</Divergence>
+
+**Emerging: AI-assisted self-audit.** A natural loop: the agent itself can help audit your practice. *Read my last thirty session transcripts and list claims I seem to rely on that no longer match the tool's current behavior.* This is a first-class task for the agent, and the feedback loop — agent helps practitioner audit agent-use — is a genuinely new possibility that predates this book's methodology. Tools to support this are not mature in 2026; expect a generation of them within 18 months. The methodology in this chapter is the scaffolding; agent-assisted audit is the amplifier.
+
+**Emerging: cohort-level audit.** Tools or third-party services that let a team see aggregated drift signals — *everyone on the team seems surprised when X happens; that's a candidate for a team-level update* — do not exist in 2026 but are an obvious extension of the personal pattern. Privacy-preserving designs will matter; expect opt-in, aggregated-signal-only products within 18–24 months.
+
+**Emerging: practice longevity research.** A small community is beginning to study practitioner skill decay in AI-assisted development — how fast skilled practitioners get slower when they stop practicing, how much of their skill transfers to new tools, whether the three-cadence discipline actually produces measurable improvement. This is nascent. Expect publications over the next two years; expect the methodology in this chapter to be refined or partially superseded by more evidence-based versions.
+
+## Quick reference
+
+- Your personal practice rots the same way a book rots — by the same mechanisms, along the same axes. Self-audit is the counter-discipline.
+- Three dimensions of personal rot: sources you trust, claims you rely on, repertoire you reach for. Each ages at a different rate.
+- Four routines at four cadences: daily surprise log, weekly repertoire review, quarterly belief audit, annual tool integration. The combination is load-bearing; any single cadence in isolation fails.
+- Daily: end-of-session 90 seconds on what didn't work, what the agent couldn't do, what surprised you. Surprises are the highest-information signal.
+- Weekly: walk your commands/skills/prompts. For each — still good, needs migration, or delete? Dead skills are active misinformation.
+- Quarterly: audit your operating beliefs. When did you last verify this? Against what source? Promote assumed-truth to tested-truth or retire.
+- Annually: consider tool switching with a clear head. Usually no change; when yes, catching it at one year rather than three is worth the audit cost.
+- Personal audit and team audit are coupled. Individual fixes should propagate to shared artifacts; shared changes should trigger personal alignment.
+- Convergent across tools: the *shape* of self-audit is universal. Divergent: the specific surfaces, the tooling support, and the emerging vocabulary.
+- Emerging: agent-assisted self-audit, cohort-level audit signals, practitioner-skill research. 18–24 months of substantial movement.
+- Durable principle: you are the most important source in your own practice. Audit your own claims at least as carefully as you'd audit someone else's book.

@@ -1,0 +1,155 @@
+---
+title: Enterprise deployment
+part: 4
+chapter: 14
+volatility: architectural-pattern
+tools_compared: [claude-code, gemini-cli, codex-cli]
+last_verified: 2026-04-17
+sources: []
+description: "Enterprise deployment of agentic tools adds constraints that personal and team use never surface: regulatory compliance, data residency, audit logging, air-gapped networks, procurement risk. This chapter covers the architectural patterns that make CLI agents acceptable to enterprise constraints — and the design choices that become load-bearing when they do."
+draft: false
+---
+
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import CaseStudy from '../../components/callouts/CaseStudy.astro';
+import ConceptBox from '../../components/callouts/ConceptBox.astro';
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+import Recovery from '../../components/callouts/Recovery.astro';
+import Convergence from '../../components/callouts/Convergence.astro';
+import Divergence from '../../components/callouts/Divergence.astro';
+import Sidenote from '../../components/Sidenote.astro';
+
+*An agent that works for one engineer is a tool. An agent that works for a team is infrastructure. An agent that works inside a regulated enterprise is a compliance surface — a place where data flows have to be documented, access has to be audited, procurement has to be survived. The patterns that get an agent across the enterprise threshold are not about the agent itself; they are about the envelope the agent runs inside.*
+
+## Representation
+
+Enterprise deployment adds three classes of constraint that personal and team use do not surface.
+
+**Regulatory.** Financial services, healthcare, defense, critical infrastructure — each brings its own compliance regime (SOC 2, HIPAA, FedRAMP, PCI-DSS, various regional equivalents). The regimes differ in specifics; they converge on a handful of requirements: *data residency* (where the data may leave the network), *access control* (who may invoke what), *audit logging* (what was done, by whom, when, with what authorization), *change control* (how modifications to the system are approved).
+
+**Operational.** Enterprise environments are usually not cleanly internet-connected. Some production networks are air-gapped. Some allow egress only to specific approved endpoints. Some route all outbound through inspection proxies that are intolerant of streaming responses. An agent that assumes direct access to a vendor API over the public internet does not run in these environments without modification.
+
+**Procurement.** The agent tool must pass vendor review: security questionnaires, SOC 2 reports, DPIAs (data protection impact assessments), model card reviews. The tool vendor's security posture becomes part of the deployment's security posture. This is a months-long process at most enterprises; the engineering work must anticipate it.
+
+<ConceptBox term="The enterprise envelope">
+  The layer of infrastructure that wraps an agent tool to satisfy regulatory, operational, and procurement constraints. Components typically include: a data-residency-compliant model endpoint (regional, private, or on-prem), an egress gateway with allowlist and logging, an identity-and-access layer that maps corporate SSO to agent permissions, a structured audit log pipeline, and a change-control process that governs updates to any of the above. The envelope is where most of the engineering happens; the agent tool itself is often the smallest component.
+</ConceptBox>
+
+The mental model to resist: *we'll use the agent the way our engineers already do, just at corporate scale*. The mental model that works: *we are designing the envelope first, and the agent is a component inside it*. Framing the problem as agent-first invariably produces a deployment the compliance team rejects on first review; framing it as envelope-first lets the compliance team sign off on the envelope's guarantees and then lets engineering choose and upgrade the agent inside those guarantees over time.
+
+<KeyIdea>
+  Enterprise deployment is not a scaled-up version of team deployment. It is a different design problem dominated by the envelope — data path, audit path, identity path, change-control path — with the agent as a replaceable component inside the envelope. Teams that design envelope-first ship within weeks to months; teams that design agent-first spend years fighting procurement and compliance reviews that keep sending the same artifacts back.
+</KeyIdea>
+
+## Operation
+
+Five components — model endpoint, identity, audit logging, network policy, and change control — carry nearly all the compliance weight. Each maps onto distinct choices all three tools have converged on supporting.
+
+### Component 1: the model endpoint
+
+The single largest compliance question is *where the model runs* and *whether the prompts and completions leave the network*.
+
+<Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+  All three tools support pointing the CLI at a configurable backend rather than only the vendor's default public API. Claude Code supports AWS Bedrock and Google Cloud Vertex AI as first-class backends, which gives enterprises model access via their existing cloud contract; Gemini CLI runs natively against Vertex AI; Codex CLI supports backend configuration via environment variables that can point at Azure OpenAI, private inference endpoints, or OpenAI-compatible proxies. The *mechanism* differs by tool; the *capability* — run the agent against an enterprise-approved endpoint rather than the public API — is convergent and a hard prerequisite for enterprise adoption.
+</Convergence>
+
+Three deployment topologies cover most enterprise cases:
+
+- **Vendor-managed, region-scoped.** The tool talks to the vendor's public API, but with data residency committed (prompts and completions stay in a specific region, not stored for training). Easiest to set up; requires the vendor's regional residency guarantees to satisfy compliance.
+- **Cloud-partner managed.** The tool talks to AWS Bedrock, Google Vertex AI, or Azure OpenAI — the enterprise's existing cloud provider hosts the inference endpoint under the contract the enterprise already has. Data never leaves the enterprise's cloud tenancy; billing flows through the cloud account.
+- **Self-hosted inference.** The tool talks to a model running on enterprise-controlled infrastructure, often a locally-hosted open-weights model or a vendor-approved on-prem deployment. Maximum control; maximum operational burden.
+
+Most enterprises start with the cloud-partner topology — it matches their existing cloud security posture and does not require standing up inference infrastructure. Self-hosted is a fallback for the most sensitive workloads (classified, deeply-regulated healthcare, certain national-security contexts).
+
+<SkillBox title="Choosing the topology">
+  Three questions reliably sort the choice. (1) *Does your compliance regime allow data to leave your cloud tenancy?* If no, you need cloud-partner or self-hosted; vendor-managed is out. (2) *Does your operations team have capacity to run inference infrastructure?* If no, cloud-partner is the pragmatic middle ground. (3) *Do you have workloads where even your cloud provider is too much trust?* If yes, self-hosted for those specific workloads; cloud-partner or vendor-managed for the rest. The common mistake is trying to unify — picking one topology for all workloads — when the right answer is usually different topologies for different workload classes.
+</SkillBox>
+
+### Component 2: identity and access
+
+Enterprise identity is almost never "whoever is logged into this workstation." It is corporate SSO (SAML, OIDC) that resolves to an identity with group memberships that map to permissions.
+
+The CLI-agent surface is not usually where this integration lives. Instead, the model endpoint (Bedrock, Vertex, Azure OpenAI) is what integrates with corporate identity — IAM roles, service accounts, federated identity — and the CLI authenticates to the endpoint using whatever credential the enterprise identity system provides. The agent tool itself inherits the identity of the process invoking it.
+
+The practical consequence: *the CLI tool does not need to know about SAML*. It needs to know about environment variables or local credentials that the identity infrastructure has provisioned. The integration point between corporate identity and the agent is the cloud provider's IAM, not the agent binary.
+
+<Divergence axis="secondary credential surfaces">
+  The three tools differ in what *additional* credentials they accept beyond the model endpoint. Claude Code can authenticate via OAuth to Anthropic's consumer API, via cloud IAM for Bedrock/Vertex, or via enterprise SSO flows in certain deployments. Gemini CLI leans heavily on Google Cloud Application Default Credentials — the same credential chain that the rest of Google Cloud's tooling uses. Codex CLI supports raw API keys and has been adopted in enterprise settings via key-vault-managed environment variables. The principle is convergent (*inherit identity from the enterprise's existing IAM*); the specific credential mechanisms diverge.
+</Divergence>
+
+### Component 3: audit logging
+
+Every regulated environment requires an audit log of *who did what when*. For agent tools, this splits into two distinct log streams.
+
+The first: **agent-invocation logs.** Every time the agent runs, a record exists capturing who invoked it, what the prompt was, what tools it called, what it produced, how long it took. These logs belong in the enterprise's SIEM (security information and event management system), not just the agent tool's local trace file.
+
+The second: **model-request logs.** Every call from the agent to the model endpoint produces a record at the endpoint side. Cloud providers (Bedrock, Vertex, Azure OpenAI) emit these automatically to the enterprise's logging infrastructure. Together the two log streams let auditors reconstruct: a specific engineer invoked an agent, which made specific model calls, which produced specific outputs, which resulted in specific code changes.
+
+<SkillBox title="Audit-log wiring pattern">
+  Four links in the chain: (1) the CLI emits a structured per-invocation record — JSON, shipped to the enterprise's log aggregator on every invocation — capturing invoking user, prompt, tool calls, final output, exit code. (2) The model endpoint's access logs are captured in the provider's native logging (CloudTrail, Cloud Audit Logs). (3) The agent's per-invocation record includes a correlation ID that ties back to the model endpoint's logs, so auditors can join the two. (4) The log retention policy matches the enterprise's compliance requirement — often seven years for financial services. Missing the correlation ID is the most common bug; without it, the audit chain breaks between "the agent ran" and "the model was queried" even though both sides have records.
+</SkillBox>
+
+### Component 4: network policy
+
+Air-gapped and restricted-egress environments put the final constraint on agent deployment. Two common patterns:
+
+**Egress allowlist.** The only endpoints the agent may reach are explicitly allowlisted — typically the enterprise's chosen model endpoint plus internal repositories. This is straightforward to configure as long as the tool's default behavior does not require unexpected egress (telemetry endpoints, autoupdate checks, documentation fetches). Enterprise-friendly tools explicitly document all outbound endpoints so the allowlist can be authored precisely.
+
+**Air-gapped.** No internet egress at all. Self-hosted model endpoint is mandatory. All documentation, skill registries, updates must be delivered through the enterprise's existing internal distribution channels. Air-gapped deployment is dramatically more work than restricted-egress; most enterprises run air-gapped only for specific workload classes, not as the default.
+
+<Recovery
+  pattern="The agent attempts unexpected egress that blows up in a restricted network"
+  symptom="A deployment that passed functional testing in the dev VPC fails intermittently in production because the tool tries to call an endpoint — a telemetry endpoint, an update check, a documentation fetch — that wasn't included in the egress allowlist. The failures are non-deterministic because the egress only happens under certain conditions."
+>
+  Two-layer fix. Short-term: identify the missing endpoint by running the agent with verbose network tracing enabled and adding every endpoint it contacts to the allowlist. Structural: treat egress as a documented interface of the tool — when evaluating an agent for enterprise deployment, require the vendor to provide a complete list of outbound endpoints and the conditions under which each is contacted. Tools that cannot provide this list are not ready for restricted-egress deployment. The procurement phase is where this list belongs, not the incident-response phase.
+</Recovery>
+
+### Component 5: change control
+
+Updates to the agent tool — new versions, new skills, new policies — are change-control events. In regulated environments, change control is a documented process: proposed change, risk assessment, approval, staged rollout, rollback plan.
+
+The concrete manifestation: the agent tool's version is pinned in configuration, updates go through the same pipeline as any other tooling update, and the change-control document records the specific behavior changes between versions. Vendors' changelog discipline becomes part of the enterprise's change-control machinery — a vendor that ships cryptic release notes ("bug fixes and improvements") makes change-control impossible.
+
+<CaseStudy date="2026-02">
+  A financial-services team deploying an agent tool hit a three-month procurement delay because the vendor's release notes for recent versions lacked specificity. The compliance team could not assess risk of each version update without knowing what had changed. The team's resolution: they pinned the version, built internal documentation of the observed behaviors that mattered for their workflows, and committed to re-evaluating only on major version bumps. The pin let them ship; the re-evaluation cadence matched their internal change-control rhythm rather than the vendor's release rhythm. The lesson generalizes: enterprise adoption runs on the slower clock, and the deployment design must accommodate that, not fight it.
+</CaseStudy>
+
+<TryThis title="Draft your enterprise deployment gap analysis">
+  Pretend your team is proposing to deploy an agent tool in your current employer's most regulated workload. Walk through the five components: (1) which endpoint topology satisfies your compliance regime? (2) what is the integration path between corporate SSO and the model endpoint? (3) where do the agent-invocation and model-request logs land, and do they correlate? (4) what is the egress policy, and does the agent's default behavior fit within it? (5) what is the change-control path for version updates? For each, identify the gaps between "the default configuration of the tool" and "what your enterprise requires." The gap list is the deployment roadmap. Most teams are surprised how long the list is on first attempt.
+</TryThis>
+
+## Evolution
+
+Enterprise patterns are among the slowest-moving parts of agentic coding — compliance regimes change on the scale of years, not quarters. That said, two axes are in active motion.
+
+<Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+  Enterprise-ready deployment has become table stakes across the field. All three tools ship cloud-partner backends as first-class citizens rather than afterthoughts; all three document their egress behavior; all three support structured logging of invocations. Two years ago this was differentiating; now it is the baseline. A tool that does not support cloud-partner backends in 2026 is not an enterprise candidate at all — the design space has closed.
+</Convergence>
+
+<Divergence axis="air-gapped deployment maturity">
+  Support for fully air-gapped deployment varies significantly across the three tools. Some ship official guides and reference architectures for air-gapped installation; others are de facto supported but require substantial vendor engagement or DIY work. This is the area most likely to see consolidation: as regulated industries deploy agents at scale, vendor-first-class air-gapped deployment tooling will become a competitive requirement. Expect 12–18 months of movement here.
+</Divergence>
+
+<Divergence axis="skill and policy distribution in air-gapped environments">
+  The community skill registries, MCP server repositories, and plugin ecosystems that work in internet-connected environments do not work air-gapped. No tool has a mature story for mirrored, curated, enterprise-controlled distribution of the auxiliary ecosystem. Most current air-gapped deployments are minimal — core agent + internal briefing docs + locally-authored skills only. Filling this gap is a longer-term play; 18–24 months minimum before mature tooling.
+</Divergence>
+
+**Emerging: agent identity federation.** In 2026, agent invocations inherit the identity of the human or service account that invoked them. A finer-grained model — *the agent itself has an identity*, with its own permissions that compose with the invoker's — is beginning to appear in research deployments. This matters for enterprise governance because it lets agents be audited as actors independent of their invokers. Expect vendor support for explicit agent identity within 18–24 months.
+
+**Emerging: regulated-industry reference architectures.** Anthropic, Google, and other vendors are beginning to publish reference architectures for specific regulated industries — HIPAA-compliant deployment guides, FedRAMP-ready configurations, PCI-DSS architectures. In 2026 these are still sparse. Within 18 months, expect well-documented reference architectures for the major compliance regimes that reduce the custom-engineering burden of enterprise deployment.
+
+**Emerging: policy engines for agents.** The same direction flagged in Ch 12 and Ch 13 applies here: enterprises will move from per-tool settings files to declarative policy engines (OPA, Cedar, or custom). In enterprise contexts the forcing function is stronger — compliance auditors want to see the policy expressed declaratively, reviewable, versioned, tested. Tool-specific permission files do not satisfy this; a policy layer does.
+
+## Quick reference
+
+- Enterprise deployment adds three classes of constraint: regulatory, operational, procurement. Each shapes the deployment more than the agent tool itself does.
+- The envelope — model endpoint, identity, audit logging, network policy, change control — is where most of the engineering lives. The agent tool is a replaceable component inside it.
+- Three model-endpoint topologies: vendor-managed region-scoped, cloud-partner managed (most common starting point), self-hosted (most sensitive workloads). Different workload classes often warrant different topologies.
+- Identity flows through the cloud provider's IAM, not the agent binary. The agent inherits the identity of the process that invoked it.
+- Audit logs split into two streams — agent-invocation and model-request. A correlation ID ties them together. Without the ID the audit chain breaks.
+- Network policy: restricted-egress is manageable if the vendor documents all outbound endpoints; air-gapped is dramatically more work and is usually reserved for specific workload classes.
+- Change control: pin the tool version, document behavior at pinned version, re-evaluate on major version bumps. Enterprise runs on a slower clock than the vendor's release cadence.
+- Cloud-partner backend support is now table stakes across the three tools. Air-gapped maturity, skill-distribution in air-gapped environments, and policy engines are the active divergences.
+- Emerging: agent identity federation, regulated-industry reference architectures, policy engines. 18–24 months of substantial movement.
+- Durable principle: design envelope-first, not agent-first. The envelope's guarantees are what the compliance team signs off on; the agent inside is the part that can change over time.

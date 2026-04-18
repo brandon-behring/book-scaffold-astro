@@ -1,0 +1,30 @@
+---
+/**
+ * [...slug].astro — dynamic route for every chapter in src/content/chapters.
+ *
+ * getStaticPaths emits one page per non-draft chapter; the page imports
+ * the Chapter layout and renders the MDX body via <Content />.
+ *
+ * Path shape: the collection's slug (filename minus extension) becomes
+ * the URL. E.g. `src/content/chapters/context-as-currency.mdx` → `/context-as-currency/`.
+ */
+import type { GetStaticPaths } from 'astro';
+import { render } from 'astro:content';
+import { getAllChapters } from '../lib/chapters';
+import Chapter from '../layouts/Chapter.astro';
+
+export const getStaticPaths: GetStaticPaths = async () => {
+  const chapters = await getAllChapters();
+  return chapters.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+};
+
+const { entry } = Astro.props;
+const { Content, headings } = await render(entry);
+---
+
+<Chapter entry={entry} headings={headings}>
+  <Content />
+</Chapter>

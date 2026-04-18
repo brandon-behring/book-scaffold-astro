@@ -1,0 +1,33 @@
+---
+/**
+ * ChapterTOC — collapsible "On this page" anchor list.
+ *
+ * Uses native <details> — collapsed by default; no JavaScript required.
+ * Shows h2 and h3 headings only (h1 is the chapter title; h4+ is noise
+ * in a TOC). Each heading link uses the slug Astro's MDX generates.
+ *
+ * If the chapter has fewer than 3 matching headings, the TOC renders
+ * nothing — an anchor list for a short chapter is clutter.
+ */
+import type { MarkdownHeading } from 'astro';
+
+interface Props {
+  headings: MarkdownHeading[];
+}
+const { headings } = Astro.props;
+
+const toc = headings.filter((h) => h.depth >= 2 && h.depth <= 3);
+const showToc = toc.length >= 3;
+---
+{showToc && (
+  <details class="chapter-toc">
+    <summary>On this page</summary>
+    <ol>
+      {toc.map((h) => (
+        <li class={`toc-h${h.depth}`}>
+          <a href={`#${h.slug}`}>{h.text}</a>
+        </li>
+      ))}
+    </ol>
+  </details>
+)}

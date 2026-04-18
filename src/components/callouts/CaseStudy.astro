@@ -1,0 +1,36 @@
+---
+/**
+ * CaseStudy — concrete anecdote, dated. Grounds a principle in a real
+ * event: "When Gemini's 1M window launched (Feb 2026)...", "A team hit
+ * context rot at 60K tokens in Q3 2025..."
+ *
+ * The date is required and rendered prominently to help readers
+ * calibrate relevance against current tool state. Stale case studies
+ * don't pretend to be recent.
+ *
+ * Usage:
+ *   <CaseStudy date="2026-02">
+ *     When Gemini shipped the 1M-token window, teams initially filled
+ *     it to ~800K and watched retrieval accuracy collapse by Q3...
+ *   </CaseStudy>
+ */
+interface Props {
+  date: string;       // human-readable or ISO — not parsed, just displayed
+  title?: string;
+}
+const { date, title } = Astro.props;
+---
+<aside class="callout callout-case" role="note" aria-label="Case study">
+  <strong class="callout-title">
+    Case study{title ? ` · ${title}` : ''} <span class="case-date">· {date}</span>
+  </strong>
+  <div class="callout-body"><slot /></div>
+</aside>
+
+<style>
+  .case-date {
+    font-weight: 400;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+</style>

@@ -1,0 +1,203 @@
+/* print.css — Print + Paged.js styling.
+ *
+ * Applied by the browser when the user prints, and by pagedjs-cli
+ * when rendering the PDF edition. `@page` rules configure the page
+ * size, margins, and running headers; `@media print` overrides
+ * screen-specific layout (Tufte 2-column becomes a single flow with
+ * sidenotes floating in the page margin).
+ */
+
+@page {
+  size: letter;
+  margin: 1in 0.9in 1in 0.9in;
+
+  @bottom-center {
+    content: counter(page);
+    font-family: var(--font-body);
+    font-size: 9pt;
+    color: #555;
+  }
+}
+
+/* Front-matter pages without page numbers (optional — expand later). */
+@page :first {
+  @bottom-center { content: none; }
+}
+
+@media print {
+  /* Hide interactive chrome */
+  .chrome-buttons,
+  .chapter-nav,
+  .chapter-toc,
+  .pagefind-ui,
+  .version-selector,
+  nav[aria-label="On this page"],
+  script {
+    display: none !important;
+  }
+
+  html, body {
+    background: white !important;
+    color: black !important;
+    font-size: 10.5pt;
+  }
+
+  /* Reset Tufte container for page flow */
+  .prose {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  .prose > * {
+    max-width: 100%;
+  }
+
+  /* Sidenotes stay floated in the right margin of the printed page.
+   * 30% width leaves the main column ~65% — similar proportion to
+   * the screen Tufte grid. */
+  .sidenote {
+    float: right;
+    clear: right;
+    width: 30%;
+    margin-right: -35%;
+    margin-top: 0;
+    padding-left: 0.5em;
+    border-left: 2px solid #aaa;
+    font-size: 9pt;
+    font-style: italic;
+    color: #333;
+    background: transparent;
+  }
+
+  /* Sidenote marker stays inline as superscript. */
+  .sidenote-marker {
+    color: #000;
+    font-size: 0.7em;
+  }
+
+  /* Page breaks — chapters start on a fresh page; keep headings + blocks together. */
+  section.chapter-print {
+    break-before: page;
+  }
+  section.chapter-print:first-of-type {
+    break-before: auto;
+  }
+  h1 {
+    break-before: page;
+    break-after: avoid;
+  }
+  h2, h3, h4 {
+    break-after: avoid;
+  }
+  pre, table, .callout, blockquote {
+    break-inside: avoid;
+  }
+
+  /* Links: show the URL alongside the link text for print. */
+  a[href]:not([href^="#"])::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    color: #555;
+    word-break: break-all;
+  }
+
+  /* Don't print the URL for in-page anchors or images. */
+  .citation-link::after,
+  .sidenote a::after {
+    content: "" !important;
+  }
+
+  /* Callouts: keep palette but reduce visual weight for print economy */
+  .callout {
+    padding: 0.4em 0.7em;
+    margin: 0.6em 0;
+    border-left-width: 2px;
+    background: #f6f4ee !important;
+    color: black !important;
+  }
+  .callout-title {
+    color: black;
+  }
+
+  /* Tables: light borders, normal weight */
+  table {
+    page-break-inside: avoid;
+    font-size: 9pt;
+  }
+  th, td {
+    border-bottom: 0.5pt solid #aaa;
+  }
+
+  /* Code blocks: keep the background subtle on paper. */
+  pre {
+    background: #f6f4ee !important;
+    border: 0.5pt solid #ccc;
+    font-size: 8.5pt;
+    /* Long lines wrap rather than overflow the page edge. */
+    white-space: pre-wrap !important;
+    word-wrap: break-word;
+    overflow-x: visible !important;
+  }
+  code {
+    background: transparent;
+    border: 0;
+  }
+  .astro-code,
+  .astro-code span {
+    color: black !important;
+    background: transparent !important;
+  }
+
+  /* ===== Polish pass (commit 17) =====
+   * Widows/orphans, keep-with-next rules, and a few edge-cases that
+   * only surface in real paginated output. */
+
+  /* Keep at least 3 lines together at page boundaries so paragraphs
+   * don't leave a stranded first/last line. */
+  p, li, blockquote {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* Callout titles should stay with their body; don't let a pagebreak
+   * split the title from its explanation. */
+  .callout-title {
+    break-after: avoid;
+  }
+
+  /* Chapter header is introductory material; the page break should
+   * land either before it or after the header's content area — never
+   * mid-header, and never orphaning the h1 from the first paragraph. */
+  .chapter-header {
+    break-after: avoid;
+  }
+  .chapter-header h1 {
+    break-before: auto;  /* overrides the general h1 break-before:page */
+  }
+
+  /* Headings followed by content: don't let a break leave a heading
+   * alone at the end of a page. */
+  h2, h3, h4 {
+    break-inside: avoid;
+  }
+  h2 + p, h3 + p, h4 + p {
+    break-before: avoid;
+  }
+
+  /* Lists: keep small lists together. */
+  ul, ol {
+    break-inside: avoid-page;
+  }
+
+  /* Tables: try not to split short tables across pages. */
+  table {
+    break-inside: avoid-page;
+  }
+
+  /* Hide the caret on <details> TOC — it's already hidden by chrome
+   * display:none above, but belt-and-suspenders for printers that
+   * ignore the rule. */
+  details > summary {
+    list-style: none;
+  }
+}

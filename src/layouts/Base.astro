@@ -1,0 +1,224 @@
+---
+/**
+ * Base.astro — the outermost HTML shell.
+ *
+ * Every page in the book extends this. Loads:
+ *   - Variable fonts (Roboto, Source Code Pro) self-hosted via @fontsource-variable
+ *   - Design tokens, baseline typography, Tufte layout
+ *   - FOUC-prevention script for dark mode (reads localStorage before paint)
+ *   - Meta tags for viewport, color-scheme, generator
+ *
+ * Props:
+ *   title       — document title (required)
+ *   description — meta description (optional; used by search and social)
+ *   lang        — html lang attribute (default: en)
+ *
+ * Usage:
+ *   ---
+ *   import Base from '../layouts/Base.astro';
+ *   ---
+ *   <Base title="Chapter 1" description="...">
+ *     <main>...</main>
+ *   </Base>
+ */
+import '@fontsource-variable/roboto';
+import '@fontsource-variable/source-code-pro';
+import '../styles/tokens.css';
+import '../styles/typography.css';
+import '../styles/layout.css';
+import '../styles/callouts.css';
+import '../styles/chapter.css';
+import '../styles/tool-filter.css';
+import '../styles/convergence.css';
+import '../styles/print.css';
+import VersionSelector from '../components/VersionSelector';
+import ToolFilter from '../components/ToolFilter';
+
+interface Props {
+  title: string;
+  description?: string;
+  lang?: string;
+}
+
+const { title, description, lang = 'en' } = Astro.props;
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    {/* FOUC prevention — apply saved theme before any paint. */}
+    <script is:inline>
+      (function () {
+        try {
+          var saved = localStorage.getItem('theme');
+          if (saved === 'light' || saved === 'dark') {
+            document.documentElement.setAttribute('data-theme', saved);
+          }
+        } catch (e) { /* localStorage unavailable — fall back to prefers-color-scheme */ }
+      })();
+    </script>
+    <slot name="head" />
+  </head>
+  <body>
+    <div class="chrome-buttons">
+      <ToolFilter client:idle />
+      <VersionSelector client:idle />
+      <a
+        href="/search/"
+        class="chrome-button"
+        aria-label="Search the book"
+        title="Search"
+      >
+        <span aria-hidden="true">⌕</span>
+      </a>
+      <button
+        id="theme-toggle"
+        class="chrome-button theme-toggle"
+        type="button"
+        aria-label="Toggle dark mode"
+        title="Toggle dark mode"
+      >
+        <span class="theme-toggle-icon light-icon" aria-hidden="true">☀</span>
+        <span class="theme-toggle-icon dark-icon" aria-hidden="true">☾</span>
+      </button>
+    </div>
+    <slot />
+    <script is:inline>
+      (function () {
+        var btn = document.getElementById('theme-toggle');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+          var current = document.documentElement.getAttribute('data-theme');
+          // If no explicit theme, pick the opposite of prefers-color-scheme.
+          if (!current) {
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            current = prefersDark ? 'dark' : 'light';
+          }
+          var next = current === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          try { localStorage.setItem('theme', next); } catch (e) {}
+        });
+      })();
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  /* Floating chrome buttons — fixed top-right corner.
+   * Search icon + theme toggle; more buttons can join this row later. */
+  .chrome-buttons {
+    position: fixed;
+    top: var(--space-3);
+    right: var(--space-3);
+    display: inline-flex;
+    gap: var(--space-2);
+    z-index: 10;
+  }
+  .chrome-button {
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-subtle);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    text-decoration: none;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  .chrome-button:hover {
+    border-color: var(--color-link);
+    text-decoration: none;
+  }
+
+  /* Version selector dropdown */
+  .version-selector {
+    position: relative;
+    display: inline-block;
+  }
+  .version-selector-trigger {
+    font-family: var(--font-code);
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 0 0.6em !important;
+  }
+  .version-selector-menu {
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    right: 0;
+    min-width: 12rem;
+    margin: 0;
+    padding: var(--space-2);
+    list-style: none;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+  .version-selector-menu li {
+    margin: 0;
+  }
+  .version-selector-menu a {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    text-decoration: none;
+    color: var(--color-text);
+    border-radius: var(--radius-sm);
+  }
+  .version-selector-menu a:hover {
+    background: var(--color-bg-subtle);
+  }
+  .version-selector-menu a.version-current {
+    color: var(--color-link);
+    font-weight: 500;
+  }
+  .version-selector-menu .version-label {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+  }
+  .version-selector-menu .version-date {
+    font-family: var(--font-code);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+  .theme-toggle .theme-toggle-icon {
+    display: none;
+  }
+  /* Default (light): show moon (click to go dark) */
+  .theme-toggle .dark-icon {
+    display: inline;
+  }
+  /* Dark mode (explicit or system): show sun (click to go light) */
+  :root[data-theme="dark"] .theme-toggle .dark-icon,
+  :root:not([data-theme]) .theme-toggle .dark-icon {
+    display: inline;
+  }
+  :root[data-theme="dark"] .theme-toggle .light-icon {
+    display: inline;
+  }
+  :root[data-theme="dark"] .theme-toggle .dark-icon {
+    display: none;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .theme-toggle .light-icon {
+      display: inline;
+    }
+    :root:not([data-theme="light"]) .theme-toggle .dark-icon {
+      display: none;
+    }
+  }
+</style>

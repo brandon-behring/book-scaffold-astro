@@ -1,0 +1,41 @@
+---
+/**
+ * Convergence — where two or more tools have landed on the same
+ * pattern. Signals: stable principle for the next ~3 years (unless a
+ * new tool paradigm appears).
+ *
+ * Pedagogically central: the KF Evolution cornerstone of every chapter
+ * uses Convergence + Divergence to surface how agentic practices are
+ * solidifying. A convergence box reads as "it is safe to bet on this."
+ *
+ * Props:
+ *   tools — optional array of tool slugs to display as inline badges.
+ *           Omit for a narrative-only convergence (e.g. "On session
+ *           ergonomics, all mainstream CLIs converged by late 2025.")
+ *
+ * Usage:
+ *   <Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+ *     All three now treat context as a budgeted, decaying resource
+ *     and ship an explicit compaction command.
+ *   </Convergence>
+ */
+import { toolSlugs } from '../../content.config';
+
+type ToolSlug = typeof toolSlugs[number];
+interface Props {
+  tools?: ToolSlug[];
+}
+
+const { tools = [] } = Astro.props;
+---
+<aside class="callout callout-convergence" role="note" aria-label="Convergence">
+  <strong class="callout-title">
+    Convergence
+    {tools.length > 0 && (
+      <span class="tool-badges">
+        {tools.map((t) => <span class="tool-badge">{t}</span>)}
+      </span>
+    )}
+  </strong>
+  <div class="callout-body"><slot /></div>
+</aside>

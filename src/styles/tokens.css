@@ -1,0 +1,152 @@
+/* tokens.css — Design tokens for book-template-astro
+ * Two layers:
+ *   1. Raw palette (Warm Tol hybrid — inherited from the LaTeX book)
+ *   2. Semantic roles that reference the palette
+ * Dark mode overrides only the semantic layer.
+ */
+
+:root {
+  /* ===== Layer 1: Raw palette — Warm Tol hybrid =====
+   * Source: ~/Claude/claude-best-practices/claude-best-practices.sty lines 117-128
+   * Tol Bright relationships + Anthropic warmth. Colorblind-safe. */
+  --warm-blue:   #3B6FA0;  /* structural: headings, links, info */
+  --warm-rose:   #C06858;  /* attention: warnings, alerts */
+  --warm-green:  #4A7E3F;  /* positive: tips, practitioner */
+  --warm-plum:   #8A4E82;  /* authority: official, exercises */
+  --warm-gold:   #C09840;  /* insight: convergence, reasoning */
+
+  /* Warm neutrals (Anthropic-derived) */
+  --paper:       #FDFCF9;  /* page background — slightly off-white */
+  --code-bg:     #F7F5F0;  /* code block background */
+  --code-frame:  #B5B3AA;  /* code block border */
+  --dark-text:   #1A1A19;  /* body text */
+
+  /* Soft tints — used for callout backgrounds (5% blend with paper) */
+  --warm-blue-tint:  color-mix(in srgb, var(--warm-blue)  6%, var(--paper));
+  --warm-rose-tint:  color-mix(in srgb, var(--warm-rose)  6%, var(--paper));
+  --warm-green-tint: color-mix(in srgb, var(--warm-green) 6%, var(--paper));
+  --warm-plum-tint:  color-mix(in srgb, var(--warm-plum)  6%, var(--paper));
+  --warm-gold-tint:  color-mix(in srgb, var(--warm-gold)  6%, var(--paper));
+
+  /* ===== Layer 2: Semantic roles (light mode) ===== */
+  --color-bg:         var(--paper);
+  --color-bg-subtle:  var(--code-bg);
+  --color-text:       var(--dark-text);
+  --color-text-muted: color-mix(in srgb, var(--dark-text) 55%, var(--paper));
+  --color-border:     var(--code-frame);
+  --color-link:       var(--warm-blue);
+  --color-heading:    var(--warm-blue);
+  --color-code-bg:    var(--code-bg);
+  --color-code-border: var(--code-frame);
+
+  /* Callout semantic roles (left-bar color, used with *-tint bg) */
+  --callout-info:     var(--warm-blue);
+  --callout-warn:     var(--warm-rose);
+  --callout-tip:      var(--warm-green);
+  --callout-official: var(--warm-plum);
+  --callout-insight:  var(--warm-gold);
+
+  /* ===== Typography scale ===== */
+  --font-body: 'Roboto Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-code: 'Source Code Pro Variable', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+
+  --text-xs:   0.75rem;
+  --text-sm:   0.875rem;
+  --text-base: 1rem;
+  --text-lg:   1.125rem;
+  --text-xl:   1.25rem;
+  --text-2xl:  1.5rem;
+  --text-3xl:  1.875rem;
+  --text-4xl:  2.25rem;
+
+  --leading-tight:   1.25;
+  --leading-normal:  1.5;
+  --leading-body:    1.6;   /* target for long-form reading */
+  --leading-relaxed: 1.75;
+
+  /* ===== Layout measures ===== */
+  --measure-main: 65ch;   /* main text column */
+  --measure-side: 28ch;   /* right-margin sidenote column (desktop) */
+  --breakpoint-narrow: 48rem;  /* ~768px — switches to mobile inline-flow asides */
+
+  /* ===== Spacing scale ===== */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* ===== Borders / radii ===== */
+  --radius-sm:  2px;
+  --radius-md:  4px;
+  --border-bar: 3px;   /* left-bar on callouts and sidenote asides */
+
+  /* ===== Shiki syntax highlighting (css-variables theme) =====
+   * Shiki's css-variables mode emits <span style="color:var(--astro-code-token-...)">
+   * for each token. Mapping to Warm Tol hues keeps code blocks in the
+   * same visual language as prose callouts. Dark mode overrides below. */
+  --astro-code-foreground:              var(--color-text);
+  --astro-code-background:              var(--color-code-bg);
+  --astro-code-token-constant:          var(--warm-rose);
+  --astro-code-token-string:            var(--warm-green);
+  --astro-code-token-string-expression: var(--warm-green);
+  --astro-code-token-comment:           var(--color-text-muted);
+  --astro-code-token-keyword:           var(--warm-plum);
+  --astro-code-token-parameter:         var(--warm-blue);
+  --astro-code-token-function:          var(--warm-gold);
+  --astro-code-token-punctuation:       var(--color-text-muted);
+  --astro-code-token-link:              var(--color-link);
+}
+
+/* ===== Dark mode ==========================================================
+ * Override only the raw neutral palette + a couple of accent brightenings
+ * for contrast. Because semantic roles (--color-bg, --color-text,
+ * --color-link, etc.) and tint calcs reference these via var(), they
+ * auto-update with no further work.
+ *
+ * Precedence: explicit [data-theme="light"] > explicit [data-theme="dark"]
+ * > prefers-color-scheme. A small inline script in Base.astro applies any
+ * user-saved preference from localStorage before first paint (no FOUC).
+ * ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:       #1A1816;  /* deep warm-neutral page background */
+    --code-bg:     #26231F;
+    --code-frame:  #3A3632;
+    --dark-text:   #E8E5DD;  /* cream body text */
+
+    /* Brighten headings + links for contrast against dark bg */
+    --color-heading: color-mix(in srgb, var(--warm-blue) 55%, white);
+    --color-link:    color-mix(in srgb, var(--warm-blue) 55%, white);
+
+    /* Shiki token brightenings for contrast on dark code-block bg */
+    --astro-code-token-constant:          color-mix(in srgb, var(--warm-rose)  60%, white);
+    --astro-code-token-string:            color-mix(in srgb, var(--warm-green) 60%, white);
+    --astro-code-token-string-expression: color-mix(in srgb, var(--warm-green) 60%, white);
+    --astro-code-token-keyword:           color-mix(in srgb, var(--warm-plum)  55%, white);
+    --astro-code-token-parameter:         color-mix(in srgb, var(--warm-blue)  55%, white);
+    --astro-code-token-function:          color-mix(in srgb, var(--warm-gold)  65%, white);
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper:       #1A1816;
+  --code-bg:     #26231F;
+  --code-frame:  #3A3632;
+  --dark-text:   #E8E5DD;
+
+  --color-heading: color-mix(in srgb, var(--warm-blue) 55%, white);
+  --color-link:    color-mix(in srgb, var(--warm-blue) 55%, white);
+
+  --astro-code-token-constant:          color-mix(in srgb, var(--warm-rose)  60%, white);
+  --astro-code-token-string:            color-mix(in srgb, var(--warm-green) 60%, white);
+  --astro-code-token-string-expression: color-mix(in srgb, var(--warm-green) 60%, white);
+  --astro-code-token-keyword:           color-mix(in srgb, var(--warm-plum)  55%, white);
+  --astro-code-token-parameter:         color-mix(in srgb, var(--warm-blue)  55%, white);
+  --astro-code-token-function:          color-mix(in srgb, var(--warm-gold)  65%, white);
+}

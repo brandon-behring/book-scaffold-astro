@@ -1,0 +1,163 @@
+---
+title: The session loop
+part: 2
+chapter: 4
+volatility: stable-principle
+tools_compared: [claude-code, gemini-cli, codex-cli]
+last_verified: 2026-04-17
+sources: []
+description: "The atomic unit of agentic work is the session loop — prompt, observe, refine, commit. Each phase has a purpose; skipping any produces a specific failure mode. This chapter makes the rhythm explicit."
+draft: false
+---
+
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import CaseStudy from '../../components/callouts/CaseStudy.astro';
+import ConceptBox from '../../components/callouts/ConceptBox.astro';
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+import Recovery from '../../components/callouts/Recovery.astro';
+import Convergence from '../../components/callouts/Convergence.astro';
+import Divergence from '../../components/callouts/Divergence.astro';
+import Sidenote from '../../components/Sidenote.astro';
+
+*Your briefing doc is in place, your precision vocabulary is building, your scope instincts are right. You open the agent and… where do you start? How do you know when a session is going well versus slowly going off the rails? When do you course-correct, and when do you start fresh? This chapter is about the rhythm of a working session — the four-phase loop that turns a single prompt into durable output.*
+
+## Representation
+
+An agentic coding session is not a conversation. It is a **repeating four-phase loop**. Each phase does specific work; skipping any produces a specific and predictable failure mode. The loop is the same across all three CLI-agents this book covers.
+
+<ConceptBox term="The session loop">
+  **Prompt** — describe what you want, with enough context for the agent to act without guessing. **Observe** — read what the agent did: check the diff, run the tests, examine the output. **Refine** — if the result is close but not right, give specific feedback; if it's wrong, start fresh. **Commit** — when the change is verified, commit it. One logical change per commit. Loop.
+</ConceptBox>
+
+The phases are not ceremonial — each has a role:
+
+**Prompt** is where you spend your precision budget. The specification levers from [Ch 3](/03-prompting-as-specification/) — precision vocabulary, scope, structure, depth, verification — all live here. A sloppy prompt guarantees sloppy output; a well-structured prompt usually gets what you wanted on the first pass.
+
+**Observe** is where you resist the temptation to skim. The agent produced a diff; your job is to look at it, not nod at it. Run the tests the prompt promised to run. Check that only the files you allowed got modified. If something feels off even slightly, name it. Over-trusting the observe phase is the single most common failure mode in the loop.
+
+**Refine** is conditional. If the result is close but wrong in a specific way, feedback loops fast. If it's wrong in ways that suggest the agent didn't understand the task, stop — the context is now polluted with a failed attempt, and a third round makes it worse. Start over with a better prompt.
+
+**Commit** is the durability layer. A verified change belongs on disk before the context shifts. Compaction cannot erase what's already committed. "One logical change per commit" matters because your future self (and the agent reading your history) needs to be able to bisect.
+
+<KeyIdea>
+  Your value in the loop is not typing — it's specifying, observing, and deciding when to commit. The implementation moved to the agent; the judgment stayed with you. Sessions that skip *observe* ship broken code; sessions that skip *commit* lose work to context boundaries; sessions that skip deliberate *prompt* thrash.
+</KeyIdea>
+
+### How the loop relates to context
+
+Each phase has a context cost, and the phases compound. A prompt is ~200 tokens; a file read is ~1,000–3,000; a tool-and-observe cycle is ~500–1,000 per iteration. A debugging session that loops a few times can fill 30% of a 200K window with accumulated noise — most of it encoding *failure patterns* rather than progress. The session loop is the mechanism that keeps context expenditure proportional to real work.
+
+The corollary is the **two-failure rule** — after two failed corrections on the same issue, clear context and restart with a better prompt. The arithmetic (covered in [Ch 2](/02-context-as-currency/)) favors restart over a third correction by roughly an order of magnitude.
+
+### The plan-mode extension
+
+For unfamiliar codebases or complex tasks, the canonical four-phase loop extends to five phases: **plan** → prompt → observe → refine → commit. Plan mode is a read-only phase where the agent analyzes and proposes without writing. You evaluate the plan, adjust scope, then authorize implementation. All three CLIs support this (names vary — see Operation below) and it is one of the highest-leverage practices in the agentic toolkit.
+
+## Operation
+
+The session loop is tool-agnostic, but each CLI-agent exposes the phase transitions differently. The table maps the important verbs:
+
+| Action | Claude Code | Gemini CLI | Codex CLI |
+| --- | --- | --- | --- |
+| Stop agent mid-action | `Esc` | `Esc` | `Ctrl+C` |
+| Open rewind menu | `Esc+Esc` or `/rewind` | `/undo` (partial) | manual via git |
+| Discard conversation | `/clear` | `/chat clear` | new session |
+| Compact in place | `/compact` (+ focus) | `/compress` | `/compact` |
+| Enter plan mode | `Shift+Tab` → plan | `/plan` | approval modes (`--suggest`, `-a on-request`) |
+| Accept-edits auto mode | `Shift+Tab` → acceptEdits | prompt per-tool | per-command approval |
+| Resume last session | `claude --continue` | `gemini --continue` | `codex resume` |
+| Pick from prior | `claude --resume` | (history in `~/.gemini/`) | `codex history` |
+| Start with PR context | `claude --from-pr 123` | manual `@` to PR file | manual |
+
+<SkillBox title="Spend your precision budget in the prompt phase">
+  The five-part prompt template from [Ch 3 Prompting](/03-prompting-as-specification/) — context, task, constraints, files, verification — is the concrete shape of a prompt that won't need correction rounds. Don't re-derive it per prompt; reach for the template. The precision you spend up front is paid back in every phase that follows.
+</SkillBox>
+
+<SkillBox title="Observe deliberately, not reflexively">
+  Before accepting a diff, do three things every time: (1) read the diff top-to-bottom, not just the files you expected; (2) run the verification command the prompt specified and check the actual output, not just the exit code; (3) ask yourself whether the change achieves what you asked for *and nothing more*. If the agent also "improved" three unrelated functions, revert those now — not later. Scope creep compounds.
+</SkillBox>
+
+<Recovery
+  pattern="Third correction round on the same issue"
+  symptom="You've typed 'no, that's not what I meant' for a third time. The agent apologizes, tries again, produces something subtly wrong in a different way. The diff is getting weirder, not better."
+>
+  Stop immediately. The context is now dominated by failure patterns — every future attempt is trying to satisfy the noise, not your original intent. `/clear` (or equivalent), then write the prompt you wish you had written the first time. Use the specificity the failures taught you. Total cost: ~3 minutes. Cost of pushing through to a fourth attempt: usually much more, and the resulting code often carries subtle bugs that only surface later.
+</Recovery>
+
+<Recovery
+  pattern="Silent observation failure"
+  symptom="You accepted a diff without reading it carefully. Tests passed (maybe — did you check?), you committed. Later, something broke that shouldn't have."
+>
+  This is the most expensive failure mode in the loop and the hardest to catch. Prevention: make the *observe* phase take at least as long as the *prompt* phase did. If prompt took 30 seconds, observe for 30 seconds — read the diff, check the files, run the tests live. Recovery: `git log --oneline` to find the agent's commit, `git show` to read the full diff, decide whether to revert or patch forward. Then add whatever constraint would have prevented this to the briefing doc.
+</Recovery>
+
+### A complete mini-session
+
+A realistic loop in practice:
+
+```text
+You: Add missing-value imputation to the preprocessing pipeline.
+     Strategy: median for numeric columns, mode for categorical.
+     Write tests first. Verify: pytest tests/preprocessing/ passes.
+
+Agent: [writes tests, then implementation, runs tests — 3 pass, 1 fails]
+  "Test test_categorical_imputation is failing because the mode
+  computation uses the test-batch distribution rather than the
+  training-set distribution."
+
+You: Mode should fit on train only. Fix the imputer to fit once on
+     train and reuse for all subsequent calls.
+
+Agent: [fixes implementation, reruns — all 4 pass]
+  "All 4 tests pass. Ready to commit?"
+
+You: Commit: "feat: add missing-value imputation to preprocessing"
+```
+
+The structure: the initial prompt specified what, how (strategy), and verification criteria. The refinement was specific (which behavior, what to change). One logical change, one commit. Total elapsed: two loop iterations, ~5 minutes.
+
+<TryThis title="Track your loop count for a day">
+  Pick any day you're doing real agent work. For each task, count how many refinement rounds it takes before commit. Expectations: simple tasks should land in 1 round, standard coding in 1–2, complex changes in 2–3. If any task exceeds 3 rounds, note what a better initial prompt would have been — that note becomes a precision-vocabulary entry for your briefing doc.
+</TryThis>
+
+## Evolution
+
+The session-loop shape has converged faster than almost any other pattern in agentic coding — the four-phase rhythm was already present in pair-programming and TDD literature before AI entered the loop. What's still diverging is the *course-correction* toolkit and the *multi-session* orchestration surface.
+
+<Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+  All three CLIs support the core loop actions: interrupt mid-action, discard context, compact in place, enter a plan-before-act phase, and resume a prior session. The exact commands differ; the workflow is identical. Practices written to the loop-phases (not to the commands) port cleanly across tools.
+</Convergence>
+
+**Convergence: plan-first workflows.** Plan mode was a Claude-first feature in 2025; Gemini shipped explicit plan mode later. Codex's approval-mode flow (`--suggest`, `-a on-request`) achieves functional equivalence — the agent proposes each action and waits for approval before executing. Recommending "start in plan mode for unfamiliar code" is now tool-independent advice; the specific command differs.
+
+**Convergence: auto-accept modes.** All three tools expose some form of "let the agent run a sequence of tool calls without per-step approval." Claude's `acceptEdits` / `bypassPermissions`, Gemini's tool-level allowlists, Codex's command-approval config all serve the same need: once trust is established for a specific kind of operation, stop gating it. The safety envelope differs; the mechanism is the same.
+
+<Divergence axis="course-correction primitives">
+  Claude Code has the richest correction surface — `Esc` pauses mid-action, `Esc+Esc` opens a full checkpoint rewind menu (restore conversation, code, or both to any prior turn), every tool call auto-creates a checkpoint, checkpoints persist across sessions. Gemini CLI's `/undo` handles partial rewind. Codex CLI relies on git as the rewind mechanism. If your workflow leans on fine-grained undo, Claude's surface is decisively ahead; if you're already git-disciplined, Codex's simplicity is fine.
+</Divergence>
+
+<Divergence axis="session persistence + resumption">
+  Claude Code's `--continue` / `--resume` / `--from-pr` trio gives the clearest session-management story. `--from-pr 123` pre-loads a full PR diff + metadata — particularly powerful for code review. Gemini has `--continue` but no PR-aware equivalent. Codex leans on shell history + explicit file references. For teams who work across many parallel PRs, this matters daily.
+</Divergence>
+
+**Emerging: horizontal scaling of sessions.** Running 10–15 parallel short sessions instead of one long one is a Claude-community-first practice enabled by `claude --worktree` (git worktree isolation per session). Gemini and Codex have the primitives in pieces but not as a polished workflow. Expect full convergence within 12–18 months; in the meantime the *pattern* is portable (covered in [Ch 2](/02-context-as-currency/)) even if the tooling isn't.
+
+<CaseStudy date="2026-02">
+  A team instrumented their Claude Code sessions to count loop iterations per task and correlate with outcome quality. Post-commit revert rates rose sharply with iteration count — tasks that took two rounds or fewer reverted rarely; tasks at three rounds reverted substantially more often; tasks at four or more rounds reverted at many multiples of the two-round baseline. The pattern held across task size and developer. They adopted a team habit of clearing context after the third iteration — pure discipline, zero tooling — and the high-iteration bucket shrank over the following month. Pattern signal: the two-failure rule is a quality-preservation rule, not just a context-hygiene one.
+</CaseStudy>
+
+### When to skip phases
+
+Not every task needs the full loop. A one-word variable rename doesn't need a plan phase; a typo fix doesn't need explicit verification criteria (git diff is the verification). The loop is a maximum, not a minimum. The judgment call: does this task have a plausible failure mode I'd want to catch? If yes, run the full loop. If no — just do it and move on. What you never skip is *commit*; unverified work left in a running session is work-at-risk.
+
+## Quick reference
+
+- The session loop is four phases: prompt, observe, refine, commit. Plan mode extends it to five.
+- Prompt spending: invest your specificity budget here; it pays back across all other phases.
+- Observe is the highest-failure phase because it's the easiest to skim. Slow down.
+- Refine: max two rounds before starting fresh. The third round costs more than it saves.
+- Commit verified work promptly. Context boundaries cannot erase what's on disk.
+- Course-correction primitives vary across tools; the phase structure doesn't. Bet on the structure.
+- Plan mode is tool-agnostic advice for unfamiliar or complex work.
+- Session resume is mature in Claude, improving in Gemini, minimal in Codex. Adjust multi-session workflows accordingly.

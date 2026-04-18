@@ -1,0 +1,23 @@
+---
+/**
+ * TryThis — practice exercise, <10 minutes, applies to reader's own
+ * project. Converts reading to doing.
+ *
+ * Default title is "Try this" — override for specificity:
+ *   <TryThis title="Measure your context budget">...</TryThis>
+ *
+ * Usage:
+ *   <TryThis>
+ *     Open a chapter from your current work and run `/context`. What
+ *     percentage is already filled? What would you evict first?
+ *   </TryThis>
+ */
+interface Props {
+  title?: string;
+}
+const { title = 'Try this' } = Astro.props;
+---
+<aside class="callout callout-try" role="note" aria-label={title}>
+  <strong class="callout-title">{title}</strong>
+  <div class="callout-body"><slot /></div>
+</aside>

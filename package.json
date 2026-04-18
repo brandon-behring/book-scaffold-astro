@@ -1,0 +1,31 @@
+{
+  "name": "book-template-astro",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && pagefind --site dist",
+    "build:astro": "astro build",
+    "index": "pagefind --site dist",
+    "preview": "astro preview",
+    "astro": "astro",
+    "pdf:render": "mkdir -p dist-pdf && pagedjs-cli http://localhost:4321/print/ -o dist-pdf/book.pdf",
+    "pdf": "start-server-and-test preview http://localhost:4321/ pdf:render"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^5.0.3",
+    "@astrojs/preact": "^5.1.1",
+    "@fontsource-variable/roboto": "^5.2.10",
+    "@fontsource-variable/source-code-pro": "^5.2.7",
+    "astro": "^6.1.7",
+    "pagefind": "^1.5.2",
+    "preact": "^10.29.1"
+  },
+  "devDependencies": {
+    "pagedjs-cli": "^0.4.3",
+    "start-server-and-test": "^3.0.2"
+  }
+}

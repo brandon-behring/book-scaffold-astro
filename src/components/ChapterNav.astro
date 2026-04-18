@@ -1,0 +1,29 @@
+---
+/**
+ * ChapterNav — prev / next chapter links at the bottom of each chapter.
+ * Derived from the ordered chapters collection via getNeighbors.
+ */
+import { getNeighbors } from '../lib/chapters';
+
+interface Props {
+  currentId: string;
+}
+const { currentId } = Astro.props;
+const { prev, next } = await getNeighbors(currentId);
+---
+{(prev || next) && (
+  <nav class="chapter-nav" aria-label="Chapter navigation">
+    {prev && (
+      <a href={`/${prev.id}/`} class="prev">
+        <span class="nav-label">← Previous</span>
+        <span class="nav-title">{prev.data.title}</span>
+      </a>
+    )}
+    {next && (
+      <a href={`/${next.id}/`} class="next">
+        <span class="nav-label">Next →</span>
+        <span class="nav-title">{next.data.title}</span>
+      </a>
+    )}
+  </nav>
+)}

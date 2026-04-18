@@ -1,0 +1,133 @@
+---
+/**
+ * PatternTimeline — one card per pattern on the convergence dashboard.
+ *
+ * Renders:
+ *   - Header: pattern name, category, convergence badge (date or "not
+ *     yet converged"), adoption count "N of 3 tools".
+ *   - Description paragraph.
+ *   - 3 horizontal tool tracks (claude-code / gemini-cli / codex-cli).
+ *     Adoption events render as dots positioned along a shared time
+ *     axis (earliest → latest event in this pattern's timeline).
+ *   - Empty state when no tool has adopted the pattern yet.
+ *
+ * Dots carry their metadata in title= attributes so hover in any
+ * browser shows the full note without extra tooltip infrastructure.
+ *
+ * Props:
+ *   pattern — the PatternEntry from getAllPatterns().
+ */
+import type { PatternEntry } from '../lib/patterns';
+import {
+  getPatternTimeline,
+  toolsInTimeline,
+  TIMELINE_TOOL_ORDER,
+  CATEGORY_LABELS,
+} from '../lib/patterns';
+
+interface Props {
+  pattern: PatternEntry;
+}
+const { pattern } = Astro.props;
+const data = pattern.data;
+
+const timeline = await getPatternTimeline(pattern.id);
+const adopters = toolsInTimeline(timeline);
+
+function formatDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+// Compute position along the shared time axis. A single-event pattern
+// centers its dot at 50%. No events → no axis computed.
+const times = timeline.map((t) => t.date.getTime());
+const minTime = times.length > 0 ? Math.min(...times) : 0;
+const maxTime = times.length > 0 ? Math.max(...times) : 0;
+const span = maxTime - minTime;
+
+function positionPct(date: Date): number {
+  if (span <= 0) return 50;
+  return ((date.getTime() - minTime) / span) * 100;
+}
+
+const converged = data.convergence_date != null;
+const category = data.category ?? 'other';
+---
+<article class="pattern-card" data-pattern={pattern.id}>
+  <header class="pattern-card-header">
+    <div class="pattern-card-title-row">
+      <h3 class="pattern-card-title">{data.name}</h3>
+      <span
+        class={`pattern-category-badge pattern-category-${category}`}
+        title={`Category: ${CATEGORY_LABELS[category]}`}
+      >{CATEGORY_LABELS[category]}</span>
+    </div>
+    <div class="pattern-card-meta">
+      {converged ? (
+        <span class="pattern-convergence-badge converged" title="All tracked tools have adopted">
+          Converged {formatDate(data.convergence_date as Date)}
+        </span>
+      ) : (
+        <span class="pattern-convergence-badge not-converged">
+          Not yet converged
+        </span>
+      )}
+      <span class="pattern-adoption-count">
+        {adopters.length} of {TIMELINE_TOOL_ORDER.length} tools
+      </span>
+    </div>
+  </header>
+
+  {data.description && (
+    <p class="pattern-description">{data.description}</p>
+  )}
+
+  {timeline.length === 0 ? (
+    <p class="pattern-empty-timeline">
+      No tool has adopted this pattern yet (or no data captured).
+    </p>
+  ) : (
+    <div
+      class="pattern-timeline"
+      role="img"
+      aria-label={`Adoption timeline: ${timeline.length} event${timeline.length === 1 ? '' : 's'} across ${adopters.length} of ${TIMELINE_TOOL_ORDER.length} tools.`}
+    >
+      {TIMELINE_TOOL_ORDER.map((tool) => {
+        const events = timeline.filter((e) => e.tool === tool);
+        const adopted = events.length > 0;
+        return (
+          <div
+            class="pattern-timeline-track"
+            data-tool={tool}
+            data-adopted={adopted ? 'true' : 'false'}
+          >
+            <span class="pattern-timeline-tool-label">{tool}</span>
+            <div class="pattern-timeline-rail">
+              {!adopted && (
+                <span class="pattern-timeline-not-yet">not yet</span>
+              )}
+              {events.map((e) => (
+                <span
+                  class="pattern-timeline-dot"
+                  data-kind={e.kind}
+                  style={`left: ${positionPct(e.date)}%`}
+                  title={`${tool} ${e.version} (${formatDate(e.date)}): ${e.note}`}
+                >
+                  <span class="pattern-timeline-dot-label" aria-hidden="true">
+                    v{e.version}
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      <div class="pattern-timeline-axis">
+        <span class="pattern-timeline-axis-start">{formatDate(new Date(minTime))}</span>
+        {span > 0 && (
+          <span class="pattern-timeline-axis-end">{formatDate(new Date(maxTime))}</span>
+        )}
+      </div>
+    </div>
+  )}
+</article>

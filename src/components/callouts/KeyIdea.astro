@@ -1,0 +1,21 @@
+---
+/**
+ * KeyIdea — crystallized takeaway. "Memorize this." Carries over from
+ * the LaTeX book's \keybox: thicker left-bar as a visual signal that
+ * the content is high-density.
+ *
+ * Used sparingly — perhaps 1–2 per chapter. If every third paragraph
+ * has a KeyIdea, nothing is a key idea. Place at the end of a section
+ * where an argument resolves to something retention-worthy.
+ *
+ * Usage:
+ *   <KeyIdea>
+ *     Context is a budget, not an infinity. Treat it like a finite
+ *     resource: account for it, spend it deliberately, reclaim it.
+ *   </KeyIdea>
+ */
+---
+<aside class="callout callout-key" role="note" aria-label="Key idea">
+  <strong class="callout-title">Key idea</strong>
+  <div class="callout-body"><slot /></div>
+</aside>

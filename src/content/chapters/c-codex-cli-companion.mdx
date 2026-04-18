@@ -1,0 +1,109 @@
+---
+title: "Appendix C — Codex CLI companion"
+part: 6
+chapter: 3
+volatility: feature-surface
+tools_compared: [codex-cli]
+last_verified: 2026-04-17
+sources: []
+description: "What's different about Codex CLI: the parts of its surface that diverge from the Claude-centric defaults in the body chapters. Focus on its distinctive approval-mode permission model, sandbox defaults, and the OpenAI/Azure deployment path. Where Codex is genuinely the better fit, that is named."
+draft: false
+---
+
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import ConceptBox from '../../components/callouts/ConceptBox.astro';
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+import Recovery from '../../components/callouts/Recovery.astro';
+import Divergence from '../../components/callouts/Divergence.astro';
+
+*This appendix is the Codex-specific counterpart to Appendix B. Same scoping discipline: convergent primitives (briefing doc, slash commands, headless mode) live in the body chapters; this reference covers what's different and when Codex is the better fit.*
+
+## What Codex CLI is
+
+Codex CLI is OpenAI's open-source command-line agent. Like Claude and Gemini, it runs an agent loop against a model backend, exposes tool-calling, and supports both interactive and headless modes. Its characteristic design choice is the **approval mode** model for permissions — a tighter, more declarative alternative to the allow/deny list patterns the other tools use.
+
+Key defaults at time of capture:
+
+| Surface | Codex CLI |
+| --- | --- |
+| Binary | `codex` |
+| Interactive entry | `codex` |
+| Non-interactive | Approval-mode flags; see below |
+| Briefing doc | `AGENTS.md` at repo root |
+| Backend | OpenAI API or Azure OpenAI; configurable via env |
+| Sandbox | Built-in filesystem / command sandbox |
+
+## Approval modes: the distinctive permission surface
+
+<Divergence axis="permission mental model">
+  Claude and Gemini express permissions as allow/deny lists at tool-name granularity. Codex expresses permissions as **approval modes** — a small fixed set of levels ranging from "ask on every action" to "never ask." The nomenclature maps to overlapping territory in different vocabulary; the *model* is meaningfully different. Allow/deny says *which tools the agent may use*; approval modes say *how much autonomy the agent has*. For some workflows the approval-mode framing is cleaner; for others it's less expressive because it controls trust depth rather than tool scope.
+</Divergence>
+
+The approval-mode levels, at time of capture, span roughly:
+
+- **Ask on every action** — maximum human oversight. The agent proposes, the human approves each step.
+- **Ask on request** (`-a on-request` or `--suggest`) — the agent works autonomously on reads and analysis, asks before any write or destructive action.
+- **Ask on failure** — run without prompting unless a command fails; then surface for human judgment.
+- **Never ask** — full autonomy, equivalent to Gemini's `--yolo` in trust level.
+
+For automated pipelines the approval-mode flag is the primary configuration. The discipline from Ch 12 applies: pick the most restrictive mode that still lets the workflow complete, not the most permissive one that always works.
+
+## The built-in sandbox
+
+Codex ships a filesystem and command sandbox as a first-class feature rather than as an optional hook. File writes default to a scoped working directory; shell commands run inside a constrained environment; network egress can be restricted per invocation.
+
+This changes the default risk posture. Where Claude and Gemini rely more heavily on hook-based or permission-based guardrails that the operator configures, Codex ships stricter defaults and lets the operator loosen them. For CI integration and scheduled runs the sandbox is a meaningful safety net — misconfiguration errs toward blocking rather than toward blast radius.
+
+<SkillBox title="Using the sandbox to bound a risky workflow">
+  For workflows where the agent's outputs genuinely should not escape a specific directory (code-generation experiments, automated refactors you want to review before they touch the main tree), run Codex with the sandbox scoped to a dedicated working directory. If the agent attempts to write outside, the write is rejected at the sandbox layer — no hook logic required. The pattern is particularly useful for exploratory automation where "escape blast radius" is the concern you want to eliminate structurally rather than via configuration.
+</SkillBox>
+
+## Backend flexibility
+
+Codex's backend is configurable via environment variables, which makes it particularly easy to point at alternative inference endpoints: the default OpenAI API, Azure OpenAI (enterprise default), or any OpenAI-compatible proxy (including private inference servers hosting compatible model gateways). The environment-variable approach is less opinionated than either Claude's Bedrock/Vertex integrations or Gemini's Vertex-native path, which makes Codex particularly flexible for unusual deployment topologies.
+
+For enterprise deployment (Ch 14), this manifests as an easier path to self-hosted or proxied inference. For teams using Azure as their cloud, the integration is natively ergonomic.
+
+## What's thinner
+
+Being honest about the comparison: some of the surface that is mature in Claude (and reasonably mature in Gemini) is thinner or differently-shaped in Codex.
+
+- **Hook-driven automation.** Codex's hook surface is less comprehensive than Claude's eight-event model at time of capture. Lifecycle-based automation is more often implemented as wrapper scripts than as first-class hooks.
+- **Skills-as-autonomous-capabilities.** The distinction Appendix A draws between Claude's user-triggered commands and autonomous skills is less explicit in Codex; the conventional unit is closer to a prompt template than to an auto-reaching capability.
+- **Purpose-built GitHub Action.** The integration path leans on general non-interactive invocation rather than a Codex-specific action. More DIY; more flexible; fewer opinionated defaults.
+
+These gaps are narrowing over time — the convergence axis of Ch 15 applies — but as of the last-verified date, a team leaning heavily on any of them will find more ergonomic surfaces in Claude.
+
+## Authentication
+
+Codex authenticates via API key or via Azure OpenAI's credential chain. Key management in enterprise deployments typically routes through a secrets store (HashiCorp Vault, AWS Secrets Manager, Azure Key Vault); the CLI reads the key from an environment variable that the secrets infrastructure populates.
+
+For interactive personal use, the pattern is the OpenAI API key in `~/.config/codex/config.toml` or equivalent. Keep the key out of committed files; the same discipline applies to Gemini and Claude secrets.
+
+## When Codex CLI is the right fit
+
+Situations where Codex is a particularly strong choice:
+
+- **OpenAI-first or Azure-first shop.** Existing OpenAI API relationships, existing Azure OpenAI tenancy — the friction of adopting a different tool for the same underlying model family isn't worth paying.
+- **Sandbox-as-primary-safety-net workflows.** Exploratory automation where you want a structural bound on blast radius rather than a permissions-configuration bound.
+- **Unusual backend topologies.** Self-hosted inference with an OpenAI-compatible gateway, private proxies, testing environments that swap model endpoints freely.
+- **Approval-mode ergonomics.** If your team has converged on thinking about agent trust in depth terms rather than tool-scope terms, the approval-mode model is a closer match.
+
+Situations where another tool may fit better:
+
+- Rich hook-driven automation (Claude's event model is ergonomic here).
+- Large-context workloads (Gemini's window advantage is real).
+- Workflows that benefit from first-class autonomous skills (Claude's skill model is more explicit).
+
+## Quick reference
+
+- Binary: `codex`; approval-mode flags (`-a on-request`, `--suggest`, etc.) configure autonomy for non-interactive use
+- Briefing doc: `AGENTS.md` at repo root (part of the cross-tool convergence on top-level briefing docs)
+- Backend: OpenAI API or Azure OpenAI; configurable via env; OpenAI-compatible proxies work
+- Permissions: approval-mode model, not allow/deny lists — controls trust depth rather than tool scope
+- Sandbox: built-in filesystem and command sandbox; default posture errs toward blocking
+- Thinner vs Claude: hook surface, autonomous skills, purpose-built GitHub Action
+- Auth: API key via env var; integrates with enterprise secrets stores
+- Best fit: OpenAI / Azure-first shops, sandbox-primary safety, unusual backend topologies
+- Volatility: feature-surface; audit quarterly. Gaps vs Claude are narrowing over time.

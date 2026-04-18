@@ -1,0 +1,94 @@
+---
+/**
+ * Citation — renders a reference to a source from sources/manifest.yaml.
+ *
+ * Resolves the source slug at build time via Astro's content collections.
+ * An unknown slug fails the build with a precise error, not at runtime.
+ *
+ * Two display modes:
+ *   as="sidenote" (default) — wraps the citation in a <Sidenote>. Shows
+ *     in the desktop right margin / mobile inline aside. Contains title,
+ *     author, year, tier badge, plus links to original and Perma.cc.
+ *   as="inline" — renders the citation inline in the main text as a
+ *     subtle reference (title + author + year). For cases where the
+ *     citation is part of the sentence rather than a reference.
+ *
+ * Usage:
+ *   Context rot<Citation src="anthropic-context-2026" /> is observed
+ *   in all three tools.
+ *
+ * Or inline:
+ *   See <Citation src="gwern-sidenote" as="inline" /> for the argument.
+ */
+import { getEntry } from 'astro:content';
+import Sidenote from './Sidenote.astro';
+
+interface Props {
+  src: string;
+  as?: 'sidenote' | 'inline';
+}
+
+const { src, as = 'sidenote' } = Astro.props;
+const source = await getEntry('sources', src);
+
+if (!source) {
+  throw new Error(
+    `Citation: source slug "${src}" not found in sources/manifest.yaml. ` +
+    `Add an entry with id: ${src}, or correct the typo.`
+  );
+}
+
+const { data } = source;
+const publishYear = data.publish_date
+  ? new Date(data.publish_date).getUTCFullYear()
+  : null;
+---
+
+{as === 'sidenote' ? (
+  <Sidenote>
+    <strong>{data.title}</strong>
+    {data.author && <>{' · '}{data.author}</>}
+    {publishYear && <>{' ('}{publishYear}{')'}</>}
+    <span class="citation-tier" title={`Source tier: ${data.tier}`}>{data.tier}</span>
+    {' '}
+    <a href={data.url} rel="external noopener" class="citation-link">original</a>
+    {data.perma_cc && (
+      <>
+        {' · '}
+        <a href={data.perma_cc} rel="external noopener" class="citation-link">archived</a>
+      </>
+    )}
+  </Sidenote>
+) : (
+  <span class="citation-inline">
+    <a href={data.url} rel="external noopener">{data.title}</a>
+    {data.author && <> · {data.author}</>}
+    {publishYear && <> ({publishYear})</>}
+  </span>
+)}
+
+<style is:global>
+  /* Tier badge styling — muted, uppercase, small, monospaced */
+  .citation-tier {
+    display: inline-block;
+    margin-left: 0.4em;
+    padding: 0 0.4em;
+    font-family: var(--font-code);
+    font-size: 0.7em;
+    font-style: normal;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    vertical-align: 0.1em;
+    letter-spacing: 0.05em;
+  }
+  .citation-link {
+    font-style: normal;
+  }
+  .citation-inline {
+    font-style: italic;
+    color: var(--color-text-muted);
+  }
+</style>

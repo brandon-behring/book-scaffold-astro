@@ -1,0 +1,170 @@
+---
+title: "Appendix A — Claude Code companion"
+part: 6
+chapter: 1
+volatility: feature-surface
+tools_compared: [claude-code]
+last_verified: 2026-04-17
+sources: []
+description: "A deep reference for Claude Code specifically. Organized around the book's concepts rather than as a feature catalogue: how the primitives the book discusses (briefing docs, plan mode, skills, hooks, subagents, MCP) actually map to Claude Code's surfaces, with their current flags and file paths. Where the main chapters kept Claude-specific detail bounded for comparative fairness, this appendix lets it flow."
+draft: false
+---
+
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import ConceptBox from '../../components/callouts/ConceptBox.astro';
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+import Recovery from '../../components/callouts/Recovery.astro';
+import Divergence from '../../components/callouts/Divergence.astro';
+import Sidenote from '../../components/Sidenote.astro';
+
+*The main chapters kept Claude-specific detail bounded because comparative pedagogy demands it. This appendix is where the bound comes off: concrete paths, specific flags, the exact primitives as they exist in Claude Code as of the chapter's last-verified date. Nothing here is a principle — principles are in the body chapters. Everything here is current feature surface, classified explicitly as volatile, audited quarterly.*
+
+## How to use this appendix
+
+Three reading modes fit this appendix.
+
+**Reference lookup.** You know what you want and need the specific command or path. Skim the section headers for the concept; the answer is a paragraph or table below.
+
+**Gap-check against a chapter.** You've just read a main chapter and want the Claude-specific detail. Find the section named after the concept (e.g. "Briefing documents" for Ch 7); read the concrete surface here.
+
+**Comparative study.** You know Claude Code and want to see how the book frames its primitives. The section headers match the book's concepts, not Claude's product surface; the translation is visible.
+
+The appendix assumes you have Claude Code installed and a basic session-loop familiarity. It does not reteach the interactive loop.
+
+## Invocation modes
+
+Claude Code ships one binary (`claude`) with several invocation modes.
+
+| Mode | Command | Purpose |
+| --- | --- | --- |
+| Interactive | `claude` | REPL-style session in the terminal |
+| Print (headless) | `claude -p "<prompt>"` | One-shot non-interactive run |
+| Resume | `claude --resume` or `claude --continue` | Reattach to prior session |
+| Stream | JSON-stream output for piping to other tools | Scriptable integrations |
+
+The print mode (`-p`) is the primary surface for CI integration and scripted batches (see Ch 12). Output shape is controlled by `--output-format` (`text`, `json`, `stream-json`). Scripting against a stable machine-readable output is more durable than scripting against the interactive text format, which has drifted between releases.
+
+<SkillBox title="One-shot print-mode pattern">
+  The shape is `claude -p "<prompt>" --output-format json --allowed-tools "Read,Grep,Glob"`. Scoping `--allowed-tools` to the minimum the task needs is the single most important flag in a print-mode invocation; without it, the print mode inherits broad defaults from your user settings, which is usually wrong for an automated context. Pair with `--cwd` to pin the working directory explicitly rather than relying on caller context.
+</SkillBox>
+
+## Briefing documents (Ch 7)
+
+Claude's briefing-doc convention is a file named `CLAUDE.md` at the repo root, resolved up from the working directory. Nested `CLAUDE.md` files closer to the working directory are concatenated; the closest wins on conflict. The file is re-injected on every turn — budget-sensitive claims from Ch 2 apply directly.
+
+The supported locations, in precedence order:
+- `./CLAUDE.md` (project-local, highest precedence for its directory)
+- `~/.claude/CLAUDE.md` (user-level defaults applied to every session)
+- Parent-directory `CLAUDE.md` files walked up from the current directory
+
+A user-level `CLAUDE.md` is the right place for preferences that apply to all your work (*use terse output, prefer Python over shell, never write new comments*). Project-level `CLAUDE.md` is the right place for project-specific context (*this repo uses Turbo and pnpm, the staging branch is `develop`*). Do not collapse the two levels.
+
+## Slash commands and skills (Ch 8)
+
+Claude Code exposes two extension surfaces.
+
+**Slash commands** live in `.claude/commands/` (project-level) or `~/.claude/commands/` (user-level). Each command is a Markdown file with optional frontmatter; the filename minus extension becomes the slash-command name. The body is used as a prompt template, with `{{args}}` substitution for arguments passed on the command line.
+
+**Skills** live in `.claude/skills/` (project) or `~/.claude/skills/` (user). A skill is a directory containing a `SKILL.md` with frontmatter describing when Claude should invoke it; the directory can also contain scripts, templates, and reference material the skill uses. Skills are autonomously invoked when Claude judges them relevant, rather than explicitly called like slash commands.
+
+<Divergence axis="when to use commands vs skills (Claude-internal)">
+  A **slash command** is the right shape when the user must explicitly trigger the action — a user-visible verb in the CLI ("post-review", "deploy-preview"). A **skill** is the right shape when Claude should autonomously reach for a capability when a situation matches ("whenever working on migrations, first check the migration-safety checklist"). Confusing the two — skills written as user-triggered commands, or commands expected to auto-fire — is the most common extension-design mistake.
+</Divergence>
+
+## Hooks (Ch 8)
+
+Hooks are user-defined shell commands that run in response to agent lifecycle events. Configured in `.claude/settings.json` (project) or `~/.claude/settings.json` (user). Each hook entry binds an event name to a command string.
+
+Event names, at time of capture:
+
+| Event | Fires when | Common use |
+| --- | --- | --- |
+| `PreToolUse` | Before the agent runs a tool | Block or mutate disallowed actions |
+| `PostToolUse` | After a tool runs | Log results, post-process outputs |
+| `UserPromptSubmit` | When user sends a prompt | Inject additional context |
+| `Notification` | When the agent is idle and wants attention | Trigger desktop notifications |
+| `Stop` | When the session ends | Final logging, commit hooks |
+| `PreCompact` | Before the agent compacts its context | Archive full transcript before loss |
+| `SessionStart` | At session open | Set env, run briefings |
+
+Hooks have a significant power/risk ratio. A well-scoped hook adds strong guardrails; a misconfigured hook can silently mutate the agent's behavior in ways that are very hard to debug. Start narrow (`PreToolUse` on specific dangerous commands) and only broaden after you've watched the narrow version run for a week.
+
+<Recovery
+  pattern="A hook silently changes agent behavior and you cannot figure out why"
+  symptom="The agent behaves unexpectedly — refuses actions that should be allowed, alters outputs in small ways, or pauses unexpectedly. Nothing in the conversation explains it. You had installed a hook weeks ago and forgotten."
+>
+  Run the session with hook logging enabled; every hook invocation should log its inputs and outputs to a known location. If no logging was set up, temporarily rename your `.claude/settings.json` to disable all hooks, re-run the failing scenario — if the failure goes away, a hook is the cause. Then re-enable hooks one at a time until you find the culprit. Structural fix: every hook you author should log its invocation at the very minimum; unlogged hooks are a source of silent drift.
+</Recovery>
+
+## Plan mode (Ch 6)
+
+Plan mode is Claude Code's read-only planning phase. Enter with a keyboard shortcut (typically `Shift+Tab` cycling through auto-accept / plan / normal) or via CLI flag on startup. In plan mode the agent reads files, searches, analyzes — but cannot write files or execute mutating commands. Its output is a plan artifact written to a known path (`~/.claude/plans/<name>.md`) for review.
+
+The workflow: enter plan mode → describe the goal → the agent proposes a plan file → you review and iterate → exit plan mode → the agent implements against the approved plan.
+
+<SkillBox title="Plan mode for non-trivial changes">
+  Use plan mode whenever the change requires understanding before editing. Three heuristics signal *understanding-required*: (1) you cannot describe the change as a simple diff, (2) the change touches more than one subsystem, (3) the change has a plausible alternative design you haven't ruled out. For any of those, plan mode's cost (a few minutes of read-only reasoning) is dwarfed by the cost of catching an architectural mistake during implementation.
+</SkillBox>
+
+## Subagents (Ch 9)
+
+Claude Code's delegation primitive is the `Task` tool, which spawns a child agent with its own context window, tool access, and prompt. The child runs to completion and returns a single summary message to the parent. The parent's context grows by the summary, not by the child's full transcript — this is the compression mechanism that makes delegation valuable.
+
+Subagent type definitions live in `.claude/agents/` (project) or `~/.claude/agents/` (user). Each is a Markdown file with frontmatter describing the agent's purpose, tool access, and any system prompt customizations. Predefined subagent types (e.g. `general-purpose`, `Explore`, `Plan`) ship with Claude Code; custom types extend them.
+
+The decision to delegate vs. stay in the main thread comes down to Ch 9's principle: *delegate when the subtask has a well-defined input and output, and when inlining the full work would blow the parent's context budget*. The `Task` tool is the mechanical execution of that judgment call.
+
+## MCP integration (Ch 8)
+
+Claude Code is an MCP client. Servers are configured in `.mcp.json` at the repo root (project-level) or in user settings. Each server declares a command to launch and an optional environment; Claude connects on session start and exposes the server's tools to the agent.
+
+<SkillBox title="Adding an MCP server">
+  The steps: (1) identify the server you need — Anthropic ships a registry at `docs.anthropic.com`, and the broader MCP ecosystem has third-party servers for common tools (GitHub, Slack, databases). (2) Install or locate the server binary. (3) Add an entry to `.mcp.json` with the server's launch command and any required env vars. (4) Restart the session; the server's tools appear in the agent's tool list. Scope permissions narrowly — an MCP server with broad access to your Slack or database is a credential the agent can exercise, and permissions should reflect that.
+</SkillBox>
+
+## Settings file reference
+
+Claude Code's settings split across two levels.
+
+**Project-level**: `.claude/settings.json` (committed) and `.claude/settings.local.json` (gitignored, per-user). Project settings affect everyone on the team who works in the repo; local settings are personal overrides.
+
+**User-level**: `~/.claude/settings.json`. Applies to every session regardless of project.
+
+Key fields, at time of capture:
+
+| Field | Purpose |
+| --- | --- |
+| `model` | Default model for the session |
+| `permissions.allow` / `permissions.deny` | Tool-level allow/deny lists |
+| `permissions.defaultMode` | Auto-accept vs ask-first default |
+| `env` | Environment variables applied to tool invocations |
+| `hooks` | Hook bindings (see Hooks above) |
+| `subagents.disabledTypes` | Block specific subagent types from being spawned |
+
+Permissions strings support globs (`Bash(git:*)` allows all `git` subcommands) and path scoping (`Edit(src/**)` allows edits only under `src/`). The expressive power is what makes Claude's permission model work for both personal and enterprise deployment.
+
+## Session state and memory
+
+Session transcripts are stored locally (typically under `~/.claude/projects/<project-hash>/`). The `--resume` flag reattaches to prior sessions; `--continue` picks up the last session automatically.
+
+The memory system — distinct from session transcripts — stores persistent notes the agent has written about the user, the project, or past interactions. Memory files live in user-level config and are loaded into every session's context. The memory system has its own audit discipline: stale memories are active misinformation and should be pruned on the same cadences Ch 16 describes.
+
+## When to use Claude Code
+
+The honest answer: most of this book treats Claude as the primary tool because its briefing-doc / skills / hooks / subagents / MCP surface is the most mature of the three, not because it is categorically superior. Teams with existing Google Cloud investment, existing OpenAI relationships, or specific Codex workflow preferences should read the corresponding appendix (B, C) — the principle chapters apply across tools.
+
+Situations where Claude Code is a particularly strong fit: heavy multi-file refactors that benefit from subagent delegation, teams with rich hook-driven automation needs, workflows that lean on plan mode's explicit read-then-write separation. Situations where another tool may fit better are noted in Appendices B and C.
+
+## Quick reference
+
+- `claude` (interactive), `claude -p "<prompt>"` (headless), `--resume` / `--continue` (session reattach)
+- Briefing doc: `CLAUDE.md` at repo root, plus `~/.claude/CLAUDE.md` user defaults
+- Slash commands: `.claude/commands/` (project) or `~/.claude/commands/` (user)
+- Skills: `.claude/skills/` (project) or `~/.claude/skills/` (user); autonomous rather than user-triggered
+- Hooks: `.claude/settings.json` `hooks` field; events include `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `SessionStart`, `Stop`, `PreCompact`
+- Plan mode: `Shift+Tab` cycles modes; plan artifacts land in `~/.claude/plans/`
+- Subagents: `Task` tool spawns children; types configured in `.claude/agents/`
+- MCP servers: `.mcp.json` at repo root; server tools appear in agent's tool list on session start
+- Permissions: allow/deny in `settings.json` with glob and path scoping (`Bash(git:*)`, `Edit(src/**)`)
+- Claim volatility: entire appendix is feature-surface — audit quarterly against current docs.

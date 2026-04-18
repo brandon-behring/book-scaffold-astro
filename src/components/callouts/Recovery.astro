@@ -1,0 +1,34 @@
+---
+/**
+ * Recovery — escape route from a named anti-pattern. Structured as
+ * (pattern name, symptom, escape). Pairs with the anti-pattern
+ * chapters; provides actionable recovery when readers recognize they
+ * are in the failure mode.
+ *
+ * Matches the LaTeX book's \recovery{pattern}{symptom}{escape} command
+ * (see claude-best-practices.sty). Symptom is optional; escape can be
+ * the body slot for longer explanations.
+ *
+ * Usage:
+ *   <Recovery
+ *     pattern="CLAUDE.md bloat"
+ *     symptom="Compaction triggers every 3 turns; new features land
+ *              with context rot."
+ *   >
+ *     Split CLAUDE.md into hub-and-spoke. Move project specifics to
+ *     `.claude/rules/*.md` with path-scoped loading. Keep hub under 200 lines.
+ *   </Recovery>
+ */
+interface Props {
+  pattern: string;
+  symptom?: string;
+}
+const { pattern, symptom } = Astro.props;
+---
+<aside class="callout callout-recovery" role="note" aria-label={`Recovery: ${pattern}`}>
+  <strong class="callout-title">Recovery · {pattern}</strong>
+  {symptom && (
+    <p class="recovery-symptom"><strong>Symptom:</strong> {symptom}</p>
+  )}
+  <div class="callout-body"><slot /></div>
+</aside>

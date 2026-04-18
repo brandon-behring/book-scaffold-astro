@@ -1,0 +1,156 @@
+---
+title: Team patterns and governance
+part: 4
+chapter: 13
+volatility: architectural-pattern
+tools_compared: [claude-code, gemini-cli, codex-cli]
+last_verified: 2026-04-17
+sources: []
+description: "An agent used by one person is a productivity tool. An agent used by a team is shared infrastructure — which means shared context, shared norms, shared failure modes. This chapter covers the team patterns that survive scale: shared briefing docs, skill registries, agent-assisted review, and the governance that keeps shared agents from becoming shared liabilities."
+draft: false
+---
+
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import CaseStudy from '../../components/callouts/CaseStudy.astro';
+import ConceptBox from '../../components/callouts/ConceptBox.astro';
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+import Recovery from '../../components/callouts/Recovery.astro';
+import Convergence from '../../components/callouts/Convergence.astro';
+import Divergence from '../../components/callouts/Divergence.astro';
+import Sidenote from '../../components/Sidenote.astro';
+
+*Solo practice with an agent is a skill; team practice is a system. The same briefing doc that felt ergonomic as a personal scratchpad becomes contested ground when five authors edit it. The skill one person wrote to speed up their week becomes a liability when it's running on every teammate's machine and no one is sure who maintains it. The move from individual to team is where agentic coding acquires the governance problems that every shared infrastructure eventually accumulates.*
+
+## Representation
+
+A team using agents shares three things, whether or not they intend to.
+
+The first is **briefing context** — the project-level documents (CLAUDE.md, GEMINI.md, AGENTS.md) that prime every agent on every machine with the same baseline. If the team does not explicitly maintain these, each engineer's personal copy drifts, and agents begin giving different answers to the same question depending on whose workstation is running them.
+
+The second is **skill and command infrastructure** — the slash commands, custom skills, and prompt templates that encode team-specific workflows. One engineer writes a `/deploy-preview` command; three weeks later four teammates are relying on it, none of them sure who owns it.
+
+The third is **policy** — what the agents are allowed to do in the team's shared environments. Individual practitioners set permissions for themselves; teams must set permissions as a contract, written down, reviewable, auditable.
+
+<ConceptBox term="Agent infrastructure">
+  The artifacts that multiple team members share when using the same agent tooling: briefing documents at the repo root, custom commands and skills that live in the repo or a team registry, permission policy that governs what agents may do in shared CI and production, and conventions for how agent-generated work is reviewed before merging. When these artifacts are un-owned, they drift; when they are over-owned, they bottleneck; the team's task is to get the ownership right.
+</ConceptBox>
+
+The failure modes of team agent practice are specific and repeat across teams.
+
+**Briefing-doc bloat.** Everyone adds their context without removing anyone else's. After six months the briefing doc is 8,000 words, the agent reads most of it before doing anything, and the team is paying a context tax on every session without noticing. Nobody owns it because it belongs to everyone.
+
+**Skill-registry rot.** A skill is useful for a month, then becomes obsolete when the underlying workflow changes. Nobody removes it; a new teammate joins, uses the stale skill, gets a result that matched reality two quarters ago but does not now. The skill never broke; the context it encoded became wrong without breaking.
+
+**Permission erosion.** The CI policy starts strict. A teammate hits a legitimate case the policy blocks, a one-off exception is carved out, then another, then another. Six months later the policy has thirty carve-outs and no one can tell which are still justified. The net effect is that permissions reset to "allow everything" through accretion.
+
+**Review-cycle arbitrage.** A teammate notices that agent-generated PRs get lighter review than human-written PRs — because the reviewer assumes the agent was careful, or because the PRs are often trivial, or because there's no convention. Real bugs start landing through this channel. The agent didn't get worse; the review discipline slipped for an entire category of change.
+
+<KeyIdea>
+  The unit of team agent governance is the *shared artifact*, not the agent itself. Every shared artifact needs an owner, a review cadence, and a deprecation path. The team that gets those three right for briefing docs, skills, and policies builds a durable system; the team that treats shared artifacts as no-one's-responsibility accumulates debt that compounds faster than individual productivity gains.
+</KeyIdea>
+
+## Operation
+
+Four practices — shared briefing-doc discipline, skill registries, agent-assisted review, and policy-as-code — carry most of the weight.
+
+### Practice 1: briefing-doc discipline
+
+The top-level briefing doc (Ch 7) is the highest-leverage shared artifact in the repo. Treat it the way the team treats any other load-bearing file — a CODEOWNERS entry, PR review required, a changelog comment in the file itself when major sections are added or removed.
+
+<SkillBox title="A working briefing-doc governance pattern">
+  Four conventions keep the briefing doc healthy at team scale. (1) *Ownership*: an explicit owner in CODEOWNERS who must approve changes — rotating quarterly so no single person becomes the bottleneck. (2) *Append-with-justification*: any PR that adds to the briefing doc includes a sentence in the PR description explaining *why* the addition belongs at the top level rather than in a linked document. (3) *Quarterly trim*: a scheduled review that deletes stale content — the agent gets better, not worse, when the briefing doc loses lines. (4) *Diff audit*: whenever the briefing doc changes, the team runs one agent session before and after on a representative task and compares behavior — catches accidental regressions where a "clarification" actually confused the agent.
+</SkillBox>
+
+The mistake to avoid: treating the briefing doc as documentation *for humans* who happen to also be using agents. That framing leads to explanatory prose, historical context, onboarding material — all of which is useful for humans and wasteful of agent context. The briefing doc is a briefing *for the agent*; human-oriented material belongs in linked docs the agent can fetch on demand.
+
+### Practice 2: team skill and command registries
+
+Personal skills live in `~/.claude/skills/`, `~/.gemini/commands/`, and similar per-user locations. Team skills need to live somewhere the team can see, review, and version. Two shapes work well in practice.
+
+<Divergence axis="team skill sharing mechanisms">
+  | Tool | Project-level skills path | Team discovery mechanism |
+  | --- | --- | --- |
+  | Claude Code | `.claude/skills/` checked into the repo | Discoverable via the repo itself; reviewed via normal PR flow |
+  | Gemini CLI | `.gemini/commands/` at repo root for slash-command prompts; MCP-based tool sharing | Repo-committed commands + MCP server registries |
+  | Codex CLI | Project-level config at the repo root with Codex-specific conventions | Same discovery story — repo-committed config |
+</Divergence>
+
+All three tools have converged on the same basic architecture: *repo-committed project-level directory for shared skills, user-level directory for personal skills*. The specific path names differ; the two-tier pattern is convergent. If you design your team registry around the two-tier model, you are betting on a structural pattern that will outlast the specific paths.
+
+<SkillBox title="Two-tier skill registry">
+  Split the team's skill set into two layers. *Personal tier* — skills each engineer writes for their own workflow, stored in their per-user directory, not reviewed by the team. *Team tier* — skills checked into the repo, reviewed via PR, owned by someone, with a short description of what it does and when to use it. Promoting a personal skill to team-tier requires intent: the author explicitly moves it into the repo, writes the description, requests review. The friction is deliberate; team skills become an attack surface if they can be added without review.
+</SkillBox>
+
+A team skill registry also needs **deprecation machinery.** A skill that worked six months ago may be actively misleading now; a registry with no way to mark "retired" silently rots. Minimum: a `retired/` subdirectory and a `retired-at:` field in the skill's frontmatter, plus a quarterly review that moves unused skills there.
+
+### Practice 3: agent-assisted code review
+
+The convergent pattern across the three tools: *a human opens a PR, an agent runs automatically via the tool's GitHub Action, the agent posts a review with comments, a human reviewer uses the agent's review as input rather than replacement.*
+
+<Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+  All three tools ship first-party or community-maintained GitHub Actions that trigger agent review on PRs. The convention: the action runs on PR open, posts a top-level summary comment plus inline suggestions; the human reviewer reads the agent's review alongside their own analysis. The pattern is not "agent replaces human review"; it is "agent catches the mechanical issues so humans can focus on the judgment issues." Convergent shape, divergent trigger syntax (`@claude review` / `@gemini review` / equivalent).
+</Convergence>
+
+The governance questions around agent-assisted review are where teams get themselves into trouble.
+
+**Who reviews the agent's output?** If the agent posts fifty inline suggestions on a PR, the human reviewer either reads all of them (slow) or skims (misses things). The working pattern: the agent's top-level summary is mandatory-read; inline suggestions are advisory; a human reviewer is still required for merge approval regardless of the agent's verdict.
+
+**Does the agent get merge authority?** Some teams let agent-approved PRs auto-merge if they pass CI. This works for narrowly-scoped changes (dependency bumps, generated-code updates) and fails for anything else. The boundary is clear in principle, fuzzy in practice — err toward requiring human approval.
+
+**What's recorded?** Agent reviews leave an audit trail in PR comments, but a reviewer's *agreement* with the agent often doesn't. If a human reviewer LGTMs a PR after reading the agent's detailed review, the reviewer's sign-off is as binding as any other — but the agent's review contains the substance. Teams should be explicit about this: the agent's review is reference material; the human approval is the authorization.
+
+<Recovery
+  pattern="Agent-assisted review creates a review-quality two-tier system"
+  symptom="The team notices that PRs flagged by the agent as clean get merged faster and with lighter human review than PRs flagged with concerns. The agent's clean-vs-flagged distinction is becoming a review cadence signal, and the human reviewers are implicitly trusting it."
+>
+  Two layered responses. Short-term: require a human reviewer's explicit sign-off on the agent's summary ("I read the agent's review and agree" or "I read it and disagree because X"); this forces the reviewer to engage with the agent's output rather than pattern-match on its verdict. Longer-term: calibrate the agent's review output against ground truth by sampling — pick ten recent agent-flagged-clean PRs, have a senior engineer review them independently, measure the false-negative rate. If the rate is non-trivial, the agent's verdict is less reliable than the team is treating it. Adjust the review policy accordingly and re-calibrate quarterly.
+</Recovery>
+
+### Practice 4: policy-as-code
+
+For teams operating in CI (see Ch 12) or production environments, agent permissions are shared policy. The working pattern: check the policy configuration into the repo, review it via the same PR flow as code, and apply the same test-before-merge discipline to policy changes as to code changes.
+
+The minimum: the tool's settings/permissions file lives in the repo (`settings.json`, `.claude/settings.json`, or equivalent), is owned by someone in CODEOWNERS, and policy changes require the same review as code changes. The maximum: a dedicated policy engine (OPA, Cedar) that wraps the agent with declarative rules ("agents from branch X can touch paths matching Y, can call tools Z"). Few teams are at the maximum in 2026; most are at some point along the spectrum.
+
+<CaseStudy date="2026-01">
+  A team using an agent heavily in CI discovered that an engineer had — with good intent — added `"Bash(*)"` to the settings allowlist six months earlier to unblock a specific workflow, then never narrowed it back. The broad permission sat in the config file for two quarters before a security review noticed. No incident resulted, but the near-miss drove the team to a policy: *any permission broader than a specific exact command must include an expiration date in a comment*, and a scheduled job opens an issue when any such comment is within two weeks of expiring. The mechanical reminder closed the loop that good-intent ad-hoc edits had opened.
+</CaseStudy>
+
+<TryThis title="Audit your team's shared agent artifacts">
+  Do each step on your current project. (1) *Briefing doc*: who owns it per CODEOWNERS? When was the last substantive trim? Does anyone on the team have authority to delete content from it? (2) *Skills*: list the team-tier skills checked into the repo. For each, identify the owner and the last time it was validated against reality. How many are stale? (3) *Policy*: where does the permission config live? Who approves changes? Are there broad permissions (wildcards, `*`-matches) that entered via exception and never narrowed back? (4) *Review*: for the last ten merged PRs touched by agent review, does the audit trail make it clear the human reviewer engaged with the agent's output rather than rubber-stamping? The gaps you find are the team's first-priority governance debt.
+</TryThis>
+
+## Evolution
+
+Team patterns move more slowly than feature-surface details. Three axes worth tracking.
+
+<Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+  The *architecture* of shared agent infrastructure is stabilizing: top-level briefing doc, two-tier skill registry (personal + team), agent-assisted review via GitHub Action, policy-as-code via committed settings. Every tool's team-using population has landed in roughly the same shape despite naming differences. Betting on this architecture is safer than betting on any specific file path or command syntax — the paths will change, the architecture is unlikely to.
+</Convergence>
+
+<Divergence axis="team-scale skill discovery">
+  No tool ships a mature cross-repo team skill registry in 2026. Claude Code's skills are per-repo; Gemini CLI has MCP servers that can host tools but team discovery stories are immature; Codex CLI's story is similar. Larger organizations have begun rolling their own internal registries — shared git repos of approved skills, internal package managers for MCP servers. Expect this to consolidate toward vendor-first-class support within 12–18 months; the DIY stage is where we are now.
+</Divergence>
+
+<Divergence axis="agent-as-reviewer authority">
+  Teams differ significantly on how much authority the agent's review carries. Some teams treat agent review as pure advice — the human reviewer can ignore it. Some teams treat an agent red-flag as a merge blocker until resolved. Some teams let agent-approved PRs auto-merge under narrow conditions. No consensus has formed on where the line should be, and no tool's defaults push toward one stance. Expect this to remain divergent — it is a governance question, not a tool question, and different teams legitimately need different answers.
+</Divergence>
+
+**Emerging: skill-and-policy version pinning.** Teams are beginning to pin the versions of skills, briefing-doc conventions, and policies — the same way they pin dependency versions. A PR that changes the briefing doc increments a version; CI jobs can select a specific version. This mirrors the direction software packaging went two decades ago; agent infrastructure is likely to follow. 18–24 months before mature tooling.
+
+**Emerging: role-scoped agents.** A few teams have begun running multiple agent profiles — a "junior-dev agent" with narrow write permissions and thorough explanations, a "senior-dev agent" with broader permissions and terser output — and routing tasks to the appropriate profile. This is role-based access control applied to the agent itself. No tool ships first-class support in 2026; it's a manual configuration pattern that will likely become a product feature.
+
+**Emerging: agent-generated changelog discipline.** When agents author significant PRs, the question of *attribution* surfaces: who is accountable for the change? The emerging convention — the human who dispatched the agent is accountable, the agent's involvement is logged in commit trailers — is not yet universal. Expect explicit commit-trailer conventions and org-level policy to settle over the next year.
+
+## Quick reference
+
+- Team agent practice shares three things whether the team intends to or not: briefing context, skill/command infrastructure, and permission policy. Un-owned shared artifacts drift.
+- Four failure modes repeat across teams: briefing-doc bloat, skill-registry rot, permission erosion, review-cycle arbitrage.
+- Briefing doc governance: CODEOWNERS ownership, append-with-justification, quarterly trim, diff audit. Treat as a load-bearing file.
+- Team skills live in a two-tier registry: personal (per-user directory) and team (repo-committed, reviewed). Promotion from personal to team requires intent.
+- Agent-assisted review is convergent across tools. The pattern is *agent reviews alongside human*, not *agent replaces human*. Explicit review discipline prevents two-tier quality erosion.
+- Policy-as-code: check permission configs into the repo; review them as code; mark broad permissions with expiration comments.
+- Durable architecture: top-level briefing doc + two-tier skill registry + agent-assisted review + policy-as-code. Paths and flag names will change; the architecture is more stable.
+- Emerging: skill-and-policy version pinning, role-scoped agents, explicit agent-attribution in commits. 12–24 months of tooling movement.
+- Governance debt compounds faster than individual productivity gains. A team that saves an hour per engineer per week but ships a credentials leak via an un-owned policy file did not come out ahead.

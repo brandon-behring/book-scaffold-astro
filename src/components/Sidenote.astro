@@ -1,0 +1,26 @@
+---
+/**
+ * Sidenote — a marginalia note that appears in the right margin on
+ * desktop and as an inline-flow aside on mobile. Auto-numbered via CSS
+ * counters (.prose counter-resets, marker increments).
+ *
+ * Per Q6 in the plan: never hidden, never tap-to-reveal. The only
+ * thing that changes across breakpoints is where the note sits.
+ *
+ * Usage (inline within a paragraph):
+ *   <p>
+ *     The argument<Sidenote>supporting evidence here</Sidenote>
+ *     convinced me.
+ *   </p>
+ *
+ * Rendered HTML structure:
+ *   <sup class="sidenote-marker"></sup>      ← the numeric marker
+ *   <span class="sidenote">content</span>    ← the note itself
+ *
+ * The <span> (not <aside>) is deliberate: keeps HTML valid inside
+ * <p> and naturally wraps. Role="note" + .sidenote::before
+ * rendering the number give assistive tech the right semantics.
+ */
+---
+<sup class="sidenote-marker" aria-hidden="true"></sup>
+<span class="sidenote" role="note"><slot /></span>

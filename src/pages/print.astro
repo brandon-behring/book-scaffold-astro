@@ -1,0 +1,39 @@
+---
+/**
+ * print.astro — concatenated book rendered as one long document, the
+ * input for pagedjs-cli.
+ *
+ * Walks the chapters collection in reading order, renders each chapter
+ * body, and wraps in a <section.chapter-print> so print.css can force
+ * page breaks between chapters.
+ *
+ * Build pipeline:
+ *   npm run build            → Astro emits dist/print/index.html
+ *   npm run pdf              → pagedjs-cli fetches dist/print/ via preview
+ *                              server, runs Paged.js in headless Chrome,
+ *                              outputs dist-pdf/book.pdf
+ */
+import Base from '../layouts/Base.astro';
+import { render } from 'astro:content';
+import { getAllChapters } from '../lib/chapters';
+import ChapterHeader from '../components/ChapterHeader.astro';
+
+const chapters = await getAllChapters();
+const rendered = await Promise.all(
+  chapters.map(async (entry) => {
+    const { Content } = await render(entry);
+    return { entry, Content };
+  })
+);
+---
+
+<Base title="Book (print edition)" description="Full book rendered as a single paginated document for PDF export.">
+  <main class="prose print-edition">
+    {rendered.map(({ entry, Content }) => (
+      <section class="chapter-print">
+        <ChapterHeader data={entry.data} />
+        <Content />
+      </section>
+    ))}
+  </main>
+</Base>
