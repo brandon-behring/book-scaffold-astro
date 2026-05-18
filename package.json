@@ -22,8 +22,11 @@
     "@fontsource-variable/roboto": "^5.2.10",
     "@fontsource-variable/source-code-pro": "^5.2.7",
     "astro": "^6.1.7",
+    "katex": "^0.16.11",
     "pagefind": "^1.5.2",
-    "preact": "^10.29.1"
+    "preact": "^10.29.1",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
     "pagedjs-cli": "^0.4.3",

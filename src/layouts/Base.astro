@@ -23,6 +23,12 @@
  */
 import '@fontsource-variable/roboto';
 import '@fontsource-variable/source-code-pro';
+// KaTeX stylesheet is always loaded (~60 KB) so that academic-profile
+// books render math without additional setup. Minimal/tools profiles
+// receive the CSS but have no math elements to style — harmless.
+// rehype-katex (the JS pipeline) is profile-gated in astro.config.mjs;
+// only the academic profile produces katex-classed DOM nodes at build.
+import 'katex/dist/katex.min.css';
 import '../styles/tokens.css';
 import '../styles/typography.css';
 import '../styles/layout.css';
