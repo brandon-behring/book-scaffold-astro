@@ -1,0 +1,39 @@
+# Gitleaks configuration for book-scaffold-astro and books derived from it.
+#
+# Inherits the default ruleset (useDefault = true). The allowlist below
+# excludes false-positives specific to scholarly authoring patterns.
+
+[extend]
+useDefault = true
+
+# ---------------------------------------------------------------------------
+# Bibliography keys in chapter MDX + .bib source
+#
+# Academic-profile books (BOOK_PROFILE=academic) use bibkey-style citation
+# keys (e.g. <Cite key="gu2024mamba" />) that follow the
+# firstauthor+year+firstwordoftitle convention. The same keys live in
+# bibliography.bib (or wherever BOOK_BIB_PATH points), which @citation-js
+# consumes via scripts/build-bib.mjs.
+#
+# Gitleaks' generic-api-key entropy heuristic flags these as secrets — they
+# are not. They are public bibliographic identifiers shared with the
+# scholarly literature.
+#
+# Allowlisted paths:
+#   - chapter MDX (the prose using <Cite key="...">)
+#   - bibliography.bib at scaffold root (default location)
+#
+# The derived src/data/references.json is gitignored, so it never reaches
+# gitleaks scanning.
+#
+# Books that keep their .bib elsewhere (e.g. post_transformers uses
+# guides/shared/references.bib) should extend this allowlist locally with
+# the appropriate path pattern.
+# ---------------------------------------------------------------------------
+
+[[allowlists]]
+description = "Bibliography keys in MDX chapters and .bib source are public identifiers"
+paths = [
+    '''src/content/chapters/.+\.mdx''',
+    '''bibliography\.bib''',
+]

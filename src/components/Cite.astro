@@ -1,0 +1,66 @@
+---
+/**
+ * Cite — renders a `\cite{bibkey}` LaTeX citation as a clickable
+ * inline reference to the bibliography page.
+ *
+ * Reads src/data/references.json (built by scripts/build-bib.mjs from
+ * guides/shared/references.bib). Unknown bibkeys fail the build with
+ * a precise error so typos surface at the same point biber would have
+ * caught them.
+ *
+ * Display:
+ *   - Single author: "Gu (2024)"
+ *   - Two authors:   "Gu & Dao (2024)"
+ *   - 3+ authors:    "Gu et al. (2024)"
+ *   - With page:     "Gu et al. (2024, p. 42)"
+ *
+ * The link target is /references#<bibkey>, where the references page
+ * (src/pages/references.astro) renders all entries with anchor IDs
+ * matching their bibkeys.
+ *
+ * Usage:
+ *   The HiPPO theory <Cite key="gu2020hippo" /> shows that …
+ *   See <Cite key="gu2024mamba" page="3" /> for the kernel decomposition.
+ */
+import refs from '../data/references.json';
+
+type CslAuthor = { family?: string; given?: string; literal?: string };
+type CslEntry = {
+  id: string;
+  author?: CslAuthor[];
+  issued?: { 'date-parts'?: number[][] };
+  title?: string;
+};
+
+const map = refs as Record<string, CslEntry>;
+
+interface Props {
+  key: string;
+  page?: string;
+}
+
+const { key, page } = Astro.props;
+const entry = map[key];
+if (!entry) {
+  throw new Error(
+    `Cite: unknown bibkey "${key}". Check guides/shared/references.bib ` +
+      `for the expected key, or re-run build:bib if the .bib was just edited.`,
+  );
+}
+
+const authors = entry.author ?? [];
+const surname = (a: CslAuthor) => a.family ?? a.literal ?? '(anon)';
+
+let authorText: string;
+if (authors.length === 0) authorText = '(anon)';
+else if (authors.length === 1) authorText = surname(authors[0]);
+else if (authors.length === 2)
+  authorText = `${surname(authors[0])} & ${surname(authors[1])}`;
+else authorText = `${surname(authors[0])} et al.`;
+
+const year = entry.issued?.['date-parts']?.[0]?.[0] ?? 'n.d.';
+const yearText = page ? `${year}, p. ${page}` : `${year}`;
+---
+<a href={`/references#${key}`} class="cite" title={entry.title ?? key}>
+  {authorText} ({yearText})
+</a>

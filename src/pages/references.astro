@@ -1,0 +1,154 @@
+---
+/**
+ * /references — the book's bibliography page.
+ *
+ * Renders every entry in src/data/references.json (produced by
+ * scripts/build-bib.mjs from guides/shared/references.bib). Each
+ * entry gets an anchor ID matching its bibkey, so `<Cite key="gu2024mamba" />`
+ * elsewhere on the site links to /references#gu2024mamba.
+ *
+ * Sorted alphabetically by first-author surname, then by year.
+ * arXiv-style notes are surfaced as direct links when present.
+ */
+import Base from '../layouts/Base.astro';
+import refs from '../data/references.json';
+
+type CslAuthor = { family?: string; given?: string; literal?: string };
+type CslEntry = {
+  id: string;
+  type?: string;
+  author?: CslAuthor[];
+  issued?: { 'date-parts'?: number[][] };
+  title?: string;
+  'container-title'?: string;
+  publisher?: string;
+  volume?: string;
+  issue?: string;
+  page?: string;
+  URL?: string;
+  DOI?: string;
+  note?: string;
+};
+
+const map = refs as Record<string, CslEntry>;
+const entries = Object.values(map);
+
+const surname = (a: CslAuthor): string =>
+  (a.family ?? a.literal ?? '').toLowerCase();
+
+const firstAuthor = (e: CslEntry): string =>
+  e.author && e.author.length > 0 ? surname(e.author[0]) : '~';
+
+const year = (e: CslEntry): number =>
+  e.issued?.['date-parts']?.[0]?.[0] ?? 0;
+
+entries.sort((a, b) => {
+  const sa = firstAuthor(a);
+  const sb = firstAuthor(b);
+  if (sa !== sb) return sa < sb ? -1 : 1;
+  return year(a) - year(b);
+});
+
+function formatAuthors(authors: CslAuthor[] | undefined): string {
+  if (!authors || authors.length === 0) return '(anon)';
+  const names = authors.map((a) => {
+    const family = a.family ?? a.literal ?? '';
+    const given = a.given ? `${a.given} ` : '';
+    return `${given}${family}`.trim();
+  });
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
+}
+
+// arXiv URL extraction from `note` field (existing .bib uses `note = {arXiv:2111.00396}`).
+function arxivUrl(note?: string): string | null {
+  if (!note) return null;
+  const m = note.match(/arXiv:\s*(\S+)/i);
+  return m ? `https://arxiv.org/abs/${m[1]}` : null;
+}
+---
+<Base
+  title="References — Post-Transformers"
+  description="Bibliography for the post_transformers guide, generated from guides/shared/references.bib."
+>
+  <article class="prose">
+    <header>
+      <h1>References</h1>
+      <p class="lede">
+        Every paper, book, and software citation in this guide, sorted
+        alphabetically by first-author surname. Click an entry's
+        anchor to share a deep link, or follow the arXiv / DOI / URL
+        for the source.
+      </p>
+      <p>
+        <small>
+          {entries.length} entries. Generated from
+          <code>guides/shared/references.bib</code> at build time via
+          <code>scripts/build-bib.mjs</code>.
+        </small>
+      </p>
+    </header>
+
+    <ol class="references-list">
+      {entries.map((e) => {
+        const y = year(e);
+        const arxiv = arxivUrl(e.note);
+        const primaryUrl = arxiv ?? e.URL ?? (e.DOI ? `https://doi.org/${e.DOI}` : null);
+        return (
+          <li id={e.id} class="reference-entry">
+            <span class="reference-key" aria-label="bibkey">[{e.id}]</span>
+            <span class="reference-text">
+              {formatAuthors(e.author)}
+              {y > 0 && <> ({y})</>}.
+              {' '}
+              <em>{e.title}</em>.
+              {e['container-title'] && <> {e['container-title']}.</>}
+              {e.publisher && !e['container-title'] && <> {e.publisher}.</>}
+              {e.volume && <> Vol. {e.volume}{e.issue && <>, no. {e.issue}</>}.</>}
+              {e.page && <> pp. {e.page}.</>}
+              {primaryUrl && (
+                <>
+                  {' '}
+                  <a href={primaryUrl} rel="external noopener">link</a>.
+                </>
+              )}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  </article>
+</Base>
+
+<style>
+  .references-list {
+    list-style: none;
+    padding: 0;
+    counter-reset: ref;
+  }
+  .reference-entry {
+    margin: var(--space-3) 0;
+    padding: var(--space-2) 0 var(--space-2) var(--space-4);
+    border-left: 2px solid transparent;
+    transition: border-color 200ms ease;
+  }
+  .reference-entry:target {
+    border-left-color: var(--callout-info);
+    background: var(--warm-blue-tint);
+  }
+  .reference-key {
+    display: inline-block;
+    font-family: var(--font-code);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    margin-right: var(--space-2);
+    vertical-align: baseline;
+  }
+  .reference-text {
+    line-height: var(--leading-normal);
+  }
+  .reference-text em {
+    font-style: italic;
+  }
+</style>

@@ -30,3 +30,11 @@ sources/cache/*
 
 # PDF build output
 dist-pdf/
+
+# Build artifacts derived from sources outside guides/web/.
+# Regenerated on every npm run dev/build via prebuild hook
+# (see "build:bib" in package.json).
+# - references.json: gitleaks entropy-flags bibkeys (e.g. gu2024mamba)
+#   as false-positive API keys; the .gitleaks.toml allowlist covers
+#   .mdx + .bib but JSON is rederivable so we gitignore it.
+src/data/references.json
