@@ -6,14 +6,17 @@
  * tools), so this component renders only the fields that are present on
  * the chapter data. Tools-profile metadata (volatility, last_verified,
  * tools_compared) appears when defined; academic-profile metadata (week,
- * status) appears in its place.
+ * part, status, companion artifacts) appears in its place.
  *
- * Use a chapter card's metadata to calibrate how much trust to place in
- * its specific claims — stable principles age slowly; feature surfaces
- * age fast.
+ * v3.1.0 — academic flavor: Roman-numeral part labels, StatusBadge
+ * component, and an optional companion-artifacts block matching v2.0's
+ * hand-rolled academic ChapterHeader (verbatim restore for content density
+ * parity at narrow viewports).
  */
 import type { CollectionEntry } from 'astro:content';
 import { getFreshness, freshnessLabel } from '../src/lib/freshness';
+import StatusBadge from './StatusBadge.astro';
+import CodeRef from './CodeRef.astro';
 
 interface Props {
   data: CollectionEntry<'chapters'>['data'];
@@ -51,9 +54,24 @@ const freshnessText = freshness
       : 'Stale'
   : null;
 
+// Academic-profile part labels (Roman-numeral · descriptive name).
+// v2.0 post_transformers used this exact mapping; verbatim restore here so
+// the header content density matches at narrow viewports. Keys mirror
+// `academicParts` enum from src/schemas.ts.
+const ACADEMIC_PART_LABELS: Record<string, string> = {
+  foundations: 'Part I · Foundations',
+  'ssm-core': 'Part II · SSM Core',
+  'beyond-ssm': 'Part III · Beyond SSMs',
+  integration: 'Part IV · Integration',
+  synthesis: 'Part V · Synthesis',
+};
+
 // Display strings, profile-tagged for clarity in markup.
 const partLabel = (() => {
   const p = d.part;
+  if (hasAcademicMeta && typeof p === 'string' && p in ACADEMIC_PART_LABELS) {
+    return ACADEMIC_PART_LABELS[p];
+  }
   if (typeof p === 'number') return `Part ${p}`;
   if (typeof p === 'string' && p.length > 0) return `Part: ${p}`;
   return null;
@@ -61,8 +79,6 @@ const partLabel = (() => {
 const chapterNum =
   typeof d.chapter === 'number' ? `Chapter ${d.chapter}` : null;
 const weekNum = typeof d.week === 'number' ? `Week ${d.week}` : null;
-const statusBadge =
-  typeof d.status === 'string' ? d.status.replace(/_/g, ' ') : null;
 const title = typeof d.title === 'string' ? d.title : '(untitled)';
 const description = typeof d.description === 'string' ? d.description : null;
 const toolsCompared = Array.isArray(d.tools_compared)
@@ -71,16 +87,30 @@ const toolsCompared = Array.isArray(d.tools_compared)
 const lastVerified = d.last_verified instanceof Date ? d.last_verified : null;
 const updated = d.updated instanceof Date ? d.updated : null;
 const volatility = typeof d.volatility === 'string' ? d.volatility : null;
+
+// Academic companion artifacts. Notebook source path is transformed via
+// generic basename strip so any book whose render-notebooks output lands
+// under public/notebooks/ gets a correct deep link (v2.0 hardcoded a
+// post_transformers-specific prefix; v3.1.0 generalizes).
+const hasCompanions =
+  hasAcademicMeta &&
+  (typeof d.code_path === 'string' ||
+    typeof d.tests_path === 'string' ||
+    typeof d.notebook_path === 'string');
+const notebookHtmlPath =
+  typeof d.notebook_path === 'string'
+    ? `/notebooks/${(d.notebook_path as string)
+        .replace(/^.*\//, '')
+        .replace(/\.ipynb$/, '')}.html`
+    : null;
 ---
 <header class="chapter-header">
   <div class="chapter-meta">
-    {partLabel && <span>{partLabel}</span>}
+    {partLabel && <span class="chapter-part">{partLabel}</span>}
     {chapterNum && <span>{chapterNum}</span>}
-    {weekNum && <span>{weekNum}</span>}
-    {statusBadge && (
-      <span class="status-badge" data-status={d.status as string}>
-        {statusBadge}
-      </span>
+    {weekNum && <span class="chapter-week">{weekNum}</span>}
+    {hasAcademicMeta && typeof d.status === 'string' && (
+      <StatusBadge status={d.status as never} />
     )}
     {lastVerified && (
       <span>
@@ -99,6 +129,30 @@ const volatility = typeof d.volatility === 'string' ? d.volatility : null;
   </div>
   <h1>{title}</h1>
   {description && <p class="chapter-description">{description}</p>}
+
+  {hasCompanions && (
+    <aside class="chapter-companions">
+      <strong>Companion artifacts:</strong>
+      <ul>
+        {typeof d.code_path === 'string' && (
+          <li>
+            Implementation: <CodeRef path={d.code_path as string} />
+          </li>
+        )}
+        {typeof d.tests_path === 'string' && (
+          <li>
+            Tests: <CodeRef path={d.tests_path as string} />
+          </li>
+        )}
+        {notebookHtmlPath && (
+          <li>
+            Notebook: <a href={notebookHtmlPath}>{notebookHtmlPath}</a>
+          </li>
+        )}
+      </ul>
+    </aside>
+  )}
+
   {hasToolsMeta && volatility && (
     <div class="chapter-badge-row">
       <span class="chapter-badge-row-label">Volatility:</span>
