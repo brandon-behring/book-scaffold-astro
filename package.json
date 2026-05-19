@@ -1,8 +1,8 @@
 {
   "name": "book-scaffold-astro",
-  "description": "GitHub template for long-form technical books: Astro + MDX + Paged.js + Pagefind with Tufte typography and Koller-Friedman chapter structure. Replace this description with your book's.",
+  "description": "GitHub template for long-form technical books: Astro + MDX + Paged.js + Pagefind. Profile-aware (academic / tools / minimal); KaTeX + BibTeX + Tufte typography. Replace this description with your book's.",
   "type": "module",
-  "version": "0.0.1",
+  "version": "2.0.0",
   "engines": {
     "node": ">=22.12.0"
   },
