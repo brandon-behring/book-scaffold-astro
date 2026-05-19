@@ -1,0 +1,118 @@
+# Recipe 04 — Component library
+
+**Profile**: components are profile-flavored. Tools family always available; academic family available when `BOOK_PROFILE=academic`. Utility components (Cite, XRef, Figure, …) work in any profile.
+
+**TL;DR**: Two callout families coexist (per Q3). Authors `import` what they need. The scaffold doesn't force migration of existing tools-profile books to academic, or vice versa.
+
+## Callout families
+
+### Tools family (8 components, default in `BOOK_PROFILE=tools`)
+
+`src/components/callouts/`:
+
+| Component | Use for | Visual |
+|---|---|---|
+| `SkillBox` | A skill the reader practices | green left-bar (tip) |
+| `CaseStudy` | Concrete worked example with date stamp | blue left-bar (info) |
+| `ConceptBox` | Term + crisp definition | plum left-bar (authority) |
+| `KeyIdea` | Bold short principle | gold left-bar (insight) |
+| `TryThis` | Reader exercise / activity | green left-bar (tip) |
+| `Recovery` | Anti-pattern + fix | rose left-bar (warning) |
+| `Convergence` | Multiple tools agree (with `tools` array) | gold left-bar |
+| `Divergence` | Tools disagree (with `axis` label) | gold dashed left-bar |
+
+### Academic family (10 components, default in `BOOK_PROFILE=academic`)
+
+`src/components/callouts/`:
+
+| Component | Use for |
+|---|---|
+| `NoteBox` | Aside / clarification |
+| `ExampleBox` | Worked example |
+| `DynConnect` | Cross-chapter conceptual link |
+| `InsightBox` | High-level "why this matters" |
+| `WarnBox` | Reader pitfall |
+| `CounterBox` | Counter-example / wrong-but-instructive |
+| `TipBox` | Practical advice |
+| `OpenQuestion` | Research gap |
+| `PaperBox` | Reference to a specific paper |
+| `ResultBox` | Theorem / proposition / lemma headline |
+
+For full theorem-like environments (proof scaffolding, numbering), use `<Theorem>` (below).
+
+## Theorem family (academic profile)
+
+`src/components/Theorem.astro` — unified component for nine LaTeX-style environments via the `type` prop:
+
+```mdx
+<Theorem type="theorem" id="thm:zoh-stability" label="ZOH stability">
+The bilinear discretization preserves stability iff $|\lambda \Delta t| < 1$.
+</Theorem>
+
+<Theorem type="proof">
+Direct algebra on the bilinear map.
+</Theorem>
+```
+
+Supported `type` values: `theorem`, `proposition`, `lemma`, `corollary`, `definition`, `example`, `exercise`, `remark`, `proof`. Each gets its own bar color and numbering counter.
+
+## Utility components (any profile)
+
+`src/components/`:
+
+| Component | Purpose | Example |
+|---|---|---|
+| `Cite` | Inline citation linked to `/references` | `<Cite key="gu2024mamba" page="3" />` |
+| `XRef` | Cross-reference to a labeled element | `<XRef id="thm:zoh-stability" />` |
+| `Figure` | Image + caption + id | `<Figure src="/figures/week04/eigenvalues.svg" caption="…" id="fig-eig" />` |
+| `MarginNote` | Right-margin annotation (Tufte-style) | `<MarginNote>side comment</MarginNote>` |
+| `Sidenote` | Auto-numbered marginalia | `<Sidenote>numbered note</Sidenote>` |
+| `WeekRef` | Jump-link to a week chapter | `<WeekRef week={4} />` |
+| `CodeRef` | GitHub-deep-link to file:line | `<CodeRef path="experiments/jax/foo.py" line={42} />` |
+| `CodeBlock` | Embed code-file range with syntax highlight | `<CodeBlock src="…" lines="10-30" />` |
+| `Tag` | Inline volatility/topic tag | `<Tag>stable-principle</Tag>` |
+| `StatusBadge` | Render frontmatter `status` value with color | `<StatusBadge status={frontmatter.status} />` |
+| `ChapterHeader` | Auto-rendered metadata block (week, part, status, companion links) | placed at top of each chapter automatically by Chapter.astro |
+
+## Conditional imports
+
+Authors are responsible for importing what they use. The scaffold doesn't auto-import; this keeps build output clean and makes intent explicit:
+
+```mdx
+---
+title: "Week 4 — Discretization"
+week: 4
+part: ssm-core
+status: implemented
+---
+import NoteBox from '../../components/callouts/NoteBox.astro';
+import Theorem from '../../components/Theorem.astro';
+import Cite from '../../components/Cite.astro';
+
+<NoteBox>This is the heart of S4.</NoteBox>
+
+<Theorem type="theorem">…</Theorem>
+
+The HiPPO theory <Cite key="gu2020hippo" /> shows that …
+```
+
+## Mixing families
+
+You can use tools-family callouts in an academic book or vice versa — nothing stops you. The "default family" per profile is only about what `examples/chapter-template-*.mdx` import for you. Drop in a `<SkillBox>` in an academic chapter when it fits.
+
+## Common gotchas
+
+- **Path depth**: chapters in `src/content/chapters/foo.mdx` import via `../../components/...`. If you nest chapters in a subfolder (`src/content/chapters/week04/intro.mdx`), use `../../../components/...`.
+- **Cite throws on unknown bibkey**: this is intentional (recipe 02). Run `npm run build:bib` after editing `bibliography.bib`.
+- **XRef silently renders `[?label]` for unknown ids**: the validator (recipe 09) catches these — don't rely on visual inspection.
+- **Theorem id collisions across chapters**: include a chapter prefix (e.g. `id="w4:thm:zoh"` not `id="thm:zoh"`).
+
+## Canonical files
+
+- `src/components/callouts/` — both families, 18 components total
+- `src/components/Theorem.astro` — unified theorem-like environment
+- `src/components/{Cite,XRef,Figure,…}.astro` — utility components (10 total)
+
+## Reference implementation
+
+[`~/Claude/post_transformers/guides/web/src/content/chapters/`](../../post_transformers/guides/web/src/content/chapters/) — 6 chapters exercising the academic family. [`~/Claude/book-template-astro/src/content/chapters/`](../../book-template-astro/src/content/chapters/) — 23 chapters exercising the tools family.

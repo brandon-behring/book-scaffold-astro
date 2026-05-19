@@ -1,0 +1,89 @@
+---
+# Profile-aware demo chapter, named with a leading `_` to be excluded
+# from the default content-collection glob (the scaffold can't tell which
+# profile is active until BOOK_PROFILE is set). create-book.sh renames
+# this file to `week01-hello-world.mdx` (drops the underscore) on
+# bootstrap; under BOOK_PROFILE=academic the script also swaps the
+# tools-shape frontmatter below for the academic-shape commented at the
+# bottom of this file.
+title: "Hello, world — your first chapter"
+part: 0
+chapter: 1
+volatility: stable-principle
+tools_compared: [claude-code]
+last_verified: 2026-05-18
+sources: []
+draft: false
+---
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+import Sidenote from '../../components/Sidenote.astro';
+
+# {frontmatter.title}
+
+Welcome. This is your demo chapter, shipped with the scaffold to
+exercise the callouts, the Tufte layout, and the sidebar.<Sidenote>
+You're reading a Sidenote — short marginalia that float into the
+right margin on desktop and reflow inline as colored asides on
+mobile. Try resizing your browser below ~768px.</Sidenote>
+Delete this file and replace with your first real chapter.
+
+<KeyIdea>
+A book scaffolded from this template gets out of your way. The
+infrastructure (layout, search, build, deploy) is solved; what
+remains is the writing.
+</KeyIdea>
+
+## How to use this template
+
+1. Delete this file (`src/content/chapters/week01-hello-world.mdx`).
+2. Copy a skeleton from `examples/chapter-template-academic.mdx` or
+   `examples/chapter-template-tools.mdx` to start your first chapter.
+3. Edit the frontmatter to match your chapter's metadata.
+4. Write.
+
+<SkillBox title="The minimum-viable book workflow">
+1. Pick a profile (`BOOK_PROFILE=academic` or `tools`).
+2. Write one chapter in `src/content/chapters/`.
+3. `npm run dev` and visit `localhost:4321`.
+4. Iterate.
+5. `npm run build` and deploy (recipe 05).
+</SkillBox>
+
+<TryThis title="Five-minute orientation">
+Open the recipe index at [`recipes/README.md`](https://github.com/brandon-behring/book-scaffold-astro/blob/main/recipes/README.md)
+and read the three recipes whose titles attract you. They'll show
+you where everything lives.
+</TryThis>
+
+## What's already wired up
+
+- **Tufte 2-column layout** with three-tier responsive widths
+- **Left chapter-nav sidebar** (visible at ≥1024px; hidden on mobile)
+- **Dark mode** (toggle top-right; respects `prefers-color-scheme`)
+- **Pagefind full-text search** (`/search/`)
+- **Paged.js PDF export** (`npm run pdf` → `dist-pdf/book.pdf`)
+- **18 callout components** across two pedagogical families
+- **KaTeX math** with 36 pre-defined macros (academic profile only)
+- **BibTeX → CSL JSON pipeline** for academic citations
+- **Pre-flight content validator** (`npm run validate`)
+
+## Where to go next
+
+- `recipes/00-getting-started.md` — the canonical onboarding path
+- `recipes/08-decisions-ledger.md` — why everything is shaped the way it is
+- `CLAUDE.md` — authoring guide for AI assistants
+- `pedagogy/` — the chapter-shape methodology
+
+{/*
+  Academic-profile frontmatter alternative (uncomment and replace the
+  block above when working under BOOK_PROFILE=academic):
+
+  ---
+  week: 1
+  part: foundations
+  title: "Hello, world — your first chapter"
+  status: scaffolded
+  ---
+*/}

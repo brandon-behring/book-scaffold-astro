@@ -1,0 +1,90 @@
+---
+# Frontmatter for BOOK_PROFILE=tools. See src/content.config.ts for
+# the full schema and validation rules.
+title: "Chapter title — your topic here"
+part: 1
+chapter: 1
+volatility: architectural-pattern
+tools_compared: [claude-code, gemini-cli, codex-cli]
+last_verified: 2026-05-18
+sources: []
+# Optional fields:
+# description: "Short SEO/meta description, ~140 chars."
+# draft: false
+# updated: 2026-05-18
+---
+import SkillBox from '../../components/callouts/SkillBox.astro';
+import CaseStudy from '../../components/callouts/CaseStudy.astro';
+import ConceptBox from '../../components/callouts/ConceptBox.astro';
+import KeyIdea from '../../components/callouts/KeyIdea.astro';
+import TryThis from '../../components/callouts/TryThis.astro';
+import Recovery from '../../components/callouts/Recovery.astro';
+import Convergence from '../../components/callouts/Convergence.astro';
+import Divergence from '../../components/callouts/Divergence.astro';
+
+# {frontmatter.title}
+
+## Representation
+
+What does the artifact (a pattern, a feature, a capability) look like
+across the tools you're comparing? Define terms precisely.
+
+<ConceptBox term="The thing being represented">
+A short, precise definition. Avoid jargon; if jargon is unavoidable,
+link to a chapter where it's defined.
+</ConceptBox>
+
+<KeyIdea>
+The single most important framing of this chapter. The reader who
+reads only this box should still leave with the central insight.
+</KeyIdea>
+
+## Operation
+
+What do you DO with this artifact? Concrete operations, with
+examples per tool. Show, don't tell.
+
+<SkillBox title="The core skill">
+A practical workflow the reader can apply right now. Numbered steps,
+specific commands, no hand-waving.
+
+1. First concrete action
+2. Second concrete action
+3. Verify
+</SkillBox>
+
+<TryThis title="Hands-on exercise">
+Open your own project and apply the skill above to a specific case.
+What did you observe? What surprised you?
+</TryThis>
+
+<CaseStudy date="2026-05">
+A specific, dated incident or example showing the pattern in
+practice. Concrete numbers if possible (durations, file counts,
+token savings, etc.).
+</CaseStudy>
+
+<Recovery
+  pattern="Common anti-pattern in this space"
+  symptom="What the reader experiences when stuck in the anti-pattern."
+>
+The recommended fix. One paragraph.
+</Recovery>
+
+## Evolution
+
+What's converging or diverging across the tools you're tracking?
+This is the comparative-tracking heart of the Koller-Friedman shape
+applied to evolving technology.
+
+<Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+All tracked tools now do X. You can safely write practices that
+assume this. Date the convergence so the reader knows when to
+re-check.
+</Convergence>
+
+<Divergence axis="The axis of disagreement">
+Tool A picks one tradeoff; Tool B picks the opposite. The space
+hasn't settled. Document both positions plainly so the reader can
+make an informed choice.
+</Divergence>

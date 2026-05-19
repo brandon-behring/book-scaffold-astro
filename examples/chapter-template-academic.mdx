@@ -1,0 +1,100 @@
+---
+# Frontmatter for BOOK_PROFILE=academic. See src/content.config.ts for
+# the full schema and validation rules.
+week: 1
+part: foundations
+title: "Chapter title — your subject here"
+status: scaffolded
+# Optional fields:
+# description: "Short SEO/meta description, ~140 chars."
+# code_path: experiments/jax/week01/some_module.py
+# tests_path: experiments/jax/week01/test_some_module.py
+# notebook_path: notebooks/week01/companion.ipynb
+# roadmap_lines: [10, 42]
+---
+import NoteBox from '../../components/callouts/NoteBox.astro';
+import ExampleBox from '../../components/callouts/ExampleBox.astro';
+import InsightBox from '../../components/callouts/InsightBox.astro';
+import OpenQuestion from '../../components/callouts/OpenQuestion.astro';
+import Theorem from '../../components/Theorem.astro';
+import Cite from '../../components/Cite.astro';
+import Figure from '../../components/Figure.astro';
+import Sidenote from '../../components/Sidenote.astro';
+
+# {frontmatter.title}
+
+## Overview
+
+A half-page motivation: what this chapter covers, why it matters,
+and how it fits into the curriculum. Reader should be able to decide
+after the Overview whether to read further.<Sidenote>Use Sidenote
+for short asides that belong in the right margin on desktop and
+reflow inline on mobile.</Sidenote>
+
+<InsightBox>
+The single most important takeaway of this chapter, stated as a
+short principle. Comes before the Theory so a reader who only
+skims gets the heart of the matter.
+</InsightBox>
+
+## Theory
+
+The core mathematical content. Definitions, lemmas, propositions,
+theorems. Cite primary sources using <Cite key="example-key2024" />.
+
+<Theorem type="definition" id="ch1:def:main">
+A *something* is a mathematical object such that … Provide the
+precise definition with the key properties explicit.
+</Theorem>
+
+<Theorem type="theorem" id="ch1:thm:main" label="Main result">
+Under the conditions of Definition <a href="#ch1:def:main">1.1</a>,
+the property $P$ holds with $\|x\| \le c \cdot \|y\|$ for some
+constant $c > 0$.
+</Theorem>
+
+<Theorem type="proof">
+Direct calculation. Apply the chain rule, regroup terms, and use
+the boundedness assumption from the hypothesis.
+</Theorem>
+
+## Examples
+
+Concrete instances that exercise the theory. At least one worked
+example per theorem.
+
+<ExampleBox title="Worked example 1">
+Take $A = \mathrm{diag}(\lambda_1, \ldots, \lambda_n)$ with all
+$|\lambda_i| < 1$. Then the iteration $x_{k+1} = A x_k$ converges
+to 0, with rate $\max_i |\lambda_i|$.
+</ExampleBox>
+
+<Figure
+  src="/figures/example/placeholder.svg"
+  caption="Caption explaining what the reader should see in the figure."
+  id="ch1-fig-example"
+/>
+
+## Reflections
+
+What should the reader walk away knowing? Three to five takeaways.
+
+1. The first key insight, restated in plain language.
+2. The second key insight, with a connection to a sibling chapter.
+3. The third key insight, often a caveat or limitation.
+
+<OpenQuestion>
+A research gap the chapter exposes. What's not yet known? What
+would extend this result? Pointers to the wish-list / project-ideas
+file for ambitious readers.
+</OpenQuestion>
+
+## Forward-map
+
+How this chapter connects to next week. One paragraph; sets up the
+reader's mental model for what comes next.
+
+<NoteBox>
+Delete this section when no follow-on chapter exists yet, or replace
+with a "Synthesis" section in the final chapter of a part.
+</NoteBox>

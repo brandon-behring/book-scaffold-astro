@@ -1,0 +1,179 @@
+# CLAUDE.md — Authoring guide for AI assistants
+
+This file is auto-loaded by Claude Code (and cross-tool agents via the symmetric `AGENTS.md`) when working in a repo bootstrapped from `book-scaffold-astro`. Read this first; the patterns below are pre-tested.
+
+## Inherits from
+
+Cross-project conventions live in the hub at `~/Claude/lever_of_archimedes/patterns/`. Defer to those for:
+
+- **Git commit format** — `~/Claude/lever_of_archimedes/patterns/git.md`
+- **Testing patterns** — `~/Claude/lever_of_archimedes/patterns/testing.md`
+- **Session workflows** — `~/Claude/lever_of_archimedes/patterns/sessions.md`
+
+If the hub isn't available in your environment (e.g. external contributor), the scaffold's `CHANGELOG.md` documents commit conventions inline.
+
+## Profile
+
+Read `BOOK_PROFILE` from the environment or `.env`. It controls:
+
+- Which content-collection schema is enforced (`academic` / `tools` / `minimal`)
+- Which markdown integrations run (KaTeX gated on `academic`)
+- Which callout family is the "default" import in templates
+- Whether ToolFilter / VersionSelector Preact islands mount in the chrome row
+
+When in doubt, run `grep BOOK_PROFILE .env astro.config.mjs src/content.config.ts` to see the wiring.
+
+## Frontmatter schemas
+
+### Academic profile (`src/content.config.ts:academicChapterSchema`)
+
+```yaml
+---
+week: 1                  # int, required, 1-99
+part: foundations        # required: foundations|ssm-core|beyond-ssm|integration|synthesis
+title: "..."             # string, required
+status: implemented      # required: implemented|chapter_only|prose_only|code_only|reading_only|scaffolded|planned
+# optional:
+roadmap_lines: [10, 42]  # [start, end] line refs into roadmap.md
+code_path: experiments/jax/week01/foo.py
+tests_path: experiments/jax/week01/test_foo.py
+notebook_path: notebooks/week01.ipynb
+description: "..."       # SEO/meta
+draft: false
+---
+```
+
+### Tools profile (`src/content.config.ts:toolsChapterSchema`)
+
+```yaml
+---
+title: "..."                       # required
+part: 1                            # int, required, 0-10
+chapter: 1                         # int, required, 0-99
+volatility: architectural-pattern  # required: stable-principle|architectural-pattern|feature-surface
+tools_compared: [claude-code]      # required, ≥1 of: claude-code|gemini-cli|codex-cli|cross-tool
+last_verified: 2026-05-18          # date, required
+sources: []                        # array of source-manifest keys
+# optional: description, draft, updated
+---
+```
+
+## Component reference
+
+Two callout families coexist. Authors import what they need.
+
+**Tools family** (`src/components/callouts/`, 8 components): `SkillBox`, `CaseStudy`, `ConceptBox`, `KeyIdea`, `TryThis`, `Recovery`, `Convergence`, `Divergence`.
+
+**Academic family** (`src/components/callouts/`, 10 components): `NoteBox`, `ExampleBox`, `DynConnect`, `InsightBox`, `WarnBox`, `CounterBox`, `TipBox`, `OpenQuestion`, `PaperBox`, `ResultBox`. Plus `Theorem` (unified for theorem/proposition/lemma/corollary/definition/example/exercise/remark/proof).
+
+**Utility components** (`src/components/`, any profile): `Cite`, `XRef`, `Figure`, `MarginNote`, `Sidenote`, `WeekRef`, `CodeRef`, `CodeBlock`, `Tag`, `StatusBadge`.
+
+Full reference in `recipes/04-component-library.md`.
+
+## Citation patterns
+
+Academic profile uses BibTeX → `references.json`:
+
+```mdx
+The HiPPO theory <Cite key="gu2020hippo" /> shows that …
+For the kernel decomposition see <Cite key="gu2024mamba" page="3" />.
+```
+
+Build: `npm run build:bib` reads `bibliography.bib` and writes `src/data/references.json`. Run after any `.bib` edit. The pre-build hook handles this automatically.
+
+Tools profile uses the YAML source manifest (`sources/manifest.yaml`); cite via `sources` array in frontmatter, rendered by `SourceArchive.astro`.
+
+## Build + dev commands
+
+```bash
+npm install                  # once after clone
+npm run dev                  # localhost:4321
+npm run build                # astro build + pagefind index → dist/
+npm run validate             # pre-flight check (recipe 09)
+npm run build:bib            # rebuild references.json after .bib edit
+npm run pdf                  # render dist-pdf/book.pdf via Paged.js
+```
+
+`prebuild` chains: `build:assets` (bib + figures + notebooks) → `validate` → `astro build`.
+
+## Deploy
+
+Cloudflare Workers + Static Assets via `wrangler.toml`. Recipe 05 has the dashboard flow. URL after first deploy: `https://<book-name>.<account>.workers.dev`.
+
+For monorepo Astro projects (Astro project in subdir), prefix build + deploy commands with `cd <subdir> &&`.
+
+## Validation
+
+`npm run validate` (also runs in prebuild) catches:
+
+- Unknown `<Cite key>` (academic) — bibkey not in `references.json`
+- Unknown `<XRef id>` — id not in `labels.json` (XRef silently renders `[?label]` otherwise)
+- Missing `<Figure src>` files under `public/`
+- Internal markdown links that don't resolve
+
+See `recipes/09-validation.md` to extend.
+
+## Common authoring tasks
+
+### Add a new chapter
+
+1. Copy `examples/chapter-template-{academic,tools}.mdx` to `src/content/chapters/`.
+2. Edit frontmatter (title, week/chapter, status/volatility).
+3. Write.
+4. `npm run dev` to preview at `/chapters/<slug>/`.
+
+### Add a citation
+
+1. Edit `bibliography.bib` (academic profile) — add the BibTeX entry.
+2. `npm run build:bib` regenerates `src/data/references.json`.
+3. Use `<Cite key="<bibkey>" />` in chapter.
+
+### Add a figure
+
+1. Drop PDF in `figures/<topic>/<name>.pdf` (or set `BOOK_FIGURES_PATH`).
+2. `npm run build:figures` produces `public/figures/<topic>/<name>.svg`.
+3. Reference: `<Figure src="/figures/<topic>/<name>.svg" caption="..." id="..." />`.
+
+### Add a new component
+
+1. Create `src/components/<Foo>.astro`.
+2. Add an entry to `recipes/04-component-library.md`.
+3. Update this file's "Component reference" section.
+
+## Commit conventions
+
+Inherit from the hub's `git.md`. Format:
+
+```
+type(scope): Short imperative subject
+
+Body paragraphs explaining what and why.
+
+- Bullet for each significant change
+- Another bullet
+
+Generated with Claude Code
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+Types: `feat` / `fix` / `refactor` / `docs` / `test` / `chore` / `release`. One commit per logical unit; small commits over big ones.
+
+## Don't
+
+- Don't use `npm create astro@latest` to bootstrap a fresh repo — the scaffold is not vanilla Astro.
+- Don't bypass the validator with `--no-verify` on a commit. If validate fails, fix the underlying issue.
+- Don't commit large binaries (PDFs > 5 MB, model checkpoints) — keep them in research-kb or a separate asset host.
+- Don't auto-import from both callout families in the same chapter unless you have a reason. Pick a default family and stay with it.
+
+## Reference repos
+
+- `~/Claude/post_transformers/guides/web/` — academic-profile reference, deployed at `post-transformers-guide.brandon-m-behring.workers.dev`
+- `~/Claude/book-template-astro/` — tools-profile reference, "Agentic Coding" book in production
+- `~/Claude/book-scaffold-astro/` — this canonical scaffold
+
+## Reading this guide didn't help?
+
+- `recipes/README.md` — index of all 11 recipes
+- `recipes/08-decisions-ledger.md` — why everything is shaped the way it is
+- `~/.claude/plans/i-want-to-investigate-recursive-yao.md` — full design discussion
