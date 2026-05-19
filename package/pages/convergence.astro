@@ -16,7 +16,7 @@ import {
   getPatternsByCategory,
   CATEGORY_LABELS,
 } from '../src/lib/patterns';
-import { patternCategories } from '../content.config';
+import { patternCategories } from '@brandon_m_behring/book-scaffold-astro';
 
 const grouped = await getPatternsByCategory();
 const totalPatterns = Object.values(grouped).reduce(

@@ -17,7 +17,7 @@ import {
   toolSlugs,
   patternCategories,
   changeKinds,
-} from '../schemas.js';
+} from '@brandon_m_behring/book-scaffold-astro';
 
 export type PatternEntry = CollectionEntry<'patterns'>;
 export type ToolSlug = (typeof toolSlugs)[number];

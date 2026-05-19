@@ -23,8 +23,12 @@ export async function defineBookConfig(
   const rehypePlugins: NonNullable<NonNullable<AstroUserConfig['markdown']>['rehypePlugins']> = [];
 
   if (profile === 'academic') {
-    const { default: remarkMath } = await import('remark-math');
-    const { default: rehypeKatex } = await import('rehype-katex');
+    // `/* @vite-ignore */` tells the consumer's Vite to skip static analysis
+    // of these dynamic imports — tools/minimal consumers don't install
+    // remark-math/rehype-katex, and Vite would otherwise fail to resolve
+    // them even though the runtime branch never executes.
+    const { default: remarkMath } = await import(/* @vite-ignore */ 'remark-math');
+    const { default: rehypeKatex } = await import(/* @vite-ignore */ 'rehype-katex');
     const { ssmMacros } = await import('./lib/katex-macros.js');
     remarkPlugins.push(remarkMath);
     rehypePlugins.push([
@@ -81,10 +85,27 @@ export async function defineBookConfig(
   // directly. This sidesteps a generic-inference cascade where
   // AstroUserConfig's Locales/SessionDriverName/FontProvider params don't
   // thread through our wrapper without explicit type plumbing.
+  //
+  // KaTeX peer-deps are dynamic-imported only on the academic branch, but
+  // Rollup's static analyzer sees the literal string and tries to resolve
+  // anyway. Marking them external for non-academic builds skips the
+  // resolution attempt; the runtime branch never executes, so no runtime
+  // miss.
+  const katexExternals =
+    profile === 'academic' ? [] : ['remark-math', 'rehype-katex', 'katex'];
+
   const config: AstroUserConfig = {
     ...rest,
     integrations,
     markdown,
+    vite: {
+      build: {
+        rollupOptions: {
+          external: katexExternals,
+        },
+      },
+      ...((rest as Record<string, unknown>).vite as object | undefined ?? {}),
+    },
   } as AstroUserConfig;
   return config;
 }
