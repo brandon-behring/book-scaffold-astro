@@ -1,32 +1,39 @@
 # Wrangler configuration for Cloudflare Workers + Static Assets.
 #
-# Deployment model: a Cloudflare Worker (no custom JS handler) serves the
-# Astro static build output at ./dist/. This is the post-Pages unified
-# model — Cloudflare's official path for new static sites since the
-# Pages → Workers migration.
+# Replace the placeholder `name` below with your book's project name
+# (hyphens only, no underscores — becomes part of the subdomain).
 #
-# Deploy command (configured in the Cloudflare dashboard build settings):
+# Deployment model: a Cloudflare Worker (no custom JS handler) serves
+# the Astro static build output at ./dist/. This is the unified post-Pages
+# model — Cloudflare's official path for new static sites since the
+# Pages → Workers migration (late 2025).
+#
+# Deploy command in the Cloudflare dashboard:
 #   npx wrangler deploy
 #
-# Build command (configured in the dashboard):
-#   cd guides/web && npm install && npm run build
+# If your Astro project lives in a subdirectory (e.g. `guides/web/`)
+# rather than at repo root, prefix the deploy command:
+#   cd guides/web && npx wrangler deploy
 #
-# The "name" below becomes the Worker subdomain:
-#   https://post-transformers-guide.<account>.workers.dev
-# Cloudflare also auto-assigns a *.pages.dev-style preview URL for branch
-# pushes.
+# Build command in the Cloudflare dashboard:
+#   npm install && npm run build
+#
+# (Or with subdir: `cd guides/web && npm install && npm run build`)
+#
+# URL after first deploy: https://<name>.<your-account>.workers.dev
+# For a custom domain, see recipes/10-custom-domain.md.
 
-name = "post-transformers-guide"
+name = "your-book-name"
 compatibility_date = "2026-05-18"
 
 [assets]
-# Astro's build output directory (relative to wrangler.toml location).
+# Astro's build output directory. Relative to this wrangler.toml location.
 directory = "./dist/"
 
-# Astro pages have trailing slashes (e.g. /chapters/week05/). Default
-# handling serves dist/chapters/week05/index.html, which is what we want.
-# Leave the html_handling at the default ("auto-trailing-slash").
+# Most static sites: leave html_handling at default ("auto-trailing-slash"),
+# which serves dist/foo/index.html for URL /foo/. Astro emits this layout
+# by default.
 
-# This is NOT a single-page application — every chapter is its own
-# pre-rendered HTML page. Leaving not_found_handling unset gives the
-# default behavior (return 404).
+# Most static sites: leave not_found_handling unset (default = 404 page).
+# For a single-page-application, uncomment:
+# not_found_handling = "single-page-application"
