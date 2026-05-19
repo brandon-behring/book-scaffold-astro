@@ -39,6 +39,14 @@ export interface RouteToggles {
   print: boolean;
   chapters: boolean;
   convergence: boolean;
+  /**
+   * v3.4.0 (closes #7): auto-inject `/frontmatter/[slug]/` rendering a
+   * consumer-defined `frontmatter` content collection. Default `false` per
+   * profile — opt in via defineBookConfig({ routes: { frontmatter: true } })
+   * AND define the collection via `frontmatterCollection()` in content.config.ts.
+   * If enabled without defining the collection, Astro errors clearly at build.
+   */
+  frontmatter: boolean;
 }
 
 /** Profile definition — declarative shape for one book profile. */

@@ -1,14 +1,26 @@
-name: package CI
+name: package-ci
+
+# Active package CI — moved from package/.github/workflows/ci.yml (which
+# GitHub Actions never discovered because workflows only run from the repo
+# root .github/workflows/ path). Closes issue #10.
+#
+# Triggers on pushes/PRs touching the package, the create-book CLI, the
+# demo workspace, or this workflow itself. Visual regression coverage is in
+# its own workflow (.github/workflows/visual-regression.yml).
 
 on:
   push:
     branches: [main, v3.0]
     paths:
       - 'package/**'
-      - '.github/workflows/ci.yml'
+      - 'create-book/**'
+      - 'demo/**'
+      - '.github/workflows/package-ci.yml'
   pull_request:
     paths:
       - 'package/**'
+      - 'create-book/**'
+      - 'demo/**'
 
 defaults:
   run:
@@ -29,13 +41,13 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
-          cache-dependency-path: package/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install (workspace-aware)
         working-directory: ./
         run: npm install
 
-      - name: Build (tsup → dist)
+      - name: Build (tsup -> dist)
         run: npm run build
 
       - name: Test (node:test against fixtures)
@@ -53,6 +65,20 @@ jobs:
       - name: Pack dry-run (inspect tarball contents)
         run: npm pack --dry-run
 
+      - name: Consumer-root validate smoke (closes #8 regression coverage)
+        working-directory: package/tests/visual/fixture
+        run: |
+          # The fixture has its own chapters under src/content/chapters/.
+          # validate must report a non-zero chapter count from THIS directory,
+          # not the package root. The pre-v3.4.0 bug returned "0 chapter(s)".
+          out=$(npx --no-install book-scaffold validate 2>&1 || true)
+          echo "$out"
+          if echo "$out" | grep -q "0 chapter(s) checked"; then
+            echo "::error::validate reported 0 chapters — package-root bug (#8) regressed"
+            exit 1
+          fi
+          echo "$out" | grep -E '[1-9][0-9]* chapter\(s\) checked' >/dev/null || (echo "::error::validate output missing expected chapter count line" && exit 1)
+
   smoke-demo:
     runs-on: ubuntu-latest
     needs: test-and-build
@@ -62,7 +88,7 @@ jobs:
         with:
           node-version: '22.x'
           cache: npm
-          cache-dependency-path: package/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install (workspace-aware)
         working-directory: ./
@@ -72,10 +98,10 @@ jobs:
         working-directory: package
         run: npm run build
 
-      - name: Build the in-repo demo (academic profile)
+      - name: Build the in-repo demo (academic preset)
         working-directory: demo
         env:
-          BOOK_PROFILE: academic
+          BOOK_PRESET: academic
         run: npx astro build
 
       - name: Verify demo emitted core routes

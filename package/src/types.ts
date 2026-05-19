@@ -18,6 +18,13 @@ import type { RouteToggles } from './profile-kit.js';
 export type { BookProfile, RouteToggles };
 export { BOOK_PROFILES };
 
+// v3.4.0 (closes #9): `preset` is the forward-looking canonical name; `profile`
+// stays as a backward-compat alias forever. Same union type, same set of values
+// — the rename is purely vocabulary, positioning the toolkit for future
+// composable-preset features (e.g. issue #6 research-portfolio).
+export type BookPreset = BookProfile;
+export const BOOK_PRESETS = BOOK_PROFILES;
+
 /**
  * Options for `defineBookConfig`. See PACKAGE_DESIGN.md §4.
  *
@@ -30,9 +37,15 @@ export interface BookConfigOptions {
   /** Required. Book's deployed origin (sitemap, canonical, Pagefind). */
   site: string;
   /**
-   * Optional. Falls back to `process.env.BOOK_PROFILE`, then `.env`, then
-   * `'minimal'`. Explicit param always wins.
+   * Optional. Canonical forward-looking name (v3.4.0+). Resolution order:
+   * `preset` > `profile` > `BOOK_PRESET` env > `BOOK_PROFILE` env > `.env`
+   * `BOOK_PRESET` > `.env` `BOOK_PROFILE` > `'minimal'`.
+   *
+   * Closes #9: existing consumers using `profile:` keep working; new docs
+   * + recipes recommend `preset:`. Same value set.
    */
+  preset?: BookPreset;
+  /** Backward-compat alias for `preset`. */
   profile?: BookProfile;
   /**
    * Optional per-route override of the profile's defaults. Use to disable
@@ -75,6 +88,9 @@ export interface BookConfigOptions {
 
 /** Options for `defineBookSchemas`. See PACKAGE_DESIGN.md §5. */
 export interface BookSchemasOptions {
+  /** Canonical name (v3.4.0+). */
+  preset?: BookPreset;
+  /** Backward-compat alias for `preset`. */
   profile?: BookProfile;
   /** Defaults to `'./src/content/chapters'`. */
   chaptersBase?: string;
@@ -136,15 +152,35 @@ function readEnvFile(path = '.env'): Record<string, string> {
   }
 }
 
-/** Resolve profile from explicit param → process.env → .env → default. Throws on invalid. */
-export function resolveProfile(explicit?: BookProfile): BookProfile {
-  let candidate: string | undefined = explicit ?? process.env.BOOK_PROFILE;
+/**
+ * Resolve preset from explicit args → env → .env → default. Throws on invalid.
+ *
+ * v3.4.0 (closes #9): canonical resolver. Accepts both `preset` and `profile`
+ * (back-compat) explicit args; reads both `BOOK_PRESET` (preferred) and
+ * `BOOK_PROFILE` (alias) env vars; same for .env file lookups.
+ *
+ * Resolution order:
+ *   1. explicitPreset (from defineBookConfig({ preset: ... }))
+ *   2. explicitProfile (from defineBookConfig({ profile: ... }))
+ *   3. process.env.BOOK_PRESET
+ *   4. process.env.BOOK_PROFILE
+ *   5. .env BOOK_PRESET
+ *   6. .env BOOK_PROFILE
+ *   7. 'minimal' (with console.warn)
+ */
+export function resolvePreset(
+  explicitPreset?: BookPreset,
+  explicitProfile?: BookProfile,
+): BookPreset {
+  let candidate: string | undefined =
+    explicitPreset ?? explicitProfile ?? process.env.BOOK_PRESET ?? process.env.BOOK_PROFILE;
   let source: 'param' | 'env' | 'dotenv' | 'default' = 'default';
-  if (explicit) source = 'param';
-  else if (process.env.BOOK_PROFILE) source = 'env';
+  if (explicitPreset || explicitProfile) source = 'param';
+  else if (process.env.BOOK_PRESET || process.env.BOOK_PROFILE) source = 'env';
 
   if (!candidate) {
-    const fromFile = readEnvFile().BOOK_PROFILE;
+    const env = readEnvFile();
+    const fromFile = env.BOOK_PRESET ?? env.BOOK_PROFILE;
     if (fromFile) {
       candidate = fromFile;
       source = 'dotenv';
@@ -153,14 +189,23 @@ export function resolveProfile(explicit?: BookProfile): BookProfile {
 
   candidate = candidate ?? 'minimal';
 
-  if (!BOOK_PROFILES.includes(candidate as BookProfile)) {
+  if (!BOOK_PRESETS.includes(candidate as BookPreset)) {
     throw new BookConfigError(
-      `profile must be one of ${BOOK_PROFILES.join(' | ')} (got ${JSON.stringify(candidate)})`,
+      `preset must be one of ${BOOK_PRESETS.join(' | ')} (got ${JSON.stringify(candidate)})`,
     );
   }
   if (source === 'default') {
     // eslint-disable-next-line no-console
-    console.warn("book-scaffold-astro: BOOK_PROFILE not set; falling back to 'minimal'.");
+    console.warn("book-scaffold-astro: BOOK_PRESET not set; falling back to 'minimal'.");
   }
-  return candidate as BookProfile;
+  return candidate as BookPreset;
+}
+
+/**
+ * Backward-compat alias. New code should use `resolvePreset()`.
+ * v3.4.0+: kept for any consumer that imported `resolveProfile` directly
+ * (none we know of, but the export was public in the v3.x main entry).
+ */
+export function resolveProfile(explicit?: BookProfile): BookProfile {
+  return resolvePreset(undefined, explicit);
 }

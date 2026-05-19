@@ -9,13 +9,16 @@ import mdx from '@astrojs/mdx';
 import preact from '@astrojs/preact';
 import type { AstroUserConfig } from 'astro';
 import type { BookConfigOptions } from './types.js';
-import { resolveProfile } from './types.js';
+import { resolvePreset } from './types.js';
 import { bookScaffoldIntegration } from './integration.js';
 
 export async function defineBookConfig(
   opts: BookConfigOptions,
 ): Promise<AstroUserConfig> {
-  const profile = resolveProfile(opts.profile);
+  // v3.4.0 (#9): resolvePreset accepts both `preset` and `profile` (alias).
+  // The variable stays named `profile` internally to minimize the diff —
+  // semantically it's the resolved preset value.
+  const profile = resolvePreset(opts.preset, opts.profile);
 
   // Profile-conditional KaTeX wiring (ported from v2.0 astro.config.mjs:23-42).
   // Dynamic import keeps the dep graph clean for tools/minimal profiles.
@@ -74,6 +77,7 @@ export async function defineBookConfig(
 
   // Strip the package-specific options out of the rest before forwarding.
   const {
+    preset: _preset,                       // v3.4.0
     profile: _profile,
     routes: _routes,                       // v3.3.0
     mdxComponentsModule: _mdxComponentsModule, // v3.3.0
@@ -82,6 +86,7 @@ export async function defineBookConfig(
     markdown: _markdown,
     ...rest
   } = opts;
+  void _preset;
   void _profile;
   void _routes;
   void _mdxComponentsModule;

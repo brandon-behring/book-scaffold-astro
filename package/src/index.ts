@@ -25,12 +25,19 @@ export { defineBookConfig } from './config.js';
 export { bookScaffoldIntegration } from './integration.js';
 export type {
   BookProfile,
+  BookPreset,         // v3.4.0 — canonical name (alias of BookProfile, closes #9)
   BookConfigOptions,
   BookSchemasOptions,
   BookScaffoldIntegrationOptions,
   RouteToggles,
 } from './types.js';
-export { BOOK_PROFILES, BookConfigError, resolveProfile } from './types.js';
+export {
+  BOOK_PROFILES,
+  BOOK_PRESETS,       // v3.4.0 — alias of BOOK_PROFILES
+  BookConfigError,
+  resolveProfile,
+  resolvePreset,      // v3.4.0 — canonical resolver (accepts both preset + profile)
+} from './types.js';
 
 // Profile-kit: defineProfile helper (v3.3.0) for consumers writing their
 // own profile modules (advanced) or extending toolkit-shipped ones.

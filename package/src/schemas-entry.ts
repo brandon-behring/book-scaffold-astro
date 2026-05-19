@@ -21,7 +21,7 @@ import { defineCollection } from 'astro:content';
 import { glob, file } from 'astro/loaders';
 
 import type { BookSchemasOptions } from './types.js';
-import { resolveProfile } from './types.js';
+import { resolvePreset } from './types.js';
 import {
   academicChapterSchema,
   toolsChapterSchema,
@@ -33,11 +33,56 @@ import {
 } from './schemas.js';
 
 /**
+ * v3.4.0 (closes #7): consumer-facing helper to define a `frontmatter`
+ * content collection that the scaffold's auto-injected
+ * `/frontmatter/[slug]` route can render.
+ *
+ * Usage in consumer's content.config.ts:
+ *
+ *   import { defineBookSchemas, frontmatterCollection } from
+ *     '@brandon_m_behring/book-scaffold-astro/schemas';
+ *   import { z } from 'astro:content';
+ *
+ *   export const { collections } = {
+ *     collections: {
+ *       ...defineBookSchemas().collections,
+ *       frontmatter: frontmatterCollection(z.object({
+ *         slug: z.string(),
+ *         title: z.string(),
+ *         order: z.number(),
+ *         description: z.string().optional(),
+ *       })),
+ *     },
+ *   };
+ *
+ * Then enable the route via `defineBookConfig({ routes: { frontmatter: true } })`
+ * and drop MDX files under `src/content/frontmatter/`. The scaffold-injected
+ * route renders each entry with the consumer's mdx-components in scope (issue #2
+ * plumbing applies).
+ *
+ * Default loader: `**\/*.{md,mdx}` under `./src/content/frontmatter` (excluding
+ * underscore-prefixed files). Override `base` via the second arg.
+ */
+export function frontmatterCollection(
+  schema: Parameters<typeof defineCollection>[0]['schema'],
+  base = './src/content/frontmatter',
+) {
+  return defineCollection({
+    loader: glob({
+      pattern: ['**/*.{md,mdx}', '!**/_*'],
+      base,
+    }),
+    schema,
+  });
+}
+
+/**
  * Returns the package's default content collections. Closed shape per Q5;
  * consumer extends via object spread and Zod `.extend()` (see PACKAGE_DESIGN.md §5).
  */
 export function defineBookSchemas(opts: BookSchemasOptions = {}) {
-  const profile = resolveProfile(opts.profile);
+  // v3.4.0 (#9): resolvePreset accepts both `preset` and `profile` (alias).
+  const profile = resolvePreset(opts.preset, opts.profile);
   const chaptersBase = opts.chaptersBase ?? './src/content/chapters';
 
   // v3.3.0: schemas are owned by per-profile modules under src/profiles/,

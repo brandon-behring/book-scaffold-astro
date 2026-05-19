@@ -23,6 +23,7 @@ export const courseNotesProfile = defineProfile({
     print: true,
     chapters: false,        // multi-book consumers route via [book]/[slug] themselves
     convergence: false,
+    frontmatter: false,     // opt-in per book; see #7
   },
   styles: ['tokens.css', 'layout.css', 'callouts.css', 'chapter.css', 'typography.css', 'print.css'],
 });

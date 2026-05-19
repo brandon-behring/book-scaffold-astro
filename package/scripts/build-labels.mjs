@@ -36,6 +36,26 @@
 import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
 import { resolve, join, basename, dirname } from 'node:path';
 
+// --help / -h: non-mutating (closes #14).
+const USAGE = `Usage: book-scaffold build-labels
+
+Emit src/data/labels.json for <XRef> resolution. Walks chapter MDX files,
+extracts labelable components (Theorem, Figure, ...), assigns display strings
+like "Theorem 4.2" matching LaTeX \\cref.
+
+Env:
+  BOOK_CHAPTERS_DIR   Override chapters dir (default: src/content/chapters).
+  BOOK_LABELS_OUT     Override output path (default: src/data/labels.json).
+
+Options:
+  --help, -h          Print this message and exit (non-mutating).
+`;
+
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  process.stdout.write(USAGE);
+  process.exit(0);
+}
+
 const CHAPTERS_DIR = process.env.BOOK_CHAPTERS_DIR ?? 'src/content/chapters';
 const OUTPUT_PATH = process.env.BOOK_LABELS_OUT ?? 'src/data/labels.json';
 

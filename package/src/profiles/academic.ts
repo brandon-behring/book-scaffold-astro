@@ -21,6 +21,7 @@ export const academicProfile = defineProfile({
     print: true,
     chapters: false,        // academic consumers ship their own week-based /chapters listing
     convergence: false,     // tools-profile-specific
+    frontmatter: false,     // opt-in per book; see #7
   },
   styles: ['tokens.css', 'layout.css', 'callouts.css', 'chapter.css', 'typography.css', 'print.css'],
   katex: true,

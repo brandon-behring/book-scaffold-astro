@@ -33,6 +33,24 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+// --help / -h: non-mutating (closes #14).
+const USAGE = `Usage: book-scaffold build-bib
+
+Bibliography pipeline (academic profile). Reads bibliography.bib (or
+BOOK_BIB_PATH if set), parses via @citation-js, emits src/data/references.json.
+
+Env:
+  BOOK_BIB_PATH      Override path to .bib file (default: ./bibliography.bib).
+
+Options:
+  --help, -h         Print this message and exit (non-mutating).
+`;
+
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  process.stdout.write(USAGE);
+  process.exit(0);
+}
 import { Cite } from '@citation-js/core';
 import '@citation-js/plugin-bibtex';
 

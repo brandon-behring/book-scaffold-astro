@@ -35,6 +35,25 @@ import { dirname, resolve, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
+// --help / -h: non-mutating (closes #14).
+const USAGE = `Usage: book-scaffold render-notebooks
+
+Notebook pipeline. .ipynb -> standalone HTML via Jupyter nbconvert (--basic).
+Walks notebooks/ (or BOOK_NOTEBOOKS_PATH), emits to public/notebooks/.
+Graceful-skip if uv not on PATH.
+
+Env:
+  BOOK_NOTEBOOKS_PATH   Override notebooks source (default: notebooks/).
+
+Options:
+  --help, -h            Print this message and exit (non-mutating).
+`;
+
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  process.stdout.write(USAGE);
+  process.exit(0);
+}
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = process.cwd();
 

@@ -7,56 +7,70 @@
  * book so it's pre-commit-hook friendly.
  *
  * Checks performed (per Q14 in the v2.0 plan):
- *
  *   1. <Cite key="..." /> — key exists in src/data/references.json.
- *      (Cite.astro already throws on unknown keys at build time; we
- *      surface ALL bad keys at once instead of failing on the first.)
+ *   2. <XRef id="..." /> — id exists in src/data/labels.json.
+ *   3. <Figure src="/path/..." /> — file exists under public/.
+ *   4. Internal markdown links [text](/foo) — target resolves.
+ *   5. <CodeRef path="..." line={N} /> — when BOOK_REPO_ROOT set,
+ *      path exists + line in bounds.
  *
- *   2. <XRef id="..." /> — id exists in src/data/labels.json. XRef
- *      doesn't fail the build for unknown ids; without this check,
- *      typos ship to readers as "[?label]" placeholders.
- *
- *   3. <Figure src="/path/..." /> — referenced file exists under
- *      public/. Figure.astro renders a broken-image icon otherwise.
- *
- *   4. Internal markdown links [text](/foo) — target resolves to a
- *      known chapter slug or a known top-level route. External (http*)
- *      links are not checked (would need network IO).
- *
- *   5. <CodeRef path="..." line={N} /> — when run inside a repo
- *      whose root is BOOK_REPO_ROOT, the path exists and the line
- *      number is within file bounds. Skipped when BOOK_REPO_ROOT
- *      isn't set (the scaffold default; only meaningful for academic
- *      books that paired with an experiments/ subtree).
- *
- * What this DOESN'T do (and why):
- *   - frontmatter Zod validation — already done by astro build's
- *     content-collection sync.
- *   - MDX renders — same; astro build will fail.
- *   - KaTeX strict-mode — covered by rehype-katex when academic
- *     profile is active; undefined macros become build errors.
+ * Run from the consumer's project root. Closes #8 (was resolving paths
+ * from the package's own directory inside node_modules — false negatives
+ * across all reference consumers).
  *
  * Usage:
- *   node scripts/validate.mjs
- *   BOOK_REPO_ROOT=/abs/path/to/code/repo node scripts/validate.mjs
+ *   book-scaffold validate
+ *   book-scaffold validate --preset academic
+ *   BOOK_REPO_ROOT=/abs/path npx book-scaffold validate
  *
- * Exit code = total failure count (0 = pass, ≥1 = errors).
- *
- * Wire into:
- *   - package.json scripts: "validate": "node scripts/validate.mjs"
- *   - pre-commit hook: .pre-commit-config.yaml
- *   - CI build pipeline: run before `astro build`
+ * Exit code = total failure count (0 = pass, >=1 = errors).
  */
 import { readFile, access } from 'node:fs/promises';
 import { glob } from 'node:fs/promises';
 import { resolve, dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const ROOT = resolve(fileURLToPath(import.meta.url), '../..');
+// --help / -h: non-mutating (closes #14).
+const USAGE = `Usage: book-scaffold validate [--preset <name>]
+
+Pre-flight content validator. Checks Cite keys, XRef ids, Figure srcs,
+internal markdown links, and (when BOOK_REPO_ROOT is set) CodeRef paths.
+
+Options:
+  --preset <name>    academic | tools | minimal | course-notes
+                     (overrides BOOK_PRESET / BOOK_PROFILE env)
+  --help, -h         Print this message and exit (non-mutating).
+
+Env:
+  BOOK_PRESET        Preset name (preferred over BOOK_PROFILE).
+  BOOK_PROFILE       Backward-compat alias for BOOK_PRESET.
+  BOOK_REPO_ROOT     Absolute path to a sibling code repo for CodeRef checks.
+
+Exit code = total failure count.
+`;
+
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  process.stdout.write(USAGE);
+  process.exit(0);
+}
+
+// --preset <name> CLI flag (closes #9 — single source of truth across
+// defineBookConfig + validate).
+const argv = process.argv.slice(2);
+const presetFlagIdx = argv.findIndex((a) => a === '--preset');
+const presetFromFlag = presetFlagIdx >= 0 ? argv[presetFlagIdx + 1] : undefined;
+
+// v3.4.0: ROOT is the consumer's CWD, not the package's own dir.
+// Resolves issue #8 — three reference consumers reported "0 chapter(s) checked"
+// because ROOT was the package directory inside node_modules.
+const ROOT = process.cwd();
 const CHAPTERS_DIR = resolve(ROOT, 'src/content/chapters');
 const PUBLIC_DIR = resolve(ROOT, 'public');
 const DATA_DIR = resolve(ROOT, 'src/data');
-const PROFILE = process.env.BOOK_PROFILE ?? 'minimal';
+
+// Preset resolution: --preset flag > BOOK_PRESET env > BOOK_PROFILE env > 'minimal'.
+const PRESET = presetFromFlag ?? process.env.BOOK_PRESET ?? process.env.BOOK_PROFILE ?? 'minimal';
+// Alias kept for downstream message text only; the resolution above is canonical.
+const PROFILE = PRESET;
 const REPO_ROOT = process.env.BOOK_REPO_ROOT ?? null;
 
 const errors = [];

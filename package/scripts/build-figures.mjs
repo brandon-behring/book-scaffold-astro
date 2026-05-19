@@ -30,6 +30,25 @@ import { dirname, resolve, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
+// --help / -h: non-mutating (closes #14).
+const USAGE = `Usage: book-scaffold build-figures
+
+Figure pipeline. PDF -> SVG via pdftocairo (PNG fallback via pdftoppm at
+200dpi). Walks figures/ (or BOOK_FIGURES_PATH), emits to public/figures/.
+Graceful-skip if pdftocairo / pdftoppm not on PATH.
+
+Env:
+  BOOK_FIGURES_PATH   Override figures source (default: figures/).
+
+Options:
+  --help, -h          Print this message and exit (non-mutating).
+`;
+
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  process.stdout.write(USAGE);
+  process.exit(0);
+}
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = process.cwd();
 

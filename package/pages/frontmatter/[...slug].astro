@@ -1,0 +1,48 @@
+---
+/**
+ * pages/frontmatter/[...slug].astro — auto-injected route for the
+ * consumer-defined `frontmatter` content collection. v3.4.0 closes #7.
+ *
+ * Opt-in: consumer enables via defineBookConfig({ routes: { frontmatter: true } })
+ * AND defines the collection in src/content.config.ts via the
+ * `frontmatterCollection(schema)` helper. Drops MDX files under
+ * src/content/frontmatter/; each renders at /frontmatter/<slug>/.
+ *
+ * Why a single template route (not consumer-owned): the rendering shape
+ * is uniform (Base layout + prose + Content) — every consumer would write
+ * the same file. Centralizing it keeps the consumer-side surface to just
+ * the schema definition + the routes-toggle flip.
+ *
+ * mdx-components plumbing (issue #2): the consumer's src/mdx-components.ts
+ * components are imported via the virtual module and threaded through
+ * <Content components={mdxComponents} />, so custom MDX components render
+ * here exactly as they do on /print and chapter routes.
+ */
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import mdxComponents from 'virtual:book-scaffold/mdx-components';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('frontmatter');
+  return entries.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+
+// The schema is consumer-defined; we read defensively to avoid crashes
+// if the consumer skipped title/description fields. The frontmatterCollection
+// helper documents the recommended shape.
+const data = entry.data as Record<string, unknown>;
+const title = typeof data.title === 'string' ? data.title : entry.id;
+const description = typeof data.description === 'string' ? data.description : undefined;
+---
+
+<Base title={title} description={description ?? ''}>
+  <article class="prose frontmatter-page">
+    <Content components={mdxComponents} />
+  </article>
+</Base>

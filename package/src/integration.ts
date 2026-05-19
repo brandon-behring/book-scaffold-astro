@@ -33,11 +33,15 @@ const PACKAGE_NAME = '@brandon_m_behring/book-scaffold-astro';
 
 /** Mapping from route toggle name → injected route metadata. */
 const ROUTE_REGISTRY = {
-  references: { pattern: '/references', file: 'references.astro' },
-  search:     { pattern: '/search',     file: 'search.astro' },
-  print:      { pattern: '/print',      file: 'print.astro' },
-  chapters:   { pattern: '/chapters',   file: 'chapters.astro' },
-  convergence:{ pattern: '/convergence',file: 'convergence.astro' },
+  references:  { pattern: '/references',          file: 'references.astro' },
+  search:      { pattern: '/search',              file: 'search.astro' },
+  print:       { pattern: '/print',               file: 'print.astro' },
+  chapters:    { pattern: '/chapters',            file: 'chapters.astro' },
+  convergence: { pattern: '/convergence',         file: 'convergence.astro' },
+  // v3.4.0 (#7): consumer-collection-backed frontmatter route. Opt-in via
+  // routes: { frontmatter: true } AND content.config.ts defining the
+  // collection (use frontmatterCollection() helper from /schemas subpath).
+  frontmatter: { pattern: '/frontmatter/[slug]',  file: 'frontmatter/[...slug].astro' },
 } as const;
 
 /**
@@ -92,9 +96,21 @@ export function bookScaffoldIntegration(
         //    config.root is a URL; fileURLToPath gives the consumer's project root.
         const consumerRoot = fileURLToPath(config.root);
         const resolvedMdxPath = resolveMdxComponentsPath(consumerRoot, mdxComponentsModule);
+
+        // 4. v3.4.0 (#9): propagate the resolved preset to runtime via
+        //    vite.define. Consumer components reading import.meta.env.BOOK_PRESET
+        //    or import.meta.env.BOOK_PROFILE (alias, back-compat) get the value
+        //    defineBookConfig resolved, regardless of whether the env was set.
+        //    Single source of truth across the Astro config + runtime components
+        //    + CLI (validate.mjs accepts --preset for its own resolution).
+        const presetLiteral = JSON.stringify(profile);
         updateConfig({
           vite: {
             plugins: [makeMdxComponentsVitePlugin(resolvedMdxPath)],
+            define: {
+              'import.meta.env.BOOK_PRESET': presetLiteral,
+              'import.meta.env.BOOK_PROFILE': presetLiteral,
+            },
           },
         });
       },

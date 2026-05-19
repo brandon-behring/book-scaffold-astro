@@ -18,6 +18,7 @@ export const toolsProfile = defineProfile({
     print: true,
     chapters: true,         // tools profile ships a flat chapter index
     convergence: true,      // tools profile ships convergence dashboard
+    frontmatter: false,     // opt-in per book; see #7
   },
   styles: [
     'tokens.css', 'layout.css', 'callouts.css', 'chapter.css',
