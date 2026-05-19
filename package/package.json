@@ -1,18 +1,133 @@
 {
   "name": "@brandon_m_behring/book-scaffold-astro",
-  "description": "Astro 6 + MDX toolkit for long-form technical books. Profile-aware (academic / tools / minimal); ships Tufte typography, KaTeX, BibTeX citations, Pagefind, Cloudflare Workers deploy. See PACKAGE_DESIGN.md.",
+  "description": "Astro 6 + MDX toolkit for long-form technical books. Profile-aware (academic / tools / minimal); ships Tufte typography, KaTeX, BibTeX citations, Pagefind, Cloudflare Workers deploy. See PACKAGE_DESIGN.md for the API contract.",
   "version": "3.0.0-alpha.0",
   "type": "module",
   "license": "MIT",
+  "author": "Brandon Behring",
+  "homepage": "https://github.com/brandon-behring/book-scaffold-astro",
+  "bugs": "https://github.com/brandon-behring/book-scaffold-astro/issues",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/brandon-behring/book-scaffold-astro.git",
     "directory": "package"
   },
+  "keywords": [
+    "astro",
+    "astro-component",
+    "mdx",
+    "book",
+    "tufte",
+    "katex",
+    "bibtex",
+    "pagefind",
+    "book-scaffold"
+  ],
   "engines": {
     "node": ">=22.12.0"
   },
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "book-scaffold": "./bin/book-scaffold.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs"
+    },
+    "./components/CaseStudy.astro": "./components/CaseStudy.astro",
+    "./components/ChapterHeader.astro": "./components/ChapterHeader.astro",
+    "./components/ChapterNav.astro": "./components/ChapterNav.astro",
+    "./components/ChapterTOC.astro": "./components/ChapterTOC.astro",
+    "./components/Citation.astro": "./components/Citation.astro",
+    "./components/Cite.astro": "./components/Cite.astro",
+    "./components/CodeBlock.astro": "./components/CodeBlock.astro",
+    "./components/CodeRef.astro": "./components/CodeRef.astro",
+    "./components/ConceptBox.astro": "./components/ConceptBox.astro",
+    "./components/Convergence.astro": "./components/Convergence.astro",
+    "./components/CounterBox.astro": "./components/CounterBox.astro",
+    "./components/Divergence.astro": "./components/Divergence.astro",
+    "./components/DynConnect.astro": "./components/DynConnect.astro",
+    "./components/ExampleBox.astro": "./components/ExampleBox.astro",
+    "./components/Figure.astro": "./components/Figure.astro",
+    "./components/InsightBox.astro": "./components/InsightBox.astro",
+    "./components/KeyIdea.astro": "./components/KeyIdea.astro",
+    "./components/MarginNote.astro": "./components/MarginNote.astro",
+    "./components/NoteBox.astro": "./components/NoteBox.astro",
+    "./components/OpenQuestion.astro": "./components/OpenQuestion.astro",
+    "./components/PaperBox.astro": "./components/PaperBox.astro",
+    "./components/PatternTimeline.astro": "./components/PatternTimeline.astro",
+    "./components/Recovery.astro": "./components/Recovery.astro",
+    "./components/ResultBox.astro": "./components/ResultBox.astro",
+    "./components/Sidebar.astro": "./components/Sidebar.astro",
+    "./components/Sidenote.astro": "./components/Sidenote.astro",
+    "./components/SkillBox.astro": "./components/SkillBox.astro",
+    "./components/SourceArchive.astro": "./components/SourceArchive.astro",
+    "./components/StatusBadge.astro": "./components/StatusBadge.astro",
+    "./components/Tag.astro": "./components/Tag.astro",
+    "./components/Theorem.astro": "./components/Theorem.astro",
+    "./components/TipBox.astro": "./components/TipBox.astro",
+    "./components/ToolFilter": "./components/ToolFilter.tsx",
+    "./components/TryThis.astro": "./components/TryThis.astro",
+    "./components/VersionSelector": "./components/VersionSelector.tsx",
+    "./components/WarnBox.astro": "./components/WarnBox.astro",
+    "./components/WeekRef.astro": "./components/WeekRef.astro",
+    "./components/XRef.astro": "./components/XRef.astro",
+    "./styles/tokens.css": "./styles/tokens.css",
+    "./styles/layout.css": "./styles/layout.css",
+    "./styles/callouts.css": "./styles/callouts.css",
+    "./styles/chapter.css": "./styles/chapter.css",
+    "./styles/typography.css": "./styles/typography.css",
+    "./styles/print.css": "./styles/print.css",
+    "./styles/convergence.css": "./styles/convergence.css",
+    "./styles/tool-filter.css": "./styles/tool-filter.css",
+    "./layouts/Base.astro": "./layouts/Base.astro",
+    "./layouts/Chapter.astro": "./layouts/Chapter.astro",
+    "./lib": {
+      "types": "./dist/lib/katex-macros.d.ts",
+      "import": "./dist/lib/katex-macros.mjs"
+    }
+  },
+  "files": [
+    "dist",
+    "components",
+    "styles",
+    "layouts",
+    "pages",
+    "scripts",
+    "bin",
+    "recipes",
+    "pedagogy",
+    "examples",
+    "CLAUDE.md",
+    "README.md"
+  ],
   "scripts": {
-    "build": "echo 'tsup pipeline wired in B.5' && exit 0"
+    "build": "tsup",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "astro": "^6.1.7",
+    "@astrojs/mdx": "^5.0.3",
+    "@astrojs/preact": "^5.1.1",
+    "preact": "^10.29.1"
+  },
+  "peerDependenciesMeta": {
+    "katex": { "optional": true },
+    "rehype-katex": { "optional": true },
+    "remark-math": { "optional": true }
+  },
+  "dependencies": {
+    "@citation-js/core": "^0.7.21",
+    "@citation-js/plugin-bibtex": "^0.7.21",
+    "@fontsource-variable/roboto": "^5.2.10",
+    "@fontsource-variable/source-code-pro": "^5.2.7",
+    "pagefind": "^1.5.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.0"
   }
 }

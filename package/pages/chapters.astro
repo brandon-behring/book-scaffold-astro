@@ -8,8 +8,8 @@
  * selector without touching the card rendering.
  */
 import Base from '../layouts/Base.astro';
-import { getAllChapters, type Chapter } from '../lib/chapters';
-import { getFreshness, freshnessLabel } from '../lib/freshness';
+import { getAllChapters, type Chapter } from '../src/lib/chapters';
+import { getFreshness, freshnessLabel } from '../src/lib/freshness';
 
 const chapters = await getAllChapters();
 

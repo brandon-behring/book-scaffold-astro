@@ -15,7 +15,7 @@ import PatternTimeline from '../components/PatternTimeline.astro';
 import {
   getPatternsByCategory,
   CATEGORY_LABELS,
-} from '../lib/patterns';
+} from '../src/lib/patterns';
 import { patternCategories } from '../content.config';
 
 const grouped = await getPatternsByCategory();

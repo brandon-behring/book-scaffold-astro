@@ -10,7 +10,7 @@
  * Driven entirely from the chapter's frontmatter (see content.config.ts).
  */
 import type { CollectionEntry } from 'astro:content';
-import { getFreshness, freshnessLabel } from '../lib/freshness';
+import { getFreshness, freshnessLabel } from '../src/lib/freshness';
 
 interface Props {
   data: CollectionEntry<'chapters'>['data'];

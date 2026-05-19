@@ -15,7 +15,7 @@
  */
 import Base from '../layouts/Base.astro';
 import { render } from 'astro:content';
-import { getAllChapters } from '../lib/chapters';
+import { getAllChapters } from '../src/lib/chapters';
 import ChapterHeader from '../components/ChapterHeader.astro';
 
 const chapters = await getAllChapters();
