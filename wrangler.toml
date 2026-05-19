@@ -1,0 +1,32 @@
+# Wrangler configuration for Cloudflare Workers + Static Assets.
+#
+# Deployment model: a Cloudflare Worker (no custom JS handler) serves the
+# Astro static build output at ./dist/. This is the post-Pages unified
+# model — Cloudflare's official path for new static sites since the
+# Pages → Workers migration.
+#
+# Deploy command (configured in the Cloudflare dashboard build settings):
+#   npx wrangler deploy
+#
+# Build command (configured in the dashboard):
+#   cd guides/web && npm install && npm run build
+#
+# The "name" below becomes the Worker subdomain:
+#   https://post-transformers-guide.<account>.workers.dev
+# Cloudflare also auto-assigns a *.pages.dev-style preview URL for branch
+# pushes.
+
+name = "post-transformers-guide"
+compatibility_date = "2026-05-18"
+
+[assets]
+# Astro's build output directory (relative to wrangler.toml location).
+directory = "./dist/"
+
+# Astro pages have trailing slashes (e.g. /chapters/week05/). Default
+# handling serves dist/chapters/week05/index.html, which is what we want.
+# Leave the html_handling at the default ("auto-trailing-slash").
+
+# This is NOT a single-page application — every chapter is its own
+# pre-rendered HTML page. Leaving not_found_handling unset gives the
+# default behavior (return 404).
