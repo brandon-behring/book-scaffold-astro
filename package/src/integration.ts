@@ -29,16 +29,23 @@ const ALWAYS_ON_STYLES = [
 
 const TOOLS_ONLY_STYLES = ['convergence.css', 'tool-filter.css'] as const;
 
-// Default routes always include /chapters /references /print /search.
-// /convergence is tools-profile-only.
+// Default routes that work for any profile: /references (bibliography
+// renders from src/data/references.json built by `book-scaffold build-bib`;
+// degrades to empty list if missing) and /search (Pagefind UI; works for
+// any content).
 const DEFAULT_ROUTES_ALL = [
-  { pattern: '/chapters', file: 'chapters.astro' },
   { pattern: '/references', file: 'references.astro' },
-  { pattern: '/print', file: 'print.astro' },
   { pattern: '/search', file: 'search.astro' },
 ] as const;
 
+// Tools-profile-only routes. The shipped chapters/print/convergence pages
+// render ChapterHeader, which reads volatility / last_verified / tools_compared
+// from the tools chapter schema. Academic books that want these pages
+// provide their own (the v2.0 convention — see post_transformers/guides/web/).
+// A later alpha will ship academic-flavored versions and make these unconditional.
 const DEFAULT_ROUTES_TOOLS = [
+  { pattern: '/chapters', file: 'chapters.astro' },
+  { pattern: '/print', file: 'print.astro' },
   { pattern: '/convergence', file: 'convergence.astro' },
 ] as const;
 

@@ -6,7 +6,7 @@
  * component and any future dashboards share a single source of truth.
  */
 import { getCollection, type CollectionEntry } from 'astro:content';
-import { sourceTiers } from '../content.config';
+import { sourceTiers } from '../schemas.js';
 
 export type SourceEntry = CollectionEntry<'sources'>;
 export type SourceTier = (typeof sourceTiers)[number];

@@ -23,7 +23,7 @@
  *   getFreshness(today-200d, 'stable-principle').status === 'fresh'
  *   getFreshness(today-300d, 'stable-principle').status === 'verify-soon'
  */
-import type { volatilityLevels } from '../content.config';
+import type { volatilityLevels } from '../schemas.js';
 
 export type VolatilityLevel = (typeof volatilityLevels)[number];
 

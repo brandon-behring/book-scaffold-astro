@@ -10,7 +10,13 @@
  * See PACKAGE_DESIGN.md §5. Schemas themselves live in ./schemas.ts and
  * use the real `astro/zod` module, so they can be safely re-exported from
  * the main entry.
+ *
+ * Tools-profile collateral collections (sources / changelog / patterns)
+ * are registered only when their backing files exist on disk. This keeps
+ * academic-profile consumers from seeing `File not found` errors for
+ * collections they don't use.
  */
+import { existsSync } from 'node:fs';
 import { defineCollection } from 'astro:content';
 import { glob, file } from 'astro/loaders';
 
@@ -41,22 +47,33 @@ export function defineBookSchemas(opts: BookSchemasOptions = {}) {
     schema: profile === 'academic' ? academicChapterSchema : toolsChapterSchema,
   });
 
-  const sources = defineCollection({
-    loader: file('sources/manifest.yaml'),
-    schema: sourcesSchema,
-  });
-
-  const changelog = defineCollection({
-    loader: glob({ pattern: '*.yaml', base: './changelog/tools' }),
-    schema: changelogSchema,
-  });
-
-  const patterns = defineCollection({
-    loader: file('changelog/patterns.yaml'),
-    schema: patternsSchema,
-  });
-
-  return {
-    collections: { chapters, sources, changelog, patterns },
+  // Tools-collateral collections: register only if the consumer has the
+  // backing files. Academic-only books don't need them; without this guard
+  // Astro's file-loader logs noisy "File not found" errors at content sync.
+  const collections: Record<string, ReturnType<typeof defineCollection>> = {
+    chapters,
   };
+
+  if (existsSync('./sources/manifest.yaml')) {
+    collections.sources = defineCollection({
+      loader: file('sources/manifest.yaml'),
+      schema: sourcesSchema,
+    });
+  }
+
+  if (existsSync('./changelog/tools')) {
+    collections.changelog = defineCollection({
+      loader: glob({ pattern: '*.yaml', base: './changelog/tools' }),
+      schema: changelogSchema,
+    });
+  }
+
+  if (existsSync('./changelog/patterns.yaml')) {
+    collections.patterns = defineCollection({
+      loader: file('changelog/patterns.yaml'),
+      schema: patternsSchema,
+    });
+  }
+
+  return { collections };
 }

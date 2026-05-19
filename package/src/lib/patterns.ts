@@ -17,7 +17,7 @@ import {
   toolSlugs,
   patternCategories,
   changeKinds,
-} from '../content.config';
+} from '../schemas.js';
 
 export type PatternEntry = CollectionEntry<'patterns'>;
 export type ToolSlug = (typeof toolSlugs)[number];
