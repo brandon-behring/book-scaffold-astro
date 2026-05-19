@@ -7,12 +7,13 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "prebuild": "npm run build:assets",
+    "prebuild": "npm run build:assets && npm run validate",
     "predev": "npm run build:assets",
     "build:assets": "npm run build:bib && npm run build:figures && npm run build:notebooks",
     "build:bib": "node scripts/build-bib.mjs",
     "build:figures": "node scripts/build-figures.mjs",
     "build:notebooks": "node scripts/render-notebooks.mjs",
+    "validate": "node scripts/validate.mjs",
     "dev": "astro dev",
     "build": "astro build && pagefind --site dist",
     "build:astro": "astro build",
