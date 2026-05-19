@@ -36,7 +36,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PROJECT_ROOT = resolve(__dirname, '..');
+const PROJECT_ROOT = process.cwd();
 
 // Default: notebooks/ at scaffold root.
 // Override via BOOK_NOTEBOOKS_PATH (absolute or relative to scaffold root)

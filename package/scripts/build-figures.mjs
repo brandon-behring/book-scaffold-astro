@@ -31,7 +31,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PROJECT_ROOT = resolve(__dirname, '..');
+const PROJECT_ROOT = process.cwd();
 
 // Default: figures/ at scaffold root.
 // Override via BOOK_FIGURES_PATH=path/to/figures (absolute or relative to

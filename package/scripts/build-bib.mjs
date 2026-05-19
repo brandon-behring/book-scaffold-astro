@@ -37,7 +37,7 @@ import { Cite } from '@citation-js/core';
 import '@citation-js/plugin-bibtex';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PROJECT_ROOT = resolve(__dirname, '..');
+const PROJECT_ROOT = process.cwd();
 
 // Default: bibliography.bib at scaffold root.
 // Override via BOOK_BIB_PATH=path/to/your.bib (absolute or relative to cwd).
