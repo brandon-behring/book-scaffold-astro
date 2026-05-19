@@ -1,0 +1,16 @@
+{
+  "name": "@brandon_m_behring/create-book",
+  "description": "Bootstrap CLI for @brandon_m_behring/book-scaffold-astro. `npx @brandon_m_behring/create-book <name> --profile=academic|tools|minimal` scaffolds a thin consumer repo. Phase D — not yet implemented.",
+  "version": "3.0.0-alpha.0",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brandon-behring/book-scaffold-astro.git",
+    "directory": "create-book"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

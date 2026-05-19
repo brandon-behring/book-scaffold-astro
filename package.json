@@ -1,44 +1,20 @@
 {
-  "name": "book-scaffold-astro",
-  "description": "GitHub template for long-form technical books: Astro + MDX + Paged.js + Pagefind. Profile-aware (academic / tools / minimal); KaTeX + BibTeX + Tufte typography. Replace this description with your book's.",
+  "name": "book-scaffold-astro-monorepo",
+  "description": "Monorepo root for @brandon_m_behring/book-scaffold-astro and @brandon_m_behring/create-book. See package/ for the published toolkit, create-book/ for the bootstrap CLI, demo/ for the in-repo Astro reference implementation.",
+  "version": "3.0.0",
   "type": "module",
-  "version": "2.0.0",
+  "private": true,
   "engines": {
     "node": ">=22.12.0"
   },
+  "workspaces": [
+    "package",
+    "create-book",
+    "demo"
+  ],
   "scripts": {
-    "prebuild": "npm run build:assets && npm run validate",
-    "predev": "npm run build:assets",
-    "build:assets": "npm run build:bib && npm run build:figures && npm run build:notebooks",
-    "build:bib": "node scripts/build-bib.mjs",
-    "build:figures": "node scripts/build-figures.mjs",
-    "build:notebooks": "node scripts/render-notebooks.mjs",
-    "validate": "node scripts/validate.mjs",
-    "dev": "astro dev",
-    "build": "astro build && pagefind --site dist",
-    "build:astro": "astro build",
-    "index": "pagefind --site dist",
-    "preview": "astro preview",
-    "astro": "astro",
-    "pdf:render": "mkdir -p dist-pdf && pagedjs-cli http://localhost:4321/print/ -o dist-pdf/book.pdf",
-    "pdf": "start-server-and-test preview http://localhost:4321/ pdf:render"
-  },
-  "dependencies": {
-    "@astrojs/mdx": "^5.0.3",
-    "@astrojs/preact": "^5.1.1",
-    "@fontsource-variable/roboto": "^5.2.10",
-    "@fontsource-variable/source-code-pro": "^5.2.7",
-    "@citation-js/core": "^0.7.21",
-    "@citation-js/plugin-bibtex": "^0.7.21",
-    "astro": "^6.1.7",
-    "katex": "^0.16.11",
-    "pagefind": "^1.5.2",
-    "preact": "^10.29.1",
-    "rehype-katex": "^7.0.1",
-    "remark-math": "^6.0.0"
-  },
-  "devDependencies": {
-    "pagedjs-cli": "^0.4.3",
-    "start-server-and-test": "^3.0.2"
+    "build": "npm run build --workspace package && npm run build --workspace demo",
+    "dev": "npm run dev --workspace demo",
+    "publish:alpha": "npm publish --tag alpha --access public --workspace package"
   }
 }

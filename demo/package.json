@@ -1,0 +1,23 @@
+{
+  "name": "@brandon_m_behring/book-scaffold-astro-demo",
+  "description": "In-repo Astro demo of @brandon_m_behring/book-scaffold-astro. Consumes the package via workspace link; lives as the v2.0 reference book for migration tests + dogfooding.",
+  "version": "3.0.0-alpha.0",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "prebuild": "npm run build:assets && npm run validate",
+    "predev": "npm run build:assets",
+    "build:assets": "npm run build:bib && npm run build:figures && npm run build:notebooks",
+    "build:bib": "book-scaffold build-bib",
+    "build:figures": "book-scaffold build-figures",
+    "build:notebooks": "book-scaffold render-notebooks",
+    "validate": "book-scaffold validate",
+    "dev": "astro dev",
+    "build": "astro build && pagefind --site dist",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@brandon_m_behring/book-scaffold-astro": "*"
+  }
+}
