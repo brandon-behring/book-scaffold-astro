@@ -7,6 +7,15 @@ export default defineConfig({
     index: 'src/index.ts',
     schemas: 'src/schemas-entry.ts',
     'lib/katex-macros': 'src/lib/katex-macros.ts',
+    // Pre-compile the .tsx islands so consumers don't have to depend on
+    // Vite's JSX transform reaching into node_modules. Without this,
+    // SSR breaks with `ReferenceError: React is not defined`.
+    'components/ToolFilter': 'components/ToolFilter.tsx',
+    'components/VersionSelector': 'components/VersionSelector.tsx',
+  },
+  esbuildOptions(options) {
+    options.jsx = 'automatic';
+    options.jsxImportSource = 'preact';
   },
   format: ['esm'],
   // dts.resolve inlines cross-entry types into each entry's .d.ts so tsup

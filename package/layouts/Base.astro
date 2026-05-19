@@ -31,12 +31,9 @@
  */
 import '@fontsource-variable/roboto';
 import '@fontsource-variable/source-code-pro';
-// KaTeX stylesheet is always loaded (~60 KB) so that academic-profile
-// books render math without additional setup. Minimal/tools profiles
-// receive the CSS but have no math elements to style — harmless.
-// rehype-katex (the JS pipeline) is profile-gated in astro.config.mjs;
-// only the academic profile produces katex-classed DOM nodes at build.
-import 'katex/dist/katex.min.css';
+// KaTeX CSS is injected by bookScaffoldIntegration for academic profile
+// only (since v3.0 alpha.8) — tools/minimal profiles don't install katex
+// as a peer dep, so the import would fail at the consumer's build.
 import '../styles/tokens.css';
 import '../styles/typography.css';
 import '../styles/layout.css';
@@ -45,8 +42,13 @@ import '../styles/chapter.css';
 import '../styles/tool-filter.css';
 import '../styles/convergence.css';
 import '../styles/print.css';
-import VersionSelector from '../components/VersionSelector';
-import ToolFilter from '../components/ToolFilter';
+// Use package-path imports for the .tsx islands so Vite resolves them
+// via the exports map (→ pre-compiled dist/components/*.mjs with proper
+// preact JSX). The raw .tsx files are also shipped so consumers can
+// import them directly, but relative imports from inside the package
+// must route through the exports map, not the raw source.
+import VersionSelector from '@brandon_m_behring/book-scaffold-astro/components/VersionSelector';
+import ToolFilter from '@brandon_m_behring/book-scaffold-astro/components/ToolFilter';
 import Sidebar from '../components/Sidebar.astro';
 
 const profile = import.meta.env.BOOK_PROFILE ?? 'minimal';

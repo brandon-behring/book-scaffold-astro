@@ -81,6 +81,12 @@ export function bookScaffoldIntegration(
           injectScript('page-ssr', `import '${PACKAGE_NAME}/styles/${sheet}';`);
         }
 
+        // KaTeX CSS only for academic profile — tools/minimal don't
+        // install katex as a peer dep.
+        if (profile === 'academic') {
+          injectScript('page-ssr', "import 'katex/dist/katex.min.css';");
+        }
+
         // 2. Route injection (profile-conditional per D10). Absolute file
         //    paths required — see resolvePage().
         const routes =

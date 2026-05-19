@@ -1,7 +1,7 @@
 {
   "name": "@brandon_m_behring/book-scaffold-astro",
   "description": "Astro 6 + MDX toolkit for long-form technical books. Profile-aware (academic / tools / minimal); ships Tufte typography, KaTeX, BibTeX citations, Pagefind, Cloudflare Workers deploy. See PACKAGE_DESIGN.md for the API contract.",
-  "version": "3.0.0-alpha.6",
+  "version": "3.0.0-alpha.10",
   "type": "module",
   "license": "MIT",
   "author": "Brandon Behring",
@@ -73,9 +73,15 @@
     "./components/Tag.astro": "./components/Tag.astro",
     "./components/Theorem.astro": "./components/Theorem.astro",
     "./components/TipBox.astro": "./components/TipBox.astro",
-    "./components/ToolFilter": "./components/ToolFilter.tsx",
+    "./components/ToolFilter": {
+      "types": "./dist/components/ToolFilter.d.ts",
+      "import": "./dist/components/ToolFilter.mjs"
+    },
     "./components/TryThis.astro": "./components/TryThis.astro",
-    "./components/VersionSelector": "./components/VersionSelector.tsx",
+    "./components/VersionSelector": {
+      "types": "./dist/components/VersionSelector.d.ts",
+      "import": "./dist/components/VersionSelector.mjs"
+    },
     "./components/WarnBox.astro": "./components/WarnBox.astro",
     "./components/WeekRef.astro": "./components/WeekRef.astro",
     "./components/XRef.astro": "./components/XRef.astro",

@@ -50,7 +50,9 @@ export default function VersionSelector() {
     };
   }, [open]);
 
-  const current = STUB_VERSIONS.find((v) => v.current) || STUB_VERSIONS[0];
+  // STUB_VERSIONS is a const literal with >=1 entry so the fallback is
+  // always defined; the bang silences TS's noUncheckedIndexedAccess.
+  const current = STUB_VERSIONS.find((v) => v.current) ?? STUB_VERSIONS[0]!;
 
   return (
     <div class="version-selector" ref={ref}>
