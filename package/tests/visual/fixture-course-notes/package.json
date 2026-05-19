@@ -1,0 +1,18 @@
+{
+  "name": "@brandon_m_behring/book-scaffold-fixture-course-notes",
+  "description": "Visual regression fixture for the course-notes profile (v3.3.0, issue #4). Also exercises the defineMdxComponents/virtual-module plumbing (issue #2) via a custom NarrativeBox component registered in src/mdx-components.ts.",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "BOOK_PROFILE=course-notes astro build",
+    "preview": "BOOK_PROFILE=course-notes astro preview --host 127.0.0.1 --port 4174"
+  },
+  "dependencies": {
+    "@brandon_m_behring/book-scaffold-astro": "*",
+    "@astrojs/mdx": "^5.0.3",
+    "@astrojs/preact": "^5.1.1",
+    "astro": "^6.1.7",
+    "preact": "^10.29.1"
+  }
+}

@@ -1,60 +1,49 @@
 /**
  * bookScaffoldIntegration — the dual-purpose Astro Integration.
  *
- * 1. Injects profile-conditional CSS via `injectScript('page-ssr', …)`.
- *    Vite resolves the npm-package CSS specifiers inside the import
- *    statements at consumer build time. Confirmed by Phase A.5 spike
- *    (see ~/.claude/plans/poc-archive/v3-poc-outcome.md).
+ * 1. Injects profile-resolved CSS via `injectScript('page-ssr', …)`. Vite
+ *    resolves the npm-package CSS specifiers from the consumer's
+ *    node_modules at build time. Confirmed by Phase A.5 spike (see
+ *    ~/.claude/plans/poc-archive/v3-poc-outcome.md).
  * 2. Injects default routes via `injectRoute`. Astro's routing resolver
- *    expects an absolute filesystem path (or file: URL); npm-package
- *    specifiers do NOT work here, so we compute the path via
- *    `import.meta.url`.
+ *    expects an absolute filesystem path; npm-package specifiers do NOT
+ *    work here, so we compute the path via `import.meta.url`.
+ * 3. (v3.3.0) Mounts a Vite plugin exposing the consumer's mdx-components
+ *    map at the virtual module `virtual:book-scaffold/mdx-components`, so
+ *    scaffold-injected routes can render consumer-defined MDX components
+ *    consistently. Closes issue #2.
+ *
+ * Profile/route logic is driven by the PROFILES registry
+ * (src/profiles/index.ts). Each profile module owns its schema + routes +
+ * styles. Adding a new profile is a single-file change. See
+ * ~/.claude/plans/address-and-finish-moonlit-shell.md §Architecture.
  *
  * See PACKAGE_DESIGN.md §6.
  */
 import { fileURLToPath } from 'node:url';
 import type { AstroIntegration } from 'astro';
 import type { BookScaffoldIntegrationOptions } from './types.js';
+import { PROFILES } from './profiles/index.js';
+import {
+  resolveMdxComponentsPath,
+  makeMdxComponentsVitePlugin,
+} from './mdx-components-resolver.js';
 
 const PACKAGE_NAME = '@brandon_m_behring/book-scaffold-astro';
 
-const ALWAYS_ON_STYLES = [
-  'tokens.css',
-  'layout.css',
-  'callouts.css',
-  'chapter.css',
-  'typography.css',
-  'print.css',
-] as const;
-
-const TOOLS_ONLY_STYLES = ['convergence.css', 'tool-filter.css'] as const;
-
-// Default routes that work for any profile:
-//   /references  — bibliography renders from src/data/references.json
-//                  (built by `book-scaffold build-bib`; empty if missing)
-//   /search      — Pagefind UI; works for any content
-//   /print       — Paged.js entrypoint; ChapterHeader is schema-agnostic since alpha.5
-const DEFAULT_ROUTES_ALL = [
-  { pattern: '/references', file: 'references.astro' },
-  { pattern: '/search', file: 'search.astro' },
-  { pattern: '/print', file: 'print.astro' },
-] as const;
-
-// Tools-profile-only routes. The shipped chapters + convergence pages read
-// tools-specific fields (volatility, tools_compared) at the page level —
-// ChapterHeader fix alone doesn't help. Academic books that want these
-// pages provide their own (the v2.0 convention — see
-// post_transformers/guides/web/). Promotion to DEFAULT_ROUTES_ALL needs
-// academic-flavored versions of those pages, not just the header.
-const DEFAULT_ROUTES_TOOLS = [
-  { pattern: '/chapters', file: 'chapters.astro' },
-  { pattern: '/convergence', file: 'convergence.astro' },
-] as const;
+/** Mapping from route toggle name → injected route metadata. */
+const ROUTE_REGISTRY = {
+  references: { pattern: '/references', file: 'references.astro' },
+  search:     { pattern: '/search',     file: 'search.astro' },
+  print:      { pattern: '/print',      file: 'print.astro' },
+  chapters:   { pattern: '/chapters',   file: 'chapters.astro' },
+  convergence:{ pattern: '/convergence',file: 'convergence.astro' },
+} as const;
 
 /**
- * Resolve a page filename to an absolute filesystem path inside the
- * package. tsup bundles this module into dist/index.mjs, so the pages
- * live at `../pages/<file>` relative to the compiled output.
+ * Resolve a page filename to an absolute filesystem path inside the package.
+ * tsup bundles this module into dist/index.mjs, so the pages live at
+ * `../pages/<file>` relative to the compiled output.
  */
 function resolvePage(file: string): string {
   return fileURLToPath(new URL(`../pages/${file}`, import.meta.url));
@@ -63,43 +52,51 @@ function resolvePage(file: string): string {
 export function bookScaffoldIntegration(
   opts: BookScaffoldIntegrationOptions,
 ): AstroIntegration {
-  const { profile, extraStyles = [] } = opts;
+  const { profile, routes: userOverrides = {}, extraStyles = [], mdxComponentsModule } = opts;
+  const def = PROFILES[profile];
+
+  // Merge per-profile route defaults with user overrides. Last-wins object
+  // spread; consumer can flip any route on/off.
+  const enabledRoutes = { ...def.routes, ...userOverrides };
 
   return {
     name: 'book-scaffold-astro',
     hooks: {
-      'astro:config:setup': ({ injectScript, injectRoute }) => {
-        // 1. Style injection (Option α — Phase A.5 spike). Vite resolves
-        //    `@brandon_m_behring/book-scaffold-astro/styles/<X>.css` from
-        //    the consumer's node_modules at build time.
-        const styles =
-          profile === 'tools'
-            ? [...ALWAYS_ON_STYLES, ...TOOLS_ONLY_STYLES, ...extraStyles]
-            : [...ALWAYS_ON_STYLES, ...extraStyles];
-
+      'astro:config:setup': ({ injectScript, injectRoute, updateConfig, config }) => {
+        // 1. Style injection. Profile owns its style list; consumer can append
+        //    via extraStyles (cross-profile escape hatch).
+        const styles = [...def.styles, ...extraStyles];
         for (const sheet of styles) {
           injectScript('page-ssr', `import '${PACKAGE_NAME}/styles/${sheet}';`);
         }
 
-        // KaTeX CSS only for academic profile — tools/minimal don't
-        // install katex as a peer dep.
-        if (profile === 'academic') {
+        // KaTeX CSS only when the profile flags katex: true. The remark/rehype
+        // plugins are wired in defineBookConfig (config.ts); this injection
+        // covers the runtime CSS.
+        if (def.katex) {
           injectScript('page-ssr', "import 'katex/dist/katex.min.css';");
         }
 
-        // 2. Route injection (profile-conditional per D10). Absolute file
-        //    paths required — see resolvePage().
-        const routes =
-          profile === 'tools'
-            ? [...DEFAULT_ROUTES_ALL, ...DEFAULT_ROUTES_TOOLS]
-            : [...DEFAULT_ROUTES_ALL];
-
-        for (const route of routes) {
+        // 2. Route injection — driven by enabledRoutes map.
+        for (const [name, on] of Object.entries(enabledRoutes)) {
+          if (!on) continue;
+          const route = ROUTE_REGISTRY[name as keyof typeof ROUTE_REGISTRY];
+          if (!route) continue;   // unknown key from a stale override (defensive)
           injectRoute({
             pattern: route.pattern,
             entrypoint: resolvePage(route.file),
           });
         }
+
+        // 3. mdx-components virtual module (issue #2).
+        //    config.root is a URL; fileURLToPath gives the consumer's project root.
+        const consumerRoot = fileURLToPath(config.root);
+        const resolvedMdxPath = resolveMdxComponentsPath(consumerRoot, mdxComponentsModule);
+        updateConfig({
+          vite: {
+            plugins: [makeMdxComponentsVitePlugin(resolvedMdxPath)],
+          },
+        });
       },
     },
   };

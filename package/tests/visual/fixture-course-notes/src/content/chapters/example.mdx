@@ -1,0 +1,44 @@
+---
+title: "Knowledge Graphs for RAG — Module 1"
+chapter: 1
+part: 1
+description: "Introduction to graph-augmented retrieval. Exercises the course-notes schema (course/instructor/source_url/learning_outcomes/tags)."
+course: "Knowledge Graphs for RAG"
+instructor: "Andrew Ng"
+source_url: https://learn.deeplearning.ai/knowledge-graphs-for-rag
+learning_outcomes:
+  - id: LO-1.1
+    verb: define
+    text: Define a knowledge graph in terms of nodes, edges, and properties.
+  - id: LO-1.2
+    verb: contrast
+    text: Contrast graph-RAG with vector-RAG retrieval semantics.
+tags:
+  - MLE-Google-L4
+  - SWE-Neo4j
+  - DS-Netflix
+last_verified: 2026-05-19
+volatility: architectural-pattern
+---
+
+import NarrativeBox from '../../components/NarrativeBox.astro';
+
+## Section heading
+
+This fixture chapter exercises the course-notes profile. The frontmatter
+covers every field defined in `courseNotesChapterSchema` (issue #4):
+identity (title/chapter/part), source attribution (course/instructor/
+source_url), pedagogy (learning_outcomes/tags), and provenance
+(last_verified/volatility).
+
+<NarrativeBox title="Why this matters">
+The consumer-defined `<NarrativeBox>` here is registered via the
+`defineMdxComponents` helper in `src/mdx-components.ts`. If the
+scaffold's virtual-module plumbing (issue #2) is wired correctly, this
+component renders identically here and on the auto-injected `/print`
+route — without the consumer shadowing the route.
+</NarrativeBox>
+
+A second paragraph. Body length is short on purpose; the fixture's job
+is to exercise the schema + the custom-component rendering plumbing,
+not chapter-body styling.

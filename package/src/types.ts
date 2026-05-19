@@ -1,33 +1,64 @@
 /**
  * Shared types for @brandon_m_behring/book-scaffold-astro.
  *
- * Public types referenced from PACKAGE_DESIGN.md §4 / §5 / §6. Kept in
- * one place so consumer IntelliSense surfaces a coherent API.
+ * Public types referenced from PACKAGE_DESIGN.md §4 / §5 / §6. Kept in one
+ * place so consumer IntelliSense surfaces a coherent API.
+ *
+ * v3.3.0: BookProfile is now derived from the profile registry
+ * (src/profiles/index.ts) rather than hand-maintained — adding a profile
+ * automatically extends the union.
  */
 import type { AstroIntegration, AstroUserConfig } from 'astro';
+import { BOOK_PROFILES, type BookProfile } from './profiles/index.js';
+import type { RouteToggles } from './profile-kit.js';
 
-export type BookProfile = 'academic' | 'tools' | 'minimal';
-
-export const BOOK_PROFILES = ['academic', 'tools', 'minimal'] as const;
+// Re-export so the existing import paths
+//   import type { BookProfile } from '@brandon_m_behring/book-scaffold-astro'
+// keep working.
+export type { BookProfile, RouteToggles };
+export { BOOK_PROFILES };
 
 /**
  * Options for `defineBookConfig`. See PACKAGE_DESIGN.md §4.
  *
- * Note on the index signature: `AstroUserConfig` carries generic
- * parameters (`Locales`, `SessionDriverName`, fonts) that can't be
- * threaded cleanly through a wrapper. Instead we type the package-
- * specific fields strictly and allow arbitrary AstroUserConfig keys
- * via the index signature — consumer types will lint clean but lose
- * full IDE autocomplete on non-package fields. Acceptable trade.
+ * Note on the index signature: `AstroUserConfig` carries generic parameters
+ * (`Locales`, `SessionDriverName`, fonts) that can't be threaded cleanly
+ * through a wrapper. Instead we type the package-specific fields strictly
+ * and allow arbitrary AstroUserConfig keys via the index signature.
  */
 export interface BookConfigOptions {
   /** Required. Book's deployed origin (sitemap, canonical, Pagefind). */
   site: string;
   /**
-   * Optional. Falls back to `process.env.BOOK_PROFILE`, then `'minimal'`.
-   * Explicit param always wins over env.
+   * Optional. Falls back to `process.env.BOOK_PROFILE`, then `.env`, then
+   * `'minimal'`. Explicit param always wins.
    */
   profile?: BookProfile;
+  /**
+   * Optional per-route override of the profile's defaults. Use to disable
+   * an auto-injected route (e.g. multi-book consumer that ships its own
+   * `[book]/[chapter]` routing instead of the flat `/chapters` listing),
+   * or to enable a route the profile turns off by default.
+   *
+   *   defineBookConfig({ routes: { chapters: false, convergence: false } })
+   *
+   * Closes #3 (v3.3.0).
+   */
+  routes?: Partial<RouteToggles>;
+  /**
+   * Optional explicit path to the consumer's MDX-components map (relative
+   * to project root). When omitted, the toolkit auto-detects one of
+   *   src/mdx-components.ts
+   *   src/mdx-components.js
+   *   src/mdx-components.mjs
+   * Auto-injected routes (`/print`, future `/pdf`, `/epub`) import the
+   * default export of that file via a Vite virtual module so consumer
+   * components render consistently across scaffold-shipped pages.
+   *
+   * Closes #2 (v3.3.0). See LATEX_TO_MDX_MAPPING.md for the conventional
+   * shape and the defineMdxComponents helper.
+   */
+  mdxComponentsModule?: string;
   /** Optional. Appended to the package-provided integration list. */
   extraIntegrations?: AstroIntegration[];
   /**
@@ -52,6 +83,16 @@ export interface BookSchemasOptions {
 /** Options for the internal `bookScaffoldIntegration`. See PACKAGE_DESIGN.md §6. */
 export interface BookScaffoldIntegrationOptions {
   profile: BookProfile;
+  /** Per-route override; merged into the profile's defaults. */
+  routes?: Partial<RouteToggles>;
+  /**
+   * Optional explicit path to the consumer's mdx-components file (relative
+   * to consumer root). When omitted, the Integration auto-detects
+   * `src/mdx-components.{ts,js,mjs}` via the resolver. Final resolution
+   * happens inside the `astro:config:setup` hook where consumer root is
+   * known.
+   */
+  mdxComponentsModule?: string;
   extraStyles?: string[];
 }
 

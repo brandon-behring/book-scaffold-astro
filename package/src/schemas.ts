@@ -1,13 +1,19 @@
 /**
  * Zod schemas + enum constants for book content collections.
  *
+ * All Zod schemas live in this single file (single `astro/zod` import) so
+ * tsup's DTS bundler doesn't traverse Zod's dual CJS/ESM package multiple
+ * times — rollup-plugin-dts can't resolve Zod v4's `default` export when
+ * the same Zod import appears in multiple entry-graph files.
+ *
+ * Per-profile organization lives at src/profiles/<name>.ts which imports
+ * these schemas as values + declares the inferred chapter type + the
+ * route/style defaults. See ~/.claude/plans/address-and-finish-moonlit-shell.md.
+ *
  * Imports `z` from `astro/zod` (a real module re-export) so schemas can
  * be constructed at package-load time outside an Astro runtime context.
- * `defineBookSchemas` in index.ts wraps these into Astro `defineCollection`
- * calls at the consumer's content-config load time.
- *
- * Schemas ported verbatim from v2.0 src/content.config.ts. See
- * PACKAGE_DESIGN.md §5 for the public reproduction.
+ * `defineBookSchemas` in schemas-entry.ts wraps these into Astro
+ * `defineCollection` calls at the consumer's content-config load time.
  */
 import { z } from 'astro/zod';
 
@@ -64,7 +70,7 @@ export const chapterStatus = [
   'planned',
 ] as const;
 
-// ===== Chapter schemas — profile-dispatched =====
+// ===== Chapter schemas — one per profile =====
 
 export const academicChapterSchema = z.object({
   week: z.number().int().min(1).max(99),
@@ -91,6 +97,59 @@ export const toolsChapterSchema = z.object({
   draft: z.boolean().default(false),
   updated: z.date().optional(),
 });
+
+/** Minimal profile currently aliases the tools schema. */
+export const minimalChapterSchema = toolsChapterSchema;
+
+/**
+ * Course-notes profile schema (v3.3.0, closes issue #4). Designed for
+ * course-derived study notes (DLAI, Coursera, Manning, ...). Key fields:
+ * - `course`/`instructor`/`source_url` — attribution
+ * - `learning_outcomes` — structured Bloom-tag-ready outcomes
+ * - `tags` — freeform string array (NOT tools_compared enum)
+ */
+export const courseNotesChapterSchema = z.object({
+  // Identity
+  title: z.string().min(1),
+  chapter: z.number().int().min(0).max(99),
+  part: z.number().int().min(0).max(20).default(1),
+  description: z.string().optional(),
+
+  // Source attribution
+  course: z.string().optional(),
+  instructor: z.string().optional(),
+  source_url: z.string().url().optional(),
+
+  // Pedagogy
+  learning_outcomes: z
+    .array(
+      z.object({
+        id: z.string(),
+        verb: z.string(),
+        text: z.string(),
+      }),
+    )
+    .default([]),
+  tags: z.array(z.string()).default([]),
+
+  // Provenance + status (shared shape with tools profile)
+  last_verified: z.date(),
+  volatility: z.enum(volatilityLevels).default('architectural-pattern'),
+  sources: z.array(z.string()).default([]),
+  draft: z.boolean().default(false),
+});
+
+// ===== Inferred chapter types — one per schema =====
+//
+// Exported here so per-profile modules can re-export under a common name
+// (AcademicChapter, ToolsChapter, etc.) without each touching `z.infer`
+// in its own file (which would multiply the Zod import points and trip
+// rollup-plugin-dts).
+
+export type AcademicChapter = z.infer<typeof academicChapterSchema>;
+export type ToolsChapter = z.infer<typeof toolsChapterSchema>;
+export type MinimalChapter = z.infer<typeof minimalChapterSchema>;
+export type CourseNotesChapter = z.infer<typeof courseNotesChapterSchema>;
 
 // ===== Collateral collection schemas (tools-profile; always-defined) =====
 

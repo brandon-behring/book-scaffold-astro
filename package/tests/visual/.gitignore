@@ -1,5 +1,5 @@
 diffs/
-fixture/.env
-fixture/dist/
-fixture/.astro/
-fixture/node_modules/
+fixture*/.env
+fixture*/dist/
+fixture*/.astro/
+fixture*/node_modules/

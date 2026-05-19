@@ -11,7 +11,8 @@
     "package",
     "create-book",
     "demo",
-    "package/tests/visual/fixture"
+    "package/tests/visual/fixture",
+    "package/tests/visual/fixture-course-notes"
   ],
   "scripts": {
     "build": "npm run build --workspace package && npm run build --workspace demo",

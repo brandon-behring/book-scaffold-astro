@@ -7,6 +7,13 @@
  * body, and wraps in a <section.chapter-print> so print.css can force
  * page breaks between chapters.
  *
+ * v3.3.0 (closes #2): renders chapters with the consumer's MDX-components
+ * map. Consumer creates src/mdx-components.{ts,js,mjs} that default-exports
+ * a defineMdxComponents({...}) call; this route imports the map via the
+ * virtual:book-scaffold/mdx-components module exposed by the toolkit's
+ * Vite plugin. If the consumer has no mdx-components file, the virtual
+ * module exports {} so the import is harmless.
+ *
  * Build pipeline:
  *   npm run build            → Astro emits dist/print/index.html
  *   npm run pdf              → pagedjs-cli fetches dist/print/ via preview
@@ -17,6 +24,7 @@ import Base from '../layouts/Base.astro';
 import { render } from 'astro:content';
 import { getAllChapters } from '../src/lib/chapters';
 import ChapterHeader from '../components/ChapterHeader.astro';
+import mdxComponents from 'virtual:book-scaffold/mdx-components';
 
 const chapters = await getAllChapters();
 const rendered = await Promise.all(
@@ -32,7 +40,7 @@ const rendered = await Promise.all(
     {rendered.map(({ entry, Content }) => (
       <section class="chapter-print">
         <ChapterHeader data={entry.data} />
-        <Content />
+        <Content components={mdxComponents} />
       </section>
     ))}
   </main>

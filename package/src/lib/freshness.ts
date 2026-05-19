@@ -49,12 +49,22 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
  * Compute freshness for a chapter given its last_verified date + volatility.
  *
  * Pure function; caller supplies `now` only in tests. Production callers omit.
+ *
+ * v3.3.0 (closes issue #1): tolerant of `lastVerified === undefined`. Returns
+ * `null` instead of crashing when the chapter schema omits the field (e.g.,
+ * academic profile chapters that don't track verification dates, or consumer
+ * schemas that don't declare last_verified).
+ *
+ * Callers compose with optional chaining:
+ *   const status = getFreshness(d.last_verified, d.volatility)?.status;
  */
 export function getFreshness(
-  lastVerified: Date,
+  lastVerified: Date | undefined,
   volatility: VolatilityLevel,
   now: Date = new Date(),
-): Freshness {
+): Freshness | null {
+  if (!(lastVerified instanceof Date)) return null;
+
   const thresholdDays = THRESHOLDS[volatility];
   const daysOld = Math.floor((now.getTime() - lastVerified.getTime()) / MS_PER_DAY);
   const daysUntil = thresholdDays - daysOld;
@@ -71,8 +81,13 @@ export function getFreshness(
   return { status, daysOld, thresholdDays, daysUntil };
 }
 
-/** Human-readable label for each status; used for ARIA + tooltips. */
-export function freshnessLabel(f: Freshness): string {
+/** Human-readable label for each status; used for ARIA + tooltips.
+ *
+ * v3.3.0: accepts `null` (the new return shape of getFreshness for undefined
+ * inputs). Returns a sentinel "unknown" label so callers can render a neutral
+ * affordance without a separate branch. */
+export function freshnessLabel(f: Freshness | null): string {
+  if (f === null) return 'Verification status unknown';
   switch (f.status) {
     case 'fresh':
       return `Fresh (${f.daysOld}d old; verify within ${f.daysUntil}d)`;

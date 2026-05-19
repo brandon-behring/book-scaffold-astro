@@ -28,8 +28,25 @@ export type {
   BookConfigOptions,
   BookSchemasOptions,
   BookScaffoldIntegrationOptions,
+  RouteToggles,
 } from './types.js';
 export { BOOK_PROFILES, BookConfigError, resolveProfile } from './types.js';
+
+// Profile-kit: defineProfile helper (v3.3.0) for consumers writing their
+// own profile modules (advanced) or extending toolkit-shipped ones.
+export { defineProfile, type ProfileDefinition } from './profile-kit.js';
+
+// mdx-components helper (v3.3.0, closes #2): consumers create
+// src/mdx-components.ts that calls defineMdxComponents({ ... }); scaffold-
+// injected routes (/print etc.) import the default export via a Vite
+// virtual module.
+export { defineMdxComponents } from './mdx-components-resolver.js';
+
+// Freshness utility (v3.3.0): now tolerates undefined lastVerified;
+// returns null instead of crashing (closes #1).
+export { getFreshness, freshnessLabel, type Freshness, type FreshnessStatus, type VolatilityLevel } from './lib/freshness.js';
+
+// Schema enums + Zod schemas.
 export {
   // Enum arrays
   academicParts,
@@ -42,7 +59,20 @@ export {
   // Raw Zod schemas (no defineCollection wrapper — safe for any context)
   academicChapterSchema,
   toolsChapterSchema,
+  minimalChapterSchema,
+  courseNotesChapterSchema,
   sourcesSchema,
   changelogSchema,
   patternsSchema,
 } from './schemas.js';
+
+// Inferred chapter types per profile (v3.3.0). Type-only re-export from
+// the registry — DTS bundler handles type re-exports cleanly as long as
+// the Zod schemas they reference all live in a single file (schemas.ts).
+export type {
+  AcademicChapter,
+  ToolsChapter,
+  MinimalChapter,
+  CourseNotesChapter,
+  ChapterFor,
+} from './profiles/index.js';

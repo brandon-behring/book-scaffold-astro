@@ -25,6 +25,8 @@ import { resolveProfile } from './types.js';
 import {
   academicChapterSchema,
   toolsChapterSchema,
+  minimalChapterSchema,
+  courseNotesChapterSchema,
   sourcesSchema,
   changelogSchema,
   patternsSchema,
@@ -38,13 +40,25 @@ export function defineBookSchemas(opts: BookSchemasOptions = {}) {
   const profile = resolveProfile(opts.profile);
   const chaptersBase = opts.chaptersBase ?? './src/content/chapters';
 
+  // v3.3.0: schemas are owned by per-profile modules under src/profiles/,
+  // re-exported via schemas.ts. Schema dispatch lives here (rather than
+  // pulling PROFILES[profile].schema) because tsup's DTS bundler + Zod v4's
+  // dual CJS/ESM types don't play well when the registry's value-typed
+  // object flows through this entry's .d.ts emission. Adding a new profile
+  // = add a new branch here AND extend src/profiles/index.ts.
+  const schemaForProfile =
+    profile === 'academic' ? academicChapterSchema
+    : profile === 'course-notes' ? courseNotesChapterSchema
+    : profile === 'minimal' ? minimalChapterSchema
+    : toolsChapterSchema;
+
   const chapters = defineCollection({
     loader: glob({
       // Exclude underscore-prefixed files (standard "hidden" convention).
       pattern: ['**/*.{md,mdx}', '!**/_*'],
       base: chaptersBase,
     }),
-    schema: profile === 'academic' ? academicChapterSchema : toolsChapterSchema,
+    schema: schemaForProfile,
   });
 
   // Tools-collateral collections: register only if the consumer has the

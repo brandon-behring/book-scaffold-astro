@@ -47,7 +47,12 @@ export async function defineBookConfig(
   const integrations = [
     mdx(),
     preact(),
-    bookScaffoldIntegration({ profile, extraStyles: opts.extraStyles }),
+    bookScaffoldIntegration({
+      profile,
+      routes: opts.routes,                          // v3.3.0 — per-route override (issue #3)
+      mdxComponentsModule: opts.mdxComponentsModule, // v3.3.0 — explicit mdx-components path (issue #2)
+      extraStyles: opts.extraStyles,
+    }),
     ...(opts.extraIntegrations ?? []),
   ];
 
@@ -70,12 +75,16 @@ export async function defineBookConfig(
   // Strip the package-specific options out of the rest before forwarding.
   const {
     profile: _profile,
+    routes: _routes,                       // v3.3.0
+    mdxComponentsModule: _mdxComponentsModule, // v3.3.0
     extraIntegrations: _extraIntegrations,
     extraStyles: _extraStyles,
     markdown: _markdown,
     ...rest
   } = opts;
   void _profile;
+  void _routes;
+  void _mdxComponentsModule;
   void _extraIntegrations;
   void _extraStyles;
   void _markdown;
