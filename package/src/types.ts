@@ -63,15 +63,61 @@ export class BookConfigError extends Error {
   }
 }
 
-/** Resolve profile from explicit param → env → default. Throws on invalid. */
+import { existsSync, readFileSync } from 'node:fs';
+
+/**
+ * Best-effort .env reader. Astro's Node-context config loading (the
+ * astro.config.mjs file) doesn't auto-populate process.env from .env —
+ * Vite handles it client-side via import.meta.env, but server-side stays
+ * empty. This tiny parser handles the BOOK_PROFILE case so consumers
+ * who put `BOOK_PROFILE=…` in .env get it picked up without needing
+ * `node --env-file=.env` or dotenv-cli.
+ */
+function readEnvFile(path = '.env'): Record<string, string> {
+  try {
+    if (!existsSync(path)) return {};
+    const out: Record<string, string> = {};
+    for (const line of readFileSync(path, 'utf8').split(/\r?\n/)) {
+      const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*?)\s*$/);
+      if (!m) continue;
+      let val = m[2] ?? '';
+      if (
+        (val.startsWith('"') && val.endsWith('"')) ||
+        (val.startsWith("'") && val.endsWith("'"))
+      ) {
+        val = val.slice(1, -1);
+      }
+      out[m[1]!] = val;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/** Resolve profile from explicit param → process.env → .env → default. Throws on invalid. */
 export function resolveProfile(explicit?: BookProfile): BookProfile {
-  const candidate = explicit ?? process.env.BOOK_PROFILE ?? 'minimal';
+  let candidate: string | undefined = explicit ?? process.env.BOOK_PROFILE;
+  let source: 'param' | 'env' | 'dotenv' | 'default' = 'default';
+  if (explicit) source = 'param';
+  else if (process.env.BOOK_PROFILE) source = 'env';
+
+  if (!candidate) {
+    const fromFile = readEnvFile().BOOK_PROFILE;
+    if (fromFile) {
+      candidate = fromFile;
+      source = 'dotenv';
+    }
+  }
+
+  candidate = candidate ?? 'minimal';
+
   if (!BOOK_PROFILES.includes(candidate as BookProfile)) {
     throw new BookConfigError(
       `profile must be one of ${BOOK_PROFILES.join(' | ')} (got ${JSON.stringify(candidate)})`,
     );
   }
-  if (!explicit && !process.env.BOOK_PROFILE) {
+  if (source === 'default') {
     // eslint-disable-next-line no-console
     console.warn("book-scaffold-astro: BOOK_PROFILE not set; falling back to 'minimal'.");
   }

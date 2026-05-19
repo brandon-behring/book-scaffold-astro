@@ -1,0 +1,16 @@
+---
+week: 5
+part: ssm-core
+title: Chapter with broken XRef
+status: scaffolded
+description: Fixture for validate tests — references an id that doesn't exist in labels.json.
+---
+
+import XRef from '@brandon_m_behring/book-scaffold-astro/components/XRef.astro';
+import Theorem from '@brandon_m_behring/book-scaffold-astro/components/Theorem.astro';
+
+# Chapter with broken XRef
+
+This chapter cites <XRef id="w5:thm:nonexistent" />, which should fail validation.
+
+<Theorem id="w5:thm:exists">A theorem that does exist.</Theorem>

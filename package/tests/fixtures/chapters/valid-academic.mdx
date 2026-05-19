@@ -1,0 +1,21 @@
+---
+week: 4
+part: ssm-core
+title: Valid academic chapter
+status: implemented
+description: Fixture for build-labels and validate tests — has two Theorems, one Figure, one ExampleBox, all with ids.
+---
+
+import Theorem from '@brandon_m_behring/book-scaffold-astro/components/Theorem.astro';
+import Figure from '@brandon_m_behring/book-scaffold-astro/components/Figure.astro';
+import ExampleBox from '@brandon_m_behring/book-scaffold-astro/components/ExampleBox.astro';
+
+# Valid academic chapter
+
+<Theorem id="w4:thm:stability" type="theorem">Stability of the linearized system.</Theorem>
+
+<Theorem id="w4:thm:convergence" type="theorem" label="Convergence (custom)">Convergence under linear feedback.</Theorem>
+
+<Figure id="w4:fig:phase-portrait" src="/figures/phase.svg" alt="phase portrait" />
+
+<ExampleBox id="w4:ex:harmonic" title="Harmonic oscillator">A worked example.</ExampleBox>

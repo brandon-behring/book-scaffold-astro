@@ -1,0 +1,86 @@
+name: package CI
+
+on:
+  push:
+    branches: [main, v3.0]
+    paths:
+      - 'package/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    paths:
+      - 'package/**'
+
+defaults:
+  run:
+    working-directory: package
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22.x']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: package/package-lock.json
+
+      - name: Install (workspace-aware)
+        working-directory: ./
+        run: npm install
+
+      - name: Build (tsup → dist)
+        run: npm run build
+
+      - name: Test (node:test against fixtures)
+        run: npm test
+
+      - name: Verify exports map shape
+        run: |
+          test -f dist/index.mjs    || (echo "missing dist/index.mjs" && exit 1)
+          test -f dist/index.d.ts   || (echo "missing dist/index.d.ts" && exit 1)
+          test -f dist/schemas.mjs  || (echo "missing dist/schemas.mjs" && exit 1)
+          test -f dist/components/ToolFilter.mjs       || (echo "missing compiled ToolFilter" && exit 1)
+          test -f dist/components/VersionSelector.mjs  || (echo "missing compiled VersionSelector" && exit 1)
+          test -f dist/lib/katex-macros.mjs            || (echo "missing dist/lib/katex-macros.mjs" && exit 1)
+
+      - name: Pack dry-run (inspect tarball contents)
+        run: npm pack --dry-run
+
+  smoke-demo:
+    runs-on: ubuntu-latest
+    needs: test-and-build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: package/package-lock.json
+
+      - name: Install (workspace-aware)
+        working-directory: ./
+        run: npm install
+
+      - name: Build the toolkit
+        working-directory: package
+        run: npm run build
+
+      - name: Build the in-repo demo (academic profile)
+        working-directory: demo
+        env:
+          BOOK_PROFILE: academic
+        run: npx astro build
+
+      - name: Verify demo emitted core routes
+        working-directory: demo
+        run: |
+          test -f dist/print/index.html       || (echo "missing /print" && exit 1)
+          test -f dist/references/index.html  || (echo "missing /references" && exit 1)
+          test -f dist/search/index.html      || (echo "missing /search" && exit 1)
