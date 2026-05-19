@@ -114,3 +114,190 @@
   color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
+
+/* ===== Academic-profile callout variants (Q3 — coexist with tools variants) =====
+ * Maps the 10 academic callouts (NoteBox/ExampleBox/DynConnect/InsightBox/
+ * WarnBox/CounterBox/TipBox/OpenQuestion/PaperBox/ResultBox) to Paul Tol
+ * semantic colors. Each has a default-title prop in the component; CSS
+ * just handles bar color + background tint.
+ *
+ * Blue family — neutral info, examples, dynamical-systems bridge */
+.callout-note,
+.callout-example,
+.callout-dynconnect {
+  border-left-color: var(--callout-info);
+  background: var(--warm-blue-tint);
+}
+
+/* Rose family — alerts, counter-evidence */
+.callout-warn,
+.callout-counter {
+  border-left-color: var(--callout-warn);
+  background: var(--warm-rose-tint);
+}
+
+/* Green family — practical hints, experimental results */
+.callout-tip,
+.callout-result {
+  border-left-color: var(--callout-tip);
+  background: var(--warm-green-tint);
+}
+
+/* Plum — authoritative open questions */
+.callout-openquestion {
+  border-left-color: var(--callout-official);
+  background: var(--warm-plum-tint);
+}
+
+/* Gold — surprising insights */
+.callout-insight {
+  border-left-color: var(--callout-insight);
+  background: var(--warm-gold-tint);
+}
+
+/* Gray dashed — restated paper claims (external source) */
+.callout-paper {
+  border-left-color: var(--color-border);
+  border-left-style: dashed;
+  background: var(--color-bg-subtle);
+}
+
+/* ===== Theorem family (Theorem.astro) =====
+ * Plain (theorem/proposition/lemma/corollary): italic body
+ * Definition family (definition/example/exercise/remark/proof): upright body
+ */
+.theorem {
+  margin: var(--space-4) 0;
+  padding-left: var(--space-4);
+  border-left: var(--border-bar) solid var(--callout-official);
+}
+.theorem-label {
+  font-weight: 600;
+  font-style: normal;
+  display: inline;
+  margin-right: 0.4em;
+}
+.theorem-body {
+  display: block;
+  font-style: italic;
+}
+.theorem-body > *:first-child { display: inline; }
+
+.theorem[data-kind="definition"] .theorem-body,
+.theorem[data-kind="example"] .theorem-body,
+.theorem[data-kind="exercise"] .theorem-body,
+.theorem[data-kind="remark"] .theorem-body,
+.theorem[data-kind="proof"] .theorem-body {
+  font-style: normal;
+}
+
+/* ===== Margin notes (MarginNote.astro) — variant: note/warning/tip ===== */
+.margin-note {
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  margin: var(--space-3) 0;
+  border-left: var(--border-bar) solid var(--callout-info);
+  background: var(--warm-blue-tint);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.margin-note[data-variant="warning"] {
+  border-left-color: var(--callout-warn);
+  background: var(--warm-rose-tint);
+}
+.margin-note[data-variant="tip"] {
+  border-left-color: var(--callout-tip);
+  background: var(--warm-green-tint);
+}
+.margin-note-label {
+  display: inline-block;
+  font-family: var(--font-code);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin-right: var(--space-2);
+}
+
+/* ===== Status badges (StatusBadge.astro) — 3-state public taxonomy ===== */
+.status-badge {
+  display: inline-block;
+  font-family: var(--font-code);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 0.1em 0.55em;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--paper);
+  vertical-align: 0.1em;
+}
+.status-badge[data-status="published"]   { background: var(--warm-green); }
+.status-badge[data-status="draft"]       { background: var(--warm-gold); }
+.status-badge[data-status="coming-soon"] { background: var(--color-text-muted); }
+
+/* ===== Figure component (Figure.astro) ===== */
+figure.figure {
+  margin: var(--space-6) 0;
+  text-align: center;
+}
+figure.figure img,
+figure.figure svg {
+  max-width: 100%;
+  height: auto;
+}
+figure.figure figcaption {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-top: var(--space-2);
+  font-style: italic;
+  text-align: left;
+}
+
+/* ===== CodeBlock header bar with GitHub link ===== */
+.codeblock-frame {
+  margin: var(--space-4) 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-code-bg);
+}
+.codeblock-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-subtle);
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-code);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.codeblock-header a {
+  font-weight: 500;
+}
+.codeblock-frame pre {
+  margin: 0;
+  border-radius: 0;
+  border: 0;
+}
+
+/* ===== Practice tags (Tag.astro) ===== */
+.practice-tag {
+  display: inline-block;
+  font-family: var(--font-code);
+  font-size: 0.75em;
+  font-weight: 500;
+  padding: 0 0.4em;
+  margin: 0 0.1em;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  vertical-align: 0.1em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.practice-tag[data-kind="official"]     { border-color: var(--callout-official); color: var(--callout-official); }
+.practice-tag[data-kind="convergence"]  { border-color: var(--callout-insight); color: var(--callout-insight); }
+.practice-tag[data-kind="practitioner"] { border-color: var(--callout-tip); color: var(--callout-tip); }

@@ -1,0 +1,35 @@
+---
+/**
+ * Figure — replaces LaTeX `\includegraphics{...}` + `\caption{...}` +
+ * `\label{...}` pattern with a single component.
+ *
+ * Source assets are emitted under public/figures/weekNN/ by
+ * scripts/build-figures.sh (Phase 2.4); src paths are absolute from
+ * site root.
+ *
+ * Usage:
+ *   <Figure
+ *     src="/figures/week04/ex2_hippo_eigenvalues.svg"
+ *     caption="HiPPO-LegS eigenvalue structure for N = 16 and N = 64."
+ *     width="100%"
+ *     id="w4-fig-hippo-eigenvalues"
+ *   />
+ *
+ * The id prop registers the figure with the cross-reference label map
+ * (consumed by `<XRef>`).
+ */
+interface Props {
+  src: string;
+  caption?: string;
+  width?: string;
+  id?: string;
+  alt?: string;
+}
+
+const { src, caption, width = '100%', id, alt } = Astro.props;
+const altText = alt ?? caption ?? '';
+---
+<figure class="figure" id={id}>
+  <img src={src} alt={altText} style={`width: ${width}; max-width: 100%;`} />
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>

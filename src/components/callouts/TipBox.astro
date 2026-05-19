@@ -1,0 +1,15 @@
+---
+/**
+ * TipBox — maps to LaTeX `tipbox` env.
+ * Default use: one-off practical hints, side-shows.
+ * Family: green (tip).
+ */
+interface Props {
+  title?: string;
+}
+const { title = 'Tip' } = Astro.props;
+---
+<aside class="callout callout-tip" role="note">
+  <strong class="callout-title">{title}</strong>
+  <div class="callout-body"><slot /></div>
+</aside>

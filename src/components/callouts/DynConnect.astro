@@ -1,0 +1,15 @@
+---
+/**
+ * DynConnect — maps to LaTeX `dynconnect` env.
+ * Default use: dynamical-systems / PhD-bridge connections to the SSM material.
+ * Family: blue accent (info).
+ */
+interface Props {
+  title?: string;
+}
+const { title = 'Dynamical Systems Connection' } = Astro.props;
+---
+<aside class="callout callout-dynconnect" role="note">
+  <strong class="callout-title">{title}</strong>
+  <div class="callout-body"><slot /></div>
+</aside>

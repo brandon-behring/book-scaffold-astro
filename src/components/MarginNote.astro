@@ -1,0 +1,37 @@
+---
+/**
+ * MarginNote — short variant of Sidenote with semantic coloring.
+ *
+ * Maps the three LaTeX margin-callout commands:
+ *   \marginnotebox[title]{body}   → variant="note"    (blue)
+ *   \marginwarning[title]{body}   → variant="warning" (rose)
+ *   \margintip[title]{body}       → variant="tip"     (green)
+ *
+ * Per STANDARDS.md margin notes are capped at 25 words — enforce in
+ * the validator (Phase 2.6); not enforced here at runtime.
+ *
+ * Unlike Sidenote (which floats into the page margin on desktop),
+ * MarginNote always renders inline with the surrounding prose as a
+ * colored aside. Use Sidenote when the note is footnote-like and
+ * should not interrupt the line; use MarginNote when the note is
+ * load-bearing and the reader must see it.
+ */
+type Variant = 'note' | 'warning' | 'tip';
+
+interface Props {
+  variant?: Variant;
+  label?: string;
+}
+
+const { variant = 'note', label } = Astro.props;
+const VARIANT_DEFAULT_LABEL: Record<Variant, string> = {
+  note: 'Note',
+  warning: 'Caveat',
+  tip: 'Tip',
+};
+const displayLabel = label ?? VARIANT_DEFAULT_LABEL[variant];
+---
+<aside class="margin-note" data-variant={variant} role="note">
+  <span class="margin-note-label">[{displayLabel}]</span>
+  <slot />
+</aside>

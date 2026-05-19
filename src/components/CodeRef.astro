@@ -1,0 +1,49 @@
+---
+/**
+ * CodeRef — inline reference to a specific file (and optional line range)
+ * in the post_transformers repo on GitHub.
+ *
+ * Maps the LaTeX `\code{path:N}` and `\path{path}` idioms (which only
+ * styled monospace text) to a real hyperlink that lands the reader on
+ * the right line.
+ *
+ * Usage:
+ *   The discretization is implemented in
+ *   <CodeRef path="experiments/jax/week04/s4_hippo.py" line={42}>
+ *     <code>s4_hippo.py:42</code>
+ *   </CodeRef>.
+ *
+ *   Line range:
+ *   See <CodeRef path="experiments/jax/week04/s4_hippo.py" line={42} lineEnd={58}>
+ *     the ZOH discretization block
+ *   </CodeRef>.
+ *
+ *   Bare path (no line):
+ *   The full module lives at <CodeRef path="experiments/jax/week04/s4_hippo.py" />.
+ *
+ * The slot's content is rendered as the link text; if no slot content
+ * is given, a sensible default (the file basename plus line range) is
+ * synthesized.
+ */
+import { buildGithubUrl } from '../lib/repo-url';
+
+interface Props {
+  path: string;
+  line?: number;
+  lineEnd?: number;
+}
+
+const { path, line, lineEnd } = Astro.props;
+const url = buildGithubUrl(path, line, lineEnd);
+const hasSlot = await Astro.slots.has('default');
+const basename = path.split('/').pop() ?? path;
+const defaultText =
+  line === undefined
+    ? basename
+    : lineEnd === undefined
+      ? `${basename}:${line}`
+      : `${basename}:${line}-${lineEnd}`;
+---
+<a href={url} rel="external noopener" class="code-ref">
+  {hasSlot ? <slot /> : <code>{defaultText}</code>}
+</a>

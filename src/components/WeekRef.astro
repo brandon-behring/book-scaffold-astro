@@ -1,0 +1,51 @@
+---
+/**
+ * WeekRef — inline pointer to another chapter, mapping LaTeX `\weekref{N}{body}`.
+ *
+ * Renders as: "-> Week N: body" with "Week N" hyperlinked to /chapters/weekNN/.
+ *
+ * Used for forward and backward references in prose. The target chapter
+ * may not exist yet (other weeks not yet converted to MDX); the link
+ * will 404 gracefully — once the target chapter lands, links resolve
+ * without further author work.
+ *
+ * Usage:
+ *   <WeekRef week={4}>
+ *     S4 layer uses SSMParam from this chapter for separate LR
+ *     treatment of HiPPO parameters.
+ *   </WeekRef>
+ */
+interface Props {
+  week: number;
+}
+const { week } = Astro.props;
+const slug = `week${String(week).padStart(2, '0')}`;
+const href = `/chapters/${slug}/`;
+---
+<aside class="week-ref">
+  <span class="week-ref-arrow" aria-hidden="true">→</span>
+  <a href={href} class="week-ref-link">Week {week}</a>:
+  <span class="week-ref-body"><slot /></span>
+</aside>
+
+<style>
+  .week-ref {
+    margin: var(--space-3) 0;
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-bg-subtle);
+    border-left: 2px solid var(--callout-info);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    font-size: var(--text-sm);
+  }
+  .week-ref-arrow {
+    color: var(--callout-info);
+    font-weight: 600;
+    margin-right: var(--space-1);
+  }
+  .week-ref-link {
+    font-weight: 500;
+  }
+  .week-ref-body {
+    color: var(--color-text-muted);
+  }
+</style>

@@ -1,0 +1,15 @@
+---
+/**
+ * OpenQuestion — maps to LaTeX `openquestion` env.
+ * Default use: research questions still open at time of writing.
+ * Family: plum (authority).
+ */
+interface Props {
+  title?: string;
+}
+const { title = 'Open Question' } = Astro.props;
+---
+<aside class="callout callout-openquestion" role="note">
+  <strong class="callout-title">{title}</strong>
+  <div class="callout-body"><slot /></div>
+</aside>

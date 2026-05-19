@@ -1,0 +1,15 @@
+---
+/**
+ * CounterBox — maps to LaTeX `counterbox` env.
+ * Default use: counter-evidence to the dominant view, limitations of cited claims.
+ * Family: rose (warn).
+ */
+interface Props {
+  title?: string;
+}
+const { title = 'Counter-evidence' } = Astro.props;
+---
+<aside class="callout callout-counter" role="note">
+  <strong class="callout-title">{title}</strong>
+  <div class="callout-body"><slot /></div>
+</aside>

@@ -1,32 +1,45 @@
 /**
  * src/content.config.ts — Content Collections schema (Astro 6 Content Layer).
  *
- * Defines the shape that every chapter's frontmatter must satisfy. Astro
- * validates at build time; any chapter with invalid frontmatter fails the
- * build with a precise error pointing to the offending file.
+ * Profile-aware chapter schema dispatch via BOOK_PROFILE env var (Q4 locked).
  *
- * Frontmatter semantics:
- *   title           — chapter title as displayed
- *   part            — which book Part (1–5)
- *   chapter         — chapter number within the part (for ordering)
- *   volatility      — how likely the claims in this chapter are to date.
- *                     Drives freshness stamps and review cadence.
- *   tools_compared  — which tools' behavior is analyzed. Drives the Tool
- *                     Filter interactive feature (commit Stage 3).
- *   last_verified   — ISO date when this chapter's claims were last audited
- *                     against current tool docs. Surface stale chapters.
- *   sources         — slugs from sources/manifest.yaml. Resolved at build
- *                     time by the <Citation> component (commit 10) to render
- *                     tier badges + Perma.cc links.
- *   description     — optional meta description for search/social.
- *   draft           — if true, chapter is hidden from nav + search.
- *   updated         — optional ISO date of the last structural revision
- *                     (separate from last_verified, which is about claim
- *                     accuracy).
+ *   BOOK_PROFILE=academic — 7-state status + week + part enum (5 academic parts) +
+ *                           code_path / tests_path / notebook_path companion paths
+ *   BOOK_PROFILE=tools    — volatility classes + T1-T4 source tiers + tools_compared
+ *   BOOK_PROFILE=minimal  — falls back to tools schema (the v1 default; works for
+ *                           generic books, just don't add 'volatility' etc. to your
+ *                           frontmatter and Zod won't complain because fields
+ *                           are required — minimal profile users should pick one
+ *                           profile to commit to)
+ *
+ * Other collections (sources, changelog, patterns) are tools-profile data
+ * but stay defined unconditionally — they read empty if the underlying
+ * files are absent. ToolFilter / VersionSelector / convergence dashboard
+ * render no-op under academic profile.
+ *
+ * Schema details:
+ *   Academic profile fields (per post_transformers/guides/web reference):
+ *     week           — week number in roadmap (1–N)
+ *     part           — enum of academic parts
+ *     title          — chapter title as displayed
+ *     status         — internal 7-state taxonomy (docs/STATUS.md)
+ *     roadmap_lines  — optional [start, end] line refs into roadmap.md
+ *     code_path      — optional path to chapter's source code
+ *     tests_path     — optional path to chapter's tests
+ *     notebook_path  — optional path to Jupyter notebook companion
+ *     description    — optional meta description
+ *     draft          — hidden from nav + search if true
+ *
+ *   Tools profile fields (per book-template-astro reference):
+ *     title, part, chapter, volatility, tools_compared, last_verified,
+ *     sources, description, draft, updated
  */
 import { defineCollection, z } from 'astro:content';
 import { glob, file } from 'astro/loaders';
 
+const profile = process.env.BOOK_PROFILE ?? 'minimal';
+
+// ===== Shared tools-profile enums =====
 const toolSlugs = [
   'claude-code',
   'gemini-cli',
@@ -35,42 +48,77 @@ const toolSlugs = [
 ] as const;
 
 const volatilityLevels = [
-  'stable-principle',     // durable idea, rare change
-  'architectural-pattern', // changes on major tool versions
-  'feature-surface',      // changes on minor versions; highest drift risk
+  'stable-principle',
+  'architectural-pattern',
+  'feature-surface',
 ] as const;
 
 const sourceTiers = [
-  'T1-official',      // vendor-official docs or release notes
-  'T2-release-notes', // release blog / changelog
-  'T3-practitioner',  // respected community writing
-  'T4-conjecture',    // blog / tweet / unverified
+  'T1-official',
+  'T2-release-notes',
+  'T3-practitioner',
+  'T4-conjecture',
 ] as const;
 
-// ===== chapters =====
-const chapters = defineCollection({
-  loader: glob({
-    pattern: '**/*.{md,mdx}',
-    base: './src/content/chapters',
-  }),
-  schema: z.object({
-    title: z.string().min(1),
-    part: z.number().int().min(0).max(10),
-    chapter: z.number().int().min(0).max(99),
-    volatility: z.enum(volatilityLevels),
-    tools_compared: z.array(z.enum(toolSlugs)).min(1),
-    last_verified: z.date(),
-    sources: z.array(z.string()).default([]),
-    description: z.string().optional(),
-    draft: z.boolean().default(false),
-    updated: z.date().optional(),
-  }),
+// ===== Academic-profile enums =====
+const academicParts = [
+  'foundations',
+  'ssm-core',
+  'beyond-ssm',
+  'integration',
+  'synthesis',
+] as const;
+
+const chapterStatus = [
+  'implemented',
+  'chapter_only',
+  'reading_only',
+  'prose_only',
+  'code_only',
+  'scaffolded',
+  'planned',
+] as const;
+
+// ===== Chapter schema — profile-dispatched =====
+const academicChapterSchema = z.object({
+  week: z.number().int().min(1).max(99),
+  part: z.enum(academicParts),
+  title: z.string().min(1),
+  status: z.enum(chapterStatus),
+  roadmap_lines: z.tuple([z.number().int(), z.number().int()]).optional(),
+  code_path: z.string().optional(),
+  tests_path: z.string().optional(),
+  notebook_path: z.string().optional(),
+  description: z.string().optional(),
+  draft: z.boolean().default(false),
 });
 
-// ===== sources =====
-// One entry per cited source. The file loader reads sources/manifest.yaml
-// and keys each entry by its `id` field. Accessed from components via
-// `await getEntry('sources', slug)`.
+const toolsChapterSchema = z.object({
+  title: z.string().min(1),
+  part: z.number().int().min(0).max(10),
+  chapter: z.number().int().min(0).max(99),
+  volatility: z.enum(volatilityLevels),
+  tools_compared: z.array(z.enum(toolSlugs)).min(1),
+  last_verified: z.date(),
+  sources: z.array(z.string()).default([]),
+  description: z.string().optional(),
+  draft: z.boolean().default(false),
+  updated: z.date().optional(),
+});
+
+const chapters = defineCollection({
+  loader: glob({
+    // Exclude underscore-prefixed files (e.g. _example-chapter.mdx) — the
+    // standard "hidden" convention for content collections. Lets us keep
+    // tools-profile example content in the scaffold without breaking
+    // academic-profile builds.
+    pattern: ['**/*.{md,mdx}', '!**/_*'],
+    base: './src/content/chapters',
+  }),
+  schema: profile === 'academic' ? academicChapterSchema : toolsChapterSchema,
+});
+
+// ===== Tools-profile-only collections (always defined; empty under academic) =====
 const sources = defineCollection({
   loader: file('sources/manifest.yaml'),
   schema: z.object({
@@ -87,10 +135,6 @@ const sources = defineCollection({
   }),
 });
 
-// ===== changelog (per-tool release timelines) =====
-// One entry per tool. The glob loader picks up changelog/tools/*.yaml;
-// the shared registry changelog/patterns.yaml sits one level up so it
-// isn't swept into this collection.
 const changeKinds = ['added', 'removed', 'changed', 'deprecated'] as const;
 
 const changelog = defineCollection({
@@ -104,18 +148,15 @@ const changelog = defineCollection({
       version: z.string().min(1),
       date: z.date(),
       changes: z.array(z.object({
-        pattern: z.string(),        // references patterns collection by id
+        pattern: z.string(),
         kind: z.enum(changeKinds),
         note: z.string().min(1),
-        source_key: z.string().optional(),  // references sources collection by id
+        source_key: z.string().optional(),
       })).default([]),
     })).default([]),
   }),
 });
 
-// ===== patterns (shared registry across tools) =====
-// Names the agentic-coding patterns that one or more tools may adopt.
-// Feeds the convergence/divergence dashboard in Stage 3.
 const patternCategories = [
   'safety',
   'scale',
@@ -137,12 +178,13 @@ const patterns = defineCollection({
 
 export const collections = { chapters, sources, changelog, patterns };
 
-// Re-export enum arrays so components and tests can import the same
-// canonical lists without redefining them.
+// Re-export enum arrays for components and tests.
 export {
   toolSlugs,
   volatilityLevels,
   sourceTiers,
   changeKinds,
   patternCategories,
+  academicParts,
+  chapterStatus,
 };

@@ -1,0 +1,51 @@
+---
+/**
+ * StatusBadge — translates the internal 7-state taxonomy from
+ * docs/STATUS.md into a simplified 3-state public label.
+ *
+ * Public mapping (locked in plan Q4):
+ *   Published   = implemented | chapter_only | prose_only | reading_only
+ *   Draft       = code_only
+ *   Coming Soon = scaffolded  | planned
+ *
+ * Internal frontmatter retains the 7-state value for STATUS.md alignment;
+ * this component is the public-facing translator.
+ */
+type InternalStatus =
+  | 'implemented'
+  | 'chapter_only'
+  | 'reading_only'
+  | 'prose_only'
+  | 'code_only'
+  | 'scaffolded'
+  | 'planned';
+
+type PublicStatus = 'published' | 'draft' | 'coming-soon';
+
+const PUBLIC_OF: Record<InternalStatus, PublicStatus> = {
+  implemented: 'published',
+  chapter_only: 'published',
+  reading_only: 'published',
+  prose_only: 'published',
+  code_only: 'draft',
+  scaffolded: 'coming-soon',
+  planned: 'coming-soon',
+};
+
+const PUBLIC_LABEL: Record<PublicStatus, string> = {
+  published: 'Published',
+  draft: 'Draft',
+  'coming-soon': 'Coming Soon',
+};
+
+interface Props {
+  status: InternalStatus;
+}
+
+const { status } = Astro.props;
+const publicStatus = PUBLIC_OF[status];
+const label = PUBLIC_LABEL[publicStatus];
+---
+<span class="status-badge" data-status={publicStatus} title={`Internal: ${status}`}>
+  {label}
+</span>

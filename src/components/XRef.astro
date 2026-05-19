@@ -1,0 +1,33 @@
+---
+/**
+ * XRef — resolves a `\cref{label}` LaTeX reference to a hyperlink.
+ *
+ * Reads src/data/labels.json built by scripts/build-labels.mjs
+ * (Phase 2.6). For each known id, the map provides:
+ *   { href: "/chapters/week04#thm-w4-stability", display: "Theorem 4.2" }
+ *
+ * Phase 2.2 (now): labels.json ships empty. An unknown id renders an
+ * inline "[?label]" placeholder so the build doesn't fail before we
+ * have chapters with labels. Once Phase 2.6 lands, the validator
+ * promotes "unknown label" from a warning to a build error.
+ *
+ * Usage:
+ *   By <XRef id="thm:w4:stability" />, the discretized eigenvalues …
+ */
+import labels from '../data/labels.json';
+
+type LabelEntry = { href: string; display: string };
+const map = labels as Record<string, LabelEntry>;
+
+interface Props {
+  id: string;
+}
+
+const { id } = Astro.props;
+const entry = map[id];
+---
+{entry ? (
+  <a href={entry.href} class="xref">{entry.display}</a>
+) : (
+  <span class="xref xref-unknown" title={`Unknown label: ${id}`}>[?{id}]</span>
+)}

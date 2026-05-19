@@ -1,0 +1,60 @@
+---
+/**
+ * Tag — inline practice tag that flags the provenance of a stated claim.
+ *
+ * Maps LaTeX `\tagofficial{}`, `\tagpractitioner{}`, `\tagconv{}` which are
+ * placed immediately after a claim to flag its trust level:
+ *
+ *   official       Vendor / paper / canonical reference. Pair with \cite{...}.
+ *   practitioner   Repo lore or one-shop convention. Useful but not load-bearing.
+ *   convergence    >=2 independent implementations agree. Stronger than practitioner,
+ *                  weaker than official.
+ *
+ * Usage:
+ *   S4D-Lin is the default initialization <Tag kind="convergence" />
+ *   in the S4D, S5, and mamba-minimal reference codebases.
+ */
+type Kind = 'official' | 'practitioner' | 'convergence';
+
+interface Props {
+  kind: Kind;
+}
+
+const { kind } = Astro.props;
+
+const LABEL: Record<Kind, string> = {
+  official: 'Official',
+  practitioner: 'Practitioner',
+  convergence: 'Convergence',
+};
+
+const TITLE: Record<Kind, string> = {
+  official: 'Vendor or canonical reference — paired with a citation',
+  practitioner: 'Repo lore or single-shop convention — not load-bearing',
+  convergence: 'Two or more independent implementations agree',
+};
+---
+<span class="practice-tag" data-kind={kind} title={TITLE[kind]}>
+  [{LABEL[kind]}]
+</span>
+
+<style>
+  .practice-tag {
+    display: inline-block;
+    font-family: var(--font-code);
+    font-size: 0.75em;
+    font-weight: 500;
+    padding: 0 0.4em;
+    margin: 0 0.1em;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-subtle);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    vertical-align: 0.1em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .practice-tag[data-kind="official"]    { border-color: var(--callout-official); color: var(--callout-official); }
+  .practice-tag[data-kind="convergence"] { border-color: var(--callout-insight); color: var(--callout-insight); }
+  .practice-tag[data-kind="practitioner"] { border-color: var(--callout-tip); color: var(--callout-tip); }
+</style>

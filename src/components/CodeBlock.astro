@@ -1,0 +1,115 @@
+---
+/**
+ * CodeBlock — embed a slice of a real source file from the repo at
+ * build time, with syntax highlighting and a "View on GitHub" header
+ * link pointing to the exact line range.
+ *
+ * Reads the file from the repo root (resolved relative to
+ * guides/web/), slices `lines` ("N-M" or "N"), and hands the snippet
+ * to Astro's `<Code>` component for Shiki rendering.
+ *
+ * Build fails if:
+ *   - The file does not exist on disk
+ *   - The requested line range is out of bounds
+ *   - `lines` is malformed
+ *
+ * Usage:
+ *   <CodeBlock
+ *     src="experiments/jax/week04/s4_hippo.py"
+ *     lines="42-58"
+ *     lang="python"
+ *   />
+ *
+ *   <CodeBlock src="experiments/jax/week04/s4_hippo.py" lines="42" lang="python" />
+ *
+ * If `lang` is omitted, it is inferred from the file extension.
+ */
+import { Code } from 'astro:components';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { buildGithubUrl } from '../lib/repo-url';
+
+interface Props {
+  src: string;
+  lines: string; // "N" or "N-M" (1-indexed, inclusive)
+  lang?: string;
+}
+
+const { src, lines, lang } = Astro.props;
+
+// Resolve src relative to repo root. Astro's build runs with cwd =
+// guides/web/, so the repo root is two levels up. Using process.cwd()
+// (not import.meta.dirname) survives Astro's bundling — at runtime
+// import.meta.dirname points to the emitted .mjs chunk, not the source.
+const REPO_ROOT = resolve(process.cwd(), '..', '..');
+const absPath = resolve(REPO_ROOT, src);
+
+if (!existsSync(absPath)) {
+  throw new Error(
+    `CodeBlock: file not found at ${absPath} (src="${src}"). ` +
+      `Check the path is relative to the repo root.`,
+  );
+}
+
+const rangeMatch = lines.match(/^(\d+)(?:-(\d+))?$/);
+if (!rangeMatch) {
+  throw new Error(
+    `CodeBlock: lines="${lines}" is malformed. Use "N" or "N-M" (1-indexed).`,
+  );
+}
+
+const startLine = parseInt(rangeMatch[1], 10);
+const endLine = rangeMatch[2] ? parseInt(rangeMatch[2], 10) : startLine;
+
+if (endLine < startLine) {
+  throw new Error(
+    `CodeBlock: lines="${lines}" — end line ${endLine} is before start ${startLine}.`,
+  );
+}
+
+const fileLines = readFileSync(absPath, 'utf8').split('\n');
+if (startLine < 1 || endLine > fileLines.length) {
+  throw new Error(
+    `CodeBlock: requested lines ${startLine}-${endLine} fall outside ` +
+      `file extent (1-${fileLines.length}) for ${src}.`,
+  );
+}
+
+const snippet = fileLines.slice(startLine - 1, endLine).join('\n');
+
+const inferLang = (path: string): string => {
+  const ext = path.split('.').pop()?.toLowerCase() ?? '';
+  const map: Record<string, string> = {
+    py: 'python',
+    jl: 'julia',
+    js: 'javascript',
+    ts: 'typescript',
+    mjs: 'javascript',
+    sh: 'bash',
+    yaml: 'yaml',
+    yml: 'yaml',
+    json: 'json',
+    md: 'markdown',
+    mdx: 'mdx',
+    rs: 'rust',
+    go: 'go',
+    cpp: 'cpp',
+    c: 'c',
+    tex: 'latex',
+  };
+  return map[ext] ?? 'text';
+};
+
+const language = (lang ?? inferLang(src)) as Parameters<typeof Code>[0]['lang'];
+
+const githubUrl = buildGithubUrl(src, startLine, endLine);
+const rangeText = startLine === endLine ? `:${startLine}` : `:${startLine}-${endLine}`;
+const displayPath = `${src}${rangeText}`;
+---
+<div class="codeblock-frame">
+  <div class="codeblock-header">
+    <code>{displayPath}</code>
+    <a href={githubUrl} rel="external noopener">View on GitHub →</a>
+  </div>
+  <Code code={snippet} lang={language} theme="css-variables" wrap={false} />
+</div>

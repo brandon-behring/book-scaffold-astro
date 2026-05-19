@@ -1,0 +1,15 @@
+---
+/**
+ * ExampleBox — maps to LaTeX `examplebox` env.
+ * Default use: extended multi-paragraph walkthroughs.
+ * Family: blue accent (info).
+ */
+interface Props {
+  title?: string;
+}
+const { title = 'Example' } = Astro.props;
+---
+<aside class="callout callout-example" role="note">
+  <strong class="callout-title">{title}</strong>
+  <div class="callout-body"><slot /></div>
+</aside>
