@@ -42,5 +42,6 @@ dist-pdf/
 #   container lacks pdftocairo + uv) should comment these out so the
 #   scripts gracefully skip and CI serves the committed artifacts as-is.
 src/data/references.json
+demo/src/data/references.json
 public/figures/
 public/notebooks/

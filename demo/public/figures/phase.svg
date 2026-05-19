@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">Phase portrait placeholder</title>
+  <desc id="desc">A simple phase portrait with axes and a damped spiral trajectory.</desc>
+  <rect width="640" height="360" fill="#f8fafc"/>
+  <path d="M72 180h496M320 36v288" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <path d="M552 180l-14-8v16zM320 44l-8 14h16z" fill="#94a3b8"/>
+  <g fill="none" stroke="#cbd5e1" stroke-width="1">
+    <path d="M120 60v252M184 60v252M248 60v252M384 60v252M448 60v252M512 60v252"/>
+    <path d="M88 84h448M88 132h448M88 228h448M88 276h448"/>
+  </g>
+  <path
+    d="M459 142c32 44 1 102-54 111-60 10-113-36-103-92 9-48 61-76 107-55 37 17 49 61 27 93-23 33-73 35-97 6-22-27-11-67 22-81 28-12 61 7 66 36 4 25-15 48-41 49-23 1-42-18-39-41 2-20 22-34 42-28 17 5 26 24 19 40-6 14-22 20-35 14"
+    stroke="#2563eb"
+    stroke-width="6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="374" cy="194" r="8" fill="#ef4444"/>
+  <text x="548" y="170" fill="#475569" font-family="Arial, sans-serif" font-size="18">x</text>
+  <text x="332" y="56" fill="#475569" font-family="Arial, sans-serif" font-size="18">y</text>
+</svg>

@@ -10,4 +10,5 @@ import { defineBookConfig } from '@brandon_m_behring/book-scaffold-astro';
 
 export default await defineBookConfig({
   site: 'https://example.invalid',
+  preset: 'academic',
 });
