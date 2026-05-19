@@ -10,7 +10,8 @@
   "workspaces": [
     "package",
     "create-book",
-    "demo"
+    "demo",
+    "package/tests/visual/fixture"
   ],
   "scripts": {
     "build": "npm run build --workspace package && npm run build --workspace demo",

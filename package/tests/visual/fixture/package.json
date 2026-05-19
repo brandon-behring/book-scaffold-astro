@@ -1,0 +1,18 @@
+{
+  "name": "@brandon_m_behring/book-scaffold-fixture",
+  "description": "Minimal Astro consumer used by package/tests/visual/ Playwright suite. Mirrors a real academic-profile book at the smallest viable surface so the visual regression CI exercises ChapterHeader, .chapter-meta rendering, and the chapter route end-to-end.",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "BOOK_PROFILE=academic astro build",
+    "preview": "BOOK_PROFILE=academic astro preview --host 127.0.0.1 --port 4173"
+  },
+  "dependencies": {
+    "@brandon_m_behring/book-scaffold-astro": "*",
+    "@astrojs/mdx": "^5.0.3",
+    "@astrojs/preact": "^5.1.1",
+    "astro": "^6.1.7",
+    "preact": "^10.29.1"
+  }
+}

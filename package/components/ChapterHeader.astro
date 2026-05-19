@@ -9,9 +9,15 @@
  * part, status, companion artifacts) appears in its place.
  *
  * v3.1.0 — academic flavor: Roman-numeral part labels, StatusBadge
- * component, and an optional companion-artifacts block matching v2.0's
- * hand-rolled academic ChapterHeader (verbatim restore for content density
- * parity at narrow viewports).
+ * component, and an optional companion-artifacts block.
+ *
+ * v3.2.0 — companions refactored from sibling <aside> to inline <span>
+ * elements inside the existing .chapter-meta flex row. v3.1.0 shipped
+ * <aside class="chapter-companions"> with no CSS; UA-default <ul> block
+ * layout added ~100px height at <=1280px, producing a uniform vertical
+ * pixel shift on all academic chapters. Inline rendering eliminates the
+ * extra block by construction. The data-companion attribute on each
+ * inline span preserves introspection.
  */
 import type { CollectionEntry } from 'astro:content';
 import { getFreshness, freshnessLabel } from '../src/lib/freshness';
@@ -92,13 +98,14 @@ const volatility = typeof d.volatility === 'string' ? d.volatility : null;
 // generic basename strip so any book whose render-notebooks output lands
 // under public/notebooks/ gets a correct deep link (v2.0 hardcoded a
 // post_transformers-specific prefix; v3.1.0 generalizes).
-const hasCompanions =
-  hasAcademicMeta &&
-  (typeof d.code_path === 'string' ||
-    typeof d.tests_path === 'string' ||
-    typeof d.notebook_path === 'string');
+//
+// v3.2.0: each companion renders as an inline <span class="chapter-companion">
+// inside .chapter-meta — no sibling <aside>, no <ul>, no "Companion artifacts:"
+// label. Zero added vertical height vs v2.0.
+const codePath = hasAcademicMeta && typeof d.code_path === 'string' ? d.code_path : null;
+const testsPath = hasAcademicMeta && typeof d.tests_path === 'string' ? d.tests_path : null;
 const notebookHtmlPath =
-  typeof d.notebook_path === 'string'
+  hasAcademicMeta && typeof d.notebook_path === 'string'
     ? `/notebooks/${(d.notebook_path as string)
         .replace(/^.*\//, '')
         .replace(/\.ipynb$/, '')}.html`
@@ -126,32 +133,24 @@ const notebookHtmlPath =
       </span>
     )}
     {updated && <span>Updated {formatDate(updated)}</span>}
+    {codePath && (
+      <span class="chapter-companion" data-companion="code">
+        <CodeRef path={codePath} />
+      </span>
+    )}
+    {testsPath && (
+      <span class="chapter-companion" data-companion="tests">
+        <CodeRef path={testsPath} />
+      </span>
+    )}
+    {notebookHtmlPath && (
+      <span class="chapter-companion" data-companion="notebook">
+        <a href={notebookHtmlPath}>Notebook</a>
+      </span>
+    )}
   </div>
   <h1>{title}</h1>
   {description && <p class="chapter-description">{description}</p>}
-
-  {hasCompanions && (
-    <aside class="chapter-companions">
-      <strong>Companion artifacts:</strong>
-      <ul>
-        {typeof d.code_path === 'string' && (
-          <li>
-            Implementation: <CodeRef path={d.code_path as string} />
-          </li>
-        )}
-        {typeof d.tests_path === 'string' && (
-          <li>
-            Tests: <CodeRef path={d.tests_path as string} />
-          </li>
-        )}
-        {notebookHtmlPath && (
-          <li>
-            Notebook: <a href={notebookHtmlPath}>{notebookHtmlPath}</a>
-          </li>
-        )}
-      </ul>
-    </aside>
-  )}
 
   {hasToolsMeta && volatility && (
     <div class="chapter-badge-row">

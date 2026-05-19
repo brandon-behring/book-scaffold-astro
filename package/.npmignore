@@ -1,0 +1,13 @@
+# Tests + visual-regression fixture: dev-only, never ship to consumers.
+# Note: package.json's `files` allowlist already excludes everything not
+# listed there; this .npmignore is belt-and-suspenders for any future
+# editor that uses .npmignore as the authoritative signal.
+tests/
+diffs/
+visual-runs.*
+
+# Local editor / OS detritus
+.DS_Store
+*.log
+.env
+.env.local

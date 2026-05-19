@@ -38,6 +38,29 @@
   font-size: 0.75em;
 }
 
+/* Inline companion-artifact chips inside .chapter-meta.
+ * v3.2.0: structural inline rendering. Previous v3.1.0 emitted a sibling
+ * <aside class="chapter-companions"><ul>...</ul></aside> with no CSS
+ * coverage; UA-default block layout added ~100px height at <=1280px,
+ * producing a uniform vertical pixel shift on academic chapter pages
+ * vs the v2.0 baseline. The inline span here adds zero block height by
+ * construction; styling matches the surrounding .chapter-meta spans. */
+.chapter-companion {
+  font-family: var(--font-code);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.chapter-companion a,
+.chapter-companion code {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dotted var(--color-border);
+}
+.chapter-companion a:hover {
+  color: var(--color-link);
+  border-bottom-style: solid;
+}
+
 /* Volatility + tool badges: reuse .tool-badge from callouts.css */
 .volatility-badge {
   display: inline-block;
