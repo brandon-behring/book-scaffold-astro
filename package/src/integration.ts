@@ -29,23 +29,25 @@ const ALWAYS_ON_STYLES = [
 
 const TOOLS_ONLY_STYLES = ['convergence.css', 'tool-filter.css'] as const;
 
-// Default routes that work for any profile: /references (bibliography
-// renders from src/data/references.json built by `book-scaffold build-bib`;
-// degrades to empty list if missing) and /search (Pagefind UI; works for
-// any content).
+// Default routes that work for any profile:
+//   /references  — bibliography renders from src/data/references.json
+//                  (built by `book-scaffold build-bib`; empty if missing)
+//   /search      — Pagefind UI; works for any content
+//   /print       — Paged.js entrypoint; ChapterHeader is schema-agnostic since alpha.5
 const DEFAULT_ROUTES_ALL = [
   { pattern: '/references', file: 'references.astro' },
   { pattern: '/search', file: 'search.astro' },
+  { pattern: '/print', file: 'print.astro' },
 ] as const;
 
-// Tools-profile-only routes. The shipped chapters/print/convergence pages
-// render ChapterHeader, which reads volatility / last_verified / tools_compared
-// from the tools chapter schema. Academic books that want these pages
-// provide their own (the v2.0 convention — see post_transformers/guides/web/).
-// A later alpha will ship academic-flavored versions and make these unconditional.
+// Tools-profile-only routes. The shipped chapters + convergence pages read
+// tools-specific fields (volatility, tools_compared) at the page level —
+// ChapterHeader fix alone doesn't help. Academic books that want these
+// pages provide their own (the v2.0 convention — see
+// post_transformers/guides/web/). Promotion to DEFAULT_ROUTES_ALL needs
+// academic-flavored versions of those pages, not just the header.
 const DEFAULT_ROUTES_TOOLS = [
   { pattern: '/chapters', file: 'chapters.astro' },
-  { pattern: '/print', file: 'print.astro' },
   { pattern: '/convergence', file: 'convergence.astro' },
 ] as const;
 

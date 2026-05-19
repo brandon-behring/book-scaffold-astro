@@ -1,7 +1,7 @@
 {
   "name": "@brandon_m_behring/book-scaffold-astro",
   "description": "Astro 6 + MDX toolkit for long-form technical books. Profile-aware (academic / tools / minimal); ships Tufte typography, KaTeX, BibTeX citations, Pagefind, Cloudflare Workers deploy. See PACKAGE_DESIGN.md for the API contract.",
-  "version": "3.0.0-alpha.4",
+  "version": "3.0.0-alpha.5",
   "type": "module",
   "license": "MIT",
   "author": "Brandon Behring",
@@ -40,6 +40,7 @@
       "types": "./dist/schemas.d.ts",
       "import": "./dist/schemas.mjs"
     },
+    "./package.json": "./package.json",
     "./components/CaseStudy.astro": "./components/CaseStudy.astro",
     "./components/ChapterHeader.astro": "./components/ChapterHeader.astro",
     "./components/ChapterNav.astro": "./components/ChapterNav.astro",
@@ -109,7 +110,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && rm -f dist/types-*.d.ts",
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {

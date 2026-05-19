@@ -1,13 +1,16 @@
 ---
 /**
  * ChapterHeader — renders the metadata block at the top of every chapter.
- * Surfaces provenance signals the LaTeX book conveyed implicitly:
- *   - Part + chapter number (position in the book)
- *   - Volatility class (freshness calibration for the reader)
- *   - Tools compared (scope signal)
- *   - Last verified date (how stale are the claims?)
  *
- * Driven entirely from the chapter's frontmatter (see content.config.ts).
+ * Schema-agnostic: the package supports two profile schemas (academic and
+ * tools), so this component renders only the fields that are present on
+ * the chapter data. Tools-profile metadata (volatility, last_verified,
+ * tools_compared) appears when defined; academic-profile metadata (week,
+ * status) appears in its place.
+ *
+ * Use a chapter card's metadata to calibrate how much trust to place in
+ * its specific claims — stable principles age slowly; feature surfaces
+ * age fast.
  */
 import type { CollectionEntry } from 'astro:content';
 import { getFreshness, freshnessLabel } from '../src/lib/freshness';
@@ -17,45 +20,97 @@ interface Props {
 }
 const { data } = Astro.props;
 
-function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+// Widen for cross-schema field probing. The consumer's content.config.ts
+// resolves `data` to exactly one of the two schemas at build time; this
+// runtime probe handles either without crashing.
+const d = data as Record<string, unknown>;
+
+const hasToolsMeta =
+  typeof d.volatility === 'string' &&
+  d.last_verified instanceof Date &&
+  Array.isArray(d.tools_compared);
+
+const hasAcademicMeta =
+  typeof d.week === 'number' && typeof d.status === 'string';
+
+function formatDate(date: unknown): string {
+  return date instanceof Date ? date.toISOString().slice(0, 10) : '';
 }
 
-const freshness = getFreshness(data.last_verified, data.volatility);
-const freshnessText =
-  freshness.status === 'fresh'
+// Tools-profile freshness — only when all inputs are present + typed.
+const freshness =
+  hasToolsMeta && d.last_verified instanceof Date && typeof d.volatility === 'string'
+    ? getFreshness(d.last_verified, d.volatility as Parameters<typeof getFreshness>[1])
+    : null;
+
+const freshnessText = freshness
+  ? freshness.status === 'fresh'
     ? 'Fresh'
     : freshness.status === 'verify-soon'
       ? 'Verify soon'
-      : 'Stale';
+      : 'Stale'
+  : null;
+
+// Display strings, profile-tagged for clarity in markup.
+const partLabel = (() => {
+  const p = d.part;
+  if (typeof p === 'number') return `Part ${p}`;
+  if (typeof p === 'string' && p.length > 0) return `Part: ${p}`;
+  return null;
+})();
+const chapterNum =
+  typeof d.chapter === 'number' ? `Chapter ${d.chapter}` : null;
+const weekNum = typeof d.week === 'number' ? `Week ${d.week}` : null;
+const statusBadge =
+  typeof d.status === 'string' ? d.status.replace(/_/g, ' ') : null;
+const title = typeof d.title === 'string' ? d.title : '(untitled)';
+const description = typeof d.description === 'string' ? d.description : null;
+const toolsCompared = Array.isArray(d.tools_compared)
+  ? (d.tools_compared as string[])
+  : [];
+const lastVerified = d.last_verified instanceof Date ? d.last_verified : null;
+const updated = d.updated instanceof Date ? d.updated : null;
+const volatility = typeof d.volatility === 'string' ? d.volatility : null;
 ---
 <header class="chapter-header">
   <div class="chapter-meta">
-    <span>Part {data.part}</span>
-    <span>Chapter {data.chapter}</span>
-    <span>
-      Last verified {formatDate(data.last_verified)}
-      <span
-        class="freshness-badge"
-        data-status={freshness.status}
-        aria-label={freshnessLabel(freshness)}
-        title={freshnessLabel(freshness)}
-      >{freshnessText}</span>
-    </span>
-    {data.updated && <span>Updated {formatDate(data.updated)}</span>}
+    {partLabel && <span>{partLabel}</span>}
+    {chapterNum && <span>{chapterNum}</span>}
+    {weekNum && <span>{weekNum}</span>}
+    {statusBadge && (
+      <span class="status-badge" data-status={d.status as string}>
+        {statusBadge}
+      </span>
+    )}
+    {lastVerified && (
+      <span>
+        Last verified {formatDate(lastVerified)}
+        {freshness && freshnessText && (
+          <span
+            class="freshness-badge"
+            data-status={freshness.status}
+            aria-label={freshnessLabel(freshness)}
+            title={freshnessLabel(freshness)}
+          >{freshnessText}</span>
+        )}
+      </span>
+    )}
+    {updated && <span>Updated {formatDate(updated)}</span>}
   </div>
-  <h1>{data.title}</h1>
-  {data.description && <p class="chapter-description">{data.description}</p>}
-  <div class="chapter-badge-row">
-    <span class="chapter-badge-row-label">Volatility:</span>
-    <span class={`volatility-badge volatility-${data.volatility}`}>
-      {data.volatility}
-    </span>
-  </div>
-  {data.tools_compared.length > 0 && (
+  <h1>{title}</h1>
+  {description && <p class="chapter-description">{description}</p>}
+  {hasToolsMeta && volatility && (
+    <div class="chapter-badge-row">
+      <span class="chapter-badge-row-label">Volatility:</span>
+      <span class={`volatility-badge volatility-${volatility}`}>
+        {volatility}
+      </span>
+    </div>
+  )}
+  {hasToolsMeta && toolsCompared.length > 0 && (
     <div class="chapter-badge-row">
       <span class="chapter-badge-row-label">Tools compared:</span>
-      {data.tools_compared.map((t) => <span class="tool-badge">{t}</span>)}
+      {toolsCompared.map((t) => <span class="tool-badge">{t}</span>)}
     </div>
   )}
 </header>

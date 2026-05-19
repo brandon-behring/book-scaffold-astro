@@ -9,7 +9,10 @@ export default defineConfig({
     'lib/katex-macros': 'src/lib/katex-macros.ts',
   },
   format: ['esm'],
-  dts: true,
+  // dts.resolve inlines cross-entry types into each entry's .d.ts so tsup
+  // doesn't emit a shared `types-<hash>.d.ts` file that leaks into the
+  // published tarball.
+  dts: { resolve: true },
   outDir: 'dist',
   // Match the exports map (`./dist/index.mjs`, `./dist/lib/katex-macros.mjs`).
   outExtension: () => ({ js: '.mjs' }),
