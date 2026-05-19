@@ -1,25 +1,23 @@
 /**
- * @brandon_m_behring/book-scaffold-astro — public entry.
+ * @brandon_m_behring/book-scaffold-astro — main entry.
  *
- * See PACKAGE_DESIGN.md for the full API contract. Stable surface:
+ * Node-loadable: this file is imported by the consumer's `astro.config.mjs`
+ * which uses Node's default ESM loader. No `astro:` virtual modules here.
+ * For `defineBookSchemas` (which needs `astro:content`), import from the
+ * `/schemas` subpath which is only loaded inside Vite-processed
+ * `content.config.ts`. See PACKAGE_DESIGN.md §5.
+ *
+ * Stable surface (main entry):
  *   - defineBookConfig({ site, profile?, extraIntegrations?, extraStyles?, markdown? })
- *   - defineBookSchemas({ profile?, chaptersBase? })
  *   - bookScaffoldIntegration (used internally; exposed for advanced override)
  *   - BookProfile, BOOK_PROFILES, BookConfigError, resolveProfile
  *   - schema enum constants (academicParts, chapterStatus, toolSlugs, …)
+ *   - Raw Zod schemas (academicChapterSchema, toolsChapterSchema, …) for
+ *     consumers who want to compose without the defineBookSchemas helper.
+ *
+ * Stable surface (`/schemas` subpath, separate entry):
+ *   - defineBookSchemas({ profile?, chaptersBase? })
  */
-import { defineCollection } from 'astro:content';
-import { glob, file } from 'astro/loaders';
-
-import type { BookSchemasOptions } from './types.js';
-import { resolveProfile } from './types.js';
-import {
-  academicChapterSchema,
-  toolsChapterSchema,
-  sourcesSchema,
-  changelogSchema,
-  patternsSchema,
-} from './schemas.js';
 
 // ----- Public re-exports -----
 
@@ -33,6 +31,7 @@ export type {
 } from './types.js';
 export { BOOK_PROFILES, BookConfigError, resolveProfile } from './types.js';
 export {
+  // Enum arrays
   academicParts,
   chapterStatus,
   toolSlugs,
@@ -40,43 +39,10 @@ export {
   sourceTiers,
   changeKinds,
   patternCategories,
+  // Raw Zod schemas (no defineCollection wrapper — safe for any context)
+  academicChapterSchema,
+  toolsChapterSchema,
+  sourcesSchema,
+  changelogSchema,
+  patternsSchema,
 } from './schemas.js';
-
-// ----- defineBookSchemas (closed surface — Q5) -----
-
-/**
- * Returns the package's default content collections. Closed shape per Q5;
- * consumer extends via object spread and Zod `.extend()` (see PACKAGE_DESIGN.md §5).
- */
-export function defineBookSchemas(opts: BookSchemasOptions = {}) {
-  const profile = resolveProfile(opts.profile);
-  const chaptersBase = opts.chaptersBase ?? './src/content/chapters';
-
-  const chapters = defineCollection({
-    loader: glob({
-      // Exclude underscore-prefixed files (standard "hidden" convention).
-      pattern: ['**/*.{md,mdx}', '!**/_*'],
-      base: chaptersBase,
-    }),
-    schema: profile === 'academic' ? academicChapterSchema : toolsChapterSchema,
-  });
-
-  const sources = defineCollection({
-    loader: file('sources/manifest.yaml'),
-    schema: sourcesSchema,
-  });
-
-  const changelog = defineCollection({
-    loader: glob({ pattern: '*.yaml', base: './changelog/tools' }),
-    schema: changelogSchema,
-  });
-
-  const patterns = defineCollection({
-    loader: file('changelog/patterns.yaml'),
-    schema: patternsSchema,
-  });
-
-  return {
-    collections: { chapters, sources, changelog, patterns },
-  };
-}

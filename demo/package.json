@@ -1,14 +1,13 @@
 {
   "name": "@brandon_m_behring/book-scaffold-astro-demo",
-  "description": "In-repo Astro demo of @brandon_m_behring/book-scaffold-astro. Consumes the package via workspace link; lives as the v2.0 reference book for migration tests + dogfooding.",
+  "description": "In-repo Astro demo of @brandon_m_behring/book-scaffold-astro. Consumes the package via workspace link; serves as the v3.0 dogfood + smoke target.",
   "version": "3.0.0-alpha.0",
   "type": "module",
   "license": "MIT",
   "private": true,
   "scripts": {
-    "prebuild": "npm run build:assets && npm run validate",
-    "predev": "npm run build:assets",
-    "build:assets": "npm run build:bib && npm run build:figures && npm run build:notebooks",
+    "predev": "npm run build:bib --if-present",
+    "prebuild": "npm run build:bib --if-present && npm run validate --if-present",
     "build:bib": "book-scaffold build-bib",
     "build:figures": "book-scaffold build-figures",
     "build:notebooks": "book-scaffold render-notebooks",
@@ -18,6 +17,16 @@
     "preview": "astro preview"
   },
   "dependencies": {
-    "@brandon_m_behring/book-scaffold-astro": "*"
+    "@brandon_m_behring/book-scaffold-astro": "*",
+    "@astrojs/mdx": "^5.0.3",
+    "@astrojs/preact": "^5.1.1",
+    "astro": "^6.1.7",
+    "katex": "^0.16.11",
+    "preact": "^10.29.1",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0",
+    "@fontsource-variable/roboto": "^5.2.10",
+    "@fontsource-variable/source-code-pro": "^5.2.7",
+    "pagefind": "^1.5.2"
   }
 }

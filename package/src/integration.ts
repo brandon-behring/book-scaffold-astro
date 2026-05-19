@@ -1,15 +1,18 @@
 /**
  * bookScaffoldIntegration — the dual-purpose Astro Integration.
  *
- * 1. Injects profile-conditional CSS via `injectScript('page-ssr', …)`
- *    — confirmed by Phase A.5 spike (see
- *    `~/.claude/plans/poc-archive/v3-poc-outcome.md`).
- * 2. Injects default routes via `injectRoute` so the consumer's
- *    `src/pages/` can stay empty. Consumer wins by precedence if they
- *    create their own `src/pages/<route>.astro`.
+ * 1. Injects profile-conditional CSS via `injectScript('page-ssr', …)`.
+ *    Vite resolves the npm-package CSS specifiers inside the import
+ *    statements at consumer build time. Confirmed by Phase A.5 spike
+ *    (see ~/.claude/plans/poc-archive/v3-poc-outcome.md).
+ * 2. Injects default routes via `injectRoute`. Astro's routing resolver
+ *    expects an absolute filesystem path (or file: URL); npm-package
+ *    specifiers do NOT work here, so we compute the path via
+ *    `import.meta.url`.
  *
  * See PACKAGE_DESIGN.md §6.
  */
+import { fileURLToPath } from 'node:url';
 import type { AstroIntegration } from 'astro';
 import type { BookScaffoldIntegrationOptions } from './types.js';
 
@@ -26,16 +29,27 @@ const ALWAYS_ON_STYLES = [
 
 const TOOLS_ONLY_STYLES = ['convergence.css', 'tool-filter.css'] as const;
 
+// Default routes always include /chapters /references /print /search.
+// /convergence is tools-profile-only.
 const DEFAULT_ROUTES_ALL = [
-  { pattern: '/chapters', entrypoint: `${PACKAGE_NAME}/pages/chapters.astro` },
-  { pattern: '/references', entrypoint: `${PACKAGE_NAME}/pages/references.astro` },
-  { pattern: '/print', entrypoint: `${PACKAGE_NAME}/pages/print.astro` },
-  { pattern: '/search', entrypoint: `${PACKAGE_NAME}/pages/search.astro` },
+  { pattern: '/chapters', file: 'chapters.astro' },
+  { pattern: '/references', file: 'references.astro' },
+  { pattern: '/print', file: 'print.astro' },
+  { pattern: '/search', file: 'search.astro' },
 ] as const;
 
 const DEFAULT_ROUTES_TOOLS = [
-  { pattern: '/convergence', entrypoint: `${PACKAGE_NAME}/pages/convergence.astro` },
+  { pattern: '/convergence', file: 'convergence.astro' },
 ] as const;
+
+/**
+ * Resolve a page filename to an absolute filesystem path inside the
+ * package. tsup bundles this module into dist/index.mjs, so the pages
+ * live at `../pages/<file>` relative to the compiled output.
+ */
+function resolvePage(file: string): string {
+  return fileURLToPath(new URL(`../pages/${file}`, import.meta.url));
+}
 
 export function bookScaffoldIntegration(
   opts: BookScaffoldIntegrationOptions,
@@ -46,7 +60,9 @@ export function bookScaffoldIntegration(
     name: 'book-scaffold-astro',
     hooks: {
       'astro:config:setup': ({ injectScript, injectRoute }) => {
-        // 1. Style injection (Option α — Phase A.5 spike)
+        // 1. Style injection (Option α — Phase A.5 spike). Vite resolves
+        //    `@brandon_m_behring/book-scaffold-astro/styles/<X>.css` from
+        //    the consumer's node_modules at build time.
         const styles =
           profile === 'tools'
             ? [...ALWAYS_ON_STYLES, ...TOOLS_ONLY_STYLES, ...extraStyles]
@@ -56,14 +72,18 @@ export function bookScaffoldIntegration(
           injectScript('page-ssr', `import '${PACKAGE_NAME}/styles/${sheet}';`);
         }
 
-        // 2. Route injection (profile-conditional per D10)
+        // 2. Route injection (profile-conditional per D10). Absolute file
+        //    paths required — see resolvePage().
         const routes =
           profile === 'tools'
             ? [...DEFAULT_ROUTES_ALL, ...DEFAULT_ROUTES_TOOLS]
             : [...DEFAULT_ROUTES_ALL];
 
         for (const route of routes) {
-          injectRoute({ pattern: route.pattern, entrypoint: route.entrypoint });
+          injectRoute({
+            pattern: route.pattern,
+            entrypoint: resolvePage(route.file),
+          });
         }
       },
     },

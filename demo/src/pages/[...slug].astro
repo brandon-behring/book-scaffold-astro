@@ -9,12 +9,14 @@
  * the URL. E.g. `src/content/chapters/context-as-currency.mdx` → `/context-as-currency/`.
  */
 import type { GetStaticPaths } from 'astro';
-import { render } from 'astro:content';
-import { getAllChapters } from '../lib/chapters';
-import Chapter from '../layouts/Chapter.astro';
+import { getCollection, render } from 'astro:content';
+import Chapter from '@brandon_m_behring/book-scaffold-astro/layouts/Chapter.astro';
 
 export const getStaticPaths: GetStaticPaths = async () => {
-  const chapters = await getAllChapters();
+  const chapters = await getCollection(
+    'chapters',
+    (entry) => entry.data.draft !== true,
+  );
   return chapters.map((entry) => ({
     params: { slug: entry.id },
     props: { entry },

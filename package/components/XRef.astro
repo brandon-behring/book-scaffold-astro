@@ -14,10 +14,17 @@
  * Usage:
  *   By <XRef id="thm:w4:stability" />, the discretized eigenvalues …
  */
-import labels from '../data/labels.json';
-
 type LabelEntry = { href: string; display: string };
-const map = labels as Record<string, LabelEntry>;
+
+// Resolve labels.json from the consumer's project root (Vite resolves `/`
+// to project root, not the package). Missing file -> empty map -> [?id]
+// placeholders (silent degrade for dev ergonomics; validator catches at CI).
+const labelsModules = import.meta.glob<{ default: Record<string, LabelEntry> }>(
+  '/src/data/labels.json',
+  { eager: true },
+);
+const labelsModule = labelsModules['/src/data/labels.json'];
+const map = (labelsModule?.default ?? {}) as Record<string, LabelEntry>;
 
 interface Props {
   id: string;

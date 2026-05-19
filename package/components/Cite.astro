@@ -22,8 +22,6 @@
  *   The HiPPO theory <Cite key="gu2020hippo" /> shows that …
  *   See <Cite key="gu2024mamba" page="3" /> for the kernel decomposition.
  */
-import refs from '../data/references.json';
-
 type CslAuthor = { family?: string; given?: string; literal?: string };
 type CslEntry = {
   id: string;
@@ -32,7 +30,14 @@ type CslEntry = {
   title?: string;
 };
 
-const map = refs as Record<string, CslEntry>;
+// Resolve references.json from consumer's project root. Missing file -> empty
+// map -> any <Cite> throws below (strict per D3 — bibkeys must resolve at build).
+const refsModules = import.meta.glob<{ default: Record<string, CslEntry> }>(
+  '/src/data/references.json',
+  { eager: true },
+);
+const refsModule = refsModules['/src/data/references.json'];
+const map = (refsModule?.default ?? {}) as Record<string, CslEntry>;
 
 interface Props {
   key: string;

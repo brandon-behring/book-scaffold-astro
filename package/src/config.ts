@@ -5,7 +5,6 @@
  *
  * See PACKAGE_DESIGN.md §4.
  */
-import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import preact from '@astrojs/preact';
 import type { AstroUserConfig } from 'astro';
@@ -77,9 +76,15 @@ export async function defineBookConfig(
   void _extraStyles;
   void _markdown;
 
-  return defineConfig({
+  // defineConfig from 'astro/config' is documented as an identity function
+  // that only carries types; we skip it and assemble the AstroUserConfig
+  // directly. This sidesteps a generic-inference cascade where
+  // AstroUserConfig's Locales/SessionDriverName/FontProvider params don't
+  // thread through our wrapper without explicit type plumbing.
+  const config: AstroUserConfig = {
     ...rest,
     integrations,
     markdown,
-  });
+  } as AstroUserConfig;
+  return config;
 }

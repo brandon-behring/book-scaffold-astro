@@ -36,6 +36,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs"
     },
+    "./schemas": {
+      "types": "./dist/schemas.d.ts",
+      "import": "./dist/schemas.mjs"
+    },
     "./components/CaseStudy.astro": "./components/CaseStudy.astro",
     "./components/ChapterHeader.astro": "./components/ChapterHeader.astro",
     "./components/ChapterNav.astro": "./components/ChapterNav.astro",

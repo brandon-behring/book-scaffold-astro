@@ -10,9 +10,17 @@ export type BookProfile = 'academic' | 'tools' | 'minimal';
 
 export const BOOK_PROFILES = ['academic', 'tools', 'minimal'] as const;
 
-/** Options for `defineBookConfig`. See PACKAGE_DESIGN.md §4. */
-export interface BookConfigOptions
-  extends Omit<AstroUserConfig, 'integrations' | 'markdown'> {
+/**
+ * Options for `defineBookConfig`. See PACKAGE_DESIGN.md §4.
+ *
+ * Note on the index signature: `AstroUserConfig` carries generic
+ * parameters (`Locales`, `SessionDriverName`, fonts) that can't be
+ * threaded cleanly through a wrapper. Instead we type the package-
+ * specific fields strictly and allow arbitrary AstroUserConfig keys
+ * via the index signature — consumer types will lint clean but lose
+ * full IDE autocomplete on non-package fields. Acceptable trade.
+ */
+export interface BookConfigOptions {
   /** Required. Book's deployed origin (sitemap, canonical, Pagefind). */
   site: string;
   /**
@@ -30,6 +38,8 @@ export interface BookConfigOptions
   extraStyles?: string[];
   /** Optional. Spread-merged into the package-provided markdown config. */
   markdown?: AstroUserConfig['markdown'];
+  /** Escape hatch for any other AstroUserConfig field. */
+  [key: string]: unknown;
 }
 
 /** Options for `defineBookSchemas`. See PACKAGE_DESIGN.md §5. */
