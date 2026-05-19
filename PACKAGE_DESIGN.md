@@ -1,4 +1,4 @@
-# Package Design — `@brandon-behring/book-scaffold-astro` v3.0
+# Package Design — `@brandon_m_behring/book-scaffold-astro` v3.0
 
 > **Status**: design document for `book-scaffold-astro` v3.0 (npm package pivot).
 > **Date**: 2026-05-18.
@@ -48,8 +48,8 @@ Every API section includes signature + behavior + error cases + at least one cop
 | D3 | XRef strictness: validator-only (component keeps silent-degrade for dev ergonomics) |
 | D4 | Test framework: `node:test` built-in (zero new deps) |
 | D5 | Package boundary: thin consumer (package owns components, scripts, styles, default pages, recipes, KaTeX macros) |
-| D6 | Registry: public npm `@brandon-behring/book-scaffold-astro` |
-| D7 | Bootstrap UX: sibling CLI `npx @brandon-behring/create-book <name> --profile=…` |
+| D6 | Registry: public npm `@brandon_m_behring/book-scaffold-astro` |
+| D7 | Bootstrap UX: sibling CLI `npx @brandon_m_behring/create-book <name> --profile=…` |
 | D8 | Migration sequence: design → alpha → dogfood `post_transformers` → cut 3.0.0 → migrate remaining books |
 | D9 | Phase 0 spike before Phase B (DONE — Outcome A) |
 | D10 | Profile surfaces live in main package; conditional mounting |
@@ -76,8 +76,8 @@ D11 monorepo. Three workspaces, root coordinates.
 ```
 book-scaffold-astro/
   package.json              # workspaces: ["package", "create-book", "demo"]
-  package/                  # @brandon-behring/book-scaffold-astro  (this doc)
-  create-book/              # @brandon-behring/create-book          (Phase D)
+  package/                  # @brandon_m_behring/book-scaffold-astro  (this doc)
+  create-book/              # @brandon_m_behring/create-book          (Phase D)
   demo/                     # in-repo Astro demo via workspace link
 ```
 
@@ -268,13 +268,13 @@ export function defineBookConfig(opts: BookConfigOptions): AstroUserConfig;
 
 ```js
 // astro.config.mjs (academic book, default case — 2 lines)
-import { defineBookConfig } from '@brandon-behring/book-scaffold-astro';
+import { defineBookConfig } from '@brandon_m_behring/book-scaffold-astro';
 export default defineBookConfig({ site: 'https://my-book.example.com' });
 ```
 
 ```js
 // astro.config.mjs (with additional integrations + cross-profile callout opt-in)
-import { defineBookConfig } from '@brandon-behring/book-scaffold-astro';
+import { defineBookConfig } from '@brandon_m_behring/book-scaffold-astro';
 import sitemap from '@astrojs/sitemap';
 
 export default defineBookConfig({
@@ -365,7 +365,7 @@ Exact schema fields (verbatim from v2.0 `src/content.config.ts:83-177`, reproduc
 
 ```ts
 // src/content.config.ts
-import { defineBookSchemas } from '@brandon-behring/book-scaffold-astro';
+import { defineBookSchemas } from '@brandon_m_behring/book-scaffold-astro';
 export const { collections } = defineBookSchemas();
 ```
 
@@ -373,7 +373,7 @@ export const { collections } = defineBookSchemas();
 
 ```ts
 // src/content.config.ts (interview prep book with a glossary)
-import { defineBookSchemas } from '@brandon-behring/book-scaffold-astro';
+import { defineBookSchemas } from '@brandon_m_behring/book-scaffold-astro';
 import { defineCollection, z, file } from 'astro:content';
 
 const { collections: base } = defineBookSchemas();
@@ -393,7 +393,7 @@ export const collections = { ...base, glossary };
 
 ```ts
 // src/content.config.ts (academic book with extra interview_topic field)
-import { defineBookSchemas } from '@brandon-behring/book-scaffold-astro';
+import { defineBookSchemas } from '@brandon_m_behring/book-scaffold-astro';
 import { z } from 'astro:content';
 
 const { collections: base } = defineBookSchemas();
@@ -451,7 +451,7 @@ const styles = profile === 'tools'
 for (const sheet of styles) {
   injectScript(
     'page-ssr',
-    `import '@brandon-behring/book-scaffold-astro/styles/${sheet}';`
+    `import '@brandon_m_behring/book-scaffold-astro/styles/${sheet}';`
   );
 }
 
@@ -624,14 +624,14 @@ The complete consumer-side config for an academic book using v3.0:
 `astro.config.mjs` (2 lines):
 
 ```js
-import { defineBookConfig } from '@brandon-behring/book-scaffold-astro';
+import { defineBookConfig } from '@brandon_m_behring/book-scaffold-astro';
 export default defineBookConfig({ site: 'https://my-book.example.com' });
 ```
 
 `src/content.config.ts` (2 lines):
 
 ```ts
-import { defineBookSchemas } from '@brandon-behring/book-scaffold-astro';
+import { defineBookSchemas } from '@brandon_m_behring/book-scaffold-astro';
 export const { collections } = defineBookSchemas();
 ```
 
@@ -649,7 +649,7 @@ BOOK_TITLE=My Book
   "name": "my-book",
   "type": "module",
   "dependencies": {
-    "@brandon-behring/book-scaffold-astro": "^3.0.0",
+    "@brandon_m_behring/book-scaffold-astro": "^3.0.0",
     "astro": "^6.1.7",
     "@astrojs/mdx": "^5.0.3",
     "@astrojs/preact": "^5.1.1",
@@ -677,11 +677,11 @@ part: foundations
 title: Hello world
 status: implemented
 ---
-import Theorem  from '@brandon-behring/book-scaffold-astro/components/Theorem.astro';
-import Cite     from '@brandon-behring/book-scaffold-astro/components/Cite.astro';
-import XRef     from '@brandon-behring/book-scaffold-astro/components/XRef.astro';
-import Figure   from '@brandon-behring/book-scaffold-astro/components/Figure.astro';
-import NoteBox  from '@brandon-behring/book-scaffold-astro/components/NoteBox.astro';
+import Theorem  from '@brandon_m_behring/book-scaffold-astro/components/Theorem.astro';
+import Cite     from '@brandon_m_behring/book-scaffold-astro/components/Cite.astro';
+import XRef     from '@brandon_m_behring/book-scaffold-astro/components/XRef.astro';
+import Figure   from '@brandon_m_behring/book-scaffold-astro/components/Figure.astro';
+import NoteBox  from '@brandon_m_behring/book-scaffold-astro/components/NoteBox.astro';
 
 # Chapter 1 — Hello world
 
@@ -772,7 +772,7 @@ Add `package/dist/` (generated artifact; rebuilt on every publish).
 
 **RESOLVED 2026-05-18** — Option α confirmed by Phase A.5 spike. See `~/.claude/plans/poc-archive/v3-poc-outcome.md` and §6 of this doc.
 
-Mechanism: `bookScaffoldIntegration` calls `injectScript('page-ssr', "import '@brandon-behring/book-scaffold-astro/styles/<name>.css';")` for each resolved CSS basename in the profile's list (plus `extraStyles`). Astro's Vite resolver follows `package.json#exports` for the CSS subpaths; the rules land in the consumer's built `<head>` with zero CSS imports in `astro.config.mjs`.
+Mechanism: `bookScaffoldIntegration` calls `injectScript('page-ssr', "import '@brandon_m_behring/book-scaffold-astro/styles/<name>.css';")` for each resolved CSS basename in the profile's list (plus `extraStyles`). Astro's Vite resolver follows `package.json#exports` for the CSS subpaths; the rules land in the consumer's built `<head>` with zero CSS imports in `astro.config.mjs`.
 
 Option β (consumer side-effect imports CSS in `astro.config.mjs`) was the fallback if Option α failed. Not needed.
 
@@ -793,10 +793,10 @@ npm pack --dry-run         # lists every file in the tarball
 npm pack && tar -tzf brandon-behring-book-scaffold-astro-*.tgz | head -50
 
 # 4. First alpha
-npm publish --tag alpha    # @brandon-behring/book-scaffold-astro@3.0.0-alpha.0
+npm publish --tag alpha    # @brandon_m_behring/book-scaffold-astro@3.0.0-alpha.0
 
 # 5. Verify the registry
-npm view @brandon-behring/book-scaffold-astro versions
+npm view @brandon_m_behring/book-scaffold-astro versions
 ```
 
 ### End-to-end smoke (run after first alpha)
@@ -806,17 +806,17 @@ npm view @brandon-behring/book-scaffold-astro versions
 mkdir -p /tmp/v3-smoke && cd /tmp/v3-smoke
 npm init -y
 npm install astro@^6.1.7 @astrojs/mdx@^5 @astrojs/preact@^5 preact@^10
-npm install @brandon-behring/book-scaffold-astro@alpha
+npm install @brandon_m_behring/book-scaffold-astro@alpha
 npm install katex@^0.16 rehype-katex@^7 remark-math@^6   # academic only
 
 mkdir -p src/content/chapters
 echo "BOOK_PROFILE=academic" > .env
 cat > astro.config.mjs <<'EOF'
-import { defineBookConfig } from '@brandon-behring/book-scaffold-astro';
+import { defineBookConfig } from '@brandon_m_behring/book-scaffold-astro';
 export default defineBookConfig({ site: 'https://example.invalid' });
 EOF
 cat > src/content.config.ts <<'EOF'
-import { defineBookSchemas } from '@brandon-behring/book-scaffold-astro';
+import { defineBookSchemas } from '@brandon_m_behring/book-scaffold-astro';
 export const { collections } = defineBookSchemas();
 EOF
 cat > src/content/chapters/test.mdx <<'EOF'
@@ -826,7 +826,7 @@ part: foundations
 title: Smoke test
 status: scaffolded
 ---
-import NoteBox from '@brandon-behring/book-scaffold-astro/components/NoteBox.astro';
+import NoteBox from '@brandon_m_behring/book-scaffold-astro/components/NoteBox.astro';
 <NoteBox title="Hello">It builds.</NoteBox>
 EOF
 
@@ -883,7 +883,7 @@ Phase B follow-ups (low-risk implementation details; not architecture-changing):
 
 Open at the package-publishing level (handled at Phase B start):
 
-- npm scope claim for `@brandon-behring` (free for individual users; first publish auto-creates).
+- npm scope claim for `@brandon_m_behring` (free for individual users; first publish auto-creates).
 - `npm whoami` returning `ENEEDAUTH` — user action: `npm adduser`.
 
 ---
@@ -909,7 +909,7 @@ Mirrors the [[runpod-deploy-consumer-feedback]] pattern proven across `runpod-de
 ```
 **Section**: PACKAGE_DESIGN.md §<N>
 **Consumer**: <repo name>
-**Package version**: <`@brandon-behring/book-scaffold-astro@x.y.z`>
+**Package version**: <`@brandon_m_behring/book-scaffold-astro@x.y.z`>
 **Astro version**: <`astro@x.y.z`>
 
 **What the doc says**:
