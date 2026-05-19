@@ -7,11 +7,19 @@
  *   - Design tokens, baseline typography, Tufte layout
  *   - FOUC-prevention script for dark mode (reads localStorage before paint)
  *   - Meta tags for viewport, color-scheme, generator
+ *   - Optional left chapter-nav Sidebar (showSidebar prop; default true)
  *
  * Props:
  *   title       — document title (required)
  *   description — meta description (optional; used by search and social)
  *   lang        — html lang attribute (default: en)
+ *   showSidebar — render the left chapter-navigation sidebar (default: true).
+ *                 Set false for the landing page or any full-bleed surface.
+ *                 Below 1024px the sidebar is auto-hidden via CSS regardless.
+ *
+ * Tools chrome (ToolFilter, VersionSelector): only mounted when
+ * BOOK_PROFILE !== 'academic'. Academic-profile books get no JS islands
+ * in the chrome row (search + theme toggle only).
  *
  * Usage:
  *   ---
@@ -39,14 +47,19 @@ import '../styles/convergence.css';
 import '../styles/print.css';
 import VersionSelector from '../components/VersionSelector';
 import ToolFilter from '../components/ToolFilter';
+import Sidebar from '../components/Sidebar.astro';
+
+const profile = import.meta.env.BOOK_PROFILE ?? 'minimal';
+const showToolsChrome = profile !== 'academic';
 
 interface Props {
   title: string;
   description?: string;
   lang?: string;
+  showSidebar?: boolean;
 }
 
-const { title, description, lang = 'en' } = Astro.props;
+const { title, description, lang = 'en', showSidebar = true } = Astro.props;
 ---
 
 <!doctype html>
@@ -74,8 +87,8 @@ const { title, description, lang = 'en' } = Astro.props;
   </head>
   <body>
     <div class="chrome-buttons">
-      <ToolFilter client:idle />
-      <VersionSelector client:idle />
+      {showToolsChrome && <ToolFilter client:idle />}
+      {showToolsChrome && <VersionSelector client:idle />}
       <a
         href="/search/"
         class="chrome-button"
@@ -95,7 +108,14 @@ const { title, description, lang = 'en' } = Astro.props;
         <span class="theme-toggle-icon dark-icon" aria-hidden="true">☾</span>
       </button>
     </div>
-    <slot />
+    {showSidebar ? (
+      <div class="layout-with-sidebar">
+        <Sidebar />
+        <main class="layout-main"><slot /></main>
+      </div>
+    ) : (
+      <slot />
+    )}
     <script is:inline>
       (function () {
         var btn = document.getElementById('theme-toggle');

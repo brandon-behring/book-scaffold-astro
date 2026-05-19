@@ -1,0 +1,268 @@
+---
+/**
+ * Sidebar — left-pinned chapter navigation.
+ *
+ * Profile-aware: reads BOOK_PROFILE to decide how to group + sort.
+ *   academic: groups by part (foundations / ssm-core / ...), sorts by week
+ *   tools/minimal: groups by part (numeric 0-10), sorts by chapter
+ *
+ * Rendered by Base.astro when `showSidebar` is true (default).
+ * Hidden below 1024px (`@media (max-width: 64rem)` in layout.css) —
+ * mobile gets single-column chapter content with no nav (user reaches
+ * the chapter index via /chapters/).
+ *
+ * Visual: ~280px wide, sticky to top, scrollable independently of main.
+ * Site title at top doubles as a "home" link.
+ *
+ * Customize: edit the `siteTitle` / `siteSubtitle` strings below or pass
+ * them in as Astro.props from Base.astro if you want per-page overrides.
+ */
+import { getCollection } from 'astro:content';
+
+const profile = import.meta.env.BOOK_PROFILE ?? 'minimal';
+const siteTitle = 'Book';
+const siteSubtitle = 'A scaffold-astro book';
+
+// Academic profile: part is a string enum.
+const ACADEMIC_PART_ORDER = [
+  'foundations',
+  'ssm-core',
+  'beyond-ssm',
+  'integration',
+  'synthesis',
+] as const;
+const ACADEMIC_PART_LABEL: Record<string, string> = {
+  foundations: 'Part I · Foundations',
+  'ssm-core': 'Part II · SSM Core',
+  'beyond-ssm': 'Part III · Beyond SSMs',
+  integration: 'Part IV · Integration',
+  synthesis: 'Part V · Synthesis',
+};
+
+const rawChapters = await getCollection('chapters', (entry) => !entry.data.draft);
+
+// Pre-shape chapters into render-ready rows. All TS casts happen here in
+// the frontmatter so the template stays free of type annotations (Astro's
+// JSX parser mis-tokenizes `as Type<X, Y>` inside expression containers).
+interface ChapterRow {
+  id: string;
+  partKey: string;
+  prefix: string;
+  title: string;
+  sortPart: number;
+  sortRank: number;
+}
+
+function rowOf(entry: typeof rawChapters[number]): ChapterRow {
+  const d = entry.data as Record<string, unknown>;
+  if (profile === 'academic') {
+    const week = (d.week as number) ?? 0;
+    return {
+      id: entry.id,
+      partKey: (d.part as string) ?? '',
+      prefix: `W${String(week).padStart(2, '0')}`,
+      title: (d.title as string) ?? entry.id,
+      sortPart: ACADEMIC_PART_ORDER.indexOf((d.part as typeof ACADEMIC_PART_ORDER[number]) ?? 'foundations'),
+      sortRank: week,
+    };
+  }
+  const partNum = (d.part as number) ?? 0;
+  const chapter = (d.chapter as number) ?? 0;
+  return {
+    id: entry.id,
+    partKey: String(partNum),
+    prefix: `Ch${chapter}`,
+    title: (d.title as string) ?? entry.id,
+    sortPart: partNum,
+    sortRank: chapter,
+  };
+}
+
+const rows: ChapterRow[] = rawChapters.map(rowOf).sort((a, b) => {
+  if (a.sortPart !== b.sortPart) return a.sortPart - b.sortPart;
+  return a.sortRank - b.sortRank;
+});
+
+// Group rows by part. Academic profile uses the ACADEMIC_PART_ORDER as
+// the canonical key sequence so empty parts still appear (in part headers
+// rather than gaps).
+const byPart = new Map<string, ChapterRow[]>();
+if (profile === 'academic') {
+  for (const part of ACADEMIC_PART_ORDER) byPart.set(part, []);
+}
+for (const r of rows) {
+  if (!byPart.has(r.partKey)) byPart.set(r.partKey, []);
+  byPart.get(r.partKey)!.push(r);
+}
+
+const currentPath = Astro.url.pathname;
+function isCurrent(id: string): boolean {
+  return currentPath === `/chapters/${id}/` || currentPath === `/chapters/${id}`;
+}
+
+function partLabel(key: string): string {
+  if (profile === 'academic') return ACADEMIC_PART_LABEL[key] ?? key;
+  return `Part ${key}`;
+}
+---
+
+<aside class="sidebar" aria-label="Chapter navigation">
+  <div class="sidebar-inner">
+    <a href="/" class="sidebar-home">
+      <strong>{siteTitle}</strong>
+      <span class="sidebar-subtitle">{siteSubtitle}</span>
+    </a>
+
+    <nav class="sidebar-nav">
+      <a
+        href="/chapters/"
+        class={`sidebar-link sidebar-link-index ${currentPath === '/chapters/' ? 'is-current' : ''}`}
+      >
+        All chapters
+      </a>
+      {profile === 'academic' && (
+        <a
+          href="/references/"
+          class={`sidebar-link sidebar-link-index ${currentPath === '/references/' ? 'is-current' : ''}`}
+        >
+          References
+        </a>
+      )}
+
+      {Array.from(byPart.entries()).map(([part, list]) => list.length === 0 ? null : (
+        <section class="sidebar-part">
+          <h3 class="sidebar-part-heading">{partLabel(part)}</h3>
+          <ol class="sidebar-list">
+            {list.map((r) => (
+              <li>
+                <a
+                  href={`/chapters/${r.id}/`}
+                  class={`sidebar-link ${isCurrent(r.id) ? 'is-current' : ''}`}
+                >
+                  <span class="sidebar-week">{r.prefix}</span>
+                  <span class="sidebar-chapter-title">{r.title}</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ))}
+    </nav>
+  </div>
+</aside>
+
+<style>
+  .sidebar {
+    grid-area: sidebar;
+    border-right: 1px solid var(--color-border);
+    background: var(--color-bg-subtle);
+    font-size: var(--text-sm);
+  }
+  .sidebar-inner {
+    position: sticky;
+    top: 0;
+    max-height: 100vh;
+    overflow-y: auto;
+    padding: var(--space-6) var(--space-4) var(--space-6) var(--space-5);
+  }
+
+  .sidebar-home {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    margin-bottom: var(--space-5);
+    line-height: 1.3;
+  }
+  .sidebar-home strong {
+    display: block;
+    font-size: var(--text-base);
+    color: var(--color-heading);
+  }
+  .sidebar-home .sidebar-subtitle {
+    display: block;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    margin-top: 0.15em;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .sidebar-link-index {
+    display: block;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--color-text);
+    font-weight: 500;
+    margin-bottom: 1px;
+    border-left: 2px solid transparent;
+  }
+  .sidebar-link-index:hover {
+    background: var(--color-bg);
+  }
+  .sidebar-link-index.is-current {
+    background: var(--warm-blue-tint);
+    border-left-color: var(--callout-info);
+  }
+
+  .sidebar-part {
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-3);
+  }
+  .sidebar-part:first-of-type {
+    border-top: 0;
+    padding-top: 0;
+  }
+  .sidebar-part-heading {
+    font-family: var(--font-code);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    margin: 0 0 var(--space-2) 0;
+    padding: 0 var(--space-3);
+  }
+
+  .sidebar-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .sidebar-list li {
+    margin: 0;
+  }
+  .sidebar-link {
+    display: grid;
+    grid-template-columns: 2.4em 1fr;
+    gap: var(--space-2);
+    align-items: baseline;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--color-text);
+    line-height: var(--leading-normal);
+    border-left: 2px solid transparent;
+  }
+  .sidebar-link:hover {
+    background: var(--color-bg);
+    text-decoration: none;
+  }
+  .sidebar-link.is-current {
+    background: var(--warm-blue-tint);
+    border-left-color: var(--callout-info);
+    font-weight: 500;
+  }
+  .sidebar-week {
+    font-family: var(--font-code);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+  }
+  .sidebar-chapter-title {
+    color: inherit;
+  }
+</style>

@@ -64,10 +64,36 @@
   --leading-body:    1.6;   /* target for long-form reading */
   --leading-relaxed: 1.75;
 
-  /* ===== Layout measures ===== */
-  --measure-main: 65ch;   /* main text column */
-  --measure-side: 28ch;   /* right-margin sidenote column (desktop) */
-  --breakpoint-narrow: 48rem;  /* ~768px — switches to mobile inline-flow asides */
+  /* ===== Layout measures =====
+   * Three-tier responsive measure tuned via Playwright comparison at
+   * 375 / 1280 / 1440 / 1920px viewports (post_transformers commit d9d085b).
+   *
+   * The classic 65ch Tufte measure feels narrow on wide desktops (≥1440px)
+   * where ~38% of the viewport sits as empty margin. The tiered approach
+   * keeps 65ch where it's typographically right (laptop) and expands to
+   * 80ch / 90ch on wider monitors without crossing the 90ch upper limit
+   * of comfortable line length.
+   *
+   * Tier values + utilization (verified):
+   *   default (≤1440px): 65ch + 28ch  → 70% at 1280px
+   *   1440px tier:       80ch + 24ch  → 69% (with sidebar: 89%)
+   *   1920px tier:       90ch + 26ch  → 57% (with sidebar: 72%)
+   *
+   * Sidenote column shrinks slightly at wider tiers (24ch / 26ch) to give
+   * main column more room while staying readable for short notes.
+   *
+   * Mobile (<48rem) handled separately in layout.css — sidenotes reflow
+   * inline; the tokens here don't apply below 48rem.
+   *
+   * Note: CSS custom properties cannot be used in @media expressions, so
+   * the breakpoints are encoded as literal rem values in the media queries
+   * (90rem ≈ 1440px, 120rem ≈ 1920px).
+   */
+  --measure-main: 65ch;        /* default: laptop-friendly typographic measure */
+  --measure-side: 28ch;        /* right-margin sidenote column (desktop) */
+  --breakpoint-narrow: 48rem;  /* ~768px — mobile fold (sidenotes inline) */
+  --breakpoint-wide: 90rem;    /* ~1440px — wide-desktop tier */
+  --breakpoint-ultrawide: 120rem; /* ~1920px — ultrawide tier */
 
   /* ===== Spacing scale ===== */
   --space-1:  0.25rem;
@@ -100,6 +126,22 @@
   --astro-code-token-function:          var(--warm-gold);
   --astro-code-token-punctuation:       var(--color-text-muted);
   --astro-code-token-link:              var(--color-link);
+}
+
+/* Tier 2: wide desktop (1440px+). Main 80ch, sidenote 24ch. */
+@media (min-width: 90rem) {
+  :root {
+    --measure-main: 80ch;
+    --measure-side: 24ch;
+  }
+}
+
+/* Tier 3: ultrawide (1920px+). Main 90ch, sidenote 26ch. */
+@media (min-width: 120rem) {
+  :root {
+    --measure-main: 90ch;
+    --measure-side: 26ch;
+  }
 }
 
 /* ===== Dark mode ==========================================================
