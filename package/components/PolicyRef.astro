@@ -1,0 +1,46 @@
+---
+/**
+ * PolicyRef — inline link to a repo-root policy document.
+ *
+ * v3.5.0 (research-portfolio profile, closes #6). Generic: any consumer can
+ * use it to cite ETHICS.md / SECURITY.md / CODE_OF_CONDUCT.md / LICENSE /
+ * GOVERNANCE.md without rebuilding the same "link + label" pattern per book.
+ *
+ * Usage:
+ *   <PolicyRef file="ETHICS.md" section="§1 Dual-use disclosure" label="ethics policy" />
+ *   <PolicyRef file="SECURITY.md" />                       // default label = filename
+ *   <PolicyRef file="GOVERNANCE.md" section="Quorum" />    // auto-anchor from section
+ *
+ * The href resolves to `/<file>` by default (assuming the consumer ships the
+ * markdown at site root via public/ or an Astro page). When `section` is set,
+ * a slugified anchor `#<slug>` is appended. The label defaults to the section
+ * name (if present) else the filename.
+ */
+interface Props {
+  file: string;
+  section?: string;
+  label?: string;
+  href?: string;     // explicit override (otherwise computed)
+}
+const { file, section, label, href } = Astro.props;
+
+const slugify = (s: string) =>
+  s.toLowerCase().replace(/[§\W]+/g, '-').replace(/^-+|-+$/g, '');
+
+const resolvedHref = href ?? `/${file}${section ? `#${slugify(section)}` : ''}`;
+const display = label ?? (section ? `${file} ${section}` : file);
+---
+<a class="policy-ref" href={resolvedHref}>{display}</a>
+
+<style>
+  .policy-ref {
+    font-family: var(--font-code);
+    font-size: 0.95em;
+    color: var(--color-link);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--color-link);
+  }
+  .policy-ref:hover {
+    border-bottom-style: solid;
+  }
+</style>

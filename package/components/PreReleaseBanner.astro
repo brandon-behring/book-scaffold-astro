@@ -1,0 +1,73 @@
+---
+/**
+ * PreReleaseBanner — site-wide banner declaring the book's release state.
+ *
+ * v3.5.0 (research-portfolio profile, closes #6). Generic primitive; any
+ * profile can use it but research portfolios are the primary use case
+ * (long-running research books pass through alpha → beta → rc states).
+ *
+ * Usage:
+ *   <PreReleaseBanner state="alpha" />
+ *   <PreReleaseBanner state="beta" dismissAt="v0.7.0" />
+ *   <PreReleaseBanner state="rc" message="Final review pass; please open issues." />
+ *   <PreReleaseBanner state="locked" />
+ *
+ * Drop inside a layout or chapter front-matter file. Common placement is the
+ * top of every page via a layout slot — see recipes/13.
+ */
+interface Props {
+  state: 'alpha' | 'beta' | 'rc' | 'locked';
+  dismissAt?: string;
+  message?: string;
+}
+const { state, dismissAt, message } = Astro.props;
+
+const DEFAULTS: Record<Props['state'], string> = {
+  alpha: 'This book is in alpha — expect breaking changes and partial coverage.',
+  beta: 'This book is in beta — most sections stable; minor changes possible.',
+  rc: 'Release candidate — finalizing content; substantive feedback welcome.',
+  locked: 'This release is frozen. See CHANGELOG for the next iteration.',
+};
+const text = message ?? DEFAULTS[state];
+const label = `${state.toUpperCase()}${dismissAt ? ` (until ${dismissAt})` : ''}`;
+---
+<aside class={`pre-release-banner pre-release-banner-${state}`} role="status" aria-live="polite">
+  <strong>{label}:</strong> {text}
+</aside>
+
+<style>
+  .pre-release-banner {
+    display: block;
+    margin: var(--space-2) 0 var(--space-4);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    border-left: var(--border-bar) solid;
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+  }
+  .pre-release-banner strong {
+    margin-right: var(--space-1);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .pre-release-banner-alpha {
+    background: var(--warm-rose-tint);
+    border-left-color: var(--warm-rose);
+    color: var(--warm-rose);
+  }
+  .pre-release-banner-beta {
+    background: var(--warm-gold-tint);
+    border-left-color: var(--warm-gold);
+    color: var(--warm-gold);
+  }
+  .pre-release-banner-rc {
+    background: var(--warm-blue-tint);
+    border-left-color: var(--warm-blue);
+    color: var(--warm-blue);
+  }
+  .pre-release-banner-locked {
+    background: var(--warm-green-tint);
+    border-left-color: var(--warm-green);
+    color: var(--warm-green);
+  }
+</style>

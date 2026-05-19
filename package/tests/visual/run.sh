@@ -39,6 +39,7 @@ done
 FIXTURES=(
   "fixture:4173:academic:index=/,chapter-full=/chapters/full/,chapter-minimal=/chapters/minimal/"
   "fixture-course-notes:4174:course-notes:index=/,chapter-example=/chapters/example/,print=/print/"
+  "fixture-research-portfolio:4175:research-portfolio:index=/,chapter-example=/chapters/example/,frontmatter-title=/frontmatter/title-page/"
 )
 WIDTHS=(768 1280 1440 1920)
 

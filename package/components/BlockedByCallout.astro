@@ -1,0 +1,82 @@
+---
+/**
+ * BlockedByCallout — declare that this chapter / section / experiment is
+ * blocked on an upstream dependency (e.g., a tool release, a paper
+ * publication, a hardware acquisition).
+ *
+ * v3.5.0 (research-portfolio profile, closes #6 + the cross-consumer
+ * dogfooding pattern). Research books often have "blocked by X" sections
+ * — explicit, dated, with optional unblock target.
+ *
+ * Usage:
+ *   <BlockedByCallout
+ *     upstream="book-scaffold-astro v3.5.0"
+ *     url="https://github.com/brandon-behring/book-scaffold-astro/issues/6"
+ *     reason="research-portfolio preset + 3 new components"
+ *     unblockedAt="2026-05-19"
+ *   >
+ *     Once the preset ships, this chapter's frontmatter migrates from the
+ *     hand-rolled schema to the upstream `research-portfolio` shape.
+ *   </BlockedByCallout>
+ *
+ * Slot content (optional) appears under the structured fields and is the
+ * place to put migration notes / workaround prose.
+ */
+interface Props {
+  upstream: string;
+  reason: string;
+  url?: string;
+  unblockedAt?: string;
+}
+const { upstream, reason, url, unblockedAt } = Astro.props;
+const upstreamLabel = url ? null : upstream;
+---
+<aside class="blocked-by-callout" role="note" aria-labelledby="blocked-by-h">
+  <h3 id="blocked-by-h">Blocked by upstream</h3>
+  <p>
+    <strong>
+      {url ? <a href={url} rel="external noopener">{upstream}</a> : upstreamLabel}
+    </strong>
+    {' — '}{reason}{unblockedAt && (<span class="unblocked-at"> (expected {unblockedAt})</span>)}.
+  </p>
+  <div class="blocked-by-body">
+    <slot />
+  </div>
+</aside>
+
+<style>
+  .blocked-by-callout {
+    display: block;
+    margin: var(--space-4) 0;
+    padding: var(--space-3) var(--space-4);
+    border-left: var(--border-bar) solid var(--warm-gold);
+    background: var(--warm-gold-tint);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+  }
+  .blocked-by-callout h3 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-base);
+    color: var(--warm-gold);
+    letter-spacing: 0.02em;
+  }
+  .blocked-by-callout p {
+    margin: var(--space-2) 0;
+    text-indent: 0;
+  }
+  .blocked-by-callout a {
+    color: var(--warm-gold);
+    text-decoration: underline;
+  }
+  .unblocked-at {
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+  .blocked-by-body :global(p:first-child) {
+    margin-top: 0;
+  }
+  .blocked-by-body :global(p:last-child) {
+    margin-bottom: 0;
+  }
+</style>

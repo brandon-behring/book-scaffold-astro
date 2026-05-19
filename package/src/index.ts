@@ -68,6 +68,8 @@ export {
   toolsChapterSchema,
   minimalChapterSchema,
   courseNotesChapterSchema,
+  researchPortfolioChapterSchema,        // v3.5.0 (#6)
+  sourceTiersResearch,                   // v3.5.0 — T1/T2/T3/T4 short form for research-portfolio sources
   sourcesSchema,
   changelogSchema,
   patternsSchema,
@@ -81,5 +83,6 @@ export type {
   ToolsChapter,
   MinimalChapter,
   CourseNotesChapter,
+  ResearchPortfolioChapter,    // v3.5.0 (#6)
   ChapterFor,
 } from './profiles/index.js';

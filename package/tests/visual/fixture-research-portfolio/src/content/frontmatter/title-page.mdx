@@ -1,0 +1,20 @@
+---
+slug: title-page
+title: "Research Portfolio Fixture (v3.5.0)"
+order: 1
+description: "Test fixture exercising the v3.5.0 research-portfolio preset + 4 new components + frontmatter route plumbing."
+---
+
+import AICollaborationDisclosure from '@brandon_m_behring/book-scaffold-astro/components/AICollaborationDisclosure.astro';
+
+# {frontmatter.title}
+
+Visual regression fixture for `@brandon_m_behring/book-scaffold-astro@3.5.0`.
+This frontmatter page renders via the auto-injected `/frontmatter/[slug]`
+route (issue #7 plumbing) under the research-portfolio preset (issue #6).
+
+<AICollaborationDisclosure
+  model="Claude Opus 4.7 (Anthropic)"
+  role="fixture author"
+  commit_attribution="Co-Authored-By: Claude <noreply@anthropic.com>"
+/>

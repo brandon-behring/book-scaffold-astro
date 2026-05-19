@@ -1,7 +1,7 @@
 {
   "name": "book-scaffold-astro-monorepo",
   "description": "Monorepo root for @brandon_m_behring/book-scaffold-astro and @brandon_m_behring/create-book. See package/ for the published toolkit, create-book/ for the bootstrap CLI, demo/ for the in-repo Astro reference implementation.",
-  "version": "3.4.0",
+  "version": "3.5.0",
   "type": "module",
   "private": true,
   "engines": {
@@ -12,7 +12,8 @@
     "create-book",
     "demo",
     "package/tests/visual/fixture",
-    "package/tests/visual/fixture-course-notes"
+    "package/tests/visual/fixture-course-notes",
+    "package/tests/visual/fixture-research-portfolio"
   ],
   "scripts": {
     "build": "npm run build --workspace package && npm run build --workspace demo",

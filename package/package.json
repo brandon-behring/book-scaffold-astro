@@ -1,7 +1,7 @@
 {
   "name": "@brandon_m_behring/book-scaffold-astro",
   "description": "Astro 6 + MDX toolkit for long-form technical books. Profile-aware (academic / tools / minimal); ships Tufte typography, KaTeX, BibTeX citations, Pagefind, Cloudflare Workers deploy. See PACKAGE_DESIGN.md for the API contract.",
-  "version": "3.4.0",
+  "version": "3.5.0",
   "type": "module",
   "license": "MIT",
   "author": "Brandon Behring",
@@ -41,6 +41,8 @@
       "import": "./dist/schemas.mjs"
     },
     "./package.json": "./package.json",
+    "./components/AICollaborationDisclosure.astro": "./components/AICollaborationDisclosure.astro",
+    "./components/BlockedByCallout.astro": "./components/BlockedByCallout.astro",
     "./components/CaseStudy.astro": "./components/CaseStudy.astro",
     "./components/ChapterHeader.astro": "./components/ChapterHeader.astro",
     "./components/ChapterNav.astro": "./components/ChapterNav.astro",
@@ -63,6 +65,8 @@
     "./components/OpenQuestion.astro": "./components/OpenQuestion.astro",
     "./components/PaperBox.astro": "./components/PaperBox.astro",
     "./components/PatternTimeline.astro": "./components/PatternTimeline.astro",
+    "./components/PolicyRef.astro": "./components/PolicyRef.astro",
+    "./components/PreReleaseBanner.astro": "./components/PreReleaseBanner.astro",
     "./components/Recovery.astro": "./components/Recovery.astro",
     "./components/ResultBox.astro": "./components/ResultBox.astro",
     "./components/Sidebar.astro": "./components/Sidebar.astro",
@@ -114,7 +118,8 @@
     "examples",
     "CLAUDE.md",
     "README.md",
-    "LATEX_TO_MDX_MAPPING.md"
+    "LATEX_TO_MDX_MAPPING.md",
+    "examples"
   ],
   "scripts": {
     "build": "tsup && rm -f dist/types-*.d.ts",

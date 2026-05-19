@@ -1,0 +1,79 @@
+---
+title: "Chapter N — Title goes here"
+slug: chN-short-slug
+chapter: 1
+part: 1
+week: 1                                # optional; omit if not on a weekly cadence
+status: prose_only                     # 'prose_only' | 'code_only' | 'implemented' | ...
+freshness: experimental-result         # 'experimental-result' | 'literature-survey' | 'theoretical' | 'reference'
+volatility: feature-surface            # 'stable-principle' | 'architectural-pattern' | 'feature-surface'
+tags:
+  - replace-me
+  - with
+  - real-tags
+sources:
+  - tier: T1
+    url: https://example.invalid/primary-source
+    label: Primary source (e.g., NVD CVE / arXiv paper / official spec)
+  - tier: T2
+    url: https://example.invalid/secondary
+    label: Secondary corroboration
+last_verified: 2026-05-19
+draft: true
+---
+
+import PreReleaseBanner from '@brandon_m_behring/book-scaffold-astro/components/PreReleaseBanner.astro';
+import PolicyRef from '@brandon_m_behring/book-scaffold-astro/components/PolicyRef.astro';
+import AICollaborationDisclosure from '@brandon_m_behring/book-scaffold-astro/components/AICollaborationDisclosure.astro';
+import BlockedByCallout from '@brandon_m_behring/book-scaffold-astro/components/BlockedByCallout.astro';
+import Theorem from '@brandon_m_behring/book-scaffold-astro/components/Theorem.astro';
+import Sidenote from '@brandon_m_behring/book-scaffold-astro/components/Sidenote.astro';
+import Cite from '@brandon_m_behring/book-scaffold-astro/components/Cite.astro';
+
+<PreReleaseBanner state="alpha" />
+
+## Introduction
+
+This chapter template exercises the four research-portfolio-specific components.
+Delete sections that don't apply to your chapter.
+
+## Section: a result with provenance
+
+Per <Cite key="example2024" />, the result holds under conditions $\Phi \subset \mathbb{R}^n$.
+<Sidenote>Sidenotes float to the right margin on desktop and inline below 768px.</Sidenote>
+
+<Theorem kind="theorem" n="1" name="Existence">
+Let $f: X \to Y$ be a map satisfying ... Then there exists ...
+</Theorem>
+
+## Section: policy + AI disclosure references
+
+See <PolicyRef file="ETHICS.md" section="§1 Dual-use disclosure" label="our ethics policy" />
+for the dual-use review process applied to this chapter.
+
+<AICollaborationDisclosure
+  model="Claude Opus 4.7 (Anthropic)"
+  role="research collaborator + writing collaborator"
+  commit_attribution="Co-Authored-By: Claude <noreply@anthropic.com>"
+>
+  All factual claims and numeric results in this chapter independently verified
+  by the human author; AI contributions reviewed line-by-line before merge.
+</AICollaborationDisclosure>
+
+## Section: an upstream blocker
+
+<BlockedByCallout
+  upstream="dataset X v2.0"
+  url="https://example.invalid/dataset-x/issues/42"
+  reason="full evaluation suite (current: smoke subset only)"
+  unblockedAt="2026-Q3"
+>
+  This section's numerical claims will be re-verified once dataset X v2.0 ships
+  with the missing splits. Current numbers are from the smoke subset and should
+  be treated as upper bounds.
+</BlockedByCallout>
+
+## Section: conclusion
+
+Wrap up here. Common pattern: 1-2 sentences summarizing the result, 1 sentence
+on limitations, 1 sentence pointing at the next chapter.

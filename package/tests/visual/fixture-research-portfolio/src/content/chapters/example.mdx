@@ -1,0 +1,72 @@
+---
+title: "Chapter 1 — Research portfolio fixture"
+slug: ch01-fixture
+chapter: 1
+part: 1
+status: prose_only
+freshness: experimental-result
+volatility: feature-surface
+tags:
+  - fixture
+  - v3.5.0
+  - all-components
+sources:
+  - tier: T1
+    url: https://example.invalid/primary
+    label: Primary source (fixture)
+  - tier: T2
+    url: https://example.invalid/secondary
+    label: Secondary corroboration (fixture)
+last_verified: 2026-05-19
+draft: false
+---
+
+import PreReleaseBanner from '@brandon_m_behring/book-scaffold-astro/components/PreReleaseBanner.astro';
+import PolicyRef from '@brandon_m_behring/book-scaffold-astro/components/PolicyRef.astro';
+import AICollaborationDisclosure from '@brandon_m_behring/book-scaffold-astro/components/AICollaborationDisclosure.astro';
+import BlockedByCallout from '@brandon_m_behring/book-scaffold-astro/components/BlockedByCallout.astro';
+
+<PreReleaseBanner state="alpha" dismissAt="v0.7.0" />
+
+## All 4 new components in one fixture
+
+This chapter exercises every v3.5.0 component end-to-end to keep the visual
+regression baselines covering them.
+
+### PolicyRef
+
+Inline policy citations: <PolicyRef file="ETHICS.md" section="§1 Dual-use disclosure" label="our ethics policy" />.
+Also bare: <PolicyRef file="SECURITY.md" />.
+
+### AICollaborationDisclosure
+
+<AICollaborationDisclosure
+  model="Claude Opus 4.7 (Anthropic)"
+  role="research collaborator + writing collaborator"
+  commit_attribution="Co-Authored-By: Claude <noreply@anthropic.com>"
+>
+  All factual claims independently verified by the human author.
+</AICollaborationDisclosure>
+
+### BlockedByCallout
+
+<BlockedByCallout
+  upstream="dataset X v2.0"
+  url="https://example.invalid/dataset-x/issues/42"
+  reason="full evaluation suite (current: smoke subset only)"
+  unblockedAt="2026-Q3"
+>
+  This section's numerical claims will be re-verified once dataset X v2.0 ships.
+</BlockedByCallout>
+
+### Body content
+
+Three short paragraphs follow to give the chapter non-trivial vertical extent
+so any visual regression in component rendering cascades visibly through the
+diff metric.
+
+A second paragraph. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+
+A third paragraph. Duis aute irure dolor in reprehenderit in voluptate velit
+esse cillum dolore eu fugiat nulla pariatur.

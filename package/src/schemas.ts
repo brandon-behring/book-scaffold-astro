@@ -102,6 +102,16 @@ export const toolsChapterSchema = z.object({
 export const minimalChapterSchema = toolsChapterSchema;
 
 /**
+ * Research-portfolio source tiers (v3.5.0, closes issue #6).
+ *
+ * Lighter shape than the tools-profile `sourceTiers` enum (`'T1-official'` etc.)
+ * — research portfolios cite primary sources inline per-chapter, so short
+ * `'T1'`/`'T2'` is more compact and readable. Semantics overlap (T1 = official
+ * primary, T2 = secondary, T3 = practitioner / community, T4 = conjecture).
+ */
+export const sourceTiersResearch = ['T1', 'T2', 'T3', 'T4'] as const;
+
+/**
  * Course-notes profile schema (v3.3.0, closes issue #4). Designed for
  * course-derived study notes (DLAI, Coursera, Manning, ...). Key fields:
  * - `course`/`instructor`/`source_url` — attribution
@@ -139,6 +149,87 @@ export const courseNotesChapterSchema = z.object({
   draft: z.boolean().default(false),
 });
 
+/**
+ * Research-portfolio profile schema (v3.5.0, closes issue #6).
+ *
+ * Union of academic + tools field shapes, modernized: uses `tags` (freeform
+ * string array) instead of `tools_compared` (CLI-enum, doesn't fit research
+ * content). Designed for research-portfolio books that need BOTH academic-
+ * style structure (week/part/status, math/BibTeX/Theorem support via the
+ * `katex: true` profile flag) AND tools-style provenance (volatility class,
+ * tier-tagged sources, last_verified freshness signal).
+ *
+ * Reference (forthcoming) consumer: prompt-injection-portfolio.
+ *
+ * Hierarchy fields are all optional — chapters can use academic-style
+ * (`week` + part-enum string) OR tools-style (`chapter` + part-number) OR
+ * minimal (just title). The route templates dispatch on which is set.
+ *
+ * Sources are STRUCTURED INLINE (each chapter cites primary sources directly)
+ * rather than referencing a sources collection — saves cross-file lookup +
+ * matches research-paper citation conventions. Tier shorthand T1/T2/T3/T4
+ * (per sourceTiersResearch) over the tools-profile long form.
+ */
+export const researchPortfolioChapterSchema = z.object({
+  // Identity
+  title: z.string().min(1),
+  slug: z.string().optional(),                 // explicit slug override (otherwise filename)
+  description: z.string().optional(),
+
+  // Hierarchy — accept either academic-style or tools-style; all optional.
+  // The academic 'part' field is a string enum; tools 'part' is a number.
+  // Use z.union to permit either type.
+  part: z.union([z.number().int().min(0).max(20), z.string()]).optional(),
+  week: z.number().int().min(0).max(99).optional(),
+  chapter: z.number().int().min(0).max(99).optional(),
+
+  // Academic-style status (optional for research-portfolio — books may track
+  // chapters as 'prose_only' / 'experimental-result' / etc.).
+  status: z
+    .enum([
+      'implemented',
+      'chapter_only',
+      'reading_only',
+      'prose_only',
+      'code_only',
+      'scaffolded',
+      'planned',
+    ])
+    .optional(),
+
+  // Research-portfolio specific: nature of the chapter's content.
+  // Distinct from academic's 'status' (which tracks authoring state) — this
+  // describes the EVIDENCE TYPE the chapter rests on.
+  freshness: z
+    .enum([
+      'experimental-result',   // primary data the author produced
+      'literature-survey',     // synthesis of others' work
+      'theoretical',           // analytical / mathematical argument
+      'reference',             // canonical material (definitions, taxonomy)
+    ])
+    .optional(),
+
+  // Provenance (tools-style — overlap with tools/course-notes profiles).
+  volatility: z.enum(volatilityLevels).optional(),
+  tags: z.array(z.string()).default([]),       // freeform; replaces tools_compared
+
+  // Structured inline sources with T1-T4 tiers.
+  sources: z
+    .array(
+      z.object({
+        tier: z.enum(sourceTiersResearch),
+        url: z.string().url(),
+        label: z.string().min(1),
+      }),
+    )
+    .default([]),
+
+  // Status + dates.
+  last_verified: z.date(),
+  updated: z.date().optional(),
+  draft: z.boolean().default(false),
+});
+
 // ===== Inferred chapter types — one per schema =====
 //
 // Exported here so per-profile modules can re-export under a common name
@@ -150,6 +241,7 @@ export type AcademicChapter = z.infer<typeof academicChapterSchema>;
 export type ToolsChapter = z.infer<typeof toolsChapterSchema>;
 export type MinimalChapter = z.infer<typeof minimalChapterSchema>;
 export type CourseNotesChapter = z.infer<typeof courseNotesChapterSchema>;
+export type ResearchPortfolioChapter = z.infer<typeof researchPortfolioChapterSchema>;
 
 // ===== Collateral collection schemas (tools-profile; always-defined) =====
 

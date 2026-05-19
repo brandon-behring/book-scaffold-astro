@@ -27,6 +27,7 @@ import {
   toolsChapterSchema,
   minimalChapterSchema,
   courseNotesChapterSchema,
+  researchPortfolioChapterSchema,
   sourcesSchema,
   changelogSchema,
   patternsSchema,
@@ -94,6 +95,7 @@ export function defineBookSchemas(opts: BookSchemasOptions = {}) {
   const schemaForProfile =
     profile === 'academic' ? academicChapterSchema
     : profile === 'course-notes' ? courseNotesChapterSchema
+    : profile === 'research-portfolio' ? researchPortfolioChapterSchema
     : profile === 'minimal' ? minimalChapterSchema
     : toolsChapterSchema;
 

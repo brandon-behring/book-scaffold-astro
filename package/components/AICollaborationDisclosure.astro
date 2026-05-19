@@ -1,0 +1,81 @@
+---
+/**
+ * AICollaborationDisclosure — render a structured AI-collaboration disclosure
+ * paragraph from props.
+ *
+ * v3.5.0 (research-portfolio profile, closes #6). Generic primitive.
+ * Research portfolios universally need to disclose AI involvement (per
+ * various norms); this component centralizes the rendering so consumers
+ * don't reinvent the disclosure block per book.
+ *
+ * Usage (props form — recommended):
+ *   <AICollaborationDisclosure
+ *     model="Claude Opus 4.7 + Sonnet 4.6 (Anthropic)"
+ *     role="research collaborator + writing collaborator"
+ *     commit_attribution="Co-Authored-By: Claude <noreply@anthropic.com>"
+ *   />
+ *
+ * Usage (YAML-driven — consumer loads via astro:content data collection):
+ *   ---
+ *   import disclosure from '../data/ai-collaboration.yaml';
+ *   ---
+ *   <AICollaborationDisclosure {...disclosure} />
+ *
+ * The YAML loader is consumer-side (not shipped) to avoid pulling a YAML
+ * dep into the scaffold; Astro consumers commonly use the `astro:content`
+ * file loader with `yaml()` or similar.
+ *
+ * Slots:
+ *   `default` — optional extra prose to append after the model/role line
+ *               (e.g. "All factual claims independently verified by …").
+ */
+interface Props {
+  model: string;
+  role: string;
+  commit_attribution?: string;
+}
+const { model, role, commit_attribution } = Astro.props;
+---
+<aside class="ai-collab-disclosure" role="note" aria-labelledby="ai-collab-h">
+  <h3 id="ai-collab-h">AI collaboration disclosure</h3>
+  <p>
+    This book was authored in collaboration with <strong>{model}</strong>, acting as <em>{role}</em>.
+  </p>
+  {commit_attribution && (
+    <p>
+      Commits attributed to the model carry the trailer
+      <code>{commit_attribution}</code>.
+    </p>
+  )}
+  <slot />
+</aside>
+
+<style>
+  .ai-collab-disclosure {
+    display: block;
+    margin: var(--space-6) 0;
+    padding: var(--space-3) var(--space-4);
+    border-left: var(--border-bar) solid var(--warm-plum);
+    background: var(--warm-plum-tint);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+  }
+  .ai-collab-disclosure h3 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-base);
+    color: var(--warm-plum);
+    letter-spacing: 0.02em;
+  }
+  .ai-collab-disclosure p {
+    margin: var(--space-2) 0;
+    text-indent: 0;
+  }
+  .ai-collab-disclosure code {
+    font-family: var(--font-code);
+    font-size: 0.95em;
+    background: var(--color-code-bg);
+    padding: 0.1em 0.4em;
+    border-radius: var(--radius-sm);
+  }
+</style>

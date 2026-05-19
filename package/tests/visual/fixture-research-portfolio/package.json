@@ -1,0 +1,18 @@
+{
+  "name": "@brandon_m_behring/book-scaffold-fixture-research-portfolio",
+  "description": "Visual regression fixture for the research-portfolio preset (v3.5.0, closes issue #6). Exercises the new union schema (academic + tools fields with `tags`-style modernization) + the 4 new components (PreReleaseBanner, PolicyRef, AICollaborationDisclosure, BlockedByCallout) + the frontmatter route (#7 plumbing) in one fixture.",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "BOOK_PRESET=research-portfolio astro build",
+    "preview": "BOOK_PRESET=research-portfolio astro preview --host 127.0.0.1 --port 4175"
+  },
+  "dependencies": {
+    "@brandon_m_behring/book-scaffold-astro": "*",
+    "@astrojs/mdx": "^5.0.3",
+    "@astrojs/preact": "^5.1.1",
+    "astro": "^6.1.7",
+    "preact": "^10.29.1"
+  }
+}

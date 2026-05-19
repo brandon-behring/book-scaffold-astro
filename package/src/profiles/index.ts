@@ -14,12 +14,14 @@ import { academicProfile, type AcademicChapter } from './academic.js';
 import { toolsProfile, type ToolsChapter } from './tools.js';
 import { minimalProfile, type MinimalChapter } from './minimal.js';
 import { courseNotesProfile, type CourseNotesChapter } from './course-notes.js';
+import { researchPortfolioProfile, type ResearchPortfolioChapter } from './research-portfolio.js';
 
 export const PROFILES = {
   academic: academicProfile,
   tools: toolsProfile,
   minimal: minimalProfile,
   'course-notes': courseNotesProfile,
+  'research-portfolio': researchPortfolioProfile,
 } as const;
 
 export type BookProfile = keyof typeof PROFILES;
@@ -39,7 +41,14 @@ export type ChapterFor<P extends BookProfile> =
   P extends 'tools' ? ToolsChapter :
   P extends 'minimal' ? MinimalChapter :
   P extends 'course-notes' ? CourseNotesChapter :
+  P extends 'research-portfolio' ? ResearchPortfolioChapter :
   never;
 
 // Re-export the inferred chapter types for consumer ergonomics.
-export type { AcademicChapter, ToolsChapter, MinimalChapter, CourseNotesChapter };
+export type {
+  AcademicChapter,
+  ToolsChapter,
+  MinimalChapter,
+  CourseNotesChapter,
+  ResearchPortfolioChapter,
+};
