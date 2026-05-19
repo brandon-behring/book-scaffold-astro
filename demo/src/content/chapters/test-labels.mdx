@@ -1,0 +1,20 @@
+---
+week: 4
+part: ssm-core
+title: Labels test chapter
+status: scaffolded
+---
+
+import Theorem from '@brandon_m_behring/book-scaffold-astro/components/Theorem.astro';
+import Figure from '@brandon_m_behring/book-scaffold-astro/components/Figure.astro';
+import ExampleBox from '@brandon_m_behring/book-scaffold-astro/components/ExampleBox.astro';
+
+# Labels test
+
+<Theorem id="w4:thm:stability" type="theorem">First theorem.</Theorem>
+
+<Figure id="w4:fig:phase-portrait" src="/figures/phase.svg" alt="phase portrait" />
+
+<Theorem id="w4:thm:convergence" type="theorem" label="Convergence (custom label)">Second theorem with override.</Theorem>
+
+<ExampleBox id="w4:ex:harmonic" title="Harmonic oscillator">A worked example.</ExampleBox>

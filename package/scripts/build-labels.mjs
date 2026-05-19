@@ -1,0 +1,209 @@
+#!/usr/bin/env node
+/**
+ * build-labels.mjs — emit src/data/labels.json for <XRef> resolution.
+ *
+ * Walks the consumer's `src/content/chapters/**\/*.mdx`, extracts each
+ * labelable component invocation (Theorem, Figure, Section, … — see
+ * `LABELABLE_TYPES` below), and assigns it a display string of the form
+ * `<Type> <chapter>.<n>` (e.g. `Theorem 4.2`), matching the LaTeX `\cref`
+ * convention. The resulting map is consumed by XRef.astro via
+ * `import.meta.glob('/src/data/labels.json', { eager: true })`.
+ *
+ * Per-chapter, per-type counter: each chapter resets the counter, so two
+ * chapters can both have `Theorem 1` without colliding. The chapter
+ * number comes from frontmatter:
+ *   - tools profile: `chapter` field (number).
+ *   - academic profile: `week` field (number).
+ *
+ * Slug used for the href = filename minus `.mdx`. The href shape mirrors
+ * the consumer's pages router: `/chapters/<slug>#<id>`. Academic books
+ * using `[...slug].astro` get the same shape since Astro slugifies
+ * filenames identically.
+ *
+ * Optional override:
+ *   <Theorem id="…" label="Custom display" />
+ *     → labels.json uses "Custom display" instead of the auto-counter.
+ *
+ * Usage:
+ *   node scripts/build-labels.mjs
+ *   book-scaffold build-labels
+ *
+ * Reads from cwd (the consumer's project root); writes
+ * `src/data/labels.json`. Creates `src/data/` if missing.
+ *
+ * Designed to run in <2 s on a medium book.
+ */
+import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
+import { resolve, join, basename, dirname } from 'node:path';
+
+const CHAPTERS_DIR = process.env.BOOK_CHAPTERS_DIR ?? 'src/content/chapters';
+const OUTPUT_PATH = process.env.BOOK_LABELS_OUT ?? 'src/data/labels.json';
+
+/** Component names that participate in cross-referencing. */
+const LABELABLE_TYPES = [
+  'Theorem',
+  'Figure',
+  'ExampleBox',
+  'ResultBox',
+  'NoteBox',
+  'CaseStudy',
+];
+
+/** Display-name prefix used when no `label` override is given. */
+const TYPE_DISPLAY = {
+  Theorem: 'Theorem',
+  Figure: 'Figure',
+  ExampleBox: 'Example',
+  ResultBox: 'Result',
+  NoteBox: 'Note',
+  CaseStudy: 'Case study',
+};
+
+// ===== Frontmatter parsing =====
+
+function parseFrontmatter(source) {
+  // Standard MDX/YAML frontmatter: `---\n…\n---`.
+  const m = source.match(/^---\n([\s\S]*?)\n---/);
+  if (!m) return {};
+  const fm = {};
+  for (const line of m[1].split('\n')) {
+    const kv = line.match(/^(\w+)\s*:\s*(.+?)\s*$/);
+    if (!kv) continue;
+    const [, key, raw] = kv;
+    // Strip quotes; coerce numeric scalars.
+    let val = raw.replace(/^["']|["']$/g, '');
+    if (/^-?\d+$/.test(val)) val = parseInt(val, 10);
+    fm[key] = val;
+  }
+  return fm;
+}
+
+function chapterNumberOf(frontmatter) {
+  // Tools profile uses `chapter`; academic uses `week`. Prefer chapter.
+  if (typeof frontmatter.chapter === 'number') return frontmatter.chapter;
+  if (typeof frontmatter.week === 'number') return frontmatter.week;
+  return null;
+}
+
+// ===== Component-invocation parsing =====
+
+/**
+ * Match opening tags of any labelable component, capturing the attrs blob.
+ * Conservative regex: only matches `<ComponentName ... />` or
+ * `<ComponentName ...>` (not closing tags, not self-references in prose).
+ */
+function buildTagRegex() {
+  const names = LABELABLE_TYPES.join('|');
+  return new RegExp(`<(${names})\\b([^>]*?)\\/?>`, 'g');
+}
+
+function extractAttr(attrsBlob, name) {
+  // `name="value"` or `name='value'` or `name={value}`.
+  const dq = attrsBlob.match(new RegExp(`${name}="([^"]*)"`));
+  if (dq) return dq[1];
+  const sq = attrsBlob.match(new RegExp(`${name}='([^']*)'`));
+  if (sq) return sq[1];
+  const ex = attrsBlob.match(new RegExp(`${name}=\\{([^}]*)\\}`));
+  if (ex) return ex[1].trim().replace(/^["'`]|["'`]$/g, '');
+  return null;
+}
+
+// ===== Filesystem walk =====
+
+async function walkChapters(dir) {
+  const out = [];
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch (err) {
+    if (err.code === 'ENOENT') return out;
+    throw err;
+  }
+  for (const e of entries) {
+    const path = join(dir, e.name);
+    if (e.isDirectory()) {
+      out.push(...(await walkChapters(path)));
+      continue;
+    }
+    if (!e.isFile()) continue;
+    if (!/\.mdx?$/.test(e.name)) continue;
+    if (e.name.startsWith('_')) continue; // hidden by convention
+    out.push(path);
+  }
+  return out;
+}
+
+// ===== Main =====
+
+async function main() {
+  const cwd = process.cwd();
+  const chaptersDir = resolve(cwd, CHAPTERS_DIR);
+  const files = await walkChapters(chaptersDir);
+
+  const labels = {};
+  const tagRegex = buildTagRegex();
+  let totalIds = 0;
+  let chaptersWithIds = 0;
+
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    const fm = parseFrontmatter(source);
+    const chapterNum = chapterNumberOf(fm);
+    const slug = basename(file).replace(/\.mdx?$/, '');
+
+    // Per-chapter counters reset for each file.
+    const counters = {};
+    let foundInChapter = 0;
+
+    for (const match of source.matchAll(tagRegex)) {
+      const [, type, attrs] = match;
+      const id = extractAttr(attrs, 'id');
+      if (!id) continue;
+
+      counters[type] = (counters[type] ?? 0) + 1;
+      foundInChapter += 1;
+      totalIds += 1;
+
+      const labelOverride = extractAttr(attrs, 'label');
+      const display =
+        labelOverride ??
+        (chapterNum != null
+          ? `${TYPE_DISPLAY[type]} ${chapterNum}.${counters[type]}`
+          : `${TYPE_DISPLAY[type]} ${counters[type]}`);
+
+      if (labels[id]) {
+        // Duplicate id — surface but don't fail; consumer's validator
+        // catches collisions with full diagnostic context.
+        process.stderr.write(
+          `build-labels: WARN duplicate id "${id}" (first in ` +
+            `${labels[id].href.split('#')[0]}, now in ${slug})\n`,
+        );
+      }
+      labels[id] = {
+        href: `/chapters/${slug}#${id}`,
+        display,
+      };
+    }
+
+    if (foundInChapter > 0) chaptersWithIds += 1;
+  }
+
+  // Emit deterministic output: keys sorted alphabetically.
+  const sorted = {};
+  for (const k of Object.keys(labels).sort()) sorted[k] = labels[k];
+
+  const outputPath = resolve(cwd, OUTPUT_PATH);
+  await mkdir(dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, JSON.stringify(sorted, null, 2) + '\n', 'utf8');
+
+  process.stdout.write(
+    `build-labels: ${totalIds} id${totalIds === 1 ? '' : 's'} across ` +
+      `${chaptersWithIds} chapter${chaptersWithIds === 1 ? '' : 's'} → ` +
+      `${OUTPUT_PATH}\n`,
+  );
+}
+
+main().catch((err) => {
+  process.stderr.write(`build-labels: fatal: ${err?.message ?? err}\n`);
+  process.exit(1);
+});
