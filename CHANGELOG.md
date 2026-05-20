@@ -2,6 +2,24 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [3.5.1] — 2026-05-19
+
+Patch release to put the post-v3.5.0 hygiene/build fixes behind a proper tag instead of leaving `v3.0` ahead of the latest release tag.
+
+### Fixed
+
+- Demo builds are reproducible from a fresh clone: the demo now explicitly uses the `academic` preset in Astro config, content schema config, and `book-scaffold validate`.
+- Restored the missing `demo/public/figures/phase.svg` fixture referenced by the demo label-validation chapter.
+- `package-lock.json` now matches the lock-step workspace release version.
+
+### Changed
+
+- `demo/src/data/references.json` is ignored as generated bibliography output.
+
+### Release policy
+
+- **D12 lock-step preserved**: `@brandon_m_behring/create-book@3.5.1` ships alongside the toolkit.
+
 ## [3.5.0] — 2026-05-19
 
 Closes the last open issue from the v3.3.0 cycle: [#6](https://github.com/brandon-behring/coffin/book-scaffold-astro/issues/6) — `research-portfolio` preset. Unblocks downstream [`prompt-injection-portfolio`](https://github.com/brandon-behring/prompt-injection-portfolio) M1 book authoring. Adds the 5th preset, 4 new components, a recipe, a chapter template, and a third visual regression fixture.
