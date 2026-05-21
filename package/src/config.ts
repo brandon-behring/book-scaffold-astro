@@ -33,6 +33,9 @@ export async function defineBookConfig(
     const { default: remarkMath } = await import(/* @vite-ignore */ 'remark-math');
     const { default: rehypeKatex } = await import(/* @vite-ignore */ 'rehype-katex');
     const { ssmMacros } = await import('./lib/katex-macros.js');
+    // Shallow-merge consumer macros onto ssmMacros. Consumer wins on key
+    // collision so books can override scaffold defaults if needed. Closes #22.
+    const macros = { ...ssmMacros, ...(opts.katexMacros ?? {}) };
     remarkPlugins.push(remarkMath);
     rehypePlugins.push([
       rehypeKatex,
@@ -42,7 +45,7 @@ export async function defineBookConfig(
         // for catching errors before deploy.
         strict: 'error',
         trust: true,
-        macros: ssmMacros,
+        macros,
       },
     ]);
   }
@@ -84,6 +87,7 @@ export async function defineBookConfig(
     extraIntegrations: _extraIntegrations,
     extraStyles: _extraStyles,
     markdown: _markdown,
+    katexMacros: _katexMacros,             // v3.6.0 (closes #22)
     ...rest
   } = opts;
   void _preset;
@@ -93,6 +97,7 @@ export async function defineBookConfig(
   void _extraIntegrations;
   void _extraStyles;
   void _markdown;
+  void _katexMacros;
 
   // defineConfig from 'astro/config' is documented as an identity function
   // that only carries types; we skip it and assemble the AstroUserConfig
