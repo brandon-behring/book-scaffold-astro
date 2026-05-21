@@ -27,7 +27,39 @@
  */
 import { readFile, access } from 'node:fs/promises';
 import { glob } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
+
+/**
+ * Best-effort .env reader. Mirrors `readEnvFile` in src/types.ts; kept inline
+ * here because scripts/ is shipped as plain JS without compiling src/.
+ *
+ * Closes #20 — validate.mjs previously skipped the .env fallback that
+ * `resolveProfileWithSource` honors, so consumers who set BOOK_PROFILE in
+ * .env (per the SKILL.md and scaffold's create-book defaults) saw the CLI
+ * silently default to minimal, masking academic-profile errors.
+ */
+function readEnvFile(path = '.env') {
+  try {
+    if (!existsSync(path)) return {};
+    const out = {};
+    for (const line of readFileSync(path, 'utf8').split(/\r?\n/)) {
+      const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*?)\s*$/);
+      if (!m) continue;
+      let val = m[2] ?? '';
+      if (
+        (val.startsWith('"') && val.endsWith('"')) ||
+        (val.startsWith("'") && val.endsWith("'"))
+      ) {
+        val = val.slice(1, -1);
+      }
+      out[m[1]] = val;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
 
 // --help / -h: non-mutating (closes #14).
 const USAGE = `Usage: book-scaffold validate [--preset <name>]
@@ -67,8 +99,20 @@ const CHAPTERS_DIR = resolve(ROOT, 'src/content/chapters');
 const PUBLIC_DIR = resolve(ROOT, 'public');
 const DATA_DIR = resolve(ROOT, 'src/data');
 
-// Preset resolution: --preset flag > BOOK_PRESET env > BOOK_PROFILE env > 'minimal'.
-const PRESET = presetFromFlag ?? process.env.BOOK_PRESET ?? process.env.BOOK_PROFILE ?? 'minimal';
+// Preset resolution (matches resolvePreset in src/types.ts):
+//   --preset flag > BOOK_PRESET env > BOOK_PROFILE env >
+//   .env BOOK_PRESET > .env BOOK_PROFILE > 'minimal'.
+// .env fallback closes #20 — without it, consumers who set BOOK_PROFILE in
+// .env (the documented convenience in SKILL.md + create-book defaults) saw
+// the CLI silently default to minimal, hiding academic-profile errors.
+const dotenv = readEnvFile(resolve(ROOT, '.env'));
+const PRESET =
+  presetFromFlag ??
+  process.env.BOOK_PRESET ??
+  process.env.BOOK_PROFILE ??
+  dotenv.BOOK_PRESET ??
+  dotenv.BOOK_PROFILE ??
+  'minimal';
 // Alias kept for downstream message text only; the resolution above is canonical.
 const PROFILE = PRESET;
 const REPO_ROOT = process.env.BOOK_REPO_ROOT ?? null;
