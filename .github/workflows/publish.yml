@@ -1,0 +1,98 @@
+name: publish
+
+# Trusted publishing to npm via OIDC. No NPM_TOKEN secret required — npm and
+# GitHub exchange short-lived credentials at publish time. Provenance attestation
+# is automatic with trusted publishing (no --provenance flag needed).
+#
+# Trigger paths:
+# - push:tag v*.*.* — normal release (developer tags + pushes, workflow fires)
+# - workflow_dispatch — manual fire against an existing tag (e.g., v3.5.1 which
+#   was tagged before this workflow existed)
+#
+# Lock-step contract: both @brandon_m_behring/book-scaffold-astro AND
+# @brandon_m_behring/create-book must be at the same version as the tag. If
+# either publish fails, the workflow exits and the other package's state must
+# be reconciled manually before retrying.
+#
+# npm-side prerequisite: each package needs a "Trusted Publisher" config at
+# npmjs.com (package settings → Trusted Publisher → GitHub Actions) with
+# workflow filename `publish.yml` and `npm publish` allowed.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to publish (e.g., v3.5.1)'
+        required: true
+        type: string
+
+permissions:
+  id-token: write   # required for OIDC token generation
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Upgrade npm (trusted publishing requires >= 11.5.1)
+        run: npm install -g npm@latest
+
+      - name: Install (workspace-aware)
+        run: npm install
+
+      - name: Build the toolkit (tsup -> dist/)
+        run: npm run build --workspace package
+
+      - name: Test the toolkit
+        run: npm test --workspace package
+
+      - name: Verify lock-step versions match tag
+        run: |
+          pkg_version=$(node -p "require('./package/package.json').version")
+          cb_version=$(node -p "require('./create-book/package.json').version")
+          tag_ref="${{ inputs.tag || github.ref_name }}"
+          tag_version="${tag_ref#v}"
+          if [ "$pkg_version" != "$cb_version" ]; then
+            echo "::error::Lock-step violation: package=$pkg_version create-book=$cb_version"
+            exit 1
+          fi
+          if [ "$pkg_version" != "$tag_version" ]; then
+            echo "::error::Tag/version mismatch: tag=$tag_ref package.json=$pkg_version"
+            exit 1
+          fi
+          echo "Lock-step OK: both packages at v$pkg_version, matches tag $tag_ref"
+
+      - name: Publish @brandon_m_behring/book-scaffold-astro
+        working-directory: package
+        run: npm publish --access public
+
+      - name: Publish @brandon_m_behring/create-book
+        working-directory: create-book
+        run: npm publish --access public
+
+      - name: Smoke verify registry
+        run: |
+          sleep 10
+          pkg_version=$(node -p "require('./package/package.json').version")
+          registry_pkg=$(npm view @brandon_m_behring/book-scaffold-astro version)
+          registry_cb=$(npm view @brandon_m_behring/create-book version)
+          echo "Registry: toolkit=$registry_pkg create-book=$registry_cb expected=$pkg_version"
+          [ "$registry_pkg" = "$pkg_version" ] || (echo "::error::Toolkit not at expected version on registry" && exit 1)
+          [ "$registry_cb" = "$pkg_version" ] || (echo "::error::create-book not at expected version on registry" && exit 1)
+          echo "Both packages confirmed at v$pkg_version on registry"
