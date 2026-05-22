@@ -39,7 +39,7 @@ The profile is read by `import.meta.env.BOOK_PROFILE` at build time. Re-run `npm
 ## 3. Bootstrap a new book (recommended path)
 
 ```bash
-~/.claude/skills/book-scaffold-astro/create-book.sh my-book-name --preset=academic
+~/.claude/skills/book-scaffold-astro/create-book.sh my-book-name --profile=academic
 cd ~/Claude/my-book-name
 npm install
 npm run dev

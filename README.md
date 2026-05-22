@@ -7,13 +7,13 @@
 ## Start a new book
 
 ```bash
-npx @brandon_m_behring/create-book my-book --preset=academic
+npx @brandon_m_behring/create-book my-book --profile=academic
 cd my-book
 npm install
 npm run dev
 ```
 
-`--preset` is one of `academic` / `tools` / `minimal` / `course-notes` / `research-portfolio` (the canonical vocabulary as of v3.4.0; `--profile` is the backward-compatible alias). The scaffold emits 11 templated files (~50 lines total of book-specific config); everything else comes from the package via the exports map.
+`--profile` is one of `academic` / `tools` / `minimal` / `course-notes` / `research-portfolio`. (The `book-scaffold` runtime CLI accepts both `--profile` and the canonical `--preset` introduced in v3.4.0; `create-book` adds `--preset` in a future release — see [#38](https://github.com/brandon-behring/book-scaffold-astro/issues/38).) The scaffold emits 11 templated files (~50 lines total of book-specific config); everything else comes from the package via the exports map.
 
 ## Consumer config (what you own)
 
