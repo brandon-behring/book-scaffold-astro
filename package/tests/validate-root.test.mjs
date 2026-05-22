@@ -130,3 +130,53 @@ test('validate-root: --preset CLI flag overrides env (closes #9 single-source re
     rmSync(tmp, { recursive: true, force: true });
   }
 });
+
+test('validate-root: .env BOOK_PROFILE is honored when no env or flag is set (closes #20)', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    // Write .env at the consumer root — the same pattern create-book scaffolds.
+    writeFileSync(join(tmp, '.env'), 'BOOK_PROFILE=academic\nBOOK_TITLE=Test Book\n');
+    // Strip BOOK_PRESET / BOOK_PROFILE from inherited env so the .env file is
+    // the only source of preset information.
+    const env = { ...process.env };
+    delete env.BOOK_PRESET;
+    delete env.BOOK_PROFILE;
+    const result = spawnSync('node', [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 10_000,
+      env,
+    });
+    assert.equal(result.status, 0, `validate should exit 0 on clean fixture with .env-driven academic profile`);
+    assert.match(
+      result.stdout,
+      /profile=academic/,
+      `validate should read BOOK_PROFILE from .env when no env var or flag is set; got: ${result.stdout}\nstderr: ${result.stderr}`,
+    );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate-root: BOOK_PROFILE env still wins over .env (closes #20)', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    writeFileSync(join(tmp, '.env'), 'BOOK_PROFILE=tools\n');
+    const result = spawnSync('node', [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 10_000,
+      env: { ...process.env, BOOK_PROFILE: 'academic' },
+    });
+    assert.equal(result.status, 0, `validate should exit 0`);
+    assert.match(
+      result.stdout,
+      /profile=academic/,
+      `process.env.BOOK_PROFILE should win over .env BOOK_PROFILE; got: ${result.stdout}`,
+    );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
