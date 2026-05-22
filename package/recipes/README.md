@@ -17,6 +17,9 @@ Terse pointers into canonical code for the most common book-authoring workflows.
 | 08 | [Decisions ledger](08-decisions-ledger.md) | any | 15 design decisions explained |
 | 09 | [Pre-flight validation](09-validation.md) | any | `validate.mjs` catches bibkey/XRef/Figure typos |
 | 10 | [Custom domain](10-custom-domain.md) | any | Cloudflare dashboard, apex vs subdomain |
+| 12 | [Where to file issues](12-where-to-file-issues.md) | any | Consumer-pilot issue template, label conventions |
+| 13 | [Research-portfolio getting started](13-research-portfolio-getting-started.md) | research-portfolio | When to use the preset, frontmatter shape, the 4 new components |
+| 14 | [Port a LaTeX book](14-port-latex-book.md) | typically academic | Operational playbook for porting an existing LaTeX manuscript — bib sharing, inline-upstream-PR loop, common pitfalls |
 
 ## How to read recipes
 
