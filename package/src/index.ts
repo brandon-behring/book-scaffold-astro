@@ -53,6 +53,14 @@ export { defineMdxComponents } from './mdx-components-resolver.js';
 // returns null instead of crashing (closes #1).
 export { getFreshness, freshnessLabel, type Freshness, type FreshnessStatus, type VolatilityLevel } from './lib/freshness.js';
 
+// Chapter sort key (v3.5.2, closes #24): pure-function helper that produces
+// a numeric ordering for both tools-profile (numeric part+chapter) and
+// academic-profile (string part-enum + numeric week) chapter shapes.
+// Exported so consumers building custom chapter index pages can reuse the
+// same ordering as the shipped /chapters route. Sourced from chapter-sort.ts
+// (no Astro virtual-module imports — safe for the DTS bundle).
+export { chapterSortKey } from './lib/chapter-sort.js';
+
 // Schema enums + Zod schemas.
 export {
   // Enum arrays
