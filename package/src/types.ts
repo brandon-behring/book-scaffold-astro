@@ -82,6 +82,32 @@ export interface BookConfigOptions {
   extraStyles?: string[];
   /** Optional. Spread-merged into the package-provided markdown config. */
   markdown?: AstroUserConfig['markdown'];
+  /**
+   * Optional. Consumer-defined KaTeX macros, shallow-merged onto the
+   * profile's defaults (`ssmMacros` for academic). Closes #22.
+   *
+   * Used to add domain-specific macros the scaffold doesn't ship by default
+   * — e.g. causal-inference notation (`\ate`, `\propensity`), RL/optimal-
+   * control notation, or any per-book extension. Strict KaTeX mode means
+   * the build fails on unknown commands; this option is the supported way
+   * to teach KaTeX about a consumer's commands without rewriting math.
+   *
+   * Shape matches the `macros` option of `rehype-katex`: a plain object
+   * mapping macro name (with leading backslash) to its LaTeX-style
+   * expansion.
+   *
+   * @example
+   *   defineBookConfig({
+   *     site: '...',
+   *     katexMacros: {
+   *       '\\Var': '\\mathrm{Var}',
+   *       '\\Cov': '\\mathrm{Cov}',
+   *       '\\ate': '\\tau',
+   *       '\\propensity': 'e(X)',
+   *     },
+   *   });
+   */
+  katexMacros?: Record<string, string>;
   /** Escape hatch for any other AstroUserConfig field. */
   [key: string]: unknown;
 }
