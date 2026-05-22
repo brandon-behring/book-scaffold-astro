@@ -95,7 +95,7 @@ Patch release to put the post-v3.5.0 hygiene/build fixes behind a proper tag ins
 
 ## [3.5.0] — 2026-05-19
 
-Closes the last open issue from the v3.3.0 cycle: [#6](https://github.com/brandon-behring/coffin/book-scaffold-astro/issues/6) — `research-portfolio` preset. Unblocks downstream [`prompt-injection-portfolio`](https://github.com/brandon-behring/prompt-injection-portfolio) M1 book authoring. Adds the 5th preset, 4 new components, a recipe, a chapter template, and a third visual regression fixture.
+Closes the last open issue from the v3.3.0 cycle: [#6](https://github.com/brandon-behring/book-scaffold-astro/issues/6) — `research-portfolio` preset. Unblocks downstream [`prompt-injection-portfolio`](https://github.com/brandon-behring/prompt-injection-portfolio) M1 book authoring. Adds the 5th preset, 4 new components, a recipe, a chapter template, and a third visual regression fixture.
 
 ### Added
 

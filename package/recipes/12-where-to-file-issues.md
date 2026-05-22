@@ -40,7 +40,10 @@ Each batch of cross-consumer issues drives a minor toolkit release:
 - **v3.0–v3.2** absorbed Phase B/C/D feedback from `post_transformers` + `book-template-astro`.
 - **v3.3.0** closed 5 issues surfaced from the DLAI knowledge-graphs-rag pilot (course-notes profile + defineMdxComponents + per-route override + LaTeX migration doc).
 - **v3.4.0** closed 8 more (preset vocabulary + propagation + frontmatter helper + validate root fix + CI hygiene + docs).
-- **v3.5.0** (future) is expected to add the `research-portfolio` preset per issue #6 once cross-repo coordination with `prompt-injection-portfolio` is ready.
+- **v3.5.0** added the `research-portfolio` preset (#6) driven by cross-repo coordination with [`prompt-injection-portfolio`](https://github.com/brandon-behring/prompt-injection-portfolio).
+- **v3.5.2 / v3.5.3 / v3.6.0** (the [`double-ml-time-series`](https://github.com/brandon-behring/double-ml-time-series) pilot batch) closed three more issues surfaced within 24 hours of the first non-SSM academic book hitting the scaffold: `/chapters` schema-aware for academic profile (#24), `validate` honors `.env BOOK_PROFILE` (#20), and `katexMacros` extension point for non-SSM math notation (#22). Same release cycle introduced OIDC trusted publishing via [`.github/workflows/publish.yml`](../../.github/workflows/publish.yml).
+
+The next consumer-pilot batch lands as v3.7+. File issues against [`brandon-behring/book-scaffold-astro`](https://github.com/brandon-behring/book-scaffold-astro/issues) tagged with `consumer:<your-book-name>` so the batching shows up in the issue tracker.
 
 Profile-by-profile growth is the explicit strategy: the toolkit gets a new profile when a real consumer needs one, not before.
 

@@ -2,18 +2,18 @@
 
 **npm package** for long-form technical books. Astro + MDX + Paged.js + Pagefind with Tufte-inspired typography, profile-aware pedagogy (academic vs tools-comparative), KaTeX math, BibTeX citations, and Cloudflare Workers + Static Assets deploy.
 
-**v3.0 (2026-05-19)**: pivot from GitHub-template-clone to npm package. The toolkit lives at [`@brandon_m_behring/book-scaffold-astro`](https://www.npmjs.com/package/@brandon_m_behring/book-scaffold-astro); a sibling CLI at [`@brandon_m_behring/create-book`](https://www.npmjs.com/package/@brandon_m_behring/create-book) scaffolds fresh consumer repos. See [`PACKAGE_DESIGN.md`](PACKAGE_DESIGN.md) for the full API contract.
+**Current release**: [`@brandon_m_behring/book-scaffold-astro@3.6.0`](https://www.npmjs.com/package/@brandon_m_behring/book-scaffold-astro) (2026-05-22) — adds the `katexMacros` option for non-SSM academic books. Sibling CLI: [`@brandon_m_behring/create-book@3.6.0`](https://www.npmjs.com/package/@brandon_m_behring/create-book). Both ship in lock-step via OIDC trusted publishing on tag push. See [`PACKAGE_DESIGN.md`](PACKAGE_DESIGN.md) for the full API contract and [`CHANGELOG.md`](CHANGELOG.md) for the release history.
 
 ## Start a new book
 
 ```bash
-npx @brandon_m_behring/create-book my-book --profile=academic
+npx @brandon_m_behring/create-book my-book --preset=academic
 cd my-book
 npm install
 npm run dev
 ```
 
-`--profile` is one of `academic` / `tools` / `minimal`. The scaffold emits 11 templated files (~50 lines total of book-specific config); everything else comes from the package via the exports map.
+`--preset` is one of `academic` / `tools` / `minimal` / `course-notes` / `research-portfolio` (the canonical vocabulary as of v3.4.0; `--profile` is the backward-compatible alias). The scaffold emits 11 templated files (~50 lines total of book-specific config); everything else comes from the package via the exports map.
 
 ## Consumer config (what you own)
 
@@ -38,7 +38,7 @@ BOOK_PROFILE=academic
 
 - **38 components** at one flat path (`./components/<Name>.astro`) — Cite / XRef / Figure / Theorem / 18 callouts (academic + tools families) / 2 Preact islands / nav + headers
 - **8 stylesheets** auto-injected by profile via the dual-purpose Astro Integration (route + style injection)
-- **Default pages** auto-injected: `/references` / `/search` / `/print` (all profiles); `/chapters` / `/convergence` (tools profile)
+- **Default pages** auto-injected: `/references` / `/search` / `/print` (all profiles); `/convergence` (tools profile); `/chapters` (tools profile by default, opt-in for academic via `routes.chapters: true` — schema-aware as of v3.5.2)
 - **Profile-aware Zod schemas** — academic 7-state status / tools volatility + T1-T4 source tiers
 - **Tufte three-tier layout** — 65ch (default) / 80ch (≥90rem) / 90ch (≥120rem)
 - **KaTeX 36-macro library** (academic profile)
@@ -55,15 +55,17 @@ BOOK_PROFILE=academic
 | [`post-transformers-guide`](https://post-transformers-guide.brandon-m-behring.workers.dev) (6 chapters) | academic | 12 | 9 MB |
 | [`book-template-astro`](https://github.com/brandon-behring/book-template-astro) — *Agentic Coding* (23 chapters) | tools | 29 | 3.3 MB |
 
-Both books consume `@brandon_m_behring/book-scaffold-astro@^3.0.0` with ≤5 lines of book-side config.
+Both books consume `@brandon_m_behring/book-scaffold-astro@^3.6.0` with ≤5 lines of book-side config. The v3.5/v3.6 cycle added [`double-ml-time-series`](https://github.com/brandon-behring/double-ml-time-series) as the third pilot — first non-SSM academic book through the scaffold, surfacing #20/#22/#24 in 24 hours.
 
 ## Provenance
 
-Three-version arc:
+Version arc:
 
 - **v0.x** (early 2026) — extracted from the *Agentic Coding* book.
 - **v2.0** (2026-05-18) — profile-aware backport. Shipped as a GitHub-template-clone scaffold. Stays usable at the [`v2.0.0`](https://github.com/brandon-behring/book-scaffold-astro/releases/tag/v2.0.0) tag.
 - **v3.0** (2026-05-19) — npm-package pivot. Two packages (`book-scaffold-astro` + `create-book`) at lock-step versions. v2.0's 15 design decisions stay; v3.0 adds 6 more (Q1–Q6 in [`PACKAGE_DESIGN.md`](PACKAGE_DESIGN.md)).
+- **v3.3–v3.5** (2026-05-19) — closed all v3.2 follow-on issues (#1–#14) + added `course-notes` (v3.3.0, #4) and `research-portfolio` (v3.5.0, #6) presets driven by the DLAI and prompt-injection-portfolio pilots.
+- **v3.5.2–v3.6.0** (2026-05-22) — `double-ml-time-series` pilot batch. v3.5.2 makes `/chapters` schema-aware for academic profile (#24); v3.5.3 honors `.env BOOK_PROFILE` in `validate` (#20); v3.6.0 adds the `katexMacros` extension point for non-SSM math notation (#22). Releases moved to OIDC trusted publishing on tag push.
 
 ## API reference
 

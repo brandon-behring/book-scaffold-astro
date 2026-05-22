@@ -2,19 +2,21 @@
 
 **Profile**: any (the recipe picks one based on your answer below).
 
-**TL;DR**: Pick a profile (`academic` / `tools` / `minimal`). Set `BOOK_PROFILE` in your shell or `.env`. Edit content under `src/content/chapters/`. `npm run dev` to preview.
+**TL;DR**: Pick a preset (`academic` / `tools` / `minimal` / `course-notes` / `research-portfolio`). Set `BOOK_PROFILE` in your shell or `.env`. Edit content under `src/content/chapters/`. `npm run dev` to preview.
 
-## 1. Choose a profile
+## 1. Choose a preset
 
-The scaffold ships three profiles. `BOOK_PROFILE` is read at startup by `astro.config.mjs` and `src/content.config.ts`.
+The scaffold ships **five presets** as of v3.5.0. `BOOK_PROFILE` (or its canonical alias `BOOK_PRESET`, v3.4.0+) is read at startup by `astro.config.mjs` and `src/content.config.ts`.
 
-| Profile | Use when | Frontmatter schema | Default callouts | Math | Bibliography |
+| Preset | Use when | Frontmatter schema | Default callouts | Math | Bibliography |
 |---|---|---|---|---|---|
-| `academic` | Textbook, research report, lecture notes | `week`, `part`(enum), `status`(7-state) | NoteBox, Theorem family, ExampleBox … | KaTeX with 36 macros | BibTeX → `src/data/references.json` |
+| `academic` | Textbook, research report, lecture notes | `week`, `part`(enum), `status`(7-state) | NoteBox, Theorem family, ExampleBox … | KaTeX with 36 macros (consumer can extend via `katexMacros`, v3.6.0+) | BibTeX → `src/data/references.json` |
 | `tools` | Comparative practitioner book (multiple tools tracked) | `chapter`, `part`(numeric), `volatility`, `tools_compared`, `sources` | SkillBox, KeyIdea, Convergence, Divergence … | off | YAML manifest at `sources/manifest.yaml` |
-| `minimal` | Single-author manifesto, essays, mixed-form work | falls back to `tools` schema (pick `tools` and ignore the fields you don't use) | tools-family | off | manual references page |
+| `minimal` | Single-author manifesto, essays, mixed-form work | falls back to `tools` schema | tools-family | off | manual references page |
+| `course-notes` (v3.3.0, #4) | Course-derived study notes (DLAI, Coursera, Manning) | `chapter`+`part`(numeric), `course`, `instructor`, `learning_outcomes`, freeform `tags` | tools-family | off | freeform `sources` array |
+| `research-portfolio` (v3.5.0, #6) | Research portfolio with mixed prose + experiments | optional `week` OR `chapter`, `status`, `freshness`(evidence-type enum), T1–T4 inline sources | both families | KaTeX on by default | structured inline `sources` (no separate collection) |
 
-Most academic books pick `academic`; most "Agentic Coding" style books pick `tools`. If unsure: pick `minimal` and switch later — schemas are forgiving as long as required fields are set.
+If unsure: pick `minimal` and switch later — schemas are forgiving as long as required fields are set.
 
 ## 2. Set the profile
 
@@ -37,7 +39,7 @@ The profile is read by `import.meta.env.BOOK_PROFILE` at build time. Re-run `npm
 ## 3. Bootstrap a new book (recommended path)
 
 ```bash
-~/.claude/skills/book-scaffold-astro/create-book.sh my-book-name --profile=academic
+~/.claude/skills/book-scaffold-astro/create-book.sh my-book-name --preset=academic
 cd ~/Claude/my-book-name
 npm install
 npm run dev
