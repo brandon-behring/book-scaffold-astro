@@ -26,9 +26,9 @@
  * Exit code = total failure count (0 = pass, >=1 = errors).
  */
 import { readFile, access } from 'node:fs/promises';
-import { glob } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
+import { walkMdx } from './walk-mdx.mjs';
 
 /**
  * Best-effort .env reader. Mirrors `readEnvFile` in src/types.ts; kept inline
@@ -134,8 +134,13 @@ const refs = await loadJson(join(DATA_DIR, 'references.json'));
 const labels = await loadJson(join(DATA_DIR, 'labels.json'));
 
 // ===== Collect chapter files =====
+// v3.7.1 (closes #52): walkMdx (in ./walk-mdx.mjs) is a recursive readdir
+// walker that replaces the previous `glob` import from `node:fs/promises`.
+// The `glob` API was added in Node 22 but consumer CI templates ship
+// Node 20 — `npm run validate` crashed on every consumer's prebuild hook.
+// Walker uses readdir + path only; works on Node 18+.
 const chapterFiles = [];
-for await (const f of glob('**/*.{md,mdx}', { cwd: CHAPTERS_DIR })) {
+for await (const f of walkMdx(CHAPTERS_DIR)) {
   if (!f.split('/').pop().startsWith('_')) chapterFiles.push(f);
 }
 
