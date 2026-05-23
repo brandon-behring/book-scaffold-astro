@@ -11,6 +11,7 @@
  */
 import { defineProfile } from '../profile-kit.js';
 import { courseNotesChapterSchema } from '../schemas.js';
+import { fallbackChaptersRenderer } from './renderers/fallback-chapters.js';
 
 export type { CourseNotesChapter } from '../schemas.js';
 
@@ -26,4 +27,6 @@ export const courseNotesProfile = defineProfile({
     frontmatter: false,     // opt-in per book; see #7
   },
   styles: ['tokens.css', 'layout.css', 'callouts.css', 'chapter.css', 'typography.css', 'print.css'],
+  // v3.7.0 (#35): course-notes schema has tools-style fields (chapter, volatility, sources) — fallback renderer dispatches via tools renderer
+  chaptersRenderer: fallbackChaptersRenderer,
 });

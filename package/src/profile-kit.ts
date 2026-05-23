@@ -23,6 +23,8 @@
  *   3. (Optional) ship a default chapter route page under package/pages/.
  */
 
+import type { ChaptersRenderer } from './lib/chapters-renderer.js';
+
 /**
  * The set of routes the toolkit can auto-inject. Per-profile defaults are
  * declared in each profile module; consumers override via
@@ -67,6 +69,16 @@ export interface ProfileDefinition {
   styles: string[];
   /** Whether KaTeX should be wired in (academic profile only currently). */
   katex?: boolean;
+  /**
+   * v3.7.0 (closes #35): per-profile renderer for the /chapters route.
+   * Owns the chapter-card meta-row composition, numbering format, sort key,
+   * and ToolFilter wiring for this profile's data shape. Pure-function
+   * strategy (no Astro imports — see src/lib/chapters-renderer.ts header).
+   *
+   * Optional: profiles that don't ship a dedicated renderer get the
+   * fallbackChaptersRenderer (field-presence dispatch) at route render time.
+   */
+  chaptersRenderer?: ChaptersRenderer;
 }
 
 /**

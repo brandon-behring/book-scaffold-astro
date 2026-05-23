@@ -2,6 +2,42 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [3.7.0] — 2026-05-22
+
+Minor release. Refactors the `/chapters` route from a field-presence discriminator into a per-profile renderer strategy plugged into the existing `PROFILES` registry. Closes [#35](https://github.com/brandon-behring/peppy-scroll/book-scaffold-astro/issues/35) and [#36](https://github.com/brandon-behring/book-scaffold-astro/issues/36). No breaking changes; consumer DOM output is byte-equivalent for both tools and academic profiles (verified by visual regression at AE=0).
+
+### Changed
+
+- **`pages/chapters.astro` now dispatches via `PROFILES[BOOK_PROFILE].chaptersRenderer`** instead of inline field-presence branching ([#35](https://github.com/brandon-behring/book-scaffold-astro/issues/35)). Route-level concerns (data fetch, byPart grouping, ToolFilter island wiring, CSS, inline filter script) stay in the route file. Per-profile concerns (numbering format, badge selection, sort key, `data-tools` attribute value) move into each profile's renderer. Pure-function strategy; no Astro imports in renderer modules (preserves the `chapter-sort.ts` pattern that keeps tsup's DTS bundler stable).
+- **Per-card render data is precomputed in the frontmatter `---` block** rather than inline inside JSX expressions. Sidesteps an Astro-compiler limitation where TypeScript generic casts (`as Record<string, unknown>`) inside `{...}` JSX expressions get parsed as tag-start tokens. Functionally identical to the inline pattern; structurally cleaner separation of "compute data" from "render JSX."
+
+### Added
+
+- **`ChaptersRenderer` interface** ([`src/lib/chapters-renderer.ts`](https://github.com/brandon-behring/book-scaffold-astro/blob/main/package/src/lib/chapters-renderer.ts)) — typed strategy for the `/chapters` route. Public export from `index.ts` along with `PartKey`, `VolatilityBadge`, `StatusBadge`, `FreshnessAffordance` types and the three shipped renderer instances.
+- **`toolsChaptersRenderer`** — implements current tools UI (numeric Part/Chapter labels, volatility badge, freshness affordance from `last_verified` + volatility class, tools-compared tags). DOM-equivalent to v3.5.2.
+- **`academicChaptersRenderer`** — implements academic UI (string-enum Part labels, Week N numbering, status badge). DOM-equivalent to v3.5.2's academic branch.
+- **`fallbackChaptersRenderer`** — used by minimal / course-notes / research-portfolio when those profiles opt into `routes.chapters: true`. Dispatches per-chapter via field presence (v3.5.2's logic, preserved as a safety net for shapes without a dedicated renderer).
+- **`ProfileDefinition.chaptersRenderer?: ChaptersRenderer`** — optional field on the `defineProfile()` input. Each of the 5 shipped profiles is wired to its renderer (academic + tools → dedicated; minimal + course-notes + research-portfolio → fallback).
+- **`package/tests/visual/fixture-academic-chapters/`** ([#36](https://github.com/brandon-behring/book-scaffold-astro/issues/36)) — new visual-regression fixture exercising the academic `/chapters` route end-to-end via `defineBookConfig({ profile: 'academic', routes: { chapters: true } })`. 5 chapters across foundations/ssm-core/beyond-ssm/synthesis parts; 4 routes screenshotted at 4 viewport widths = 16 baseline PNGs. Wired into the workflow via `run.sh` FIXTURES array + root `package.json` workspaces.
+
+### Tests
+
+- **`package/tests/chapters-renderer.test.mjs`** (31 cases) — covers all three renderers' methods: `formatChapterNumber`, `getFreshnessData` thresholds, `sortKey` monotonicity for both schemas, full academic part-enum ordinal mapping, fallback dispatch correctness, cross-renderer `sortKey` agreement on shared shapes.
+- **`chapterSortKey` public export** (v3.5.2) — kept as a back-compat shim; tested to agree with the per-profile `sortKey` methods on both tools and academic shapes.
+- **Visual regression**: 52 total baselines pass at AE=0 — 36 existing (tools fixture + course-notes + research-portfolio) unchanged by the refactor, 16 new (academic-chapters).
+
+### Backward compatibility
+
+- **Public API**: `chapterSortKey(data)` export retained; behavior unchanged. `ChaptersRenderer` type + three renderer instances added (additive).
+- **Frontmatter schemas**: no changes. Both academic and tools schemas continue working as before.
+- **Route URL**: `/chapters/` unchanged.
+- **DOM output**: byte-for-byte equivalent for tools profile (verified at AE=0 against all 3 pre-existing visual fixtures). Academic profile DOM matches v3.5.2 (verified by smoke-testing the chapters listing under the refactored route).
+
+### Release policy
+
+- **D12 lock-step preserved**: `@brandon_m_behring/create-book@3.7.0` ships alongside the toolkit.
+- Pre-publish smoke (added in v3.6.5) ran end-to-end against the v3.7.0 tarball before publish, exercising the academic chapters renderer + new visual fixture build.
+
 ## [3.6.5] — 2026-05-22
 
 Release pipeline polish. No new consumer features; locks in the lessons from the v3.6.1 → v3.6.4 hotfix chain so the next minor (v3.7.0, chapters profile-strategy refactor) ships cleanly the first time. Closes [#37](https://github.com/brandon-behring/book-scaffold-astro/issues/37).

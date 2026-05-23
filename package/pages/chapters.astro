@@ -2,59 +2,91 @@
 /**
  * /chapters — book index page.
  *
- * Groups non-draft chapters by Part in ascending order. Each card exposes
- * `data-tools="<slug> <slug>..."` so the ToolFilter island can hide cards via
- * a single attribute selector without touching card rendering.
+ * Route-level concerns kept here:
+ *   - Data fetch (getAllChapters)
+ *   - byPart Map grouping (insertion-order preserved across number + string keys)
+ *   - ToolFilter island wiring (inline script, data-tools attribute on cards,
+ *     part-group hide-when-empty, filter hint)
+ *   - CSS, structural JSX, <Base> wrapping
  *
- * v3.5.2 (closes #24): schema-aware. Previously hardcoded the tools-profile
- * shape and crashed on academic profile (no `chapter` / `volatility` /
- * `tools_compared` / `last_verified`). Now renders either shape:
- *   - tools: `Chapter N` + volatility badge + freshness + tools-compared tags
- *   - academic: `Week N` + status badge (no freshness or tools-compared)
- * Field presence is the schema discriminator (cheaper than reading
- * BOOK_PROFILE at the route layer).
+ * Per-profile concerns dispatched via `PROFILES[BOOK_PROFILE].chaptersRenderer`:
+ *   - Meta-row composition (numbering, badges)
+ *   - Sort key strategy
+ *   - data-tools value computation
+ *
+ * v3.7.0 (closes #35): replaces the field-presence discriminator that
+ * lived inline in v3.5.2. Each profile now ships a ChaptersRenderer
+ * implementing the strategy interface; consumers opting profiles without
+ * a dedicated renderer (e.g., minimal + routes.chapters: true) get the
+ * fallbackChaptersRenderer which dispatches via field presence — exactly
+ * the v3.5.2 behavior, preserved as a safety net.
  */
 import Base from '../layouts/Base.astro';
 import { getAllChapters, type Chapter } from '../src/lib/chapters';
-import { getFreshness, freshnessLabel } from '../src/lib/freshness';
+import { PROFILES } from '../src/profiles/index';
+import { fallbackChaptersRenderer } from '../src/profiles/renderers/fallback-chapters';
+import type { ChaptersRenderer, PartKey } from '../src/lib/chapters-renderer';
+
+const profileName = (import.meta.env.BOOK_PROFILE ?? 'minimal') as keyof typeof PROFILES;
+const profileDef = PROFILES[profileName];
+const renderer: ChaptersRenderer =
+  (profileDef as { chaptersRenderer?: ChaptersRenderer } | undefined)?.chaptersRenderer
+  ?? fallbackChaptersRenderer;
 
 const chapters = await getAllChapters();
 
-// Stable insertion-order grouping by `part`. Map key may be number (tools) or
-// string (academic enum); Map preserves insertion order for both.
-type PartKey = string | number;
-const byPart = new Map<PartKey, Chapter[]>();
+// Precompute each card's render-ready fields in the frontmatter block.
+// This keeps TypeScript generics (Record<string, unknown> casts, the
+// renderer return-type unions) out of the JSX template, where the
+// Astro compiler treats `<` as a tag-start token and trips on type
+// assertions inside expressions.
+interface CardData {
+  c: Chapter;
+  toolsAttr: string;
+  number: string;
+  volatility: ReturnType<typeof renderer.getVolatilityData>;
+  status: ReturnType<typeof renderer.getStatusData>;
+  freshness: ReturnType<typeof renderer.getFreshnessData>;
+  freshnessText: string | null;
+  verifiedLabel: string | null;
+  toolsCompared: string[];
+  data: { title: unknown; description?: unknown };
+}
+
+function buildCard(c: Chapter, appendix: boolean): CardData {
+  const data = c.data as Record<string, unknown>;
+  const freshness = renderer.getFreshnessData(data);
+  const freshnessText = freshness
+    ? freshness.status === 'fresh'
+      ? 'Fresh'
+      : freshness.status === 'verify-soon'
+        ? 'Verify soon'
+        : 'Stale'
+    : null;
+  return {
+    c,
+    toolsAttr: renderer.getToolsAttr(data),
+    number: renderer.formatChapterNumber(data, appendix),
+    volatility: renderer.getVolatilityData(data),
+    status: renderer.getStatusData(data),
+    freshness,
+    freshnessText,
+    verifiedLabel: renderer.getVerifiedDateLabel(data),
+    toolsCompared: renderer.getToolsCompared(data),
+    data: { title: data.title, description: data.description as string | undefined },
+  };
+}
+
+// Stable insertion-order grouping. Map preserves order for both number and
+// string keys (academic uses string-enum parts; tools uses numeric parts).
+const byPart = new Map<PartKey, CardData[]>();
 for (const c of chapters) {
-  const key = (c.data as { part: PartKey }).part;
+  const key = renderer.partKey(c.data as Record<string, unknown>);
+  const appendix = renderer.isAppendix(key);
+  const card = buildCard(c, appendix);
   const list = byPart.get(key);
-  if (list) list.push(c);
-  else byPart.set(key, [c]);
-}
-
-function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-/** Render-ready label for a Part heading. Tools: "Part N" or "Appendices"
- *  (parts >= 6 are appendices). Academic: titlecase the enum string. */
-function partLabel(part: PartKey): string {
-  if (typeof part === 'number') {
-    return part >= 6 ? 'Appendices' : `Part ${part}`;
-  }
-  return part
-    .split('-')
-    .map((w) => (w.length ? w[0].toUpperCase() + w.slice(1) : ''))
-    .join(' ');
-}
-
-function isAppendix(part: PartKey): boolean {
-  return typeof part === 'number' && part >= 6;
-}
-
-/** Per-card schema detection. Cheaper than reading BOOK_PROFILE — the shape
- *  of the chapter's data already tells us which profile produced it. */
-function isToolsShape(data: Record<string, unknown>): boolean {
-  return 'volatility' in data && 'chapter' in data;
+  if (list) list.push(card);
+  else byPart.set(key, [card]);
 }
 ---
 <Base
@@ -72,89 +104,58 @@ function isToolsShape(data: Record<string, unknown>): boolean {
 
     <p class="chapters-filter-hint" id="filter-hint" aria-live="polite"></p>
 
-    {Array.from(byPart.entries()).map(([part, list]) => {
-      const appendix = isAppendix(part);
-      return (
-        <section class="part-group">
-          <h2 class="part-heading">
-            <span class="part-label">{partLabel(part)}</span>
-          </h2>
-          <ol class="chapter-list">
-            {list.map((c) => {
-              const data = c.data as Record<string, unknown>;
-              const tools = isToolsShape(data);
-              // data-tools attribute drives the ToolFilter island. Academic
-              // cards opt out by claiming "cross-tool" — always visible
-              // regardless of filter state.
-              const toolsAttr = tools
-                ? (data.tools_compared as string[]).join(' ')
-                : 'cross-tool';
-              const freshness = tools
-                ? getFreshness(data.last_verified as Date, data.volatility as Parameters<typeof getFreshness>[1])
-                : null;
-              const freshnessText = freshness
-                ? freshness.status === 'fresh'
-                  ? 'Fresh'
-                  : freshness.status === 'verify-soon'
-                    ? 'Verify soon'
-                    : 'Stale'
-                : null;
-              return (
-                <li class="chapter-card" data-tools={toolsAttr}>
-                  <a href={`/${c.id}/`} class="chapter-card-link">
-                    <div class="chapter-card-meta">
-                      <span class="chapter-card-number">
-                        {tools
-                          ? appendix
-                            ? `Appendix ${String.fromCharCode(64 + (data.chapter as number)).toLowerCase()}`
-                            : `Chapter ${data.chapter}`
-                          : `Week ${data.week}`}
-                      </span>
-                      {tools && (
-                        <span
-                          class={`volatility-badge volatility-${data.volatility}`}
-                          title={`Volatility: ${data.volatility}`}
-                        >{data.volatility}</span>
-                      )}
-                      {!tools && data.status && (
-                        <span
-                          class={`status-badge status-${data.status}`}
-                          title={`Status: ${data.status}`}
-                        >{data.status}</span>
-                      )}
-                      {freshness && freshnessText && (
-                        <span
-                          class="freshness-badge"
-                          data-status={freshness.status}
-                          aria-label={freshnessLabel(freshness)}
-                          title={freshnessLabel(freshness)}
-                        >{freshnessText}</span>
-                      )}
-                      {tools && data.last_verified && (
-                        <span class="chapter-card-verified">
-                          verified {formatDate(data.last_verified as Date)}
-                        </span>
-                      )}
-                    </div>
-                    <h3 class="chapter-card-title">{data.title}</h3>
-                    {data.description && (
-                      <p class="chapter-card-description">{data.description as string}</p>
-                    )}
-                    {tools && (
-                      <div class="chapter-card-tools">
-                        {(data.tools_compared as string[]).map((t) => (
-                          <span class="tool-badge">{t}</span>
-                        ))}
-                      </div>
-                    )}
-                  </a>
-                </li>
-              );
-            })}
-          </ol>
-        </section>
-      );
-    })}
+    {Array.from(byPart.entries()).map(([part, cards]) => (
+      <section class="part-group">
+        <h2 class="part-heading">
+          <span class="part-label">{renderer.formatPartLabel(part)}</span>
+        </h2>
+        <ol class="chapter-list">
+          {cards.map((card) => (
+            <li class="chapter-card" data-tools={card.toolsAttr}>
+              <a href={`/${card.c.id}/`} class="chapter-card-link">
+                <div class="chapter-card-meta">
+                  <span class="chapter-card-number">{card.number}</span>
+                  {card.volatility && (
+                    <span
+                      class={`volatility-badge volatility-${card.volatility.level}`}
+                      title={`Volatility: ${card.volatility.label}`}
+                    >{card.volatility.label}</span>
+                  )}
+                  {card.status && (
+                    <span
+                      class={`status-badge status-${card.status.status}`}
+                      title={`Status: ${card.status.label}`}
+                    >{card.status.label}</span>
+                  )}
+                  {card.freshness && card.freshnessText && (
+                    <span
+                      class="freshness-badge"
+                      data-status={card.freshness.status}
+                      aria-label={card.freshness.label}
+                      title={card.freshness.label}
+                    >{card.freshnessText}</span>
+                  )}
+                  {card.verifiedLabel && (
+                    <span class="chapter-card-verified">{card.verifiedLabel}</span>
+                  )}
+                </div>
+                <h3 class="chapter-card-title">{card.data.title}</h3>
+                {card.data.description && (
+                  <p class="chapter-card-description">{card.data.description as string}</p>
+                )}
+                {card.toolsCompared.length > 0 && (
+                  <div class="chapter-card-tools">
+                    {card.toolsCompared.map((t) => (
+                      <span class="tool-badge">{t}</span>
+                    ))}
+                  </div>
+                )}
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    ))}
   </article>
 </Base>
 
