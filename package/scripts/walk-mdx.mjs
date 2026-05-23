@@ -75,22 +75,21 @@ export async function readChaptersBase(projectRoot) {
     } catch {
       return DEFAULT_BASE;
     }
-    // Look for a `chapters = defineCollection({ loader: glob({ base: '...' }) })`
-    // pattern. The regex matches the `base: 'string'` form inside any
-    // defineCollection-like block — we narrow to the `chapters` collection by
-    // requiring the `chapters` identifier in the preceding ~200 chars.
+    // Look for a `chapters` collection's `loader.base` string. Permissive
+    // form: match the `chapters` identifier, then within the next 500
+    // chars find `base: 'string'` or `base: "string"`. NOT template
+    // literals (which use backticks and may contain ${} interpolation —
+    // those fall back to the default since the value is dynamic).
     //
-    // Two forms to match:
+    // Forms matched:
     //   - `const chapters = defineCollection({ loader: glob({ base: './foo' }) })`
     //   - `export const collections = { chapters: defineCollection({ loader: glob({ base: './foo' }) }) }`
-    // Only match single- or double-quoted string literals (NOT template
-     // literals). Template literals may contain interpolation like ${dir},
-     // which is dynamic and can't be resolved statically; fall back to
-     // the default in that case.
-    const re = /chapters\s*[:=][\s\S]{0,400}?loader\s*:[\s\S]{0,200}?base\s*:\s*(['"])([^'"]+)\1/;
+    //   - any indentation / line break style
+    const re = /\bchapters\b[\s\S]{0,500}?\bbase\s*:\s*'([^']+)'|\bchapters\b[\s\S]{0,500}?\bbase\s*:\s*"([^"]+)"/;
     const m = source.match(re);
-    if (m && m[2]) {
-      return resolve(projectRoot, m[2]);
+    const captured = m && (m[1] || m[2]);
+    if (captured) {
+      return resolve(projectRoot, captured);
     }
     // File exists but no override found — assume the consumer uses the
     // scaffold's defineBookSchemas() default.

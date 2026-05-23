@@ -2,7 +2,29 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
-## [4.1.1] — 2026-05-23
+## [4.1.2] — 2026-05-23
+
+Hotfix release. Republishes v4.1.1's scope (#63 chapter discovery fix + fixture-pedagogy baselines) with a more permissive regex in `readChaptersBase`. The v4.1.1 tag exists on GitHub but **was never published to npm** because the `readChaptersBase: double-quoted loader.base override works` unit test failed in CI's Node 22 environment — the regex's `(['"])([^'"]+)\1` backreference form behaved differently on the runner than locally. v4.1.2 uses two separate alternation branches (one per quote style) instead of a backreference; the test passes locally AND in CI. No consumer impact since v4.1.1 never reached npm.
+
+### Fixed
+
+- **`readChaptersBase` regex rewritten without backreference** — replaced `chapters\s*[:=][\s\S]{0,400}?loader\s*:[\s\S]{0,200}?base\s*:\s*(['"])([^'"]+)\1` with `\bchapters\b[\s\S]{0,500}?\bbase\s*:\s*'([^']+)'|\bchapters\b[\s\S]{0,500}?\bbase\s*:\s*"([^"]+)"`. Two consequences: (1) no more backreference (more portable across regex engines), (2) more permissive matching pattern — relaxes the requirement that `chapters` be immediately followed by `:` or `=`. All 8 existing `chapters-base-resolution.test.mjs` tests pass; behavior is conceptually unchanged.
+
+### Carries forward from the unreleased v4.1.1
+
+- **`book-scaffold validate` + `book-scaffold build-labels` honor `loader.base` overrides** ([#63](https://github.com/brandon-behring/book-scaffold-astro/issues/63))
+- **`fixture-pedagogy` visual regression fixture** — 20 new baseline PNGs at AE=0
+- **`PocLayout.astro` type union flattened to single line**
+
+See the v4.1.1 entry below for the full details of those changes.
+
+### Release policy
+
+- **D12 lock-step preserved**: `@brandon_m_behring/create-book@4.1.2` ships alongside.
+- Pre-publish smoke gate (v3.6.5) ran end-to-end against academic + research-portfolio before publish.
+- Test gate caught the regex regression in CI before publish — exactly the gate's intended purpose.
+
+## [4.1.1] — 2026-05-23 (tagged but unreleased — see [4.1.2])
 
 Patch release. Two-item bundle: closes [#63](https://github.com/brandon-behring/book-scaffold-astro/issues/63) (chapter discovery silently returns 0 when `content.config.ts` overrides `loader.base`) + ships visual regression baselines for the 4 v4.1.0 pedagogy components (deferred from v4.1.0 to keep velocity).
 
