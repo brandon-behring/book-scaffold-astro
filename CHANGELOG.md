@@ -2,6 +2,28 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [3.6.5] — 2026-05-22
+
+Release pipeline polish. No new consumer features; locks in the lessons from the v3.6.1 → v3.6.4 hotfix chain so the next minor (v3.7.0, chapters profile-strategy refactor) ships cleanly the first time. Closes [#37](https://github.com/brandon-behring/book-scaffold-astro/issues/37).
+
+### Changed
+
+- **Pre-publish smoke is now an automated CI gate** in `.github/workflows/publish.yml`. Runs after build/test and before either `npm publish` call: packs the toolkit locally (`npm pack`), scaffolds a fresh academic book via the in-repo `create-book` bin, installs the toolkit via `file://` tarball, runs `npm install + npm run build`, and asserts the chapter route + landing page + references page all emit HTML. If any step fails, neither package publishes (no irreversible npm side-effect). Same recipe that was run manually before v3.6.4; now mandatory.
+- **`Smoke verify registry` now uses an incremental-backoff retry loop** (10s/20s/30s/40s/50s = 150s budget) instead of a single fixed `sleep 10`. Previous version false-failed on v3.5.2 / v3.6.2 / v3.6.4 publishes when `npm view` ran before the registry index propagated; the publishes themselves succeeded but the workflow exited non-zero. The loop logs each attempt + exits success on the first match.
+
+### Fixed
+
+- **No more `Node.js 20 actions are deprecated` workflow annotations**. Bumped `actions/checkout@v4` → `@v6`, `actions/setup-node@v4` → `@v6`, `actions/upload-artifact@v4` → `@v7` across all three workflows (`publish.yml`, `package-ci.yml`, `visual-regression.yml`). GitHub Actions force-upgrades Node 20 → Node 24 on June 2 2026 and removes Node 20 entirely on Sept 16 2026; this bump gets us ahead of both deadlines.
+
+### Added
+
+- `npm test --workspace create-book` step in `publish.yml` (10 scaffold tests join the toolkit's 47 in the publish gate). Pre-v3.6.5 only the toolkit's own tests ran; create-book had no gate at publish time.
+
+### Release policy
+
+- **D12 lock-step preserved**: `@brandon_m_behring/create-book@3.6.5` ships alongside the toolkit.
+- Pre-publish smoke caught nothing this release (clean ship from v3.6.4); future publishes get the same gate.
+
 ## [3.6.4] — 2026-05-22
 
 Patch release fixing the validator failure surfaced by the v3.6.3 end-to-end smoke test. With the bibliography parsing finally working (v3.6.3), `book-scaffold validate` ran and caught a different issue: the scaffolded academic demo chapter referenced `<Cite key="example-key2024" />` but the placeholder bibliography (added in v3.6.1) only defined `placeholder2026`. Every new academic book failed validate with "Unknown bibkey" on the first build.
