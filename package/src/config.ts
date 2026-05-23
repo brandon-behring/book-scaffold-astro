@@ -1,7 +1,12 @@
 /**
  * defineBookConfig — thin wrapper around Astro's defineConfig that
- * threads the resolved profile through `bookScaffoldIntegration` and
- * applies profile-conditional KaTeX wiring.
+ * composes the resolved Style chain, threads the preset through
+ * `bookScaffoldIntegration`, and applies profile-conditional KaTeX wiring.
+ *
+ * v4.0.0 (BREAKING, closes #35 architecture work): replaces the v3.x
+ * `preset:`/`profile:` top-level fields with `styles: Style[]` composition.
+ * Consumers using v3 fields receive an auto-suggested migration error
+ * pointing at the exact replacement (D11). See MIGRATION-v3-to-v4.md.
  *
  * See PACKAGE_DESIGN.md §4.
  */
@@ -9,49 +14,126 @@ import mdx from '@astrojs/mdx';
 import preact from '@astrojs/preact';
 import type { AstroUserConfig } from 'astro';
 import type { BookConfigOptions } from './types.js';
-import { resolvePreset } from './types.js';
+import { BOOK_PRESETS, BookConfigError } from './types.js';
 import { bookScaffoldIntegration } from './integration.js';
 import { PROFILES } from './profiles/index.js';
+import { composeStyles, type Style } from './lib/define-style.js';
+import { BUILTIN_STYLES } from './styles/built-in.js';
+
+/**
+ * v4.0.0 migration error (D11) — emitted when consumer code passes the v3
+ * `preset:` or `profile:` field. Builds a per-value auto-suggested
+ * replacement showing the exact `styles: [<preset>Style]` syntax + import line.
+ */
+function v3MigrationError(opts: Record<string, unknown>): BookConfigError {
+  const v3Value = (opts.preset ?? opts.profile) as string | undefined;
+  const v3FieldUsed = 'preset' in opts ? 'preset' : 'profile';
+
+  // Map preset value → style export name.
+  const styleExportName =
+    v3Value && BOOK_PRESETS.includes(v3Value as (typeof BOOK_PRESETS)[number])
+      ? `${v3Value === 'research-portfolio'
+          ? 'researchPortfolio'
+          : v3Value === 'course-notes'
+            ? 'courseNotes'
+            : v3Value}Style`
+      : null;
+
+  const knownReplacement = styleExportName
+    ? `
+Replace this:
+  defineBookConfig({ ${v3FieldUsed}: ${JSON.stringify(v3Value)}, ... })
+
+With this:
+  import { defineBookConfig, ${styleExportName} } from '@brandon_m_behring/book-scaffold-astro';
+  defineBookConfig({ styles: [${styleExportName}], ... })
+`
+    : `
+Replace the \`${v3FieldUsed}: <value>\` field with a \`styles: [<...Style>]\` array.
+The v4 toolkit exports built-in styles for each preset: academicStyle, toolsStyle,
+minimalStyle, courseNotesStyle, researchPortfolioStyle.
+`;
+
+  return new BookConfigError(
+    `book-scaffold-astro v4.0.0 removed the \`${v3FieldUsed}\` field on defineBookConfig.
+${knownReplacement}
+See https://github.com/brandon-behring/book-scaffold-astro/blob/main/package/MIGRATION-v3-to-v4.md
+for the full migration guide. If you hit friction migrating, please file an issue at
+https://github.com/brandon-behring/book-scaffold-astro/issues — v4 is fresh and the API
+will evolve based on real friction reports.`,
+  );
+}
 
 export async function defineBookConfig(
   opts: BookConfigOptions,
 ): Promise<AstroUserConfig> {
-  // v3.4.0 (#9): resolvePreset accepts both `preset` and `profile` (alias).
-  // The variable stays named `profile` internally to minimize the diff —
-  // semantically it's the resolved preset value.
-  const profile = resolvePreset(opts.preset, opts.profile);
+  // 0. v3 → v4 migration check (D11). Hard break per D5; no shim.
+  if ('preset' in opts || 'profile' in opts) {
+    throw v3MigrationError(opts as Record<string, unknown>);
+  }
 
-  // Profile-conditional KaTeX wiring (ported from v2.0 astro.config.mjs:23-42).
-  // Dynamic import keeps the dep graph clean for tools/minimal profiles.
-  //
-  // v3.7.1 (closes #51): gate on the profile's `katex` flag (single source of
-  // truth: the ProfileDefinition) instead of a hardcoded `profile === 'academic'`
-  // check. Both academic and research-portfolio set `katex: true`; previously
-  // research-portfolio missed the math wiring, causing `$\mathbb{E}\{X\}$`-style
-  // expressions to be parsed by MDX as JSX (the `{X}` became an expression
-  // containing undefined variable `X`) instead of by remark-math.
+  // 1. Compose the style chain. Empty chain returns an empty Style; defaults
+  //    fall back to 'minimal' preset below (matches v3 behavior when no
+  //    BOOK_PROFILE was set anywhere).
+  const composed = composeStyles((opts.styles as readonly Style[] | undefined) ?? []);
+
+  // 2. Apply top-level opts on top of composed (top-level wins for shared fields).
+  const profile = (opts.styles === undefined && composed.preset === undefined
+    ? 'minimal'
+    : composed.preset ?? 'minimal') as (typeof BOOK_PRESETS)[number];
+
+  const site = opts.site ?? composed.site;
+  if (!site) {
+    throw new BookConfigError(
+      'book-scaffold-astro v4.0.0: `site` is required. Provide it via the top-level ' +
+        '`site` field in defineBookConfig OR via a Style in the `styles` array.',
+    );
+  }
+
+  // Merge routes: composed style routes + top-level opts.routes (top-level wins per-key).
+  const mergedRoutes = {
+    ...(composed.routes ?? {}),
+    ...(opts.routes ?? {}),
+  };
+
+  // Merge katexMacros: composed style macros + top-level (top-level wins per-key).
+  const consumerKatexMacros = {
+    ...(composed.katexMacros ?? {}),
+    ...((opts.katexMacros as Record<string, string> | undefined) ?? {}),
+  };
+
+  // Extra styles + integrations: concat composed + top-level.
+  const mergedExtraStyles = [
+    ...(composed.extraStyles ?? []),
+    ...((opts.extraStyles as readonly string[] | undefined) ?? []),
+  ];
+  const mergedExtraIntegrations = [
+    ...(composed.extraIntegrations ?? []),
+    ...((opts.extraIntegrations as readonly NonNullable<AstroUserConfig['integrations']>[number][] | undefined) ?? []),
+  ];
+
+  // mdxComponentsModule: top-level beats composed.
+  const mdxComponentsModule =
+    (opts.mdxComponentsModule as string | undefined) ?? composed.mdxComponentsModule;
+
+  // markdown: composed + top-level (top-level remark/rehype concat after composed).
+  const composedMarkdown = composed.markdown ?? {};
+  const userMarkdown = (opts.markdown as AstroUserConfig['markdown'] | undefined) ?? {};
+
+  // 3. Profile-conditional KaTeX wiring. v3.7.1 (#51) gate: PROFILES[profile]?.katex.
   const wantsKatex = PROFILES[profile]?.katex === true;
   const remarkPlugins: NonNullable<NonNullable<AstroUserConfig['markdown']>['remarkPlugins']> = [];
   const rehypePlugins: NonNullable<NonNullable<AstroUserConfig['markdown']>['rehypePlugins']> = [];
 
   if (wantsKatex) {
-    // `/* @vite-ignore */` tells the consumer's Vite to skip static analysis
-    // of these dynamic imports — tools/minimal consumers don't install
-    // remark-math/rehype-katex, and Vite would otherwise fail to resolve
-    // them even though the runtime branch never executes.
     const { default: remarkMath } = await import(/* @vite-ignore */ 'remark-math');
     const { default: rehypeKatex } = await import(/* @vite-ignore */ 'rehype-katex');
     const { ssmMacros } = await import('./lib/katex-macros.js');
-    // Shallow-merge consumer macros onto ssmMacros. Consumer wins on key
-    // collision so books can override scaffold defaults if needed. Closes #22.
-    const macros = { ...ssmMacros, ...(opts.katexMacros ?? {}) };
+    const macros = { ...ssmMacros, ...consumerKatexMacros };
     remarkPlugins.push(remarkMath);
     rehypePlugins.push([
       rehypeKatex,
       {
-        // Strict mode: build fails on undefined macros, malformed expressions,
-        // unsupported AMS environments. Trades developer pain at write-time
-        // for catching errors before deploy.
         strict: 'error',
         trust: true,
         macros,
@@ -64,64 +146,67 @@ export async function defineBookConfig(
     preact(),
     bookScaffoldIntegration({
       profile,
-      routes: opts.routes,                          // v3.3.0 — per-route override (issue #3)
-      mdxComponentsModule: opts.mdxComponentsModule, // v3.3.0 — explicit mdx-components path (issue #2)
-      extraStyles: opts.extraStyles,
+      routes: mergedRoutes,
+      mdxComponentsModule,
+      extraStyles: mergedExtraStyles,
     }),
-    ...(opts.extraIntegrations ?? []),
+    ...mergedExtraIntegrations,
   ];
 
-  // Consumer's `markdown` spreads after the package defaults so they
-  // can override fields, but the remark/rehype arrays merge additively.
-  const userMarkdown = opts.markdown ?? {};
+  // Consumer's `markdown` spreads after the package defaults so they can
+  // override fields; the remark/rehype arrays merge additively from composed
+  // styles → top-level user markdown.
+  const finalRemark = [
+    ...remarkPlugins,
+    ...(composedMarkdown.remarkPlugins ?? []),
+    ...(userMarkdown.remarkPlugins ?? []),
+  ];
+  const finalRehype = [
+    ...rehypePlugins,
+    ...(composedMarkdown.rehypePlugins ?? []),
+    ...(userMarkdown.rehypePlugins ?? []),
+  ];
+
   const markdown: AstroUserConfig['markdown'] = {
     shikiConfig: {
-      // css-variables mode lets code blocks switch dark/light theme without
-      // rebuilding. Tokens map to --astro-code-* CSS vars in tokens.css.
       theme: 'css-variables',
       wrap: false,
-      ...(userMarkdown.shikiConfig ?? {}),
+      ...((userMarkdown.shikiConfig ?? composedMarkdown.shikiConfig) ?? {}),
     },
-    remarkPlugins: [...remarkPlugins, ...(userMarkdown.remarkPlugins ?? [])],
-    rehypePlugins: [...rehypePlugins, ...(userMarkdown.rehypePlugins ?? [])],
+    ...composedMarkdown,
     ...userMarkdown,
+    remarkPlugins: finalRemark,
+    rehypePlugins: finalRehype,
   };
 
-  // Strip the package-specific options out of the rest before forwarding.
+  // Strip the package-specific options out of the rest before forwarding to Astro.
   const {
-    preset: _preset,                       // v3.4.0
-    profile: _profile,
-    routes: _routes,                       // v3.3.0
-    mdxComponentsModule: _mdxComponentsModule, // v3.3.0
+    styles: _styles,
+    site: _site,
+    routes: _routes,
+    deploy: _deploy,
+    mdxComponentsModule: _mdxComponentsModule,
     extraIntegrations: _extraIntegrations,
     extraStyles: _extraStyles,
     markdown: _markdown,
-    katexMacros: _katexMacros,             // v3.6.0 (closes #22)
+    katexMacros: _katexMacros,
     ...rest
   } = opts;
-  void _preset;
-  void _profile;
+  void _styles;
+  void _site;
   void _routes;
+  void _deploy;
   void _mdxComponentsModule;
   void _extraIntegrations;
   void _extraStyles;
   void _markdown;
   void _katexMacros;
 
-  // defineConfig from 'astro/config' is documented as an identity function
-  // that only carries types; we skip it and assemble the AstroUserConfig
-  // directly. This sidesteps a generic-inference cascade where
-  // AstroUserConfig's Locales/SessionDriverName/FontProvider params don't
-  // thread through our wrapper without explicit type plumbing.
-  //
-  // KaTeX peer-deps are dynamic-imported only on the academic branch, but
-  // Rollup's static analyzer sees the literal string and tries to resolve
-  // anyway. Marking them external for non-academic builds skips the
-  // resolution attempt; the runtime branch never executes, so no runtime
-  // miss.
+  // KaTeX externals — same v3.7.1 pattern, now gated on the composed preset.
   const katexExternals = wantsKatex ? [] : ['remark-math', 'rehype-katex', 'katex'];
 
   const config: AstroUserConfig = {
+    site,
     ...rest,
     integrations,
     markdown,

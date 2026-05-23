@@ -215,74 +215,196 @@ package/
 
 ---
 
-## 4. `defineBookConfig` API
+## 4. `defineBookConfig` API (v4.0.0)
 
-Wraps Astro's `defineConfig`; threads the resolved profile, registers the dual-purpose Integration, and applies profile-conditional KaTeX wiring.
+Wraps Astro's `defineConfig`; composes a Style chain, threads the resolved profile, registers the dual-purpose Integration, and applies profile-conditional KaTeX wiring.
+
+**v4.0.0 BREAKING CHANGE**: the v3.x `preset:` / `profile:` shorthand was removed. Pass styles via `styles: [<presetName>Style]` instead. See [`MIGRATION-v3-to-v4.md`](package/MIGRATION-v3-to-v4.md) for the migration recipe and [`recipes/15-defining-styles.md`](package/recipes/15-defining-styles.md) for the Style composition pattern.
 
 ### Signature
 
 ```ts
 import type { AstroUserConfig, AstroIntegration } from 'astro';
+import type { Style, PartialRouteToggles } from '@brandon_m_behring/book-scaffold-astro';
 
-export type BookProfile = 'academic' | 'tools' | 'minimal';
+export type BookPreset = 'academic' | 'tools' | 'minimal' | 'course-notes' | 'research-portfolio';
 
 export interface BookConfigOptions extends Omit<AstroUserConfig, 'integrations' | 'markdown'> {
-  /** Required. Book's deployed origin (used by sitemap, Pagefind, canonical links). */
-  site: string;
-  /**
-   * Optional. Falls back to `process.env.BOOK_PROFILE`, then `'minimal'`.
-   * Explicit param always wins over env (locked precedence).
-   */
-  profile?: BookProfile;
-  /** Optional. Appended to package-provided integration list. */
-  extraIntegrations?: AstroIntegration[];
-  /**
-   * Optional. Cross-profile CSS escape hatch (Q3). Basenames only, e.g.
-   * `['convergence.css']` to opt an academic book into a tools-flavored callout.
-   */
-  extraStyles?: string[];
-  /** Optional. Spread-merged into the package-provided markdown config. */
+  /** v4.0.0 NEW: array of Style objects composed left-to-right.
+   *  Each style's fields are merged per the per-key strategy table (see §4a). */
+  styles?: readonly Style[];
+
+  /** Optional. Book's deployed origin. Required at runtime — supply here OR in a Style. */
+  site?: string;
+
+  /** Optional. Cross-profile route opt-ins (chapters / convergence / frontmatter).
+   *  frontmatter is widened to `boolean | { enabled, prefix? }` for #49. */
+  routes?: PartialRouteToggles;
+
+  /** Optional. Consumer-supplied KaTeX macros merged on top of ssmMacros (#22). */
+  katexMacros?: Readonly<Record<string, string>>;
+
+  /** Optional. Cross-profile CSS escape hatch. Basenames only. Array concat. */
+  extraStyles?: readonly string[];
+
+  /** Optional. Astro integrations appended after the package list. Array concat. */
+  extraIntegrations?: readonly AstroIntegration[];
+
+  /** Optional. Override mdx components module path. */
+  mdxComponentsModule?: string;
+
+  /** Optional. Spread-merged into package-provided markdown config (plugin arrays concat). */
   markdown?: AstroUserConfig['markdown'];
+
+  /** Optional. Deploy target — informs create-book's wrangler.toml shape (#50).
+   *  Inherited from the chosen style; override per-book if needed. */
+  deploy?: 'pages' | 'workers';
 }
 
-export function defineBookConfig(opts: BookConfigOptions): AstroUserConfig;
+export function defineBookConfig(opts: BookConfigOptions): Promise<AstroUserConfig>;
 ```
 
 ### Behavior
 
-1. Resolve `profile = opts.profile ?? process.env.BOOK_PROFILE ?? 'minimal'`.
-2. Throw `BookConfigError` if `profile` is not in `{ 'academic', 'tools', 'minimal' }`.
-3. Build the package's integration list: `[mdx(), preact(), bookScaffoldIntegration({ profile, extraStyles })]`.
-4. If `profile === 'academic'`, dynamically import `remark-math`, `rehype-katex`, and the bundled `ssmMacros`; append them to `markdown.remarkPlugins` / `markdown.rehypePlugins` (Astro 6 strict-mode KaTeX).
-5. Concatenate `extraIntegrations` after the package list.
-6. Spread-merge `opts.markdown` over the package-provided markdown config (consumer override wins for keys they set; everything else inherits).
-7. Return the final `AstroUserConfig` via Astro's `defineConfig`.
+1. Detect v3 API usage (`preset` or `profile` at top level) → throw `BookConfigError` with auto-suggested replacement: exact `styles: [<presetName>Style]` line + missing import, plus link to MIGRATION-v3-to-v4.md.
+2. Compose the Style chain via `composeStyles(opts.styles ?? [])`, applying the per-key merge strategy (see §4a).
+3. Apply top-level `opts` fields on top of composed style (consumer per-book override wins).
+4. Resolve `preset` from composed style; throw `BookConfigError` if unknown.
+5. Require `site` to be set after composition; throw otherwise.
+6. Build the package's integration list: `[mdx(), preact(), bookScaffoldIntegration({ preset, routes, extraStyles, mdxComponentsModule })]`.
+7. If `PROFILES[preset]?.katex === true` (academic + research-portfolio), dynamically import `remark-math`, `rehype-katex`, and `ssmMacros`; merge `katexMacros` on top; append to `markdown.remarkPlugins` / `markdown.rehypePlugins`.
+8. Concatenate `extraIntegrations` after the package list.
+9. Spread-merge `opts.markdown` over package markdown config (plugin arrays concat).
+10. Return final `AstroUserConfig` via Astro's `defineConfig`.
 
 ### Errors / common mistakes
 
-- **`BookConfigError: profile must be one of academic | tools | minimal (got "X")`** — invalid value for `profile` or `BOOK_PROFILE`. Check `.env` typos.
-- **Warn: `BOOK_PROFILE not set; falling back to 'minimal'.`** — emitted to stderr at config-load time. Fix by adding `BOOK_PROFILE=academic` (or `tools`) to `.env`.
-- **Consumer adds remark/rehype plugin via `markdown.remarkPlugins`**: package list ordering matters; consumer plugins run **after** package's KaTeX plugins. If you need a different order, opt out of academic profile (set `profile: 'minimal'` explicitly) and wire math manually.
+- **`BookConfigError: v3 API detected. Replace this: ... With this: ...`** — passed `preset:` or `profile:` at top level. The error includes the exact replacement code. See MIGRATION-v3-to-v4.md.
+- **`BookConfigError: site is required`** — neither top-level `site` nor any composed Style provided one. Add `site: 'https://...'` to the call or to a shared Style.
+- **`BookConfigError: unknown preset "X"`** — composed Style's `preset` field is invalid. Use one of the 5 built-in styles or `defineStyle({ preset: 'academic', ... })`.
+- **Consumer adds remark/rehype plugin via `markdown.remarkPlugins`**: package list ordering matters; consumer plugins run **after** package's KaTeX plugins. If you need a different order, choose a non-katex preset (e.g., `toolsStyle`) and wire math manually.
 
-### Consumer example
+### Consumer examples
 
 ```js
-// astro.config.mjs (academic book, default case — 2 lines)
-import { defineBookConfig } from '@brandon_m_behring/book-scaffold-astro';
-export default defineBookConfig({ site: 'https://my-book.example.com' });
+// astro.config.mjs (academic book, minimum case — 3 lines)
+import { defineBookConfig, academicStyle } from '@brandon_m_behring/book-scaffold-astro';
+export default await defineBookConfig({
+  styles: [academicStyle],
+  site: 'https://my-book.example.com',
+});
 ```
 
 ```js
-// astro.config.mjs (with additional integrations + cross-profile callout opt-in)
-import { defineBookConfig } from '@brandon_m_behring/book-scaffold-astro';
+// astro.config.mjs (cross-profile additions + sitemap)
+import { defineBookConfig, academicStyle } from '@brandon_m_behring/book-scaffold-astro';
 import sitemap from '@astrojs/sitemap';
 
-export default defineBookConfig({
+export default await defineBookConfig({
+  styles: [academicStyle],
   site: 'https://my-book.example.com',
   extraIntegrations: [sitemap()],
   extraStyles: ['convergence.css'],   // academic book that uses <Convergence>
+  katexMacros: { '\\Var': '\\mathrm{Var}' },
 });
 ```
+
+```js
+// astro.config.mjs (workspace pattern: shared style + per-book override)
+import { defineBookConfig, researchPortfolioStyle } from '@brandon_m_behring/book-scaffold-astro';
+import { guidesFamilyStyle } from '../shared/styles/guides-family.js';
+
+export default await defineBookConfig({
+  styles: [researchPortfolioStyle, guidesFamilyStyle],
+  // No per-book site; guidesFamilyStyle provides it (the workspace shares one domain).
+});
+```
+
+---
+
+## 4a. `defineStyle` API (v4.0.0)
+
+Identity helper that creates a typed, branded, composable Style. Zero runtime overhead beyond an object spread + version marker.
+
+### Signature
+
+```ts
+import type { AstroIntegration, AstroUserConfig } from 'astro';
+
+declare const StyleBrand: unique symbol;
+
+export interface Style {
+  /** Type-only brand (set by defineStyle); prevents confusion with Partial<BookConfigOptions>. */
+  readonly [StyleBrand]: true;
+  /** Version marker for forward compatibility; auto-set to 1 by defineStyle. */
+  readonly __styleVersion: 1;
+
+  // ===== All fields below are OPTIONAL =====
+  readonly name?: string;
+  readonly preset?: BookPreset;
+  readonly site?: string;
+  readonly routes?: PartialRouteToggles;
+  readonly katexMacros?: Readonly<Record<string, string>>;
+  readonly extraStyles?: readonly string[];
+  readonly extraIntegrations?: readonly AstroIntegration[];
+  readonly mdxComponentsModule?: string;
+  readonly markdown?: AstroUserConfig['markdown'];
+  readonly deploy?: 'pages' | 'workers';
+  /** Scoped consumer-side metadata; ignored by toolkit; survives merge as shallow override.
+   *  Preserves typo protection on known fields (closed shape — no public index signature). */
+  readonly extra?: Readonly<Record<string, unknown>>;
+}
+
+export type StyleInput = Omit<Style, typeof StyleBrand | '__styleVersion'>;
+
+export function defineStyle(opts: StyleInput): Style;
+```
+
+### Behavior
+
+Returns `{ __styleVersion: 1, ...opts }` cast to `Style`. The brand is type-only (no runtime symbol overhead). Pure; idempotent; safe to call at module scope.
+
+### Per-key merge strategy
+
+When `composeStyles([s1, s2, s3])` runs (left-to-right; top-level `defineBookConfig` fields win over the whole chain):
+
+| Field | Strategy |
+|---|---|
+| `name`, `preset`, `site`, `deploy`, `mdxComponentsModule` | Shallow override (last wins) |
+| `routes` | Per-route spread |
+| `routes.frontmatter` | Per-route spread; later value (boolean OR object) wholly replaces earlier |
+| `katexMacros` | Object spread (per-macro override) |
+| `extra` | Object spread (per-key consumer-metadata override) |
+| `extraStyles`, `extraIntegrations` | Array concat (additive — no dedup) |
+| `markdown.remarkPlugins`, `markdown.rehypePlugins` | Array concat (additive) |
+| Unknown future fields | Default: shallow override |
+
+### Built-in styles
+
+```ts
+import {
+  academicStyle, toolsStyle, minimalStyle, courseNotesStyle, researchPortfolioStyle,
+  BUILTIN_STYLES,  // Record<BookPreset, Style>
+} from '@brandon_m_behring/book-scaffold-astro';
+```
+
+Each built-in matches one preset. `BUILTIN_STYLES['academic']` resolves to the specific styled type via `as const satisfies Record<BookPreset, Style>` (TS 4.9+ narrow inference).
+
+### Consumer example
+
+```ts
+// shared/styles/guides-family.ts
+import { defineStyle } from '@brandon_m_behring/book-scaffold-astro';
+
+export const guidesFamilyStyle = defineStyle({
+  name: 'guides-family',
+  site: 'https://guides.brandon-behring.dev/',
+  routes: { frontmatter: { enabled: true, prefix: '' } },
+  extra: { pedagogyTier: 'experimental' },  // typo-safe consumer metadata
+});
+```
+
+See [`recipes/15-defining-styles.md`](package/recipes/15-defining-styles.md) for the full pattern catalog.
 
 ---
 

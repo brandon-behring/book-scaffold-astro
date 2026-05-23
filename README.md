@@ -2,25 +2,28 @@
 
 **npm package** for long-form technical books. Astro + MDX + Paged.js + Pagefind with Tufte-inspired typography, profile-aware pedagogy (academic vs tools-comparative), KaTeX math, BibTeX citations, and Cloudflare Workers + Static Assets deploy.
 
-**Current release**: [`@brandon_m_behring/book-scaffold-astro@3.6.0`](https://www.npmjs.com/package/@brandon_m_behring/book-scaffold-astro) (2026-05-22) — adds the `katexMacros` option for non-SSM academic books. Sibling CLI: [`@brandon_m_behring/create-book@3.6.0`](https://www.npmjs.com/package/@brandon_m_behring/create-book). Both ship in lock-step via OIDC trusted publishing on tag push. See [`PACKAGE_DESIGN.md`](PACKAGE_DESIGN.md) for the full API contract and [`CHANGELOG.md`](CHANGELOG.md) for the release history.
+**Current release**: [`@brandon_m_behring/book-scaffold-astro@4.0.0`](https://www.npmjs.com/package/@brandon_m_behring/book-scaffold-astro) (2026-05-23) — **BREAKING**: `preset:` shorthand replaced by typed `defineStyle()` composition. Migrating from v3.x? → [`MIGRATION-v3-to-v4.md`](package/MIGRATION-v3-to-v4.md). Sibling CLI: [`@brandon_m_behring/create-book@4.0.0`](https://www.npmjs.com/package/@brandon_m_behring/create-book). Both ship in lock-step via OIDC trusted publishing on tag push. See [`PACKAGE_DESIGN.md`](PACKAGE_DESIGN.md) for the full API contract and [`CHANGELOG.md`](CHANGELOG.md) for the release history.
 
 ## Start a new book
 
 ```bash
-npx @brandon_m_behring/create-book my-book --profile=academic
+npx @brandon_m_behring/create-book my-book --preset=academic
 cd my-book
 npm install
 npm run dev
 ```
 
-`--profile` is one of `academic` / `tools` / `minimal` / `course-notes` / `research-portfolio`. (The `book-scaffold` runtime CLI accepts both `--profile` and the canonical `--preset` introduced in v3.4.0; `create-book` adds `--preset` in a future release — see [#38](https://github.com/brandon-behring/book-scaffold-astro/issues/38).) The scaffold emits 11 templated files (~50 lines total of book-specific config); everything else comes from the package via the exports map.
+`--preset` (or v3.4.0+ alias `--profile`) is one of `academic` / `tools` / `minimal` / `course-notes` / `research-portfolio`. The scaffold emits ~13 templated files including a v4 `astro.config.mjs` that composes the matching built-in style. See [recipes/15-defining-styles.md](package/recipes/15-defining-styles.md) for the full Style composition pattern (workspace-local vs npm-package styles, per-key merge semantics, escape hatches).
 
 ## Consumer config (what you own)
 
 ```js
-// astro.config.mjs (2 lines)
-import { defineBookConfig } from '@brandon_m_behring/book-scaffold-astro';
-export default await defineBookConfig({ site: 'https://my-book.example.com' });
+// astro.config.mjs (3 lines — v4.0.0)
+import { defineBookConfig, academicStyle } from '@brandon_m_behring/book-scaffold-astro';
+export default await defineBookConfig({
+  styles: [academicStyle],
+  site: 'https://my-book.example.com',
+});
 ```
 
 ```ts

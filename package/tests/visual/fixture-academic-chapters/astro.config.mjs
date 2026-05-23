@@ -11,10 +11,12 @@
 // routes.chapters: true is what makes this fixture exercise the academic
 // chapters route — the same opt-in pattern double-ml-time-series used in
 // the bug #24 report.
-import { defineBookConfig } from '@brandon_m_behring/book-scaffold-astro';
+// v4.0.0 (BREAKING): migrated from `profile: 'academic'` to the
+// `styles: [academicStyle]` composition. See MIGRATION-v3-to-v4.md.
+import { defineBookConfig, academicStyle } from '@brandon_m_behring/book-scaffold-astro';
 
 export default await defineBookConfig({
+  styles: [academicStyle],
   site: 'http://127.0.0.1:4176',
-  profile: 'academic',
   routes: { chapters: true },
 });
