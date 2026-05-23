@@ -28,7 +28,7 @@
 import { readFile, access } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
-import { walkMdx } from './walk-mdx.mjs';
+import { walkMdx, readChaptersBase } from './walk-mdx.mjs';
 
 /**
  * Best-effort .env reader. Mirrors `readEnvFile` in src/types.ts; kept inline
@@ -95,7 +95,11 @@ const presetFromFlag = presetFlagIdx >= 0 ? argv[presetFlagIdx + 1] : undefined;
 // Resolves issue #8 — three reference consumers reported "0 chapter(s) checked"
 // because ROOT was the package directory inside node_modules.
 const ROOT = process.cwd();
-const CHAPTERS_DIR = resolve(ROOT, 'src/content/chapters');
+// v4.1.1 (closes #63): read the consumer's content.config.{ts,mjs,js} to
+// honor `loader.base` overrides (multi-guide pattern uses
+// `src/content/<guide-slug>/` instead of the Astro 5 default).
+// Falls back to `src/content/chapters` when no override / no config file.
+const CHAPTERS_DIR = await readChaptersBase(ROOT);
 const PUBLIC_DIR = resolve(ROOT, 'public');
 const DATA_DIR = resolve(ROOT, 'src/data');
 

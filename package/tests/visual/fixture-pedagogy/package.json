@@ -1,0 +1,21 @@
+{
+  "name": "@brandon_m_behring/book-scaffold-fixture-pedagogy",
+  "description": "Visual regression fixture for v4.1.1 pedagogy components: Pitfall (#58), WorkedExample (#57), YouWillLearn (#59), and PocLayout (#56). Uses academic preset (KaTeX wiring on); each chapter exercises a single new component's default + full-prop variants.",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "BOOK_PRESET=academic astro build",
+    "preview": "BOOK_PRESET=academic astro preview --host 127.0.0.1 --port 4177"
+  },
+  "dependencies": {
+    "@brandon_m_behring/book-scaffold-astro": "*",
+    "@astrojs/mdx": "^5.0.3",
+    "@astrojs/preact": "^5.1.1",
+    "astro": "^6.1.7",
+    "katex": "^0.16.21",
+    "preact": "^10.29.1",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0"
+  }
+}

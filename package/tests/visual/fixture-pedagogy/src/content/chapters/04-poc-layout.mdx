@@ -1,0 +1,72 @@
+---
+week: 4
+part: foundations
+title: "PocLayout component (v4.1.0 #56)"
+status: implemented
+---
+import PocLayout from '@brandon_m_behring/book-scaffold-astro/components/PocLayout.astro';
+
+# PocLayout — 5 kinds
+
+The `<PocLayout kind="...">` component (v4.1.0, [#56](https://github.com/brandon-behring/book-scaffold-astro/issues/56)) wraps a slot in a CSS-variable shell that swaps line-length, vertical rhythm, and heading emphasis per `kind`. Below: all 5 kinds in one chapter.
+
+<PocLayout kind="tutorial">
+
+## Tutorial kind
+
+Long-form narrative with generous line-length (70ch) and rhythm (1.6). This is the "walk me through it" register — patient prose, room for digressions, sidenotes that breathe.
+
+Tutorials assume the reader has time and wants to understand the why, not just the what.
+
+</PocLayout>
+
+<PocLayout kind="how-to">
+
+## How-to kind
+
+Numbered-step emphasis with heavier heading weight (700) and slightly tighter rhythm (1.5). The reader wants the recipe, not the theory.
+
+1. Open `~/.claude/CLAUDE.md`
+2. Add the rule under the right section
+3. Save; the next Claude session picks it up
+
+</PocLayout>
+
+<PocLayout kind="tldr">
+
+## TL;DR kind
+
+Compact paragraphs with no callout chrome. Line-length 65ch, rhythm 1.4. The reader is skimming and wants the punchline.
+
+CLAUDE.md is the highest-leverage config file. Write explicit rules. Avoid AI-speak. Verify Claude can act on what you wrote.
+
+</PocLayout>
+
+<PocLayout kind="part-summary">
+
+## Part-summary kind
+
+Wide synthesis layout (90ch, rhythm 1.5). For end-of-part wrap-ups that draw connections across chapters. The wider measure lets two-column comparisons + tables breathe.
+
+| Chapter | Key insight | Where it builds on |
+|---|---|---|
+| 1 | Agent loop is a fixed protocol | Sets vocabulary |
+| 2 | Variance lives in CLAUDE.md | Targets the leverage point |
+| 3 | Skills compose; commands don't | Refines the leverage |
+
+</PocLayout>
+
+<PocLayout kind="cheat-sheet">
+
+## Cheat-sheet kind
+
+Dense layout (55ch, rhythm 1.3, tables width 100%). Reference material; the reader knows what they want and is scanning to find it.
+
+| Command | Effect |
+|---|---|
+| `/help` | List built-in commands |
+| `/clear` | Clear conversation context |
+| `/compact` | Compress prior turns |
+| `/exit` | Quit the session |
+
+</PocLayout>

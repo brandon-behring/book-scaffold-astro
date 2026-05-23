@@ -1,0 +1,25 @@
+---
+week: 1
+part: foundations
+title: "Pitfall component (v4.1.0 #58)"
+status: implemented
+---
+import Pitfall from '@brandon_m_behring/book-scaffold-astro/components/Pitfall.astro';
+
+# Pitfall
+
+The `<Pitfall>` component (v4.1.0, [#58](https://github.com/brandon-behring/book-scaffold-astro/issues/58)) is distinct from `<WarnBox>` — it signals retrospective "common mistake" patterns rather than preemptive warnings.
+
+## Default title
+
+<Pitfall>
+  When you write `if (value)` to check for absence, you also treat `0`, `""`, and `false` as missing — usually not what you want. Use explicit equality (`value === undefined`) instead.
+</Pitfall>
+
+## Custom title
+
+<Pitfall title="CLAUDE.md anti-patterns that look right">
+  Many CLAUDE.md files include sentences like "Handle errors gracefully" — vague AI-speak rather than rules a Claude session can act on. Replace with concrete rules: "On a database connection error, retry up to 3 times with exponential backoff."
+</Pitfall>
+
+The visual signature (crimson border + tinted background) makes pitfalls distinguishable from warnings at a glance.

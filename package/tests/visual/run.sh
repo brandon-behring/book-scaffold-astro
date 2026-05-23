@@ -41,6 +41,7 @@ FIXTURES=(
   "fixture-course-notes:4174:course-notes:index=/,chapter-example=/chapters/example/,print=/print/"
   "fixture-research-portfolio:4175:research-portfolio:index=/,chapter-example=/chapters/example/,chapter-math=/chapters/ch02-math/,frontmatter-title=/frontmatter/title-page/"
   "fixture-academic-chapters:4176:academic-chapters:index=/,chapters-listing=/chapters/,chapter-found1=/chapters/found-week1/,chapter-synth5=/chapters/synth-week5/"
+  "fixture-pedagogy:4177:pedagogy:index=/,pitfall=/chapters/01-pitfall/,worked=/chapters/02-worked-example/,learn=/chapters/03-you-will-learn/,poc=/chapters/04-poc-layout/"
 )
 WIDTHS=(768 1280 1440 1920)
 
