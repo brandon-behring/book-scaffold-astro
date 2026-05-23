@@ -34,7 +34,8 @@
  * Designed to run in <2 s on a medium book.
  */
 import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
-import { resolve, join, basename, dirname } from 'node:path';
+import { resolve, relative, join, basename, dirname } from 'node:path';
+import { readChaptersBase } from './walk-mdx.mjs';
 
 // --help / -h: non-mutating (closes #14).
 const USAGE = `Usage: book-scaffold build-labels
@@ -56,7 +57,15 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
   process.exit(0);
 }
 
-const CHAPTERS_DIR = process.env.BOOK_CHAPTERS_DIR ?? 'src/content/chapters';
+// v4.1.1 (closes #63): readChaptersBase honors BOOK_CHAPTERS_DIR env (when set)
+// then parses the consumer's content.config.{ts,mjs,js} for a `chapters`
+// collection `loader.base` override. Multi-guide consumers use
+// `src/content/<guide-slug>/` rather than the Astro 5 default.
+const CHAPTERS_DIR_ABS = await readChaptersBase(process.cwd());
+// build-labels uses CHAPTERS_DIR as a path relative to cwd elsewhere in the
+// script (joined with `walkMdx`). Convert the absolute path back to relative
+// for compatibility with the existing call sites.
+const CHAPTERS_DIR = relative(process.cwd(), CHAPTERS_DIR_ABS) || 'src/content/chapters';
 const OUTPUT_PATH = process.env.BOOK_LABELS_OUT ?? 'src/data/labels.json';
 
 /** Component names that participate in cross-referencing. */

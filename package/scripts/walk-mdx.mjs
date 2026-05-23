@@ -12,8 +12,9 @@
  * Output: relative paths in POSIX form ("subdir/file.mdx"), matching what
  * the previous `glob('**\/*.{md,mdx}', { cwd })` produced.
  */
-import { readdir } from 'node:fs/promises';
-import { join, relative } from 'node:path';
+import { readFile, readdir } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
 
 export async function* walkMdx(dir, baseDir = dir) {
   let entries;
@@ -31,4 +32,70 @@ export async function* walkMdx(dir, baseDir = dir) {
       yield relative(baseDir, full).split(/[\\/]/).join('/');
     }
   }
+}
+
+/**
+ * Read the consumer's `content.config.ts` (or `.mjs` / `.js`) and extract
+ * the `loader.base` path for the `chapters` content collection.
+ *
+ * v4.1.1 (closes #63): consumers in the multi-guide / multi-book pattern
+ * override the chapters dir to `src/content/<guide-slug>` rather than the
+ * Astro 5 default `src/content/chapters/`. Without this helper,
+ * `book-scaffold validate` + `book-scaffold build-labels` silently report
+ * 0 chapters because they walk the default path. This helper parses the
+ * consumer's config file and returns the actual base path so both scripts
+ * discover the consumer's chapter files.
+ *
+ * Strategy: regex-parse the source file (avoid runtime import; the file
+ * imports from `astro:content` / `astro/loaders` which don't resolve in
+ * plain Node). Matches both single- and double-quoted string literals;
+ * matches paths with or without the `./` prefix.
+ *
+ * Returns the resolved absolute path. Falls back to
+ * `${projectRoot}/src/content/chapters` when:
+ *   - content.config.{ts,mjs,js} doesn't exist
+ *   - the file exists but no `chapters` collection or `loader.base` found
+ *   - the matched base path uses dynamic forms (variables, template literals)
+ *     instead of a string literal
+ *
+ * Honors env override: BOOK_CHAPTERS_DIR (when set) wins over config parse.
+ */
+export async function readChaptersBase(projectRoot) {
+  const envOverride = process.env.BOOK_CHAPTERS_DIR;
+  if (envOverride) {
+    return resolve(projectRoot, envOverride);
+  }
+  const DEFAULT_BASE = resolve(projectRoot, 'src/content/chapters');
+  for (const ext of ['ts', 'mjs', 'js']) {
+    const configPath = join(projectRoot, `src/content.config.${ext}`);
+    if (!existsSync(configPath)) continue;
+    let source;
+    try {
+      source = await readFile(configPath, 'utf8');
+    } catch {
+      return DEFAULT_BASE;
+    }
+    // Look for a `chapters = defineCollection({ loader: glob({ base: '...' }) })`
+    // pattern. The regex matches the `base: 'string'` form inside any
+    // defineCollection-like block — we narrow to the `chapters` collection by
+    // requiring the `chapters` identifier in the preceding ~200 chars.
+    //
+    // Two forms to match:
+    //   - `const chapters = defineCollection({ loader: glob({ base: './foo' }) })`
+    //   - `export const collections = { chapters: defineCollection({ loader: glob({ base: './foo' }) }) }`
+    // Only match single- or double-quoted string literals (NOT template
+     // literals). Template literals may contain interpolation like ${dir},
+     // which is dynamic and can't be resolved statically; fall back to
+     // the default in that case.
+    const re = /chapters\s*[:=][\s\S]{0,400}?loader\s*:[\s\S]{0,200}?base\s*:\s*(['"])([^'"]+)\1/;
+    const m = source.match(re);
+    if (m && m[2]) {
+      return resolve(projectRoot, m[2]);
+    }
+    // File exists but no override found — assume the consumer uses the
+    // scaffold's defineBookSchemas() default.
+    return DEFAULT_BASE;
+  }
+  // No content.config.{ts,mjs,js} at all — return the Astro 5 default.
+  return DEFAULT_BASE;
 }

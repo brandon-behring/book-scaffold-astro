@@ -1,0 +1,33 @@
+---
+week: 2
+part: foundations
+title: "WorkedExample component (v4.1.0 #57)"
+status: implemented
+---
+import WorkedExample from '@brandon_m_behring/book-scaffold-astro/components/WorkedExample.astro';
+
+# WorkedExample
+
+The `<WorkedExample>` component (v4.1.0, [#57](https://github.com/brandon-behring/book-scaffold-astro/issues/57)) backs the Sweller/Cooper worked-example-effect pedagogy. Native `<details>`; collapsed by default unless `expanded` is set.
+
+## Collapsed (default)
+
+<WorkedExample id="agent-loop" title="One Claude session, end to end">
+Setup: write a focused CLAUDE.md with explicit instructions. Run `claude` in the project root.
+
+```
+> Implement user authentication using JWT tokens.
+```
+
+Claude proposes a plan, executes it incrementally, runs tests after each change. The session's final commit summarizes what changed and why.
+
+Key insight: the agent loop is a fixed protocol; the variance lives in the CLAUDE.md.
+</WorkedExample>
+
+## Expanded by default
+
+<WorkedExample id="quick-demo" title="Quick fixture demo" expanded>
+This example is shown open by default because the content is short enough that hiding it would cost more than it saves. Use `expanded` for trivial demonstrations that still benefit from the visual signature.
+</WorkedExample>
+
+Each example carries a `#worked-example-{id}` anchor that other documents can deep-link to.

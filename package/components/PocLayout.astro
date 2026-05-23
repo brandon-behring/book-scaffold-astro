@@ -11,12 +11,7 @@
  * Closed `kind` union: discriminated literal type. To add a 6th kind in
  * a future release, expand the union + add a CSS block in poc-layouts.css.
  */
-export type PocLayoutKind =
-  | 'tutorial'
-  | 'how-to'
-  | 'tldr'
-  | 'part-summary'
-  | 'cheat-sheet';
+export type PocLayoutKind = 'tutorial' | 'how-to' | 'tldr' | 'part-summary' | 'cheat-sheet';
 
 interface Props {
   kind: PocLayoutKind;

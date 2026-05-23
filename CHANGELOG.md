@@ -2,6 +2,35 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.1.1] — 2026-05-23
+
+Patch release. Two-item bundle: closes [#63](https://github.com/brandon-behring/book-scaffold-astro/issues/63) (chapter discovery silently returns 0 when `content.config.ts` overrides `loader.base`) + ships visual regression baselines for the 4 v4.1.0 pedagogy components (deferred from v4.1.0 to keep velocity).
+
+### Fixed
+
+- **`book-scaffold validate` + `book-scaffold build-labels` honor `loader.base` overrides in `content.config.ts`** ([#63](https://github.com/brandon-behring/book-scaffold-astro/issues/63)). The `guides-experimentation` consumer's multi-guide pattern places chapters under `src/content/<guide-slug>/` rather than the Astro 5 default `src/content/chapters/`. Both scaffold scripts previously hardcoded the default path, silently reporting `0 chapter(s)` even with valid MDX files present. v4.1.1 adds a `readChaptersBase(projectRoot)` helper in `scripts/walk-mdx.mjs` that regex-parses the consumer's `content.config.{ts,mjs,js}` for the `chapters` collection's `loader.base` and falls back to the Astro 5 default when: the config file is missing / no `chapters` collection identifier is found / the base path uses dynamic forms (template literals, variables). When `BOOK_CHAPTERS_DIR` env var is set, it takes precedence (build-labels.mjs already honored this; validate.mjs now does too). Investigation note: the issue reporter also flagged `getCollection('chapters')` returning empty — that flow works correctly in v4.1.0 when the loader.base is properly configured (verified in reproduction). The scaffold fix targets validate + build-labels (the 2/3 symptoms with scaffold-side causes); the third symptom is consumer-side configuration. 8 new unit tests in `tests/chapters-base-resolution.test.mjs`.
+
+### Added
+
+- **`fixture-pedagogy` visual regression fixture** — 5 routes (index + one chapter per v4.1.0 pedagogy component) × 4 viewport widths = 20 new baseline PNGs at AE=0. Closes the visual-coverage gap deferred from v4.1.0. Each chapter exercises both default-prop and full-prop variants of its component (e.g., `<WorkedExample>` collapsed AND expanded; `<YouWillLearn>` with and without `prerequisites`). The 4th chapter exercises all 5 `<PocLayout>` kinds in one document.
+
+### Changed
+
+- **`PocLayout.astro` type union flattened to a single line** — Astro's frontmatter parser couldn't handle the multi-line discriminated union syntax (`| 'tutorial' | 'how-to' | ...`); inlined as `'tutorial' | 'how-to' | ...`. No API change; runtime behavior identical; all 17 v4.1.0 pedagogy/CSS contract tests still pass.
+
+### Verification
+
+- 169/169 unit tests pass (124 pre-v4.1.0 + 17 pedagogy + 9 empty-manifest + 8 new chapters-base-resolution + 11 carry-over)
+- 76/76 visual baselines pass at AE=0 (56 existing + 20 new fixture-pedagogy)
+- 15/15 create-book scaffold tests pass
+- Local-tarball smoke: academic + research-portfolio scaffolds build end-to-end against the v4.1.1 tarball
+
+### Release policy
+
+- **D12 lock-step preserved**: `@brandon_m_behring/create-book@4.1.1` ships alongside.
+- Pre-publish smoke gate (v3.6.5) ran end-to-end against academic + research-portfolio before publish.
+- Feedback loop: file friction at https://github.com/brandon-behring/book-scaffold-astro/issues with the `consumer:<workspace>` label.
+
 ## [4.1.0] — 2026-05-23
 
 Consumer-batch minor release. Bundles 6 issues filed by the [`claude-books`](https://github.com/brandon-behring/claude-books) consumer during its 2026-05-23 pedagogy PoC round. All additive; no breaking changes; v4.0.0 consumers upgrade by bumping the version with no config edits required.

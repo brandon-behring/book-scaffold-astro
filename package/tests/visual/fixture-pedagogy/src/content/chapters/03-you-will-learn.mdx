@@ -1,0 +1,30 @@
+---
+week: 3
+part: foundations
+title: "YouWillLearn component (v4.1.0 #59)"
+status: implemented
+---
+import YouWillLearn from '@brandon_m_behring/book-scaffold-astro/components/YouWillLearn.astro';
+
+# YouWillLearn
+
+The `<YouWillLearn>` component (v4.1.0, [#59](https://github.com/brandon-behring/book-scaffold-astro/issues/59)) is a chapter-opener pattern from React.dev's pedagogy vocabulary, grounded in Bloom's-taxonomy framing.
+
+## Without prerequisites
+
+<YouWillLearn>
+- How the agent loop works at the level of a single Claude session
+- Why CLAUDE.md is the single highest-leverage configuration file
+- The four engineering principles that govern every recommendation
+- When to reach for a planning skill vs. just executing
+</YouWillLearn>
+
+## With prerequisites
+
+<YouWillLearn prerequisites="Familiarity with the agent loop concept (chapter 1) and the four engineering principles (chapter 2).">
+- The four-stage refactor protocol Claude follows internally
+- How to set up TDD-style validation gates in CLAUDE.md
+- Common reasons your agent stops mid-task
+</YouWillLearn>
+
+The gold border + leading title make the opener recognizable at a thumbnail glance.
