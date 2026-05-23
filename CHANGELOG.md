@@ -2,6 +2,34 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.2.0] — 2026-05-23
+
+Minor release. Closes [#17](https://github.com/brandon-behring/book-scaffold-astro/issues/17) — `book-scaffold build-figures` now auto-compiles TikZ standalone `.tex` sources to `.pdf` via `pdflatex` before the existing PDF→SVG conversion runs. Additive only; consumers with `.pdf`-only figures are unaffected; consumers without TeX Live continue to work (clear ERROR + skip for `.tex` files; pre-built `.pdf` files still convert normally).
+
+### Added
+
+- **TikZ standalone → PDF → SVG pipeline** ([#17](https://github.com/brandon-behring/book-scaffold-astro/issues/17)). `package/scripts/build-figures.mjs` now scans `figures/` for both `.pdf` AND `.tex` files. For each `.tex` source: if no sibling `.pdf` exists OR the `.tex` is newer than the `.pdf`, runs `pdflatex -halt-on-error -interaction=nonstopmode -output-directory=. <name>.tex` in the source directory. The generated `.pdf` then flows into the existing pdf2svg conversion stage unchanged. Missing-pdflatex case: emits clear ERROR with TeX Live install link (https://www.tug.org/texlive/) and skips `.tex` files; continues processing any `.pdf`-only topics. Doesn't crash the build.
+- **`package/recipes/16-tikz-figures.md`** — end-to-end recipe covering the `\documentclass[tikz,border=2mm]{standalone}` convention, discovery rule (when pdflatex runs vs skips), working-directory semantics (compiles in `figures/<topic>/` so `\input{}` relative paths work), `.gitignore` snippet for intermediate `.aux/.log/.fls/.fdb_latexmk/.synctex.gz` files, TeX Live install instructions per OS, CI workflow snippet for runners that need to regenerate from source, and common debugging tips.
+- **`tests/build-figures-tikz.test.mjs`** — 2 tests. (1) End-to-end: copy a minimal `tikz-basic.tex` fixture to a temp project, run `build-figures`, assert that `pdf` exists alongside `.tex` AND that `.svg` exists under `public/figures/sample/` AND that the SVG contains valid `<svg>` markup. (2) Missing-pdflatex error message format. Both tests `skip` cleanly when `pdflatex` / `pdftocairo` aren't on PATH (uses `{ skip: undefined }` semantics — Node 22's test runner treats `null` as a skip-with-reason, so `undefined` is required for "run the test").
+- **`tests/fixtures/figures/tikz-basic.tex`** — minimal TikZ standalone source for the pipeline test.
+- **PACKAGE_DESIGN.md §7** — new "Optional system dependencies" subsection documenting `pdflatex` + `pdftocairo` install paths.
+- **PACKAGE_DESIGN.md §8** — `build-figures` row updated to note the v4.2.0 TikZ stage.
+
+### Changed
+
+- **`build-figures` output line** — now includes `tikz→pdf` count when stage 1 ran on at least one source (e.g., `build-figures: 3 total, 3 converted (0 png fallback), 0 cached, 1 tikz→pdf`).
+
+### Migration
+
+None. Pure additive minor release. Upgrade by bumping `@brandon_m_behring/book-scaffold-astro` and `@brandon_m_behring/create-book` to `^4.2.0` (lock-step). Consumers without `.tex` figures see zero behavior change. Consumers WITH `.tex` figures now get automatic compilation IF they have TeX Live installed; otherwise see a clear ERROR + continued processing of `.pdf` figures.
+
+### Release policy
+
+- **D12 lock-step preserved**: `@brandon_m_behring/create-book@4.2.0` ships alongside.
+- Pre-publish smoke gate (v3.6.5) ran end-to-end against academic + research-portfolio before publish.
+- 171 unit tests pass (169 existing + 2 new TikZ tests; latter skip cleanly when TeX Live unavailable).
+- Feedback loop: file friction at https://github.com/brandon-behring/book-scaffold-astro/issues with the `consumer:<workspace>` label.
+
 ## [4.1.2] — 2026-05-23
 
 Hotfix release. Republishes v4.1.1's scope (#63 chapter discovery fix + fixture-pedagogy baselines) with a more permissive regex in `readChaptersBase`. The v4.1.1 tag exists on GitHub but **was never published to npm** because the `readChaptersBase: double-quoted loader.base override works` unit test failed in CI's Node 22 environment — the regex's `(['"])([^'"]+)\1` backreference form behaved differently on the runner than locally. v4.1.2 uses two separate alternation branches (one per quote style) instead of a backreference; the test passes locally AND in CI. No consumer impact since v4.1.1 never reached npm.

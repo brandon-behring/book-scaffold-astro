@@ -6,6 +6,13 @@
  * pdftocairo, emitting under public/figures/. SVG preserves zoom/quality
  * and stays small for matplotlib-style plots.
  *
+ * v4.2.0 (closes #17): TikZ standalone `.tex` sources are auto-compiled
+ * to `.pdf` via pdflatex before the existing PDF→SVG pass runs. Discovery
+ * rule: if `figures/<topic>/<name>.tex` exists AND no sibling `.pdf`
+ * (or `.tex` is newer than `.pdf`), pdflatex runs. Graceful skip when
+ * pdflatex is not on PATH (only emits ERROR if .tex sources exist).
+ * See recipes/16-tikz-figures.md for the workflow + install pointers.
+ *
  * Default source: figures/ at scaffold root. Override via BOOK_FIGURES_PATH
  * env var (absolute path or path relative to scaffold root) — useful for
  * books that share figures with a LaTeX sibling at e.g. ../shared/figures/.
@@ -98,6 +105,55 @@ async function listPdfsRecursive(root, prefix = '') {
   return out;
 }
 
+/**
+ * v4.2.0 (#17): recursively collect .tex sources under FIGURES_SRC.
+ * Same shape as listPdfsRecursive but for `.tex` extension. TikZ
+ * standalone files at any subdirectory depth are picked up.
+ */
+async function listTexRecursive(root, prefix = '') {
+  if (!existsSync(root)) return [];
+  const entries = await readdir(root, { withFileTypes: true });
+  const out = [];
+  for (const entry of entries) {
+    const relPath = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      out.push(...(await listTexRecursive(resolve(root, entry.name), relPath)));
+    } else if (entry.isFile() && entry.name.endsWith('.tex')) {
+      out.push({ relPath });
+    }
+  }
+  return out;
+}
+
+/**
+ * v4.2.0 (#17): compile a TikZ standalone .tex to .pdf via pdflatex.
+ * Run in the source directory so TikZ \input{} relative paths resolve
+ * + intermediate .aux/.log files land alongside the source.
+ * Returns true on success; throws Error with stderr on failure.
+ */
+function compileTikz(srcPath) {
+  const srcDir = dirname(srcPath);
+  const srcName = basename(srcPath);
+  const r = spawnSync(
+    'pdflatex',
+    [
+      '-halt-on-error',
+      '-interaction=nonstopmode',
+      '-output-directory=.',
+      srcName,
+    ],
+    { cwd: srcDir, stdio: 'pipe' },
+  );
+  if (r.status !== 0) {
+    const stderr = (r.stderr ?? Buffer.from('')).toString().trim();
+    const stdout = (r.stdout ?? Buffer.from('')).toString().trim();
+    throw new Error(
+      `pdflatex failed for ${srcPath}: ${stderr || stdout || `exit code ${r.status}`}`,
+    );
+  }
+  return true;
+}
+
 function isUpToDate(srcPath, dstPath) {
   if (!existsSync(dstPath)) return false;
   const srcMtime = statSync(srcPath).mtimeMs;
@@ -153,6 +209,38 @@ async function main() {
     return;
   }
 
+  // v4.2.0 (#17): stage 1 — compile any TikZ standalone .tex sources to .pdf
+  // BEFORE the PDF→SVG loop. Topic-walk discovers .tex files; compiles those
+  // where no sibling .pdf exists OR .tex is newer than .pdf.
+  const texSources = await listTexRecursive(FIGURES_SRC);
+  let tikzCompiled = 0;
+  if (texSources.length > 0) {
+    if (!check('pdflatex')) {
+      console.error(
+        `build-figures: pdflatex not on $PATH but ${texSources.length} ` +
+          `.tex source(s) detected. Install TeX Live to enable TikZ ` +
+          `compilation (see https://www.tug.org/texlive/). Skipping ` +
+          `.tex sources; pre-compiled .pdf siblings (if any) will still ` +
+          `be converted to SVG.`,
+      );
+    } else {
+      for (const { relPath } of texSources) {
+        const srcPath = resolve(FIGURES_SRC, relPath);
+        const pdfPath = srcPath.replace(/\.tex$/, '.pdf');
+        if (existsSync(pdfPath) && statSync(pdfPath).mtimeMs >= statSync(srcPath).mtimeMs) {
+          continue; // pdf is up-to-date
+        }
+        try {
+          compileTikz(srcPath);
+          tikzCompiled++;
+        } catch (err) {
+          console.error(`build-figures: ${err.message ?? err}`);
+          // Continue — don't fail the whole build on one broken .tex file.
+        }
+      }
+    }
+  }
+
   const pdfs = await listPdfsRecursive(FIGURES_SRC);
   if (pdfs.length === 0) {
     console.log('build-figures: no PDFs found; nothing to do.');
@@ -185,9 +273,10 @@ async function main() {
     converted++;
   }
 
+  const tikzNote = tikzCompiled > 0 ? `, ${tikzCompiled} tikz→pdf` : '';
   console.log(
     `build-figures: ${total} total, ${converted} converted ` +
-      `(${pngFallback} png fallback), ${skipped} cached`,
+      `(${pngFallback} png fallback), ${skipped} cached${tikzNote}`,
   );
 }
 

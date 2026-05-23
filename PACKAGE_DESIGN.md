@@ -722,6 +722,11 @@ What consumers must install themselves; what the package ships bundled.
 - **Bundled deps**: citation-js (used by `book-scaffold build-bib`), fonts (CSS-imported by `tokens.css`), Pagefind (used at build time for search index). These are package-internal; consumers should never import them directly.
 - **Dev deps**: `tsup` for compiling `src/*.ts` → `dist/*.{mjs,d.ts}`. Not installed by consumers.
 
+**Optional system dependencies** (NOT npm packages — install via OS package manager):
+
+- `pdftocairo` + `pdftoppm` (poppler-utils) — used by `book-scaffold build-figures` to convert PDF figures to SVG. Without them, `build-figures` warns and serves committed SVGs/PNGs as-is. Install: `brew install poppler` (macOS) / `apt-get install poppler-utils` (Debian/Ubuntu).
+- `pdflatex` (TeX Live) — v4.2.0+ adds TikZ standalone `.tex` → `.pdf` → `.svg` compilation. Only needed if you author figures as TikZ sources (not for pre-built PDF figures). Install: `brew install --cask basictex` (macOS) / `apt-get install texlive-base texlive-pictures` (Debian/Ubuntu). See `recipes/16-tikz-figures.md`.
+
 ---
 
 ## 8. `book-scaffold` CLI
@@ -742,7 +747,7 @@ Single bin entry, sub-command dispatcher (Q4). Mirrors `git`, `wrangler`, `gh`.
 | `book-scaffold validate` | Pre-flight content validator | `scripts/validate.mjs` (port of v2.0) |
 | `book-scaffold build-labels` | Emit `src/data/labels.json` for `<XRef>` / `<Theorem>` cross-refs | `scripts/build-labels.mjs` (**Phase C**) |
 | `book-scaffold build-bib` | BibTeX → CSL JSON | `scripts/build-bib.mjs` (port of v2.0) |
-| `book-scaffold build-figures` | PDF → SVG via pdftocairo with fallback | `scripts/build-figures.mjs` (port of v2.0) |
+| `book-scaffold build-figures` | PDF → SVG via pdftocairo with PNG fallback; v4.2.0+ also auto-compiles TikZ standalone `.tex` → `.pdf` via pdflatex first (see [recipe 16](package/recipes/16-tikz-figures.md)) | `scripts/build-figures.mjs` |
 | `book-scaffold render-notebooks` | ipynb → HTML via Jupyter nbconvert | `scripts/render-notebooks.mjs` (port of v2.0) |
 | `book-scaffold --help` | List sub-commands + brief usage | dispatcher |
 | `book-scaffold --version` | Print package version | dispatcher |
