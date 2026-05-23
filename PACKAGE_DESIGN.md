@@ -533,6 +533,76 @@ export const collections = {
 
 ---
 
+## 5a. Custom collections + YAML date types (v4.1.0, #61)
+
+When consumers define their own content collections beyond the built-in `chapters` / `sources` / `changelog` / `patterns`, a YAML-date pitfall surfaces immediately. This section documents the gotcha + 2 safe patterns.
+
+### The gotcha
+
+A naive custom collection like:
+
+```ts
+const poc = defineCollection({
+  loader: glob({ pattern: '**/*.mdx', base: './src/content/poc' }),
+  schema: z.object({
+    title: z.string(),
+    last_updated: z.string(),  // ← unsafe: see below
+  }),
+});
+```
+
+paired with a naive MDX frontmatter:
+
+```yaml
+---
+title: "Day 1"
+last_updated: 2026-05-23   # ← unquoted YYYY-MM-DD
+---
+```
+
+fails at build time with:
+
+```
+Expected type 'string', received 'object'
+```
+
+Cause: YAML auto-parses unquoted `YYYY-MM-DD` to a JavaScript `Date` object, which then fails Zod's `z.string()` schema. The scaffold's built-in `chapters` schema works because it uses `z.date()` for `last_verified` (`schemas.ts:94, 146, 228, 252`).
+
+### Pattern A (RECOMMENDED): `z.date()` in the custom schema
+
+```ts
+const poc = defineCollection({
+  loader: glob({ pattern: '**/*.mdx', base: './src/content/poc' }),
+  schema: z.object({
+    title: z.string(),
+    last_updated: z.date(),   // ← accepts native YAML Date
+  }),
+});
+```
+
+Astro auto-parses unquoted `YYYY-MM-DD` to `Date`; `z.date()` accepts it. Matches all built-in schemas in the scaffold.
+
+### Pattern B: quote the date in MDX frontmatter
+
+```yaml
+---
+title: "Day 1"
+last_updated: "2026-05-23"   # ← quoted → stays string
+---
+```
+
+paired with `z.string()` in the schema works because the quotes prevent YAML auto-parsing. Adopt this only when the field is genuinely a free-form identifier rather than a date you'll compute on.
+
+### Anti-pattern: `z.string()` for date-shaped fields
+
+If the field semantically IS a date, use `z.date()` and let Astro do the parsing. Reserve `z.string()` for fields where the value is not date-shaped (slug, kind, tag identifier).
+
+### Helper export
+
+A `zodDateString` helper that coerces both shapes is intentionally **not** exported in v4.1.0. One consumer hit the gotcha; docs solve it. If a second consumer asks, the helper joins the API surface in v4.2.0 — file an issue at https://github.com/brandon-behring/book-scaffold-astro/issues with the `consumer:<workspace>` label.
+
+---
+
 ## 6. `bookScaffoldIntegration`
 
 The single Astro Integration that does both **route injection** (Q2) and **style injection** (Q3). Phase A.5 spike confirmed Option α (Integration + `injectScript`) works cleanly cross-package; see `~/.claude/plans/poc-archive/v3-poc-outcome.md` "Phase A.5 follow-up spike".

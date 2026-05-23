@@ -162,6 +162,54 @@
   background: var(--color-bg-subtle);
 }
 
+/* Crimson — Pitfall (v4.1.0, #58). Distinct from warn-rose: deeper, more
+ * saturated. Used for "common mistake" / retrospective error patterns. */
+.callout-pitfall {
+  border-left-color: var(--callout-pitfall);
+  background: var(--warm-crimson-tint);
+}
+
+/* Plum-dashed — WorkedExample (v4.1.0, #57). Reuses callout-official
+ * (plum) bar; <details>/<summary> chrome is plain — no extra structure. */
+.callout-worked {
+  border-left-color: var(--callout-worked);
+  background: var(--warm-plum-tint);
+}
+.callout-worked summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+.callout-worked summary::-webkit-details-marker {
+  display: none;
+}
+.callout-worked .callout-chip {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--callout-worked);
+  border-radius: var(--radius-sm);
+  color: var(--callout-worked);
+}
+
+/* Gold — YouWillLearn (v4.1.0, #59). Reuses callout-insight (gold) hue;
+ * "Before you start" prereq sub-block sits above the title in muted style. */
+.callout-learn {
+  border-left-color: var(--callout-learn);
+  background: var(--warm-gold-tint);
+}
+.callout-learn .callout-prereq {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+}
+.callout-learn .callout-prereq-label {
+  color: var(--color-text);
+}
+
 /* ===== Theorem family (Theorem.astro) =====
  * Plain (theorem/proposition/lemma/corollary): italic body
  * Definition family (definition/example/exercise/remark/proof): upright body

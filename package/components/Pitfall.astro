@@ -1,0 +1,17 @@
+---
+/**
+ * Pitfall — distinct from generic <WarnBox>.
+ * Retrospective "this often goes wrong" callout (vs WarnBox's preemptive
+ * "this could go wrong"). React.dev "Pitfall" vocabulary. Closes #58.
+ *
+ * Family: crimson (--callout-pitfall, deeper than warn-rose).
+ */
+interface Props {
+  title?: string;
+}
+const { title = 'Common mistake' } = Astro.props;
+---
+<aside class="callout callout-pitfall" role="note">
+  <strong class="callout-title">{title}</strong>
+  <div class="callout-body"><slot /></div>
+</aside>

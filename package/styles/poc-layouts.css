@@ -1,0 +1,57 @@
+/* poc-layouts.css — per-PoC-kind layout variables (v4.1.0, closes #56).
+ *
+ * Each kind swaps 3 CSS variables that downstream stylesheets (chapter.css,
+ * layout.css) can read. Consumers can override per-kind in their own
+ * stylesheets via `:where(.poc-layout-X) { --bs-content-line-length: ... }`.
+ *
+ * Variable surface (intentionally narrow):
+ *   --bs-content-line-length       — main column max line length (ch)
+ *   --bs-content-vertical-rhythm   — body line-height multiplier
+ *   --bs-heading-emphasis          — heading font-weight (400-900)
+ */
+
+:where(.poc-layout-tutorial) {
+  --bs-content-line-length: 70ch;
+  --bs-content-vertical-rhythm: 1.6;
+  --bs-heading-emphasis: 600;
+}
+
+:where(.poc-layout-how-to) {
+  --bs-content-line-length: 68ch;
+  --bs-content-vertical-rhythm: 1.5;
+  --bs-heading-emphasis: 700;
+}
+
+:where(.poc-layout-tldr) {
+  --bs-content-line-length: 65ch;
+  --bs-content-vertical-rhythm: 1.4;
+  --bs-heading-emphasis: 500;
+}
+
+:where(.poc-layout-part-summary) {
+  --bs-content-line-length: 90ch;
+  --bs-content-vertical-rhythm: 1.5;
+  --bs-heading-emphasis: 600;
+}
+
+:where(.poc-layout-cheat-sheet) {
+  --bs-content-line-length: 55ch;
+  --bs-content-vertical-rhythm: 1.3;
+  --bs-heading-emphasis: 600;
+}
+
+/* All kinds: apply the variables to the wrapper itself.
+ * Authors can read these vars from descendants for tighter control. */
+.poc-layout {
+  max-width: var(--bs-content-line-length, 70ch);
+  line-height: var(--bs-content-vertical-rhythm, 1.6);
+}
+
+.poc-layout :is(h1, h2, h3, h4, h5, h6) {
+  font-weight: var(--bs-heading-emphasis, 600);
+}
+
+/* Cheat-sheet: tables should fill the available width since the column is narrower. */
+.poc-layout-cheat-sheet table {
+  width: 100%;
+}

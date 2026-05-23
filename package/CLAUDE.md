@@ -66,7 +66,9 @@ Two callout families coexist. Authors import what they need.
 
 **Academic family** (`src/components/callouts/`, 10 components): `NoteBox`, `ExampleBox`, `DynConnect`, `InsightBox`, `WarnBox`, `CounterBox`, `TipBox`, `OpenQuestion`, `PaperBox`, `ResultBox`. Plus `Theorem` (unified for theorem/proposition/lemma/corollary/definition/example/exercise/remark/proof).
 
-**Utility components** (`src/components/`, any profile): `Cite`, `XRef`, `Figure`, `MarginNote`, `Sidenote`, `WeekRef`, `CodeRef`, `CodeBlock`, `Tag`, `StatusBadge`.
+**Pedagogy family** (v4.1.0+, any profile, 3 components): `Pitfall` (rose; "common mistake" — distinct from `WarnBox`'s preemptive warning), `WorkedExample` (plum; collapsible `<details>` block with `#worked-example-{id}` anchor for deep links), `YouWillLearn` (gold; chapter-opener with optional `prerequisites` prop). Slot bullets/code freely; render at any preset.
+
+**Utility components** (`src/components/`, any profile): `Cite`, `XRef`, `Figure`, `MarginNote`, `Sidenote`, `WeekRef`, `CodeRef`, `CodeBlock`, `Tag`, `StatusBadge`, `PocLayout` (v4.1.0+; wraps slot in a per-`kind` layout shell — 5 closed-union kinds; see `recipes/15-defining-styles.md`).
 
 Full reference in `recipes/04-component-library.md`.
 
