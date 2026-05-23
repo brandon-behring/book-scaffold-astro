@@ -24,7 +24,7 @@ The scaffold ships **38 components**. Without this map, a `.tex → .mdx` conver
 | `\begin{tipbox}` | `TipBox` | `…/components/TipBox.astro` | `title?: string` | Pro tips / shortcuts |
 | `\begin{dynconnect}` | `DynConnect` | `…/components/DynConnect.astro` | `title?: string` | Cross-domain connection |
 | `\begin{theorem}` / `\begin{proposition}` / `\begin{lemma}` / `\begin{corollary}` / `\begin{definition}` / `\begin{remark}` / `\begin{proof}` | `Theorem` | `…/components/Theorem.astro` | `kind, n?, name?, id?` | amsthm family — single component dispatches via `kind` prop |
-| `\marginnote{}` | `MarginNote` | `…/components/MarginNote.astro` | — | Side commentary |
+| `\marginnote{}` / `\marginnotebox{}` / `\marginwarning{}` / `\margintip{}` | `MarginNote` | `…/components/MarginNote.astro` | `variant?: 'note' \| 'warning' \| 'tip'; label?: string` | `\marginnotebox` → `variant="note"` (blue), `\marginwarning` → `variant="warning"` (rose), `\margintip` → `variant="tip"` (green). `label` overrides the variant's default badge text. Body has a 25-word soft cap. |
 | `\sidenote{}` | `Sidenote` | `…/components/Sidenote.astro` | — | Auto-numbered marginalia (Tufte) |
 | `\includegraphics + \caption` | `Figure` | `…/components/Figure.astro` | `src, caption?, id?` | XRef-registered |
 | `\cite{}` / `\parencite{}` | `Citation` | `…/components/Citation.astro` | `src, as?` | Resolves `sources` collection |
@@ -41,6 +41,7 @@ Component subset table for tools-profile-specific UI (volatility dashboards, con
 | Construct | Component | Use case |
 |---|---|---|
 | Volatility badge | `Tag` | `volatility` enum chip in chapter meta |
+| Practice tag (`\official{}` / `\practitioner{}` / `\convergence{}`, also `\tagofficial{}` / `\tagpractitioner{}` / `\tagconvergence{}`) | `Tag` | `kind="official" \| "practitioner" \| "convergence"` — inline assertion of source authority. Both the bare and `\tag*` prefixed LaTeX forms map to the same component (see `package/components/Tag.astro`). |
 | Tool comparison | `ToolFilter` (island) | Interactive comparison gate |
 | Version selector | `VersionSelector` (island) | Switch between tool versions |
 | Convergence event | `Convergence` | "All tools converged here" timeline marker |

@@ -24,21 +24,26 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ===== Args =====
 
-const HELP = `Usage: npx @brandon_m_behring/create-book <name> [--profile=...]
+const HELP = `Usage: npx @brandon_m_behring/create-book <name> [--preset=...|--profile=...]
 
 Arguments:
   <name>           Book repo name. Becomes the new directory + package name.
 
 Options:
-  --profile=NAME   academic | tools | minimal   (default: minimal)
+  --preset=NAME    academic | tools | minimal   (default: minimal)
+                   Canonical vocabulary as of v3.4.0; alias of --profile.
+  --profile=NAME   Backward-compatible alias of --preset.
   --version, -v    Print the CLI version.
   --help, -h       This message.
 
 Example:
-  npx @brandon_m_behring/create-book interview-prep --profile=academic
+  npx @brandon_m_behring/create-book interview-prep --preset=academic
 `;
 
 function parseArgs(argv) {
+  // v3.6.1 (closes #38): accept --preset as canonical alias of --profile.
+  // Internal variable name stays `profile` for back-compat with downstream
+  // template code; the canonical user-facing vocabulary is preset.
   const args = { name: null, profile: 'minimal' };
   for (const a of argv.slice(2)) {
     if (a === '--help' || a === '-h') {
@@ -46,6 +51,11 @@ function parseArgs(argv) {
       process.exit(0);
     }
     if (a === '--version' || a === '-v') return { showVersion: true };
+    const presetMatch = a.match(/^--preset=(.+)$/);
+    if (presetMatch) {
+      args.profile = presetMatch[1];
+      continue;
+    }
     const profMatch = a.match(/^--profile=(.+)$/);
     if (profMatch) {
       args.profile = profMatch[1];
@@ -208,14 +218,80 @@ directory = "./dist"
 `,
 
     'src/data/.gitkeep': '',
+
+    // v3.6.1 (closes #28): scaffold the consumer's src/pages/ routes.
+    // Pre-v3.6.1, create-book emitted no pages — the resulting book built with
+    // zero per-chapter HTML (only auto-injected /chapters /print /search /references
+    // routes). Now ships an index landing page + the [...slug].astro per-chapter
+    // route. Mirrors the working pattern from package/tests/visual/fixture/src/pages/.
+    'src/pages/index.astro': `---
+import Base from '@brandon_m_behring/book-scaffold-astro/layouts/Base.astro';
+---
+<Base title="${name}" description="A book scaffolded with @brandon_m_behring/create-book (${profile} profile).">
+  <article class="prose">
+    <h1>${name}</h1>
+    <p>
+      This is the landing page for your book. Edit it at
+      <code>src/pages/index.astro</code>.
+    </p>
+    <p>
+      Chapters live under <code>src/content/chapters/</code>. The auto-injected
+      routes are <a href="/chapters/">/chapters</a>,
+      <a href="/references/">/references</a>,
+      <a href="/search/">/search</a>, and
+      <a href="/print/">/print</a>.
+    </p>
+  </article>
+</Base>
+`,
+
+    'src/pages/chapters/[...slug].astro': `---
+/**
+ * Per-chapter route. Imports chapters from the content collection and
+ * delegates rendering to the toolkit's Chapter layout. Schema-agnostic —
+ * works for any preset.
+ */
+import { getCollection, render } from 'astro:content';
+import Chapter from '@brandon_m_behring/book-scaffold-astro/layouts/Chapter.astro';
+
+export async function getStaticPaths() {
+  const chapters = await getCollection('chapters', (entry) => !entry.data.draft);
+  return chapters.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content, headings } = await render(entry);
+---
+<Chapter entry={entry} headings={headings}>
+  <Content />
+</Chapter>
+`,
   };
 
   // Profile-conditional files.
   if (PROFILE_DEFAULTS[profile].withBib) {
+    // v3.6.1 (closes #39): ship a parseable placeholder entry so
+    // `npm run build:bib` succeeds on a fresh scaffold. The pre-v3.6.1
+    // comments-only file crashed @citation-js/plugin-bibtex's Grammar parser
+    // (no entries → parse error), blocking every new academic book's first
+    // build. Consumers replace this with their first real reference.
     templates['bibliography.bib'] = `% bibliography.bib — BibTeX source for <Cite> components.
 % Run \`npm run build:bib\` to generate src/data/references.json.
 %
-% Example entry:
+% Replace this placeholder with your first real reference, or remove it
+% once you have actual bibliography entries.
+
+@misc{placeholder2026,
+  title  = {Placeholder reference — replace with your first real citation},
+  author = {{Scaffolded by create-book}},
+  year   = {2026},
+  note   = {Remove this entry once you add real references.}
+}
+
+% Example article entry (commented):
 %
 % @article{example-key2024,
 %   author  = {Author, First and Author, Second},
