@@ -1,0 +1,29 @@
+---
+/**
+ * WorkedExample — collapsible demonstration block (closes #57).
+ *
+ * Pedagogical worked-example-effect treatment (Sweller/Cooper). Uses
+ * native <details>; collapsed by default unless `expanded` prop set.
+ * The outer aside carries `id="worked-example-{id}"` for deep links
+ * from TL;DRs or cheat-sheets. Prefix avoids collision with author
+ * heading anchors.
+ *
+ * Family: plum (--callout-worked, reuses --callout-official authority hue).
+ */
+interface Props {
+  id: string;
+  title: string;
+  expanded?: boolean;
+}
+const { id, title, expanded = false } = Astro.props;
+const anchorId = `worked-example-${id}`;
+---
+<aside class="callout callout-worked" id={anchorId} role="note">
+  <details open={expanded}>
+    <summary>
+      <strong class="callout-title">{title}</strong>
+      <span class="callout-chip">Worked example</span>
+    </summary>
+    <div class="callout-body"><slot /></div>
+  </details>
+</aside>

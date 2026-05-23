@@ -14,6 +14,7 @@
   --warm-green:  #4A7E3F;  /* positive: tips, practitioner */
   --warm-plum:   #8A4E82;  /* authority: official, exercises */
   --warm-gold:   #C09840;  /* insight: convergence, reasoning */
+  --warm-crimson:#A03838;  /* pitfall: deeper red distinct from warm-rose */
 
   /* Warm neutrals (Anthropic-derived) */
   --paper:       #FDFCF9;  /* page background — slightly off-white */
@@ -27,6 +28,7 @@
   --warm-green-tint: color-mix(in srgb, var(--warm-green) 6%, var(--paper));
   --warm-plum-tint:  color-mix(in srgb, var(--warm-plum)  6%, var(--paper));
   --warm-gold-tint:  color-mix(in srgb, var(--warm-gold)  6%, var(--paper));
+  --warm-crimson-tint:color-mix(in srgb, var(--warm-crimson) 6%, var(--paper));
 
   /* ===== Layer 2: Semantic roles (light mode) ===== */
   --color-bg:         var(--paper);
@@ -45,6 +47,9 @@
   --callout-tip:      var(--warm-green);
   --callout-official: var(--warm-plum);
   --callout-insight:  var(--warm-gold);
+  --callout-pitfall:  var(--warm-crimson);
+  --callout-worked:   var(--warm-plum);
+  --callout-learn:    var(--warm-gold);
 
   /* ===== Typography scale ===== */
   --font-body: 'Roboto Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

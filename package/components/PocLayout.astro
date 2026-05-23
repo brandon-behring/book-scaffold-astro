@@ -1,0 +1,28 @@
+---
+/**
+ * PocLayout — per-PoC-kind layout selector (closes #56).
+ *
+ * Wraps slotted content in a <div> that swaps 3 CSS variables per kind
+ * (line-length, vertical rhythm, heading emphasis). 5 closed-union kinds.
+ *
+ * CSS variable surface defined in package/styles/poc-layouts.css. Authors
+ * can override per-kind in their own stylesheets via `:where(.poc-layout-X)`.
+ *
+ * Closed `kind` union: discriminated literal type. To add a 6th kind in
+ * a future release, expand the union + add a CSS block in poc-layouts.css.
+ */
+export type PocLayoutKind =
+  | 'tutorial'
+  | 'how-to'
+  | 'tldr'
+  | 'part-summary'
+  | 'cheat-sheet';
+
+interface Props {
+  kind: PocLayoutKind;
+}
+const { kind } = Astro.props;
+---
+<div class={`poc-layout poc-layout-${kind}`}>
+  <slot />
+</div>

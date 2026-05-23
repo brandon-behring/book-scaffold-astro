@@ -16,9 +16,43 @@
  * academic-profile consumers from seeing `File not found` errors for
  * collections they don't use.
  */
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { defineCollection } from 'astro:content';
 import { glob, file } from 'astro/loaders';
+
+/**
+ * v4.1.0 (#60): detect whether a YAML file holds at least one entry.
+ *
+ * `sources/manifest.yaml` is registered as a content collection via Astro's
+ * `file()` loader. If the file exists but parses to an empty list (valid
+ * pre-bibliography state — a book in early Phase 1 has no citations yet),
+ * Astro's loader emits a noisy WARN that consumers learn to ignore — exactly
+ * the wrong calibration, since a *malformed* manifest deserves a real warning.
+ *
+ * Strategy: skip registering the collection when the manifest is empty.
+ * Astro never sees the empty file → no spurious WARN. Genuine emptiness is
+ * silent (the consumer's bibliography isn't started yet); malformed YAML
+ * still trips Astro's loader and produces a real ERROR (preserved behavior).
+ *
+ * Definition of "empty": after stripping `#`-comment lines and whitespace,
+ * the remaining content is either empty or `[]`. Conservative — anything
+ * with structure (even a single placeholder entry) registers normally.
+ */
+function isYamlEmpty(path: string): boolean {
+  try {
+    const raw = readFileSync(path, 'utf8');
+    const stripped = raw
+      .split(/\r?\n/)
+      .map((line) => line.replace(/#.*$/, '').trim())
+      .filter((line) => line.length > 0)
+      .join('');
+    return stripped === '' || stripped === '[]';
+  } catch {
+    // If we can't read it, fall back to "not empty" so the loader can
+    // surface its own error if appropriate.
+    return false;
+  }
+}
 
 import type { BookSchemasOptions } from './types.js';
 import { resolvePreset } from './types.js';
@@ -115,7 +149,10 @@ export function defineBookSchemas(opts: BookSchemasOptions = {}) {
     chapters,
   };
 
-  if (existsSync('./sources/manifest.yaml')) {
+  // v4.1.0 (#60): also skip registration when manifest is empty to suppress
+  // the misleading "No items found" WARN that fires for valid pre-bibliography
+  // state. See isYamlEmpty() docstring above.
+  if (existsSync('./sources/manifest.yaml') && !isYamlEmpty('./sources/manifest.yaml')) {
     collections.sources = defineCollection({
       loader: file('sources/manifest.yaml'),
       schema: sourcesSchema,

@@ -2,6 +2,51 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.1.0] — 2026-05-23
+
+Consumer-batch minor release. Bundles 6 issues filed by the [`claude-books`](https://github.com/brandon-behring/claude-books) consumer during its 2026-05-23 pedagogy PoC round. All additive; no breaking changes; v4.0.0 consumers upgrade by bumping the version with no config edits required.
+
+### Why
+
+The 2026-05-23 PoC round at `claude-books/handbook` rendered 5 supplement formats of Chapter 1 side-by-side (tutorial / how-to / TL;DR / part-summary / cheat-sheet) backed by research at `claude-books/docs/research/11-pedagogy/` (Sweller cognitive-load, Bloom's-taxonomy, React.dev callout vocabulary). The round surfaced 4 missing components + 1 layout primitive + 1 build-noise bug + 1 docs gap, all at once. This release ships all 6.
+
+### Added
+
+- **`<Pitfall>` component** ([#58](https://github.com/brandon-behring/book-scaffold-astro/issues/58)) — React.dev "Pitfall" vocabulary for retrospective "common mistake" callouts. Distinct from `<WarnBox>` (which is preemptive). Crimson border + tinted background (new `--warm-crimson` token).
+- **`<WorkedExample>` component** ([#57](https://github.com/brandon-behring/book-scaffold-astro/issues/57)) — collapsible demonstration block backed by Sweller/Cooper's worked-example-effect theory. Native `<details>` (no JS); `id` prop becomes `#worked-example-{id}` anchor (prefixed to avoid heading-anchor collisions); optional `expanded` prop. Plum border + chip in the summary.
+- **`<YouWillLearn>` component** ([#59](https://github.com/brandon-behring/book-scaffold-astro/issues/59)) — chapter-opener "what this chapter delivers" callout (Bloom's-taxonomy framing). Slotted body (MDX bullets); optional `prerequisites` prop renders a "Before you start" sub-block. Gold border.
+- **`<PocLayout>` component** ([#56](https://github.com/brandon-behring/book-scaffold-astro/issues/56)) — per-PoC-kind layout selector. Closed discriminated `kind` union: `'tutorial' | 'how-to' | 'tldr' | 'part-summary' | 'cheat-sheet'`. Each kind swaps 3 CSS variables (`--bs-content-line-length`, `--bs-content-vertical-rhythm`, `--bs-heading-emphasis`) on a `.poc-layout-{kind}` wrapper. New `package/styles/poc-layouts.css` ships the variant table; consumers override via `:where(.poc-layout-X)` selectors.
+- **Pedagogy family** — `Pitfall` / `WorkedExample` / `YouWillLearn` form a new "pedagogy" component family (any preset can use them). Documented in `package/CLAUDE.md`.
+- **`PACKAGE_DESIGN.md §5a`** ([#61](https://github.com/brandon-behring/book-scaffold-astro/issues/61)) — new section "Custom collections + YAML date types" covers the `z.date()` vs `z.string()` gotcha + 2 safe patterns + anti-pattern. No `zodDateString` helper export in this release (one consumer hit the issue; docs solve it).
+- **17 new contract tests** (`tests/pedagogy-callouts.test.mjs` + `tests/poc-layout-css.test.mjs`) — assert each component's Props interface, default values, CSS class names; assert each PocLayout kind's CSS variable set.
+- **9 new isYamlEmpty tests** (`tests/sources-empty-detection.test.mjs`) — empty / whitespace / comment-only / `[]` / single-entry / multi-entry / missing-file / malformed-yaml.
+
+### Changed
+
+- **Empty `sources/manifest.yaml` no longer emits noisy WARN** ([#60](https://github.com/brandon-behring/book-scaffold-astro/issues/60)). Astro's `file()` content loader previously logged `[file-loader] No items found in sources/manifest.yaml` for every build — including when the file existed with `[]` content (valid pre-bibliography state in early Phase 1 chapter development). `package/src/schemas-entry.ts` now detects empty manifests (after stripping `#`-comment lines + whitespace; treats `[]` and empty as empty) and skips registering the collection entirely. Distinguished states:
+  - File missing → collection not registered; build is silent (preserves existing behavior).
+  - File exists, parses empty → collection not registered; build is silent (new).
+  - File exists with entries → collection registered; loader runs normally (unchanged).
+  - File exists, malformed YAML → Astro's loader surfaces the real ERROR (unchanged).
+
+### Migration
+
+None. Pure additive minor release. Upgrade by bumping `@brandon_m_behring/book-scaffold-astro` and `@brandon_m_behring/create-book` to `^4.1.0` (lock-step).
+
+### Out of scope / next sessions
+
+- **Visual regression baselines for new components** deferred to v4.1.1 (component contract tests cover the API; visual-pixel verification follows when fixture-pedagogy gets captured).
+- **`zodDateString` helper export** — wait for a second consumer to ask (avoids ad-hoc API surface).
+- **`<PocLayout kind: string>` escape hatch** — closed union enforces vocabulary discipline; revisit if a sixth kind is needed.
+
+### Release policy
+
+- **D12 lock-step preserved**: `@brandon_m_behring/create-book@4.1.0` ships alongside the toolkit.
+- Pre-publish smoke gate (v3.6.5) ran end-to-end against academic + research-portfolio before publish.
+- 161 unit tests pass (124 existing + 17 new pedagogy + 9 new empty-manifest + 11 existing katex/define-style).
+- Visual regression baselines (56 existing) unaffected — no v4.0.0 components changed.
+- Feedback loop: file friction at https://github.com/brandon-behring/book-scaffold-astro/issues with the `consumer:<workspace>` label. v4.x is the iteration window for this API.
+
 ## [4.0.0] — 2026-05-23
 
 **BREAKING**: the v3.x `preset:` / `profile:` shorthand on `defineBookConfig` is removed. Replaced by typed `defineStyle()` composition via the new `styles: [...]` field. Migration is ~2 lines per book. Full migration recipe in [`package/MIGRATION-v3-to-v4.md`](package/MIGRATION-v3-to-v4.md); composition patterns in [`package/recipes/15-defining-styles.md`](package/recipes/15-defining-styles.md).

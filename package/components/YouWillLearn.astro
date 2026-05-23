@@ -1,0 +1,24 @@
+---
+/**
+ * YouWillLearn — chapter-opener "what this chapter delivers" callout
+ * (closes #59). React.dev pedagogy vocabulary; Bloom's-taxonomy framing.
+ *
+ * Slotted body — author writes markdown bullets directly.
+ * Optional `prerequisites` prop renders a small "Before you start" sub-block.
+ *
+ * Family: gold (--callout-learn, reuses --callout-insight to signal importance).
+ */
+interface Props {
+  prerequisites?: string;
+}
+const { prerequisites } = Astro.props;
+---
+<aside class="callout callout-learn" role="note">
+  {prerequisites && (
+    <div class="callout-prereq">
+      <strong class="callout-prereq-label">Before you start:</strong> {prerequisites}
+    </div>
+  )}
+  <strong class="callout-title">You will learn</strong>
+  <div class="callout-body"><slot /></div>
+</aside>
