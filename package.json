@@ -1,7 +1,7 @@
 {
   "name": "book-scaffold-astro-monorepo",
   "description": "Monorepo root for @brandon_m_behring/book-scaffold-astro and @brandon_m_behring/create-book. See package/ for the published toolkit, create-book/ for the bootstrap CLI, demo/ for the in-repo Astro reference implementation.",
-  "version": "4.1.1",
+  "version": "4.1.2",
   "type": "module",
   "private": true,
   "engines": {
