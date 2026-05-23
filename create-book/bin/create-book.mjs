@@ -70,11 +70,28 @@ function parseArgs(argv) {
   return args;
 }
 
-const VALID_PROFILES = new Set(['academic', 'tools', 'minimal']);
+// v3.7.1 (extension paired with #51): catch up to the toolkit's 5-preset
+// lineup. Pre-v3.7.1 the create-book validator only knew academic / tools /
+// minimal — course-notes (v3.3.0) and research-portfolio (v3.5.0) couldn't
+// be scaffolded at all, just rejected. course-notes uses tools-style fields
+// (chapter + volatility + sources); research-portfolio is the union shape
+// with structured inline sources.
+const VALID_PROFILES = new Set([
+  'academic',
+  'tools',
+  'minimal',
+  'course-notes',
+  'research-portfolio',
+]);
 const PROFILE_DEFAULTS = {
   academic: { withBib: true, withSources: false },
   tools: { withBib: false, withSources: true },
   minimal: { withBib: false, withSources: false },
+  // course-notes uses tools-style sources (no separate bib)
+  'course-notes': { withBib: false, withSources: true },
+  // research-portfolio uses inline structured sources in chapter frontmatter,
+  // PLUS a bib for KaTeX-supported citations
+  'research-portfolio': { withBib: true, withSources: false },
 };
 
 // ===== Templates =====
@@ -107,7 +124,11 @@ function makeTemplates(name, profile, toolkitVersion) {
     "@astrojs/preact": "^5.1.1",
     "astro": "^6.1.7",
     "preact": "^10.29.1"${
-      profile === 'academic'
+      // v3.7.1 (#51): research-portfolio also wants KaTeX (per its profile's
+      // `katex: true` flag); previously only academic added these peer deps,
+      // so research-portfolio scaffolds failed to dynamic-import remark-math
+      // at build time.
+      (profile === 'academic' || profile === 'research-portfolio')
         ? `,
     "katex": "^0.16.11",
     "rehype-katex": "^7.0.1",

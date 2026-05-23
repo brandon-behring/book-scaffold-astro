@@ -1,0 +1,46 @@
+---
+title: "Math notation fixture — brace expansions"
+slug: ch02-math
+chapter: 2
+part: 1
+status: prose_only
+freshness: theoretical
+volatility: stable-principle
+tags:
+  - fixture
+  - katex
+  - v3.7.1
+sources: []
+last_verified: 2026-05-23
+draft: false
+---
+
+# Math notation fixture
+
+Exercises KaTeX rendering of common probability / statistics notation in
+the research-portfolio preset. Pre-v3.7.1 this chapter would crash the
+MDX parse because brace-containing math (`\mathbb{E}\{X\}`) was passed
+through to the MDX layer as JSX expressions instead of intercepted by
+`remark-math`. The fix wires KaTeX for any profile with `katex: true`
+(not just the `academic` literal).
+
+## Expectation and variance
+
+The expected value of a random variable is $\mathbb{E}\{X\}$, and its
+variance is $\mathrm{Var}\{X\} = \mathbb{E}\{X^2\} - \mathbb{E}\{X\}^2$.
+
+Conditional expectation: $\mathbb{E}\{Y | X = x\}$.
+
+## Probability
+
+$\mathbb{P}\{A \cap B\} = \mathbb{P}\{A\} \cdot \mathbb{P}\{B | A\}$.
+
+## Display math
+
+$$
+\mathbb{E}\{X\} = \int_{-\infty}^{\infty} x \, f(x) \, dx
+$$
+
+$$
+\mathrm{Cov}\{X, Y\} = \mathbb{E}\{(X - \mu_X)(Y - \mu_Y)\}
+$$

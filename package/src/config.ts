@@ -11,6 +11,7 @@ import type { AstroUserConfig } from 'astro';
 import type { BookConfigOptions } from './types.js';
 import { resolvePreset } from './types.js';
 import { bookScaffoldIntegration } from './integration.js';
+import { PROFILES } from './profiles/index.js';
 
 export async function defineBookConfig(
   opts: BookConfigOptions,
@@ -22,10 +23,18 @@ export async function defineBookConfig(
 
   // Profile-conditional KaTeX wiring (ported from v2.0 astro.config.mjs:23-42).
   // Dynamic import keeps the dep graph clean for tools/minimal profiles.
+  //
+  // v3.7.1 (closes #51): gate on the profile's `katex` flag (single source of
+  // truth: the ProfileDefinition) instead of a hardcoded `profile === 'academic'`
+  // check. Both academic and research-portfolio set `katex: true`; previously
+  // research-portfolio missed the math wiring, causing `$\mathbb{E}\{X\}$`-style
+  // expressions to be parsed by MDX as JSX (the `{X}` became an expression
+  // containing undefined variable `X`) instead of by remark-math.
+  const wantsKatex = PROFILES[profile]?.katex === true;
   const remarkPlugins: NonNullable<NonNullable<AstroUserConfig['markdown']>['remarkPlugins']> = [];
   const rehypePlugins: NonNullable<NonNullable<AstroUserConfig['markdown']>['rehypePlugins']> = [];
 
-  if (profile === 'academic') {
+  if (wantsKatex) {
     // `/* @vite-ignore */` tells the consumer's Vite to skip static analysis
     // of these dynamic imports — tools/minimal consumers don't install
     // remark-math/rehype-katex, and Vite would otherwise fail to resolve
@@ -110,8 +119,7 @@ export async function defineBookConfig(
   // anyway. Marking them external for non-academic builds skips the
   // resolution attempt; the runtime branch never executes, so no runtime
   // miss.
-  const katexExternals =
-    profile === 'academic' ? [] : ['remark-math', 'rehype-katex', 'katex'];
+  const katexExternals = wantsKatex ? [] : ['remark-math', 'rehype-katex', 'katex'];
 
   const config: AstroUserConfig = {
     ...rest,

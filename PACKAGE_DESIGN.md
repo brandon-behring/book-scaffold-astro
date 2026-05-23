@@ -704,8 +704,67 @@ See <XRef id="w1:thm:hello" /> and <Cite key="example-key2024" />.
 | Academic-flavored callouts | NoteBox, ExampleBox, DynConnect, InsightBox, WarnBox, CounterBox, TipBox, OpenQuestion, PaperBox, ResultBox |
 | Tools-flavored callouts | SkillBox, KeyIdea, Convergence, Divergence, CaseStudy, ConceptBox, TryThis, Recovery |
 | Tools-only islands | ToolFilter, VersionSelector, PatternTimeline, SourceArchive |
+| Research-portfolio primitives (v3.5.0) | PreReleaseBanner, PolicyRef, AICollaborationDisclosure, BlockedByCallout |
 
 Mixing across categories is allowed — see `defineBookConfig({ extraStyles: ['convergence.css'] })` for the cross-profile escape hatch (§4).
+
+### Component prop reference (v3.5.0+)
+
+Prop tables for components added in v3.5.0. The Props interface lives in each component's `.astro` file under `package/components/`. Source of truth is the file; this table is a quick lookup.
+
+#### `PreReleaseBanner`
+
+Site-wide banner declaring the book's release state.
+
+| Prop | Type | Required | Description |
+|---|---|---|---|
+| `state` | `'alpha' \| 'beta' \| 'rc' \| 'locked'` | yes | Visible release-state chip + default message text |
+| `dismissAt` | `string` | no | Version tag indicating when this state expires (e.g., `'v0.7.0'`); informational, no auto-dismiss behavior |
+| `message` | `string` | no | Override the default per-state message text |
+
+Default messages per state:
+- `alpha` → `"This book is in alpha — expect breaking changes and partial coverage."`
+- `beta` → `"This book is in beta — most sections stable; minor changes possible."`
+- `rc` → `"Release candidate — finalizing content; substantive feedback welcome."`
+- `locked` → `"This release is frozen. See CHANGELOG for the next iteration."`
+
+#### `PolicyRef`
+
+Inline link to a repo-root policy document (`ETHICS.md`, `SECURITY.md`, `GOVERNANCE.md`, etc.).
+
+| Prop | Type | Required | Description |
+|---|---|---|---|
+| `file` | `string` | yes | Filename of the policy doc at site root (e.g., `'ETHICS.md'`) |
+| `section` | `string` | no | Optional section name; auto-slugified into `#anchor` appended to the href |
+| `label` | `string` | no | Visible link text; defaults to `section` if present, otherwise `file` |
+| `href` | `string` | no | Explicit href override (otherwise computed from `file` + `section`) |
+
+Slot: optional inline text content overrides the computed label.
+
+#### `AICollaborationDisclosure`
+
+Structured AI-collaboration disclosure block.
+
+| Prop | Type | Required | Description |
+|---|---|---|---|
+| `model` | `string` | yes | Model name(s) + vendor (e.g., `'Claude Opus 4.7 + Sonnet 4.6 (Anthropic)'`) |
+| `role` | `string` | yes | Role description (e.g., `'research collaborator + writing collaborator'`) |
+| `commit_attribution` | `string` | no | Git trailer text used in commits (e.g., `'Co-Authored-By: Claude <noreply@anthropic.com>'`) |
+
+Slot (`default`): optional prose appended after the model/role line (e.g., `"All factual claims independently verified by …"`).
+
+#### `BlockedByCallout`
+
+Declare an upstream dependency that's blocking a chapter / section / experiment.
+
+| Prop | Type | Required | Description |
+|---|---|---|---|
+| `upstream` | `string` | yes | Short name of the blocker (e.g., `'book-scaffold-astro v3.5.0'`) |
+| `reason` | `string` | yes | Brief explanation of what the upstream provides |
+| `url` | `string` | no | Tracking URL (issue, PR, paper, release notes) |
+| `unblockedAt` | `string` | no | Date or version tag when the blocker was resolved (e.g., `'2026-05-19'`) |
+
+Slot (`default`): optional prose under the structured fields — typical placement for migration notes or workaround instructions.
 
 ---
 

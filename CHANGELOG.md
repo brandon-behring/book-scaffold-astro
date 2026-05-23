@@ -2,6 +2,25 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [3.7.1] — 2026-05-23
+
+Patch release. Closes 3 issues from the [`brandon-behring/guides`](https://github.com/brandon-behring/guides) + [`brandon-behring/guides-experimentation`](https://github.com/brandon-behring/guides-experimentation) Phase 0b consumer batch. Unblocks that workspace's CI (which was crashing on `validate` under Node 20) and fixes brace-containing math in research-portfolio chapters.
+
+### Fixed
+
+- **`book-scaffold validate` no longer requires Node 22** ([#52](https://github.com/brandon-behring/book-scaffold-astro/issues/52)). `scripts/validate.mjs` previously imported `glob` from `node:fs/promises`, an API added in Node 22. The scaffold's generated consumer CI templates ship `node-version: '20'`, so `npm run validate` crashed on every consumer's prebuild hook with `SyntaxError: The requested module 'node:fs/promises' does not provide an export named 'glob'`. Replaced with a recursive `readdir` walker (extracted to `scripts/walk-mdx.mjs` for unit-testability). Works on Node 18+; output format matches the previous `glob('**/*.{md,mdx}', { cwd })` shape (POSIX-style relative paths). 6 new regression tests in `tests/validate-walker.test.mjs`.
+- **MDX math with curly braces now renders in `research-portfolio` preset** ([#51](https://github.com/brandon-behring/book-scaffold-astro/issues/51)). Expressions like `$\mathbb{E}\{X\}$`, `$\mathbb{P}\{X|Y\}$`, `$\mathrm{Cov}\{X, Y\}$` previously failed because `src/config.ts` gated the KaTeX wiring on the literal `profile === 'academic'`, ignoring the `katex: true` flag that `research-portfolio` sets in its profile definition. Without `remark-math` intercepting first, MDX parsed `{X}` as a JSX expression containing undefined variable `X`. Fix: gate the wiring on `PROFILES[profile]?.katex === true` instead (single source of truth: the profile registry). New visual fixture `fixture-research-portfolio/.../math.mdx` covers brace-math at 4 viewport widths.
+- **`create-book` now adds KaTeX peer deps for `research-portfolio` scaffolds** (paired with the above). Previously only academic scaffolds got `katex`/`rehype-katex`/`remark-math` in their generated `package.json`; research-portfolio scaffolds with `katex: true` would have failed to dynamic-import the peer deps even after the gate fix. Now both presets get the deps.
+
+### Added
+
+- **Component prop tables for v3.5.0 components** ([#48](https://github.com/brandon-behring/book-scaffold-astro/issues/48)) in `PACKAGE_DESIGN.md §10`. Covers `PreReleaseBanner`, `PolicyRef`, `AICollaborationDisclosure`, `BlockedByCallout` with prop signatures + default values + slot semantics. Source of truth remains each component's `.astro` Props interface; this is a quick-lookup table for chapter authors.
+
+### Release policy
+
+- **D12 lock-step preserved**: `@brandon_m_behring/create-book@3.7.1` ships alongside the toolkit.
+- Pre-publish smoke gate (v3.6.5) ran end-to-end before publish.
+
 ## [3.7.0] — 2026-05-22
 
 Minor release. Refactors the `/chapters` route from a field-presence discriminator into a per-profile renderer strategy plugged into the existing `PROFILES` registry. Closes [#35](https://github.com/brandon-behring/peppy-scroll/book-scaffold-astro/issues/35) and [#36](https://github.com/brandon-behring/book-scaffold-astro/issues/36). No breaking changes; consumer DOM output is byte-equivalent for both tools and academic profiles (verified by visual regression at AE=0).
