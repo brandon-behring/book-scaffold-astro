@@ -6,6 +6,7 @@
  */
 import { defineProfile } from '../profile-kit.js';
 import { toolsChapterSchema } from '../schemas.js';
+import { toolsChaptersRenderer } from './renderers/tools-chapters.js';
 
 export type { ToolsChapter } from '../schemas.js';
 
@@ -24,4 +25,5 @@ export const toolsProfile = defineProfile({
     'tokens.css', 'layout.css', 'callouts.css', 'chapter.css',
     'typography.css', 'print.css', 'convergence.css', 'tool-filter.css',
   ],
+  chaptersRenderer: toolsChaptersRenderer,   // v3.7.0 (#35) — owns /chapters semantics for tools shape
 });

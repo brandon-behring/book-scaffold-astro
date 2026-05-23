@@ -1,0 +1,18 @@
+{
+  "name": "@brandon_m_behring/book-scaffold-fixture-academic-chapters",
+  "description": "Visual regression fixture for the v3.7.0 academic /chapters route refactor (#35 + #36). Exercises AcademicChaptersRenderer end-to-end via routes.chapters: true on the academic profile.",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "BOOK_PROFILE=academic astro build",
+    "preview": "BOOK_PROFILE=academic astro preview --host 127.0.0.1 --port 4176"
+  },
+  "dependencies": {
+    "@brandon_m_behring/book-scaffold-astro": "*",
+    "@astrojs/mdx": "^5.0.3",
+    "@astrojs/preact": "^5.1.1",
+    "astro": "^6.1.7",
+    "preact": "^10.29.1"
+  }
+}

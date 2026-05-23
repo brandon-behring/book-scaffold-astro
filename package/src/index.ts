@@ -61,6 +61,22 @@ export { getFreshness, freshnessLabel, type Freshness, type FreshnessStatus, typ
 // (no Astro virtual-module imports — safe for the DTS bundle).
 export { chapterSortKey } from './lib/chapter-sort.js';
 
+// Chapters renderer strategy (v3.7.0, closes #35): per-profile strategy
+// interface for the /chapters route. Pure-function design; no Astro imports
+// in implementations. The route file at pages/chapters.astro dispatches via
+// PROFILES[BOOK_PROFILE].chaptersRenderer (with fallbackChaptersRenderer
+// as a safety net for profiles that haven't shipped a dedicated renderer).
+export type {
+  ChaptersRenderer,
+  PartKey,
+  VolatilityBadge,
+  StatusBadge,
+  FreshnessAffordance,
+} from './lib/chapters-renderer.js';
+export { toolsChaptersRenderer } from './profiles/renderers/tools-chapters.js';
+export { academicChaptersRenderer } from './profiles/renderers/academic-chapters.js';
+export { fallbackChaptersRenderer } from './profiles/renderers/fallback-chapters.js';
+
 // Schema enums + Zod schemas.
 export {
   // Enum arrays

@@ -22,6 +22,7 @@
  */
 import { defineProfile } from '../profile-kit.js';
 import { researchPortfolioChapterSchema } from '../schemas.js';
+import { fallbackChaptersRenderer } from './renderers/fallback-chapters.js';
 
 export type { ResearchPortfolioChapter } from '../schemas.js';
 
@@ -38,4 +39,6 @@ export const researchPortfolioProfile = defineProfile({
   },
   styles: ['tokens.css', 'layout.css', 'callouts.css', 'chapter.css', 'typography.css', 'print.css'],
   katex: true,                   // math is common in research content
+  // v3.7.0 (#35): portfolio schema is a union of academic + tools shapes — fallback renderer dispatches per chapter via field presence
+  chaptersRenderer: fallbackChaptersRenderer,
 });

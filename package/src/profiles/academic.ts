@@ -8,6 +8,7 @@
  */
 import { defineProfile } from '../profile-kit.js';
 import { academicChapterSchema } from '../schemas.js';
+import { academicChaptersRenderer } from './renderers/academic-chapters.js';
 
 // Re-export for consumer ergonomics (`import { AcademicChapter } from '@brandon_m_behring/book-scaffold-astro'`).
 export type { AcademicChapter } from '../schemas.js';
@@ -25,4 +26,5 @@ export const academicProfile = defineProfile({
   },
   styles: ['tokens.css', 'layout.css', 'callouts.css', 'chapter.css', 'typography.css', 'print.css'],
   katex: true,
+  chaptersRenderer: academicChaptersRenderer,   // v3.7.0 (#35) — owns /chapters semantics if consumer opts in via routes.chapters
 });
