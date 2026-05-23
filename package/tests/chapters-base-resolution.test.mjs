@@ -21,12 +21,18 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { readChaptersBase } from '../scripts/walk-mdx.mjs';
 
-function withProject(setup, fn) {
+async function withProject(setup, fn) {
+  // BUG FIX (v4.1.2): make the harness ACTUALLY async — `try { return fn(dir) }
+  // finally { rm(dir) }` was running the cleanup synchronously, while `fn` (an
+  // async test) was still in flight. CI hit a race where the dir was deleted
+  // before readChaptersBase's readFile() completed, causing readFile to fail
+  // and the helper to return its DEFAULT_BASE fallback. Local + CI both pass
+  // when the cleanup awaits the async test.
   const dir = mkdtempSync(join(tmpdir(), 'chapters-base-'));
   try {
     mkdirSync(join(dir, 'src'), { recursive: true });
     setup(dir);
-    return fn(dir);
+    return await fn(dir);
   } finally {
     rmSync(dir, { recursive: true });
   }
