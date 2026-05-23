@@ -17,6 +17,17 @@ name: publish
 # npm-side prerequisite: each package needs a "Trusted Publisher" config at
 # npmjs.com (package settings → Trusted Publisher → GitHub Actions) with
 # workflow filename `publish.yml` and `npm publish` allowed.
+#
+# v3.6.5 (closes #37):
+# - Pre-publish smoke step (scaffold via local tarball + npm install + npm run build)
+#   gates the publish on a working end-to-end scaffold. Catches the class of
+#   regression the v3.6.1 → v3.6.4 hotfix chain surfaced (bib parser crashes,
+#   missing routes, broken cite refs) BEFORE the irreversible npm publish.
+# - Smoke verify uses an incremental-backoff retry loop instead of a flat sleep;
+#   no longer false-fails on npm index propagation lag (observed on v3.5.2,
+#   v3.6.2, v3.6.4).
+# - actions/* bumped to @v6 (Node 24-compatible; eliminates Node 20 deprecation
+#   warnings before the Sept 2026 removal date).
 
 on:
   push:
@@ -36,14 +47,14 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.tag || github.ref }}
 
       - name: Setup Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: npm
@@ -62,6 +73,9 @@ jobs:
       - name: Test the toolkit
         run: npm test --workspace package
 
+      - name: Test create-book CLI
+        run: npm test --workspace create-book
+
       - name: Verify lock-step versions match tag
         run: |
           pkg_version=$(node -p "require('./package/package.json').version")
@@ -78,6 +92,38 @@ jobs:
           fi
           echo "Lock-step OK: both packages at v$pkg_version, matches tag $tag_ref"
 
+      - name: Pre-publish smoke (scaffold + install via local tarball + build)
+        # v3.6.5 (closes #37 part 1): the hard gate that would have caught
+        # v3.6.0 / v3.6.1 / v3.6.2 / v3.6.3 failures BEFORE npm publish.
+        # Manually-verified recipe from v3.6.4, now automated.
+        run: |
+          set -euo pipefail
+          cd package
+          TARBALL=$(npm pack --json | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.parse(d)[0].filename))")
+          TARBALL_PATH="$GITHUB_WORKSPACE/package/$TARBALL"
+          cd "$GITHUB_WORKSPACE"
+
+          SMOKE=$(mktemp -d)
+          cd "$SMOKE"
+          node "$GITHUB_WORKSPACE/create-book/bin/create-book.mjs" demo --preset=academic
+          cd demo
+
+          # Swap the toolkit dep to point at the just-packed local tarball.
+          # This is what makes the smoke test about THIS tag's tarball,
+          # not whatever's already on the registry.
+          node -e "const p=require('./package.json');p.dependencies['@brandon_m_behring/book-scaffold-astro']='file:$TARBALL_PATH';require('fs').writeFileSync('./package.json',JSON.stringify(p,null,2)+'\n')"
+
+          npm install
+          npm run build
+
+          # Hard assertions: prove the scaffolded book actually emitted what
+          # consumers will see. Each assertion guards a class of failure from
+          # the v3.6 chain.
+          test -f dist/index.html                            # landing page (#28)
+          test -f dist/chapters/week01-hello-world/index.html # chapter route (#28)
+          test -f dist/references/index.html                  # bib pipeline (#39 et al)
+          echo "Pre-publish smoke OK: scaffolded academic book built end-to-end against $TARBALL"
+
       - name: Publish @brandon_m_behring/book-scaffold-astro
         working-directory: package
         run: npm publish --access public
@@ -86,13 +132,24 @@ jobs:
         working-directory: create-book
         run: npm publish --access public
 
-      - name: Smoke verify registry
+      - name: Smoke verify registry (incremental-backoff retry)
+        # v3.6.5 (closes #37 part 2): replaces the flat-sleep + single npm view
+        # with a retry loop. v3.5.2 / v3.6.2 / v3.6.4 all observed false
+        # failures when npm view ran before the registry index caught up.
+        # Total wait budget: 10 + 20 + 30 + 40 + 50 = 150s — enough for npm's
+        # worst observed propagation lag while still failing loudly on real misses.
         run: |
-          sleep 10
-          pkg_version=$(node -p "require('./package/package.json').version")
-          registry_pkg=$(npm view @brandon_m_behring/book-scaffold-astro version)
-          registry_cb=$(npm view @brandon_m_behring/create-book version)
-          echo "Registry: toolkit=$registry_pkg create-book=$registry_cb expected=$pkg_version"
-          [ "$registry_pkg" = "$pkg_version" ] || (echo "::error::Toolkit not at expected version on registry" && exit 1)
-          [ "$registry_cb" = "$pkg_version" ] || (echo "::error::create-book not at expected version on registry" && exit 1)
-          echo "Both packages confirmed at v$pkg_version on registry"
+          set -uo pipefail
+          expected=$(node -p "require('./package/package.json').version")
+          for attempt in 1 2 3 4 5; do
+            sleep $((attempt * 10))
+            pkg_v=$(npm view @brandon_m_behring/book-scaffold-astro version 2>/dev/null || true)
+            cb_v=$(npm view @brandon_m_behring/create-book version 2>/dev/null || true)
+            echo "Attempt $attempt: toolkit=$pkg_v create-book=$cb_v expected=$expected"
+            if [ "$pkg_v" = "$expected" ] && [ "$cb_v" = "$expected" ]; then
+              echo "Both at v$expected on registry (attempt $attempt)"
+              exit 0
+            fi
+          done
+          echo "::error::Registry did not reflect v$expected within 150s (5 attempts)"
+          exit 1
