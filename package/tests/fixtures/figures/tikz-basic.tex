@@ -1,0 +1,11 @@
+% Minimal TikZ standalone fixture for tests/build-figures-tikz.test.mjs.
+% Compiled by pdflatex during the test; verifies stage 1 + stage 2 produce
+% a valid SVG. Single-page; no \input{} dependencies; PortablyTeX-compatible.
+\documentclass[tikz,border=2mm]{standalone}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+  \draw[thick] (0,0) -- (2,0) -- (1,1.7) -- cycle;
+  \node at (1,0.6) {TikZ};
+\end{tikzpicture}
+\end{document}
