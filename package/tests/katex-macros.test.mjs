@@ -13,7 +13,7 @@
  */
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { defineBookConfig } from '../dist/index.mjs';
+import { defineBookConfig, academicStyle, toolsStyle } from '../dist/index.mjs';
 import { ssmMacros } from '../dist/lib/katex-macros.mjs';
 
 /**
@@ -36,8 +36,8 @@ function findRehypeKatexOptions(config) {
 
 test('katex-macros: omitting katexMacros yields the scaffold ssmMacros (backward compat)', async () => {
   const config = await defineBookConfig({
+    styles: [academicStyle],
     site: 'https://test.invalid',
-    preset: 'academic',
   });
   const katexOpts = findRehypeKatexOptions(config);
   assert.ok(katexOpts, 'rehype-katex should be registered on academic profile');
@@ -54,8 +54,8 @@ test('katex-macros: consumer macros are merged onto ssmMacros (closes #22)', asy
     '\\Cov': '\\mathrm{Cov}',
   };
   const config = await defineBookConfig({
+    styles: [academicStyle],
     site: 'https://test.invalid',
-    preset: 'academic',
     katexMacros: consumerMacros,
   });
   const katexOpts = findRehypeKatexOptions(config);
@@ -79,8 +79,8 @@ test('katex-macros: consumer wins on key collision (override semantics, closes #
   assert.ok(collidingKey, 'ssmMacros must export at least one macro for this test');
   const consumerMacros = { [collidingKey]: '\\overridden{}' };
   const config = await defineBookConfig({
+    styles: [academicStyle],
     site: 'https://test.invalid',
-    preset: 'academic',
     katexMacros: consumerMacros,
   });
   const katexOpts = findRehypeKatexOptions(config);
@@ -93,8 +93,8 @@ test('katex-macros: consumer wins on key collision (override semantics, closes #
 
 test('katex-macros: tools profile does NOT register rehype-katex (no leak)', async () => {
   const config = await defineBookConfig({
+    styles: [toolsStyle],
     site: 'https://test.invalid',
-    preset: 'tools',
     katexMacros: { '\\Var': '\\mathrm{Var}' },
   });
   const katexOpts = findRehypeKatexOptions(config);

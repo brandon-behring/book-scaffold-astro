@@ -24,6 +24,7 @@ import { fileURLToPath } from 'node:url';
 import type { AstroIntegration } from 'astro';
 import type { BookScaffoldIntegrationOptions } from './types.js';
 import { PROFILES } from './profiles/index.js';
+import { normalizeFrontmatterConfig } from './lib/define-style.js';
 import {
   resolveMdxComponentsPath,
   makeMdxComponentsVitePlugin,
@@ -31,7 +32,10 @@ import {
 
 const PACKAGE_NAME = '@brandon_m_behring/book-scaffold-astro';
 
-/** Mapping from route toggle name → injected route metadata. */
+/** Mapping from route toggle name → injected route metadata.
+ *  v4.0.0: `frontmatter.pattern` is computed at runtime from the route config's
+ *  `prefix` field (closes #49); the value below is the default when no
+ *  prefix is specified. */
 const ROUTE_REGISTRY = {
   references:  { pattern: '/references',          file: 'references.astro' },
   search:      { pattern: '/search',              file: 'search.astro' },
@@ -41,8 +45,20 @@ const ROUTE_REGISTRY = {
   // v3.4.0 (#7): consumer-collection-backed frontmatter route. Opt-in via
   // routes: { frontmatter: true } AND content.config.ts defining the
   // collection (use frontmatterCollection() helper from /schemas subpath).
+  // v4.0.0 (#49): widened to object form `{ enabled, prefix? }`; pattern
+  // computed from `prefix` (default 'frontmatter' → '/frontmatter/[slug]';
+  // empty string → '/[slug]'; arbitrary string → '/<prefix>/[slug]').
   frontmatter: { pattern: '/frontmatter/[slug]',  file: 'frontmatter/[...slug].astro' },
 } as const;
+
+/** Compute the frontmatter route URL pattern from the prefix.
+ *  Empty string → root mount `/[slug]`. Any other string → `/<prefix>/[slug]`.
+ *  Undefined → uses the default ROUTE_REGISTRY pattern. */
+function frontmatterPatternFromPrefix(prefix: string | undefined): string {
+  if (prefix === undefined) return ROUTE_REGISTRY.frontmatter.pattern;
+  if (prefix === '') return '/[slug]';
+  return `/${prefix}/[slug]`;
+}
 
 /**
  * Resolve a page filename to an absolute filesystem path inside the package.
@@ -61,7 +77,20 @@ export function bookScaffoldIntegration(
 
   // Merge per-profile route defaults with user overrides. Last-wins object
   // spread; consumer can flip any route on/off.
-  const enabledRoutes = { ...def.routes, ...userOverrides };
+  // v4.0.0 (#49): `userOverrides.frontmatter` may be `boolean | { enabled, prefix? }`.
+  // Normalize to extract the `enabled` boolean for the enabledRoutes map AND
+  // capture the prefix for downstream pattern computation.
+  const fmNormalized = normalizeFrontmatterConfig(userOverrides.frontmatter);
+  const fmEnabled = fmNormalized?.enabled ?? def.routes.frontmatter;
+  const fmPrefix = (fmNormalized && 'prefix' in fmNormalized) ? fmNormalized.prefix : undefined;
+
+  const enabledRoutes: Record<string, boolean> = {
+    ...def.routes,
+    ...Object.fromEntries(
+      Object.entries(userOverrides).filter(([k]) => k !== 'frontmatter'),
+    ),
+    frontmatter: fmEnabled,
+  };
 
   return {
     name: 'book-scaffold-astro',
@@ -82,12 +111,15 @@ export function bookScaffoldIntegration(
         }
 
         // 2. Route injection — driven by enabledRoutes map.
+        //    v4.0.0 (#49): frontmatter route uses prefix-computed pattern.
         for (const [name, on] of Object.entries(enabledRoutes)) {
           if (!on) continue;
           const route = ROUTE_REGISTRY[name as keyof typeof ROUTE_REGISTRY];
           if (!route) continue;   // unknown key from a stale override (defensive)
+          const pattern =
+            name === 'frontmatter' ? frontmatterPatternFromPrefix(fmPrefix) : route.pattern;
           injectRoute({
-            pattern: route.pattern,
+            pattern,
             entrypoint: resolvePage(route.file),
           });
         }

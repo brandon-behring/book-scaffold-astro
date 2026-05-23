@@ -11,6 +11,7 @@
 import type { AstroIntegration, AstroUserConfig } from 'astro';
 import { BOOK_PROFILES, type BookProfile } from './profiles/index.js';
 import type { RouteToggles } from './profile-kit.js';
+import type { Style, PartialRouteToggles } from './lib/define-style.js';
 
 // Re-export so the existing import paths
 //   import type { BookProfile } from '@brandon_m_behring/book-scaffold-astro'
@@ -32,32 +33,57 @@ export const BOOK_PRESETS = BOOK_PROFILES;
  * (`Locales`, `SessionDriverName`, fonts) that can't be threaded cleanly
  * through a wrapper. Instead we type the package-specific fields strictly
  * and allow arbitrary AstroUserConfig keys via the index signature.
+ *
+ * v4.0.0 (BREAKING): `preset` and `profile` fields removed — replaced by
+ * the `styles: Style[]` composition (see `defineStyle` API). Existing v3
+ * consumers receive an auto-suggested migration error at runtime pointing
+ * at MIGRATION-v3-to-v4.md.
  */
 export interface BookConfigOptions {
-  /** Required. Book's deployed origin (sitemap, canonical, Pagefind). */
-  site: string;
   /**
-   * Optional. Canonical forward-looking name (v3.4.0+). Resolution order:
-   * `preset` > `profile` > `BOOK_PRESET` env > `BOOK_PROFILE` env > `.env`
-   * `BOOK_PRESET` > `.env` `BOOK_PROFILE` > `'minimal'`.
+   * Optional. Book's deployed origin (sitemap, canonical, Pagefind).
    *
-   * Closes #9: existing consumers using `profile:` keep working; new docs
-   * + recipes recommend `preset:`. Same value set.
+   * v4.0.0 (BREAKING): now OPTIONAL at the type level — a Style in the
+   * `styles` chain can provide it (the `guides`-family pattern: shared
+   * style sets the site, per-book config inherits). Runtime validation
+   * still requires `site` to be set after style composition.
    */
-  preset?: BookPreset;
-  /** Backward-compat alias for `preset`. */
-  profile?: BookProfile;
+  site?: string;
   /**
-   * Optional per-route override of the profile's defaults. Use to disable
-   * an auto-injected route (e.g. multi-book consumer that ships its own
-   * `[book]/[chapter]` routing instead of the flat `/chapters` listing),
-   * or to enable a route the profile turns off by default.
+   * v4.0.0 (NEW): typed config bundles composed left-to-right. Earlier
+   * styles set defaults; later styles override per the merge strategy
+   * table (see `composeStyles` JSDoc + recipes/15-defining-styles.md).
+   * Top-level `BookConfigOptions` fields beat any style's value.
    *
-   *   defineBookConfig({ routes: { chapters: false, convergence: false } })
+   * @example
+   *   import { defineBookConfig, researchPortfolioStyle } from '@brandon_m_behring/book-scaffold-astro';
+   *   import { guidesFamilyStyle } from '../shared/styles/guides-family';
+   *   export default await defineBookConfig({
+   *     styles: [researchPortfolioStyle, guidesFamilyStyle],
+   *     site: 'https://foo.guides.example/',
+   *   });
+   */
+  styles?: readonly Style[];
+  /**
+   * Optional per-route override of the composed profile's defaults. Use to
+   * disable an auto-injected route (e.g. multi-book consumer that ships
+   * its own `[book]/[chapter]` routing instead of the flat `/chapters`
+   * listing), or to enable a route the profile turns off by default.
+   *
+   * v4.0.0: `routes.frontmatter` widened to support `{ enabled, prefix? }`
+   * object form (closes #49) — sets the route URL prefix. `boolean` form
+   * still accepted.
    *
    * Closes #3 (v3.3.0).
    */
-  routes?: Partial<RouteToggles>;
+  routes?: PartialRouteToggles;
+  /**
+   * v4.0.0 (NEW): deploy target — drives `create-book`'s wrangler.toml shape.
+   * Defaults from the composed style chain (academic/tools/minimal →
+   * 'workers'; course-notes/research-portfolio → 'pages'); per-book override
+   * here beats any style. Closes #50.
+   */
+  deploy?: 'pages' | 'workers';
   /**
    * Optional explicit path to the consumer's MDX-components map (relative
    * to project root). When omitted, the toolkit auto-detects one of
@@ -125,8 +151,12 @@ export interface BookSchemasOptions {
 /** Options for the internal `bookScaffoldIntegration`. See PACKAGE_DESIGN.md §6. */
 export interface BookScaffoldIntegrationOptions {
   profile: BookProfile;
-  /** Per-route override; merged into the profile's defaults. */
-  routes?: Partial<RouteToggles>;
+  /**
+   * Per-route override; merged into the profile's defaults.
+   * v4.0.0: `routes.frontmatter` widened to `boolean | { enabled, prefix? }`
+   * (closes #49). Pattern URL computed from `prefix` (default 'frontmatter').
+   */
+  routes?: PartialRouteToggles;
   /**
    * Optional explicit path to the consumer's mdx-components file (relative
    * to consumer root). When omitted, the Integration auto-detects
@@ -135,7 +165,7 @@ export interface BookScaffoldIntegrationOptions {
    * known.
    */
   mdxComponentsModule?: string;
-  extraStyles?: string[];
+  extraStyles?: readonly string[];
 }
 
 /** Raised when the resolved profile is not one of `BOOK_PROFILES`. */

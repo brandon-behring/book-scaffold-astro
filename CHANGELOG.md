@@ -2,6 +2,79 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.0.0] — 2026-05-23
+
+**BREAKING**: the v3.x `preset:` / `profile:` shorthand on `defineBookConfig` is removed. Replaced by typed `defineStyle()` composition via the new `styles: [...]` field. Migration is ~2 lines per book. Full migration recipe in [`package/MIGRATION-v3-to-v4.md`](package/MIGRATION-v3-to-v4.md); composition patterns in [`package/recipes/15-defining-styles.md`](package/recipes/15-defining-styles.md).
+
+### Why
+
+The v3.x API accumulated through 7 consumer-pilot releases. Each release added one or two top-level `BookConfigOptions` fields to address a specific consumer ask (`routes`, `katexMacros`, `extraStyles`, `extraIntegrations`, `mdxComponentsModule`, ...). v4 unifies that surface around a typed, branded, composable `Style` object: define a style once, import it across many books, override per-book explicitly. The user can now build style clusters (`guidesFamilyStyle`, `coursebookStyle`) once and reuse them across workspace siblings without per-book repetition.
+
+Foundational design choices (locked during v4.0.0 design session, see [`/.claude/plans/examine-what-has-happened-peppy-scroll.md`](.claude/plans/examine-what-has-happened-peppy-scroll.md)):
+- **Explicit over silent** — no profile-level magic defaults; every config decision visible in the call site or the imported Style.
+- **No legacy debt** — hard break at v4; sunset of v3 API is immediate.
+- **TypeScript strict-mode best practices** — branded types via `unique symbol`, closed shape (no public index signature; scoped `extra?` field instead — preserves typo protection on toolkit fields), `satisfies` for narrow registry inference, `readonly` on all DTO fields, `.js` extensions in imports.
+
+### Added
+
+- **`defineStyle(opts: StyleInput): Style`** — identity helper that creates a typed, branded, composable Style. Zero runtime overhead beyond an object spread + version marker. Branded type prevents confusion with `Partial<BookConfigOptions>`. See PACKAGE_DESIGN.md §4a.
+- **5 built-in Style exports** — `academicStyle`, `toolsStyle`, `minimalStyle`, `courseNotesStyle`, `researchPortfolioStyle`. One per preset. Plus `BUILTIN_STYLES: Record<BookPreset, Style>` (`as const satisfies` — narrow inferred lookup).
+- **`composeStyles(styles)`** — public helper for advanced consumer composition. Per-key merge strategy documented in PACKAGE_DESIGN.md §4a table.
+- **`styles?: readonly Style[]`** on `BookConfigOptions` — array of Styles composed left-to-right; top-level fields win over composed style chain.
+- **`deploy?: 'pages' | 'workers'`** on `BookConfigOptions` and `Style` ([#50](https://github.com/brandon-behring/book-scaffold-astro/issues/50)) — drives create-book's `wrangler.toml` shape. Inherited from chosen style; academic/tools/minimal default to `'workers'`, course-notes/research-portfolio default to `'pages'`.
+- **`routes.frontmatter` widened to `boolean | { enabled: boolean; prefix?: string }`** ([#49](https://github.com/brandon-behring/book-scaffold-astro/issues/49)) — object form lets consumers control the URL prefix (`prefix: ''` mounts pages at root). Boolean form keeps working with default prefix `'frontmatter'`.
+- **`extra?: Readonly<Record<string, unknown>>`** on `Style` — scoped consumer-side metadata namespace. Ignored by toolkit; survives composition as per-key spread. Preserves typo protection on known toolkit fields (closed shape — no public index signature).
+- **`__styleVersion: 1` marker** on every Style (auto-set by `defineStyle`) — forward-compatibility hook for future API-shape evolution.
+- **`package/recipes/15-defining-styles.md`** — new recipe covering workspace-local vs npm-package patterns, per-key merge semantics, escape hatches, feedback loop.
+- **`package/MIGRATION-v3-to-v4.md`** — step-by-step migration recipe for the 4 known consumers + external users.
+- **`PACKAGE_DESIGN.md §4` rewritten + new §4a** — full `defineBookConfig` v4 API contract + `defineStyle` API reference.
+- **40 unit tests in `package/tests/define-style.test.mjs`** — identity, branding, merge semantics for each field, BUILTIN_STYLES integrity, composition edge cases.
+- **5 new create-book scaffold tests** — per-preset `wrangler.toml` + new v4 `astro.config.mjs` shape.
+
+### Removed (BREAKING)
+
+- **`preset?: BookPreset` field on `BookConfigOptions`** — replaced by `styles: [<presetName>Style]`. Runtime check detects v3 usage and throws `BookConfigError` with auto-suggested replacement code + missing import line + link to MIGRATION-v3-to-v4.md.
+- **`profile?: BookPreset` field** (v3.4.0 backward-compat alias) — same treatment as `preset`. Both throw the same migration error.
+- **No backward-compatibility shim.** Consumers in early pilot phase (~4 known + workspace siblings, all maintained by same author); migration is ~2 lines per book. The v3.7.1 line stays installable indefinitely via npm for consumers who need more time.
+
+### Changed
+
+- **`book-scaffold build-bib` strips `%`-prefixed comment lines before parsing** ([#54](https://github.com/brandon-behring/book-scaffold-astro/issues/54)). Permanent fix for the citation-js parse-error class that drove the v3.6.1 → v3.6.4 hotfix chain. The library treats line-leading `@TYPE` tokens (e.g., `% @article{...}`) as entry starts even inside comments; the pre-pass `stripBibtexLineComments` removes any line whose first non-whitespace character is `%` before passing to `@citation-js/plugin-bibtex`. No consumer action needed; all existing `.bib` files continue to work.
+- **`create-book` generated `astro.config.mjs` uses v4 API** — emits `import { defineBookConfig, <preset>Style } from '@brandon_m_behring/book-scaffold-astro'; export default await defineBookConfig({ styles: [<preset>Style], site: '...' });` instead of v3 `preset: '<preset>'` form.
+- **`create-book` emits per-preset `wrangler.toml`** — Workers shape (academic/tools/minimal) vs Pages shape (course-notes/research-portfolio).
+- **`PROFILES[preset]?.katex === true` gate preserved from v3.7.1** — KaTeX wiring activates for both `academic` and `research-portfolio` based on the profile registry, not the preset literal. The fix is unchanged by the v4 API redesign.
+
+### Migration
+
+For each book using `@brandon_m_behring/book-scaffold-astro@^3.x`, edit `astro.config.mjs`:
+
+```diff
+- import { defineBookConfig } from '@brandon_m_behring/book-scaffold-astro';
++ import { defineBookConfig, academicStyle } from '@brandon_m_behring/book-scaffold-astro';
+
+  export default await defineBookConfig({
+-   preset: 'academic',
++   styles: [academicStyle],
+    site: 'https://my-book.example.com/',
+  });
+```
+
+| v3 preset | v4 import | v4 styles field |
+|---|---|---|
+| `'academic'` | `academicStyle` | `[academicStyle]` |
+| `'tools'` | `toolsStyle` | `[toolsStyle]` |
+| `'minimal'` | `minimalStyle` | `[minimalStyle]` |
+| `'course-notes'` | `courseNotesStyle` | `[courseNotesStyle]` |
+| `'research-portfolio'` | `researchPortfolioStyle` | `[researchPortfolioStyle]` |
+
+If migration friction surfaces, file an issue at https://github.com/brandon-behring/book-scaffold-astro/issues with the `consumer:<your-workspace>` label. The v4.x release line is explicitly the iteration window for this API.
+
+### Release policy
+
+- **D12 lock-step preserved**: `@brandon_m_behring/create-book@4.0.0` ships alongside the toolkit.
+- Pre-publish smoke gate (v3.6.5) ran end-to-end against academic + research-portfolio before publish.
+- 124 unit tests + 56 visual baselines (AE=0) verify DOM output is unchanged by the API redesign.
+
 ## [3.7.1] — 2026-05-23
 
 Patch release. Closes 3 issues from the [`brandon-behring/guides`](https://github.com/brandon-behring/guides) + [`brandon-behring/guides-experimentation`](https://github.com/brandon-behring/guides-experimentation) Phase 0b consumer batch. Unblocks that workspace's CI (which was crashing on `validate` under Node 20) and fixes brace-containing math in research-portfolio chapters.

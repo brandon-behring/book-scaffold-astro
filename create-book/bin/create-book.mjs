@@ -99,6 +99,21 @@ const PROFILE_DEFAULTS = {
 function makeTemplates(name, profile, toolkitVersion) {
   const ctx = { name, profile, toolkitVersion };
 
+  // v4.0.0: scaffolded astro.config.mjs imports the built-in style matching
+  // the chosen preset. Map preset name → camelCase export.
+  const STYLE_EXPORT_NAMES = {
+    academic: 'academicStyle',
+    tools: 'toolsStyle',
+    minimal: 'minimalStyle',
+    'course-notes': 'courseNotesStyle',
+    'research-portfolio': 'researchPortfolioStyle',
+  };
+  const styleExportName = STYLE_EXPORT_NAMES[profile];
+
+  // v4.0.0 (#50): per-preset wrangler.toml shape. course-notes + research-portfolio
+  // ship content-heavy static sites → Cloudflare Pages. Others → Workers.
+  const usesPages = profile === 'course-notes' || profile === 'research-portfolio';
+
   const templates = {
     'package.json': `{
   "name": "${name}",
@@ -139,14 +154,23 @@ function makeTemplates(name, profile, toolkitVersion) {
 }
 `,
 
+    // v4.0.0: scaffolded astro.config.mjs uses the new defineStyle composition
+    // pattern. Each preset maps to a built-in style (academicStyle, toolsStyle,
+    // minimalStyle, courseNotesStyle, researchPortfolioStyle). See recipes/15.
     'astro.config.mjs': `// @ts-check
 /**
- * astro.config.mjs — book-scaffold-astro consumer config.
- * defineBookConfig threads BOOK_PROFILE and wires the Integration.
+ * astro.config.mjs — book-scaffold-astro consumer config (v4 API).
+ *
+ * Built-in styles ship one per preset. To customize, define your own style
+ * in shared/styles/ (workspace pattern) or publish it as an npm package,
+ * then compose: \`styles: [${styleExportName}, myCustomStyle]\`.
+ *
+ * See recipes/15-defining-styles.md for the full pattern catalog.
  */
-import { defineBookConfig } from '@brandon_m_behring/book-scaffold-astro';
+import { defineBookConfig, ${styleExportName} } from '@brandon_m_behring/book-scaffold-astro';
 
 export default await defineBookConfig({
+  styles: [${styleExportName}],
   site: 'https://example.invalid',
 });
 `,
@@ -206,10 +230,10 @@ Available components are documented in the toolkit's [PACKAGE_DESIGN.md §10](ht
 \`\`\`bash
 npm run validate    # pre-flight content checks
 npm run build       # → dist/
-npx wrangler deploy # Cloudflare Workers + Static Assets
+${usesPages ? `npx wrangler pages deploy ./dist --project-name=${name}` : 'npx wrangler deploy'}
 \`\`\`
 
-See \`wrangler.toml\` for deploy config.
+See \`wrangler.toml\` for deploy config (this scaffold uses the ${usesPages ? 'Cloudflare **Pages**' : 'Cloudflare **Workers** + Static Assets'} shape — default for the ${profile} preset).
 `,
 
     'CLAUDE.md': `# ${name} — AI authoring guide
@@ -227,7 +251,20 @@ This book is built with \`@brandon_m_behring/book-scaffold-astro\` (${profile} p
 **Toolkit reference:** [PACKAGE_DESIGN.md](https://github.com/brandon-behring/book-scaffold-astro/blob/v3.0/PACKAGE_DESIGN.md) — single source of truth for the API. File issues at https://github.com/brandon-behring/book-scaffold-astro/issues with label \`consumer:${name}\`.
 `,
 
-    'wrangler.toml': `# wrangler.toml — Cloudflare Workers + Static Assets deploy.
+    // v4.0.0 (#50): per-preset wrangler.toml shape. Academic / tools / minimal
+    // ship as Cloudflare Workers + Static Assets (the v3 default). Course-notes
+    // and research-portfolio default to Cloudflare Pages (content-heavy static
+    // sites typical of those presets).
+    'wrangler.toml': usesPages
+      ? `# wrangler.toml — Cloudflare Pages deploy.
+# Run: npx wrangler pages deploy ./dist --project-name=${name}
+# Set up: https://developers.cloudflare.com/pages/
+
+name = "${name}"
+compatibility_date = "2025-12-01"
+pages_build_output_dir = "./dist"
+`
+      : `# wrangler.toml — Cloudflare Workers + Static Assets deploy.
 # Run: npx wrangler deploy
 # Set up: https://developers.cloudflare.com/workers/static-assets/
 

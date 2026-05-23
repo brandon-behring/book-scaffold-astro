@@ -83,7 +83,22 @@ async function main() {
     }
     throw err;
   }
-  const cite = new Cite(bibText);
+  // v4.0.0 (closes #54): strip `%`-comment lines before passing to citation-js.
+  // The plugin-bibtex lexer doesn't honor BibTeX's %-line-comment semantics —
+  // any `@TYPE` token inside a commented block is consumed as an entry start,
+  // then fails at the first real entry below. This caused 4 hotfix releases
+  // in v3.6.1→v3.6.4 chasing the same parse quirk; the pre-pass eliminates the
+  // entire class of bug.
+  //
+  // BibTeX's real comment grammar is "% at the start of a line (after optional
+  // whitespace) to end of line". Mid-line `%` (e.g., `note = {50% confidence}`)
+  // is NOT a comment and is preserved.
+  const sanitizedBib = bibText
+    .split(/\r?\n/)
+    .map((line) => (line.trimStart().startsWith('%') ? '' : line))
+    .join('\n');
+
+  const cite = new Cite(sanitizedBib);
   const data = cite.data;
 
   // Detect duplicates the way biber would (citation-js silently

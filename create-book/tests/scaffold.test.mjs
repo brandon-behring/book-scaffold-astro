@@ -219,3 +219,65 @@ test('#39: tools scaffold does NOT ship bibliography.bib (tools profile uses YAM
   const bibPath = join(workRoot, 'demo-no-bib-39', 'bibliography.bib');
   assert.equal(await exists(bibPath), false, 'tools profile should not emit bibliography.bib');
 });
+
+// ===== v4.0.0 P5: per-preset wrangler.toml (#50) =====
+
+test('v4.0.0 #50: academic scaffold ships Workers-style wrangler.toml ([assets] directive)', async () => {
+  const r = runCli(['demo-workers-v4', '--preset=academic'], workRoot);
+  assert.equal(r.status, 0);
+  const wrangler = await readFile(
+    join(workRoot, 'demo-workers-v4', 'wrangler.toml'),
+    'utf8',
+  );
+  assert.match(wrangler, /^\[assets\]$/m, 'expected [assets] directive');
+  assert.doesNotMatch(wrangler, /pages_build_output_dir/, 'should NOT have Pages directive');
+});
+
+test('v4.0.0 #50: research-portfolio scaffold ships Pages-style wrangler.toml (pages_build_output_dir)', async () => {
+  const r = runCli(['demo-pages-v4', '--preset=research-portfolio'], workRoot);
+  assert.equal(r.status, 0);
+  const wrangler = await readFile(
+    join(workRoot, 'demo-pages-v4', 'wrangler.toml'),
+    'utf8',
+  );
+  assert.match(wrangler, /pages_build_output_dir\s*=\s*"\.\/dist"/, 'expected Pages directive');
+  assert.doesNotMatch(wrangler, /^\[assets\]$/m, 'should NOT have Workers directive');
+});
+
+test('v4.0.0 #50: course-notes scaffold also ships Pages-style wrangler.toml', async () => {
+  const r = runCli(['demo-course-pages-v4', '--preset=course-notes'], workRoot);
+  assert.equal(r.status, 0);
+  const wrangler = await readFile(
+    join(workRoot, 'demo-course-pages-v4', 'wrangler.toml'),
+    'utf8',
+  );
+  assert.match(wrangler, /pages_build_output_dir/);
+});
+
+// ===== v4.0.0 architecture: scaffold uses new styles: [...] pattern =====
+
+test('v4.0.0 architecture: scaffolded astro.config.mjs uses styles: [<preset>Style] (not v3 preset:)', async () => {
+  const r = runCli(['demo-v4-config', '--preset=academic'], workRoot);
+  assert.equal(r.status, 0);
+  const astroConfig = await readFile(
+    join(workRoot, 'demo-v4-config', 'astro.config.mjs'),
+    'utf8',
+  );
+  // Must use new v4 API
+  assert.match(astroConfig, /styles:\s*\[academicStyle\]/, 'expected v4 styles: [...] composition');
+  assert.match(astroConfig, /import\s*\{[^}]*academicStyle[^}]*\}\s*from\s*'@brandon_m_behring\/book-scaffold-astro'/);
+  // Must NOT use removed v3 fields
+  assert.doesNotMatch(astroConfig, /\bpreset:\s*['"]/, 'v3 preset: field must not appear');
+  assert.doesNotMatch(astroConfig, /\bprofile:\s*['"]/, 'v3 profile: field must not appear');
+});
+
+test('v4.0.0 architecture: research-portfolio scaffold imports researchPortfolioStyle', async () => {
+  const r = runCli(['demo-v4-rp', '--preset=research-portfolio'], workRoot);
+  assert.equal(r.status, 0);
+  const astroConfig = await readFile(
+    join(workRoot, 'demo-v4-rp', 'astro.config.mjs'),
+    'utf8',
+  );
+  assert.match(astroConfig, /researchPortfolioStyle/);
+  assert.match(astroConfig, /styles:\s*\[researchPortfolioStyle\]/);
+});
