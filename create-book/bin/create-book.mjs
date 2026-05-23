@@ -295,7 +295,7 @@ const { Content, headings } = await render(entry);
 % https://github.com/brandon-behring/book-scaffold-astro/blob/main/package/recipes/02-bibliography-pipeline.md
 % for the supported BibTeX entry shapes.
 
-@misc{placeholder2026,
+@misc{placeholder,
   title  = {Placeholder reference - replace with your first real citation},
   author = {Anonymous},
   year   = {2026},
@@ -362,13 +362,13 @@ KaTeX is wired by \`defineBookConfig\` when \`BOOK_PROFILE=academic\` (this book
 
 $$\\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx = \\sqrt{\\pi}$$
 
-To cite the bibliography (once \`bibliography.bib\` has entries and \`npm run build:bib\` has run): <Cite key="example-key2024" />.
+To cite the bibliography: <Cite key="placeholder" /> (this references the placeholder entry in \`bibliography.bib\`; replace with your own once you add real references).
 
 ## What's next
 
 - Run \`npm run dev\` to preview live.
 - Add chapters under \`src/content/chapters/\` — see this file's shape.
-- Edit \`bibliography.bib\` and rebuild for citations.
+- Edit \`bibliography.bib\` and rebuild for citations (replace the \`placeholder\` entry with your first real reference).
 - Tag headings/theorems with \`id="…"\` and run \`npm run build:labels\` to enable \`<XRef>\`.
 `;
   }

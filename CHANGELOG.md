@@ -2,6 +2,30 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [3.6.4] — 2026-05-22
+
+Patch release fixing the validator failure surfaced by the v3.6.3 end-to-end smoke test. With the bibliography parsing finally working (v3.6.3), `book-scaffold validate` ran and caught a different issue: the scaffolded academic demo chapter referenced `<Cite key="example-key2024" />` but the placeholder bibliography (added in v3.6.1) only defined `placeholder2026`. Every new academic book failed validate with "Unknown bibkey" on the first build.
+
+This is the last step of the v3.6 bootstrap-experience regression chain. With v3.6.4, a fresh academic scaffold completes `npx create-book → npm install → npm run build` cleanly out of the box. Verified end-to-end against a local-tarball smoke test before shipping.
+
+### Fixed
+
+- **Demo academic chapter Cite key now references the placeholder bibkey** (`placeholder2026` instead of `example-key2024`). The demo `<Cite>` now actually demonstrates a working citation that resolves through the BibTeX pipeline.
+- "What's next" prose updated to point at the actual `placeholder2026` entry name.
+
+### Tests strengthened
+
+- **`v3.6.4` regression test** added: parses bibkeys from generated `bibliography.bib`, parses Cite keys from generated demo chapter, asserts every Cite key has a matching bibkey. Catches "demo chapter cites bibkey X but bib defines bibkey Y" at scaffold-template-generation time.
+
+### Process change
+
+- **Pre-publish local-tarball smoke test added to the release workflow** (manual for now; tracked for future automation). Pattern: `cd package && npm pack`, scaffold a fresh book via the local create-book bin, edit its `package.json` to install the toolkit from `file:./brandon_m_behring-book-scaffold-astro-X.Y.Z.tgz`, run `npm install && npm run build`. Confirms the full bootstrap path works against an in-progress version BEFORE the OIDC publish makes anything irreversible.
+
+### Release policy
+
+- **D12 lock-step preserved**: `@brandon_m_behring/create-book@3.6.4` ships alongside the toolkit.
+- **v3.6 bootstrap chain summary**: v3.6.0 had a hidden first-build crash (empty bib). v3.6.1–v3.6.3 chased the bib parsing problem through three citation-js antipatterns. v3.6.4 closes the loop by fixing the demo chapter's Cite reference + adding pre-publish smoke as a process gate.
+
 ## [3.6.3] — 2026-05-22
 
 Patch release fixing the v3.6.2 fix for [#39](https://github.com/brandon-behring/book-scaffold-astro/issues/39). Caught again by the post-publish smoke test within 60 seconds of v3.6.2 shipping.

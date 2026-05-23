@@ -145,6 +145,43 @@ test('#39: academic scaffold ships a bibliography.bib with at least one parseabl
   assert.match(bib, /^@\w+\{/m, 'bibliography.bib must contain at least one @entry');
 });
 
+test('v3.6.4: demo academic chapter Cite keys must exist in bibliography.bib placeholder', async () => {
+  // The academic demo chapter references a bibkey via <Cite key="..."/>.
+  // book-scaffold validate (a hard CI gate as of Phase 2.6) fails the build
+  // if the key isn't in the generated references.json. So the scaffolded
+  // book must ship with the demo chapter's Cite key matching an entry in
+  // the placeholder bibliography.bib.
+  //
+  // Pre-v3.6.4 the demo chapter said key="example-key2024" but the bib
+  // contained only @misc{placeholder2026} — every new academic book failed
+  // validate on the first build with "Unknown bibkey".
+  const r = runCli(['demo-bibkey-match-v364', '--preset=academic'], workRoot);
+  assert.equal(r.status, 0);
+  const scaffoldDir = join(workRoot, 'demo-bibkey-match-v364');
+  const bib = await readFile(join(scaffoldDir, 'bibliography.bib'), 'utf8');
+  const chapter = await readFile(
+    join(scaffoldDir, 'src', 'content', 'chapters', 'week01-hello-world.mdx'),
+    'utf8',
+  );
+
+  // Extract bibkeys from the bib file (the identifier after `@type{`).
+  const bibKeys = new Set();
+  for (const m of bib.matchAll(/^@\w+\{([^,\s]+)/gm)) bibKeys.add(m[1]);
+  assert.ok(bibKeys.size > 0, 'bibliography.bib must define at least one bibkey');
+
+  // Extract Cite keys from the chapter.
+  const citeKeys = [];
+  for (const m of chapter.matchAll(/<Cite\s+key="([^"]+)"/g)) citeKeys.push(m[1]);
+
+  const unknownCites = citeKeys.filter((k) => !bibKeys.has(k));
+  assert.equal(
+    unknownCites.length,
+    0,
+    `demo chapter cites bibkeys not in bibliography.bib: ${unknownCites.join(', ')}\n` +
+      `Defined bibkeys: ${[...bibKeys].join(', ')}`,
+  );
+});
+
 test('#39 (v3.6.3): bibliography.bib comments must NOT contain ANY @<word> token', async () => {
   // citation-js's BibTeX grammar tokenizes ANY `@word` token (with or without
   // a trailing `{`) inside %-prefixed comment lines as an entry start. If the
