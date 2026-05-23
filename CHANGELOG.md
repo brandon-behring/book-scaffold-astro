@@ -2,6 +2,27 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [3.6.3] — 2026-05-22
+
+Patch release fixing the v3.6.2 fix for [#39](https://github.com/brandon-behring/book-scaffold-astro/issues/39). Caught again by the post-publish smoke test within 60 seconds of v3.6.2 shipping.
+
+### Root cause (deepened)
+
+`@citation-js/plugin-bibtex` tokenizes **any `@<word>` token** inside `%`-prefixed comment lines as an entry start — not just `@<word>{` (the v3.6.1 antipattern) and not just full `% @article{...}` blocks. v3.6.2's template included a prose mention `% for the supported BibTeX entry shapes (@article, @book, @inproceedings, ...)` — those bare `@article` / `@book` tokens (no `{`) also crashed the parser.
+
+### Fixed
+
+- **`bibliography.bib` template now contains zero `@<word>` tokens in comments**. Removed the "supported BibTeX entry shapes" listing from the comment block; the link to `recipes/02-bibliography-pipeline.md` remains as the discovery path.
+
+### Tests strengthened
+
+- **`#39 (v3.6.3)` regression test** widened: now flags `^%.*@\w+` (any `@word` token in a comment), not just `^%.*@\w+\{` (v3.6.2's narrower pattern). Comment in the test documents the v3.6.0 → v3.6.1 → v3.6.2 → v3.6.3 trail so future maintainers understand WHY the regex is so broad.
+
+### Release policy
+
+- **D12 lock-step preserved**: `@brandon_m_behring/create-book@3.6.3` ships alongside the toolkit.
+- **Post-publish smoke caught its own bug twice in a row**. Process win: the failure mode is now fully characterized + locked behind a stricter regression test.
+
 ## [3.6.2] — 2026-05-22
 
 Patch release fixing the v3.6.1 fix for [#39](https://github.com/brandon-behring/book-scaffold-astro/issues/39) (caught immediately by the post-publish smoke test). The v3.6.1 `bibliography.bib` template added a parseable `@misc{placeholder...}` entry but also included a trailing block of **commented-out** `@article` example syntax. `@citation-js/plugin-bibtex` tokenizes `@<entrytype>` tokens even inside `%`-prefixed lines — so the post-entry block still crashed the grammar parser, leaving v3.6.1 with the same first-build crash as v3.6.0.
