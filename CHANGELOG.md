@@ -2,6 +2,23 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [3.6.2] — 2026-05-22
+
+Patch release fixing the v3.6.1 fix for [#39](https://github.com/brandon-behring/book-scaffold-astro/issues/39) (caught immediately by the post-publish smoke test). The v3.6.1 `bibliography.bib` template added a parseable `@misc{placeholder...}` entry but also included a trailing block of **commented-out** `@article` example syntax. `@citation-js/plugin-bibtex` tokenizes `@<entrytype>` tokens even inside `%`-prefixed lines — so the post-entry block still crashed the grammar parser, leaving v3.6.1 with the same first-build crash as v3.6.0.
+
+### Fixed
+
+- **`bibliography.bib` template no longer contains commented `@article` example block**. Replaced with a link to `recipes/02-bibliography-pipeline.md` for entry shape reference. The placeholder `@misc` entry remains; everything around it is plain-prose `%` comments with no `@<word>` tokens.
+
+### Added
+
+- **`create-book/tests/scaffold.test.mjs`**: new regression test (`#39 (v3.6.2): bibliography.bib must NOT contain commented-out @entry lines`) — fails the build if any line matches `^%.*@\w+\{`. Captures the anti-pattern at scaffold-template-generation time so this exact failure can't recur silently.
+
+### Release policy
+
+- **D12 lock-step preserved**: `@brandon_m_behring/create-book@3.6.2` ships alongside the toolkit.
+- **Post-publish smoke catches its own bug**: the v3.6.1 issue was found within 60 seconds of publish by the planned end-to-end smoke test. Same loop would have caught the v3.6.0 first-build crash had it existed in v3.5.0's smoke. Process win for the release pipeline.
+
 ## [3.6.1] — 2026-05-22
 
 Patch release closing the bootstrap-experience regression cycle surfaced by two consumers in 24 hours: the [`claude-books`](https://github.com/brandon-behring/claude-books) workspace and the [`double-ml-time-series`](https://github.com/brandon-behring/double-ml-time-series) pilot. Six issues closed, all in `create-book` or the LaTeX-mapping documentation.
