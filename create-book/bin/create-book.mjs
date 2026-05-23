@@ -278,28 +278,28 @@ const { Content, headings } = await render(entry);
     // comments-only file crashed @citation-js/plugin-bibtex's Grammar parser
     // (no entries → parse error), blocking every new academic book's first
     // build. Consumers replace this with their first real reference.
+    // v3.6.2 (closes #X): the previous template included a commented-out
+    // @article{...} example block at the bottom. @citation-js/plugin-bibtex
+    // tokenizes \`@article\` even inside %-prefixed comment lines, so the
+    // grammar parser crashed at the trailing block. Lesson: do not put
+    // commented \`@entry\` directives in a bibtex file the parser will see.
+    // Keep the placeholder entry + leading prose comments only; document
+    // the entry shape in package/recipes/02-bibliography-pipeline.md instead.
     templates['bibliography.bib'] = `% bibliography.bib — BibTeX source for <Cite> components.
 % Run \`npm run build:bib\` to generate src/data/references.json.
 %
-% Replace this placeholder with your first real reference, or remove it
-% once you have actual bibliography entries.
+% Replace this placeholder with your first real reference (or remove it
+% once you have actual bibliography entries). See
+% https://github.com/brandon-behring/book-scaffold-astro/blob/main/package/recipes/02-bibliography-pipeline.md
+% for the supported BibTeX entry shapes (@article, @book, @inproceedings,
+% @misc, @techreport, etc.).
 
 @misc{placeholder2026,
-  title  = {Placeholder reference — replace with your first real citation},
-  author = {{Scaffolded by create-book}},
+  title  = {Placeholder reference - replace with your first real citation},
+  author = {Anonymous},
   year   = {2026},
   note   = {Remove this entry once you add real references.}
 }
-
-% Example article entry (commented):
-%
-% @article{example-key2024,
-%   author  = {Author, First and Author, Second},
-%   title   = {A motivating example},
-%   journal = {Journal Name},
-%   year    = {2024},
-%   note    = {arXiv:2401.00000}
-% }
 `;
   }
 

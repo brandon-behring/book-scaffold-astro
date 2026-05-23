@@ -145,6 +145,33 @@ test('#39: academic scaffold ships a bibliography.bib with at least one parseabl
   assert.match(bib, /^@\w+\{/m, 'bibliography.bib must contain at least one @entry');
 });
 
+test('#39 (v3.6.2): bibliography.bib must NOT contain commented-out @entry lines', async () => {
+  // citation-js's BibTeX grammar tokenizes "@<entrytype>" tokens even inside
+  // %-prefixed comment lines. A trailing block like
+  //
+  //   % @article{example-key,
+  //   %   author = {...}
+  //   % }
+  //
+  // crashes `book-scaffold build-bib` with a Grammar parse error on first run,
+  // breaking every newly-scaffolded academic book. The fix is structural: do
+  // not put commented `@entry` directives in any .bib file the parser will see.
+  // (The pre-v3.6.2 template had exactly this anti-pattern.)
+  const r = runCli(['demo-bib-no-commented-entry', '--preset=academic'], workRoot);
+  assert.equal(r.status, 0);
+  const bib = await readFile(join(workRoot, 'demo-bib-no-commented-entry', 'bibliography.bib'), 'utf8');
+  const offenders = bib
+    .split('\n')
+    .map((line, i) => ({ line: line.trim(), n: i + 1 }))
+    .filter(({ line }) => /^%[^\n]*@\w+\{/.test(line));
+  assert.equal(
+    offenders.length,
+    0,
+    `bibliography.bib contains commented @entry lines that crash citation-js:\n` +
+      offenders.map((o) => `  line ${o.n}: ${o.line}`).join('\n'),
+  );
+});
+
 test('#39: tools scaffold does NOT ship bibliography.bib (tools profile uses YAML manifest)', async () => {
   const r = runCli(['demo-no-bib-39', '--preset=tools'], workRoot);
   assert.equal(r.status, 0);
