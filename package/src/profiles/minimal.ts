@@ -20,6 +20,7 @@ export const minimalProfile = defineProfile({
     chapters: false,
     convergence: false,
     frontmatter: false,     // opt-in per book; see #7
+    tips: false,            // v4.3.0 #70: opt-in per book
   },
   styles: ['tokens.css', 'layout.css', 'callouts.css', 'chapter.css', 'typography.css', 'print.css'],
   // v3.7.0 (#35): minimal aliases tools schema; fallback renderer field-dispatches if a consumer opts into routes.chapters

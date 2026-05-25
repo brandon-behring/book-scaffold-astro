@@ -1,0 +1,22 @@
+---
+/**
+ * ExerciseSolutions — chapter-end wrapper that provides the section
+ * heading + container for <Solution> elements (v4.3.0, closes #71).
+ *
+ * Author places this at chapter end and fills it with <Solution for="...">
+ * elements. The wrapper provides:
+ *   - <h2>Exercise solutions</h2> heading
+ *   - Container styling (separates the section visually from preceding prose)
+ *   - Anchor (`#exercise-solutions`) so the section is linkable
+ *
+ * v4.3.0 design: manual <Solution> placement (no auto-collection of
+ * <Exercise> content). Auto-collection deferred to v4.4.0+ if real
+ * demand surfaces — would require MDX AST traversal at build time.
+ *
+ * Family: book-genre (cross-profile).
+ */
+---
+<section class="exercise-solutions" id="exercise-solutions">
+  <h2 class="exercise-solutions-heading">Exercise solutions</h2>
+  <div class="exercise-solutions-body"><slot /></div>
+</section>

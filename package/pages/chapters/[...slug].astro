@@ -1,0 +1,40 @@
+---
+/**
+ * Auto-injected per-chapter dynamic route (v4.3.0, closes #69).
+ *
+ * Gated on `routes.chapters: true` via bookScaffoldIntegration's
+ * injectRoute call. Mirrors the frontmatter route pattern (v3.4.0 #7):
+ * the toolkit ships BOTH the /chapters/ index AND the /chapters/<slug>/
+ * dynamic route, so consumers don't have to write the boilerplate.
+ *
+ * Layout switching by preset:
+ *   - academic + research-portfolio → Chapter.astro (KaTeX + theorem chrome)
+ *   - all others → Base.astro (lighter; for tools/minimal/course-notes)
+ *
+ * Pre-v4.3.0 each consumer wrote this file by hand; all instances were
+ * mechanical copies (see post_transformers/guides/web/src/pages/chapters/
+ * [...slug].astro and double_ml_time_series/web/src/pages/chapters/
+ * [...slug].astro for the canonical pattern).
+ */
+import { getCollection, render } from 'astro:content';
+import Chapter from '../../layouts/Chapter.astro';
+import Base from '../../layouts/Base.astro';
+
+const BOOK_PRESET = import.meta.env.BOOK_PRESET ?? 'minimal';
+const USE_CHAPTER_LAYOUT = ['academic', 'research-portfolio'].includes(BOOK_PRESET);
+
+export async function getStaticPaths() {
+  const chapters = await getCollection('chapters', (entry) => !entry.data.draft);
+  return chapters.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content, headings } = await render(entry);
+const Layout = USE_CHAPTER_LAYOUT ? Chapter : Base;
+---
+<Layout entry={entry} headings={headings}>
+  <Content />
+</Layout>

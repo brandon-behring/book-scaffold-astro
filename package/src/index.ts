@@ -98,6 +98,15 @@ export {
   BUILTIN_STYLES,
 } from './styles/built-in.js';
 
+// v4.3.0 defineTips API: cross-volume numbered-tips registry per Pragmatic
+// Programmer precedent (closes #70). Paired with <Tip>, <TipsCard>, /tips
+// auto-route, and book-scaffold build-tips script.
+export {
+  defineTips,
+  type TipsConfig,
+  type TipsConfigInput,
+} from './lib/define-tips.js';
+
 // Schema enums + Zod schemas.
 export {
   // Enum arrays

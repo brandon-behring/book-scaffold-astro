@@ -41,7 +41,16 @@ const ROUTE_REGISTRY = {
   search:      { pattern: '/search',              file: 'search.astro' },
   print:       { pattern: '/print',               file: 'print.astro' },
   chapters:    { pattern: '/chapters',            file: 'chapters.astro' },
+  // v4.3.0 (#69): per-chapter dynamic route auto-injected when
+  // routes.chapters: true. Mirrors the frontmatter pattern — toolkit ships
+  // BOTH the /chapters/ index AND the /chapters/<slug>/ dynamic route.
+  // Pre-v4.3.0 each consumer wrote this file by hand; all instances were
+  // mechanical copies of the same boilerplate.
+  chaptersSlug:{ pattern: '/chapters/[...slug]',  file: 'chapters/[...slug].astro' },
   convergence: { pattern: '/convergence',         file: 'convergence.astro' },
+  // v4.3.0 (#70): cross-volume numbered-tips index. Opt-in via
+  // routes.tips: true; pairs with build-tips script + <Tip> component.
+  tips:        { pattern: '/tips',                file: 'tips.astro' },
   // v3.4.0 (#7): consumer-collection-backed frontmatter route. Opt-in via
   // routes: { frontmatter: true } AND content.config.ts defining the
   // collection (use frontmatterCollection() helper from /schemas subpath).
@@ -112,8 +121,16 @@ export function bookScaffoldIntegration(
 
         // 2. Route injection — driven by enabledRoutes map.
         //    v4.0.0 (#49): frontmatter route uses prefix-computed pattern.
+        //    v4.3.0 (#69): when routes.chapters is true, ALSO inject the
+        //    per-chapter dynamic route (chaptersSlug). The two routes ship
+        //    together: index lists chapters, dynamic route renders each one.
+        const routesToInject: string[] = [];
         for (const [name, on] of Object.entries(enabledRoutes)) {
           if (!on) continue;
+          routesToInject.push(name);
+          if (name === 'chapters') routesToInject.push('chaptersSlug');
+        }
+        for (const name of routesToInject) {
           const route = ROUTE_REGISTRY[name as keyof typeof ROUTE_REGISTRY];
           if (!route) continue;   // unknown key from a stale override (defensive)
           const pattern =

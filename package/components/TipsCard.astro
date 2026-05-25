@@ -1,0 +1,44 @@
+---
+/**
+ * TipsCard — print-friendly pull-out card listing all numbered tips
+ * (v4.3.0, closes #70).
+ *
+ * Reads `src/data/tips.json` (emitted by `book-scaffold build-tips`).
+ * Author places it on a back-matter print route (e.g., `/print-tips`).
+ *
+ * Renders a single-column ordered list with page-break-inside: avoid
+ * so the card prints cleanly on one or more dedicated pages.
+ *
+ * Graceful skip: if tips.json doesn't exist or is empty, renders an
+ * empty container with a note (doesn't fail the build). Consumers who
+ * don't use the tips feature can include the component without prep.
+ */
+let tips: Array<{ n: number; title: string; chapter: string; preview: string }> = [];
+try {
+  const mod = await import('../../../src/data/tips.json', { with: { type: 'json' } });
+  tips = (mod.default ?? []) as typeof tips;
+} catch {
+  // tips.json not generated yet — render empty card with hint.
+}
+---
+<aside class="tips-card" role="contentinfo">
+  <h2 class="tips-card-title">Tips</h2>
+  {tips.length === 0 && (
+    <p class="tips-card-empty">
+      No tips found. Run <code>book-scaffold build-tips</code> to generate
+      <code>src/data/tips.json</code> from <code>&lt;Tip&gt;</code> instances in chapters.
+    </p>
+  )}
+  {tips.length > 0 && (
+    <ol class="tips-card-list">
+      {tips.map((tip) => (
+        <li class="tips-card-item">
+          <a href={`/tips#tip-${tip.n}`} class="tips-card-link">
+            <span class="tips-card-number">{tip.n}.</span>
+            <strong class="tips-card-rule">{tip.title}</strong>
+          </a>
+        </li>
+      ))}
+    </ol>
+  )}
+</aside>

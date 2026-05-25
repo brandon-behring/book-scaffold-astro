@@ -1,0 +1,28 @@
+---
+/**
+ * Tip — numbered cross-volume tip per Pragmatic Programmer precedent
+ * (v4.3.0, closes #70).
+ *
+ * Author writes `<Tip n="14" title="Care About Your Craft">rule statement</Tip>`.
+ * Number is explicit (registry doesn't auto-number). Body slot is the
+ * pull-quotable single-sentence rule.
+ *
+ * Gold border (reuses --callout-insight); distinctive single-line layout
+ * + anchor id (`#tip-{n}`) for cross-referencing from later chapters.
+ *
+ * Family: book-genre (cross-profile; usable from any preset).
+ */
+interface Props {
+  n: string | number;
+  title: string;
+}
+const { n, title } = Astro.props;
+const anchorId = `tip-${n}`;
+---
+<aside class="callout callout-tip-numbered" id={anchorId} role="note">
+  <div class="callout-tip-header">
+    <span class="callout-tip-number">Tip {n}</span>
+    <strong class="callout-tip-title">{title}</strong>
+  </div>
+  <div class="callout-body"><slot /></div>
+</aside>

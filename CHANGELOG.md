@@ -2,6 +2,51 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.3.0] — 2026-05-24
+
+Minor release. Bundles 4 issues filed since v4.2.0 shipped (within ~36 hours): one real bug (#69), one docs gap (#68), and two pedagogy-component requests from the claude-books supplement-format decision round (#70 + #71). All additive; consumers upgrade by bumping version with zero config changes.
+
+### Fixed
+
+- **`/chapters/` index links + auto-injected per-chapter route** ([#69](https://github.com/brandon-behring/book-scaffold-astro/issues/69)). The shipped `/chapters/` index page previously linked to `/<slug>/` (root-level) instead of `/chapters/<slug>/` (under the chapters prefix). Every link on the academic chapters index 404'd. Two-part fix:
+  - `package/pages/chapters.astro:115` — href corrected to `/chapters/${id}/`
+  - **NEW** `package/pages/chapters/[...slug].astro` — per-chapter dynamic route auto-injected by `bookScaffoldIntegration` whenever `routes.chapters: true`. Mirrors the v3.4.0 frontmatter pattern (toolkit ships BOTH index + dynamic route together). Layout switches by preset: `Chapter.astro` for academic + research-portfolio (KaTeX + theorem chrome); `Base.astro` for tools + minimal + course-notes (lighter).
+  
+  Pre-v4.3.0 every academic consumer wrote the same dynamic-route boilerplate in their own `src/pages/chapters/[...slug].astro`. v4.3.0 removes that boilerplate. **Migration note for existing consumers**: if you have your own `src/pages/chapters/[...slug].astro` AND upgrade to v4.3.0, Astro will error on duplicate routes — either delete your local file (recommended) or keep yours and don't enable `routes.chapters: true` (your file takes precedence as a consumer route).
+
+### Added
+
+- **`<Tip n="..." title="...">` numbered-tips component** ([#70](https://github.com/brandon-behring/book-scaffold-astro/issues/70)) — Pragmatic Programmer-style pull-quotable rules. Author provides the number; registry doesn't auto-number. Gold border + `Tip {n}` badge + `#tip-{n}` anchor for cross-references.
+- **`defineTips({ volumeOffset, volumeLabel })` API** — cross-volume coordination helper. Branded type (matches `defineStyle` pattern); lets a multi-volume series offset displayed numbers without renumbering source tags. See `package/src/lib/define-tips.ts`.
+- **`<TipsCard>` component** — print-friendly pull-out card listing all tips. Reads `src/data/tips.json`. Graceful skip when tips.json missing.
+- **`/tips` auto-injected route** — opt-in via `routes.tips: true`. Renders all tips with `#tip-{n}` permalinks, chapter backlinks, and 80-char body previews. Reads `src/data/tips.json` from the new build script.
+- **`book-scaffold build-tips` script** — scans chapter MDX for `<Tip>` instances via 4-branch regex (handles single + double + mixed quote styles, no backreference for cross-runtime portability — same lesson as v4.1.2 regex fix). Emits `src/data/tips.json` sorted by `n`; warns (doesn't fail) on duplicate numbers. Wired into `bin/book-scaffold.mjs` dispatcher.
+- **`<Exercise id="...">` inline-at-concept-introduction component** ([#71](https://github.com/brandon-behring/book-scaffold-astro/issues/71)) — CS:APP precedent. Light treatment; `#exercise-{id}` anchor for cross-linking from `<Solution>`.
+- **`<Practice id="..." difficulty="1-4">` end-of-chapter component** — diamond markers (◆◆◇◇ for difficulty=2). Closed TS literal union on difficulty (inlined single-line per v4.1.0 PocLayout lesson). `#practice-{id}` anchor.
+- **`<Solution for="...">` companion paired by id** — backlinks to `#exercise-{id}`. Manual pairing (no build-time auto-collection in v4.3.0).
+- **`<ExerciseSolutions>` chapter-end wrapper** — provides `## Exercise solutions` heading + container for nested `<Solution>` elements. Author places `<Solution>` items inside manually.
+- **New "book-genre" component family** (cross-profile, 6 components) — documented in `package/CLAUDE.md` alongside the v4.1.0 pedagogy family. Names trace genre lineage (Pragmatic Programmer for Tip; CS:APP for Exercise/Practice).
+- **`RouteToggles.tips: boolean`** field added (all profiles default `tips: false`).
+- **`package/recipes/17-draft-chapter-workflow.md`** ([#68](https://github.com/brandon-behring/book-scaffold-astro/issues/68)) — documents the canonical `getCollection('chapters', (e) => !e.data.draft)` filter pattern, when to use draft vs delete vs reorder, and a `BOOK_INCLUDE_DRAFTS` preview-env pattern consumers can wire into their own override route. Closes the docs-discoverability loose end from #63's resolution.
+- **27 new tests** — 9 build-tips extractor tests, 6 defineTips identity/branding tests, 12 book-genre component contract tests.
+
+### Changed
+
+- **`bin/book-scaffold.mjs` dispatcher** gains `build-tips` sub-command + updated help text.
+- **`build-figures` row in CLI table** notes that TikZ stage (v4.2.0) ships in build-figures.
+
+### Migration
+
+None required for the additive changes (#68, #70, #71). For #69 specifically: if you've been hand-maintaining `src/pages/chapters/[...slug].astro` AND you opt into `routes.chapters: true` (the academic preset doesn't by default), DELETE your local file before upgrading or Astro will error on duplicate routes. v3 consumers who never used `routes.chapters: true` are unaffected.
+
+### Release policy
+
+- **D12 lock-step preserved**: `@brandon_m_behring/create-book@4.3.0` ships alongside.
+- Pre-publish smoke gate (v3.6.5) ran end-to-end against academic + research-portfolio before publish.
+- 206 unit tests pass (171 existing + 27 new from this release + 8 carry-over from earlier patches).
+- 76 visual baselines at AE=0 (existing fixtures unaffected by the #69 href fix — rendered output is byte-equivalent).
+- Feedback loop: file friction at https://github.com/brandon-behring/book-scaffold-astro/issues with the `consumer:<workspace>` label.
+
 ## [4.2.0] — 2026-05-23
 
 Minor release. Closes [#17](https://github.com/brandon-behring/book-scaffold-astro/issues/17) — `book-scaffold build-figures` now auto-compiles TikZ standalone `.tex` sources to `.pdf` via `pdflatex` before the existing PDF→SVG conversion runs. Additive only; consumers with `.pdf`-only figures are unaffected; consumers without TeX Live continue to work (clear ERROR + skip for `.tex` files; pre-built `.pdf` files still convert normally).
