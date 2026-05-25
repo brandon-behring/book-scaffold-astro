@@ -11,14 +11,20 @@
  */
 import Base from '../layouts/Base.astro';
 
-let tips: Array<{ n: number; title: string; chapter: string; preview: string }> = [];
-let loadError: string | null = null;
-try {
-  const mod = await import('../../../src/data/tips.json', { with: { type: 'json' } });
-  tips = (mod.default ?? []) as typeof tips;
-} catch {
-  loadError = 'src/data/tips.json not found — run `npx book-scaffold build-tips` to generate.';
-}
+// v4.4.0 fix: use Vite's import.meta.glob with a project-root-relative
+// path. The previous `../../../src/data/tips.json` resolution failed when
+// the auto-injected route was processed from node_modules (or any context
+// other than a workspace symlink). `/src/data/...` is consumer-project-rooted
+// in Vite's resolver and works across all consumer build contexts.
+const tipsModules = import.meta.glob<{ default: Array<{ n: number; title: string; chapter: string; preview: string }> }>(
+  '/src/data/tips.json',
+  { eager: true },
+);
+const tipsEntry = tipsModules['/src/data/tips.json'];
+const tips = tipsEntry?.default ?? [];
+const loadError = tipsEntry
+  ? null
+  : 'src/data/tips.json not found — run `npx book-scaffold build-tips` to generate.';
 ---
 <Base title="Tips" description="Numbered tips from this book, drawn from <Tip> instances in chapters.">
   <article class="prose">

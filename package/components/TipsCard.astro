@@ -13,13 +13,13 @@
  * empty container with a note (doesn't fail the build). Consumers who
  * don't use the tips feature can include the component without prep.
  */
-let tips: Array<{ n: number; title: string; chapter: string; preview: string }> = [];
-try {
-  const mod = await import('../../../src/data/tips.json', { with: { type: 'json' } });
-  tips = (mod.default ?? []) as typeof tips;
-} catch {
-  // tips.json not generated yet — render empty card with hint.
-}
+// v4.4.0 fix: project-root-relative import via Vite's import.meta.glob
+// (the previous `../../../src/data/tips.json` failed in node_modules contexts).
+const tipsModules = import.meta.glob<{ default: Array<{ n: number; title: string; chapter: string; preview: string }> }>(
+  '/src/data/tips.json',
+  { eager: true },
+);
+const tips = tipsModules['/src/data/tips.json']?.default ?? [];
 ---
 <aside class="tips-card" role="contentinfo">
   <h2 class="tips-card-title">Tips</h2>

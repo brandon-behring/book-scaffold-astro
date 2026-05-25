@@ -11,14 +11,18 @@
  */
 import Base from '../layouts/Base.astro';
 
-let byChapter: Record<string, Array<{ id: string; problem: string }>> = {};
-let loadError: string | null = null;
-try {
-  const mod = await import('../../../src/data/exercises.json', { with: { type: 'json' } });
-  byChapter = (mod.default ?? {}) as typeof byChapter;
-} catch {
-  loadError = 'src/data/exercises.json not found — run `npx book-scaffold build-exercises` to generate.';
-}
+// v4.4.0 fix: use Vite's import.meta.glob with a project-root-relative
+// path (same lesson as tips.astro). `/src/data/...` is consumer-project-
+// rooted in Vite's resolver and works across all consumer build contexts.
+const exModules = import.meta.glob<{ default: Record<string, Array<{ id: string; problem: string }>> }>(
+  '/src/data/exercises.json',
+  { eager: true },
+);
+const exEntry = exModules['/src/data/exercises.json'];
+const byChapter = exEntry?.default ?? {};
+const loadError = exEntry
+  ? null
+  : 'src/data/exercises.json not found — run `npx book-scaffold build-exercises` to generate.';
 
 const chapters = Object.keys(byChapter).sort();
 const total = chapters.reduce((sum, c) => sum + byChapter[c].length, 0);

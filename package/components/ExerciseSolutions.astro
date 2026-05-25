@@ -51,12 +51,17 @@ if (auto) {
   if (!chapterSlug) {
     autoError = `<ExerciseSolutions auto /> requires a /chapters/<slug>/ URL; got ${path}.`;
   } else {
-    try {
-      const mod = await import('../../../src/data/exercises.json', { with: { type: 'json' } });
-      const all = (mod.default ?? {}) as Record<string, Array<{ id: string; problem: string }>>;
-      exercises = all[chapterSlug] ?? [];
-    } catch {
+    // v4.4.0 fix: project-root-relative import via Vite's import.meta.glob
+    // (the previous `../../../src/data/exercises.json` failed in node_modules contexts).
+    const exModules = import.meta.glob<{ default: Record<string, Array<{ id: string; problem: string }>> }>(
+      '/src/data/exercises.json',
+      { eager: true },
+    );
+    const exEntry = exModules['/src/data/exercises.json'];
+    if (!exEntry) {
       autoError = `src/data/exercises.json not found — run \`npx book-scaffold build-exercises\` first.`;
+    } else {
+      exercises = exEntry.default[chapterSlug] ?? [];
     }
   }
 }
