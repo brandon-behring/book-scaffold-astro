@@ -56,7 +56,14 @@ BOOK_PROFILE=academic
 | Book | Profile | Pages | Dist |
 |---|---|---|---|
 | [`post-transformers-guide`](https://post-transformers-guide.brandon-m-behring.workers.dev) (6 chapters) | academic | 12 | 9 MB |
+| [`ssm-foundations`](https://ssm-foundations.brandon-behring.dev) (6 of 17 chapters) | academic | 21 | ~5 MB |
 | [`book-template-astro`](https://github.com/brandon-behring/book-template-astro) — *Agentic Coding* (23 chapters) | tools | 29 | 3.3 MB |
+
+## Deploy
+
+The shipped `wrangler.toml` template produces a Workers + Static Assets deploy via either `npx wrangler deploy` (one-shot from local) or Cloudflare Workers Builds (auto-deploy on `git push origin main`).
+
+For Brandon's books, the public URL follows a per-project-subdomain pattern: each book deploys to `<repo-slug>.brandon-behring.dev`. See [the Subdomain convention in brandon-behring.dev/README.md](https://github.com/brandon-behring/brandon-behring.dev#subdomain-convention) for the slug rule, dashboard click-path, and registry. Consumer books built from this scaffold should follow the same pattern unless deploying to a different domain.
 
 Both books consume `@brandon_m_behring/book-scaffold-astro@^3.6.0` with ≤5 lines of book-side config. The v3.5/v3.6 cycle added [`double-ml-time-series`](https://github.com/brandon-behring/double-ml-time-series) as the third pilot — first non-SSM academic book through the scaffold, surfacing #20/#22/#24 in 24 hours.
 
