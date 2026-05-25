@@ -17,6 +17,7 @@ const handlers = {
   'build-labels': '../scripts/build-labels.mjs',
   'build-bib': '../scripts/build-bib.mjs',
   'build-figures': '../scripts/build-figures.mjs',
+  'build-tips': '../scripts/build-tips.mjs',
   'render-notebooks': '../scripts/render-notebooks.mjs',
 };
 
@@ -26,7 +27,8 @@ Sub-commands:
   validate           Pre-flight content validator (XRef ids, Cite keys, Figure srcs).
   build-labels       Emit src/data/labels.json for cross-references (Phase C).
   build-bib          BibTeX -> CSL JSON for the <Cite> component.
-  build-figures      PDF -> SVG via pdftocairo / pdftoppm fallback.
+  build-figures      PDF -> SVG via pdftocairo / pdftoppm fallback (+ TikZ in v4.2.0).
+  build-tips         Scan chapters for <Tip> instances; emit src/data/tips.json (v4.3.0).
   render-notebooks   ipynb -> HTML via Jupyter nbconvert.
 
   --help, -h         This message.

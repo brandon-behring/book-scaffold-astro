@@ -49,6 +49,14 @@ export interface RouteToggles {
    * If enabled without defining the collection, Astro errors clearly at build.
    */
   frontmatter: boolean;
+  /**
+   * v4.3.0 (closes #70): auto-inject `/tips` route listing all numbered
+   * `<Tip>` instances from chapter MDX. Requires running
+   * `book-scaffold build-tips` (via prebuild) which emits src/data/tips.json.
+   * Default `false` per profile — opt in via
+   * defineBookConfig({ routes: { tips: true } }).
+   */
+  tips: boolean;
 }
 
 /** Profile definition — declarative shape for one book profile. */

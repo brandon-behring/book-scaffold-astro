@@ -1,0 +1,24 @@
+---
+/**
+ * Exercise — inline at concept introduction per CS:APP precedent
+ * (v4.3.0, closes #71).
+ *
+ * Reader is expected to attempt while reading. Solutions live at the
+ * chapter end via id reference (paired via <Solution for="{id}"> inside
+ * <ExerciseSolutions>; manual pairing — no auto-collection).
+ *
+ * Light treatment: border-left in neutral color + "Exercise" label +
+ * anchor id (`#exercise-{id}`) for cross-linking from <Solution>.
+ *
+ * Family: book-genre (cross-profile).
+ */
+interface Props {
+  id: string;
+}
+const { id } = Astro.props;
+const anchorId = `exercise-${id}`;
+---
+<aside class="exercise" id={anchorId} role="note">
+  <strong class="exercise-label">Exercise</strong>
+  <div class="exercise-body"><slot /></div>
+</aside>

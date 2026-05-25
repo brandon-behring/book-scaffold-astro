@@ -210,6 +210,151 @@
   color: var(--color-text);
 }
 
+/* ===== v4.3.0 book-genre family =====================================
+ * Tip / TipsCard (Pragmatic Programmer precedent, #70)
+ * Exercise / Practice / Solution / ExerciseSolutions (CS:APP, #71)
+ */
+
+/* Tip (numbered, #70). Gold border + tip-number badge + title row. */
+.callout-tip-numbered {
+  border-left-color: var(--callout-learn);
+  background: var(--warm-gold-tint);
+}
+.callout-tip-numbered .callout-tip-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+.callout-tip-numbered .callout-tip-number {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: var(--callout-learn);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--callout-learn);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+.callout-tip-numbered .callout-tip-title {
+  font-weight: 600;
+}
+
+/* TipsCard (print-friendly tips card, #70). */
+.tips-card {
+  margin: var(--space-8) 0;
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  page-break-inside: avoid;
+}
+.tips-card-title {
+  margin: 0 0 var(--space-4) 0;
+  font-size: var(--text-2xl);
+}
+.tips-card-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.tips-card-item {
+  padding: var(--space-2) 0;
+  border-bottom: 1px dashed var(--color-border);
+}
+.tips-card-link {
+  display: flex;
+  gap: var(--space-3);
+  text-decoration: none;
+  color: var(--color-text);
+}
+.tips-card-number {
+  font-weight: 700;
+  color: var(--callout-learn);
+  min-width: 2.5em;
+}
+.tips-card-empty {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* Exercise (#71). Light treatment for inline placement. */
+.exercise {
+  margin: var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: var(--border-bar) solid var(--color-border);
+  background: var(--color-bg-subtle);
+}
+.exercise-label {
+  display: block;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+}
+
+/* Practice (#71). Diamond-marker difficulty + label. */
+.practice {
+  margin: var(--space-6) 0;
+  padding: var(--space-4);
+  border-left: var(--border-bar) solid var(--callout-official);
+  background: var(--warm-plum-tint);
+}
+.practice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--space-3);
+}
+.practice-label {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.practice-difficulty {
+  font-family: var(--font-code);
+  color: var(--callout-official);
+}
+
+/* Solution (#71). Inside ExerciseSolutions wrapper. */
+.solution {
+  margin: var(--space-5) 0;
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--callout-insight);
+}
+.solution-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--space-2);
+}
+.solution-label {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--callout-insight);
+}
+.solution-backlink {
+  font-size: var(--text-xs);
+  text-decoration: none;
+  color: var(--color-text-muted);
+}
+
+/* ExerciseSolutions (#71). Section wrapper at chapter end. */
+.exercise-solutions {
+  margin: var(--space-12) 0 var(--space-6) 0;
+  padding-top: var(--space-6);
+  border-top: 2px solid var(--color-border);
+}
+.exercise-solutions-heading {
+  margin: 0 0 var(--space-5) 0;
+}
+
 /* ===== Theorem family (Theorem.astro) =====
  * Plain (theorem/proposition/lemma/corollary): italic body
  * Definition family (definition/example/exercise/remark/proof): upright body

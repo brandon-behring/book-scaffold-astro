@@ -1,0 +1,27 @@
+---
+/**
+ * Solution — paired by id with an <Exercise> at chapter end
+ * (v4.3.0, closes #71).
+ *
+ * Author writes `<Solution for="ch1-ex-2">solution text</Solution>` inside
+ * an <ExerciseSolutions> wrapper. The `for` attribute matches the
+ * corresponding <Exercise>'s `id`; the rendered solution links back to
+ * the inline exercise via `#exercise-{for}`.
+ *
+ * Manual pairing — no build-time auto-collection of Exercise content
+ * (deferred to v4.4.0+). Author maintains the id↔for mapping by hand.
+ *
+ * Family: book-genre (cross-profile).
+ */
+interface Props {
+  for: string;
+}
+const { for: forId } = Astro.props;
+---
+<div class="solution" id={`solution-${forId}`}>
+  <div class="solution-header">
+    <strong class="solution-label">Solution</strong>
+    <a href={`#exercise-${forId}`} class="solution-backlink">↑ Exercise</a>
+  </div>
+  <div class="solution-body"><slot /></div>
+</div>

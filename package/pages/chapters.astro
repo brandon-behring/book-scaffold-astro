@@ -112,7 +112,7 @@ for (const c of chapters) {
         <ol class="chapter-list">
           {cards.map((card) => (
             <li class="chapter-card" data-tools={card.toolsAttr}>
-              <a href={`/${card.c.id}/`} class="chapter-card-link">
+              <a href={`/chapters/${card.c.id}/`} class="chapter-card-link">
                 <div class="chapter-card-meta">
                   <span class="chapter-card-number">{card.number}</span>
                   {card.volatility && (

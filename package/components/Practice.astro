@@ -1,0 +1,30 @@
+---
+/**
+ * Practice — end-of-chapter problem with difficulty marker per CS:APP
+ * (v4.3.0, closes #71).
+ *
+ * Difficulty 1-4 rendered as ◆ count (filled diamonds out of 4). No
+ * inline solutions; instructor-manual style — separate from Exercise
+ * which has solutions at chapter end.
+ *
+ * Anchor id (`#practice-{id}`) for cross-references.
+ *
+ * Family: book-genre (cross-profile).
+ */
+type Difficulty = '1' | '2' | '3' | '4';
+interface Props {
+  id: string;
+  difficulty: Difficulty;
+}
+const { id, difficulty } = Astro.props;
+const anchorId = `practice-${id}`;
+const filled = Number.parseInt(difficulty, 10);
+const markers = '◆'.repeat(filled) + '◇'.repeat(4 - filled);
+---
+<aside class="practice" id={anchorId} role="note">
+  <div class="practice-header">
+    <strong class="practice-label">Practice</strong>
+    <span class="practice-difficulty" aria-label={`Difficulty ${difficulty} of 4`}>{markers}</span>
+  </div>
+  <div class="practice-body"><slot /></div>
+</aside>

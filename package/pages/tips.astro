@@ -1,0 +1,51 @@
+---
+/**
+ * Auto-injected /tips route (v4.3.0, closes #70).
+ *
+ * Gated on `routes.tips: true`. Reads `src/data/tips.json` (emitted by
+ * `book-scaffold build-tips`); renders an ordered list with anchor
+ * permalinks (`/tips#tip-N`).
+ *
+ * Graceful skip: if tips.json doesn't exist, renders an instructions
+ * page (doesn't fail the build).
+ */
+import Base from '../layouts/Base.astro';
+
+let tips: Array<{ n: number; title: string; chapter: string; preview: string }> = [];
+let loadError: string | null = null;
+try {
+  const mod = await import('../../../src/data/tips.json', { with: { type: 'json' } });
+  tips = (mod.default ?? []) as typeof tips;
+} catch {
+  loadError = 'src/data/tips.json not found — run `npx book-scaffold build-tips` to generate.';
+}
+---
+<Base title="Tips" description="Numbered tips from this book, drawn from <Tip> instances in chapters.">
+  <article class="prose">
+    <h1>Tips</h1>
+    {loadError && (
+      <p class="tips-empty">{loadError}</p>
+    )}
+    {!loadError && tips.length === 0 && (
+      <p class="tips-empty">No tips defined yet. Add <code>&lt;Tip n="1" title="..."&gt;...&lt;/Tip&gt;</code> to a chapter and rebuild.</p>
+    )}
+    {tips.length > 0 && (
+      <ol class="tips-index">
+        {tips.map((tip) => (
+          <li id={`tip-${tip.n}`} class="tips-index-item">
+            <h2 class="tips-index-title">
+              <span class="tips-index-number">Tip {tip.n}.</span>
+              {tip.title}
+            </h2>
+            {tip.preview && (
+              <p class="tips-index-preview">{tip.preview}</p>
+            )}
+            <p class="tips-index-meta">
+              From <a href={`/chapters/${tip.chapter}/`}>{tip.chapter}</a>
+            </p>
+          </li>
+        ))}
+      </ol>
+    )}
+  </article>
+</Base>
