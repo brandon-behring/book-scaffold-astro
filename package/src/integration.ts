@@ -51,6 +51,9 @@ const ROUTE_REGISTRY = {
   // v4.3.0 (#70): cross-volume numbered-tips index. Opt-in via
   // routes.tips: true; pairs with build-tips script + <Tip> component.
   tips:        { pattern: '/tips',                file: 'tips.astro' },
+  // v4.4.0: exercises index by chapter. Opt-in via routes.exercises: true;
+  // pairs with build-exercises script + <ExerciseSolutions auto /> mode.
+  exercises:   { pattern: '/exercises',           file: 'exercises.astro' },
   // v3.4.0 (#7): consumer-collection-backed frontmatter route. Opt-in via
   // routes: { frontmatter: true } AND content.config.ts defining the
   // collection (use frontmatterCollection() helper from /schemas subpath).

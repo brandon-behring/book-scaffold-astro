@@ -2,6 +2,41 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.4.0] — 2026-05-25
+
+Minor release. Polish closure of v4.3.0 deferred items. No new consumer issues since v4.3.0 ship — this release closes internal backlog before the next consumer-feedback cycle begins. All additive; consumers upgrade by bumping version with zero config changes.
+
+### Added
+
+- **`fixture-book-genre` visual regression fixture** — 5 routes × 4 viewport widths = 20 new baseline PNGs at AE=0. Exercises all 6 v4.3.0 book-genre components (`<Tip>`, `<TipsCard>`, `<Exercise>`, `<Practice>`, `<Solution>`, `<ExerciseSolutions>`) plus both `/tips` and `/exercises` auto-routes. Closes the visual-coverage gap deferred from v4.3.0 to keep velocity.
+- **`<ExerciseSolutions auto />` mode** — new optional boolean prop on the v4.3.0 component. When `auto` is true, the component reads `src/data/exercises.json` (emitted by `book-scaffold build-exercises`), scopes by the current chapter via `Astro.url.pathname` (matching the `/chapters/<slug>/` route pattern auto-injected since v4.3.0 #69), and auto-renders a list of exercise problem statements with placeholder solution lines (`_Add your solution here._`). Default `auto: false` preserves v4.3.0 manual-`<Solution>` behavior — no regression for existing consumers. Graceful skip + clear hint message when exercises.json is missing or the chapter URL pattern doesn't match.
+- **`book-scaffold build-exercises` script** — sister to v4.3.0's `build-tips`. Scans chapter MDX (honoring `loader.base` overrides via `readChaptersBase` from v4.1.2) for `<Exercise id="X">body</Exercise>` instances via 2-branch regex (single + double quote portability, no backreference — same v4.1.2 cross-runtime lesson). Emits `src/data/exercises.json` keyed by chapter slug. Run on `prebuild`. Wired into the `bin/book-scaffold` dispatcher.
+- **`/exercises` auto-route** — opt-in via `routes.exercises: true` in `defineBookConfig` (default `false` per profile, mirroring `routes.tips`). New `pages/exercises.astro` reads `src/data/exercises.json` and renders an index grouped by chapter with `/chapters/<slug>/#exercise-<id>` deep links + per-exercise problem-text previews (first 120 chars). Auto-injected via `bookScaffoldIntegration` (`ROUTE_REGISTRY.exercises` entry).
+- **`RouteToggles.exercises: boolean`** added to `profile-kit.ts` (default `false` for all 5 built-in profiles — academic / tools / minimal / course-notes / research-portfolio).
+- **9 new build-exercises extractor tests** (`tests/build-exercises.test.mjs`) — mirror the v4.3.0 build-tips test suite: double-quoted / single-quoted / multiple / whitespace normalization / full body preserved / no-id skip / empty-id skip / empty source / no-Exercise source.
+
+### Changed
+
+- **`ExerciseSolutions.astro` now branches on `auto` prop**. Manual mode (no prop) renders the slot content exactly as v4.3.0 (regression-safe). Auto mode renders the auto-generated section.
+- **`bin/book-scaffold.mjs`** registers the new `build-exercises` sub-command + updates help text.
+
+### Migration
+
+None. Pure additive minor release.
+
+### Out of scope / next sessions
+
+- **MDX AST-based solution-slot extraction** (`<Fragment slot="solution">...</Fragment>` inside `<Exercise>`) — v4.4.0 auto-collection captures problem text only, not solutions. Full solution-slot extraction would require MDX AST traversal at build time. Defer until a consumer asks; file a request if you'd like it in v4.5.0.
+- **#15** Multibook routing, **#16** AnkiCard + extract-cards CLI — still no consumer signal; deferred.
+
+### Release policy
+
+- **D12 lock-step preserved**: `@brandon_m_behring/create-book@4.4.0` ships alongside.
+- Pre-publish smoke gate (v3.6.5) ran end-to-end against academic before publish.
+- 215 unit tests pass (206 existing + 9 new build-exercises).
+- 96 visual baselines at AE=0 (76 existing + 20 new fixture-book-genre).
+- Feedback loop: file friction at https://github.com/brandon-behring/book-scaffold-astro/issues with the `consumer:<workspace>` label. If you'd like `<Fragment slot="solution">` extraction for auto-rendered actual solutions, file a v4.5.0 request.
+
 ## [4.3.0] — 2026-05-24
 
 Minor release. Bundles 4 issues filed since v4.2.0 shipped (within ~36 hours): one real bug (#69), one docs gap (#68), and two pedagogy-component requests from the claude-books supplement-format decision round (#70 + #71). All additive; consumers upgrade by bumping version with zero config changes.

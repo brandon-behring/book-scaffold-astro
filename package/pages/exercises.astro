@@ -1,0 +1,61 @@
+---
+/**
+ * Auto-injected /exercises route (v4.4.0).
+ *
+ * Gated on `routes.exercises: true`. Reads `src/data/exercises.json`
+ * (emitted by `book-scaffold build-exercises`); renders ordered list
+ * grouped by chapter with deep links into the chapter routes.
+ *
+ * Graceful skip: if exercises.json doesn't exist, renders an instructions
+ * page (doesn't fail the build).
+ */
+import Base from '../layouts/Base.astro';
+
+let byChapter: Record<string, Array<{ id: string; problem: string }>> = {};
+let loadError: string | null = null;
+try {
+  const mod = await import('../../../src/data/exercises.json', { with: { type: 'json' } });
+  byChapter = (mod.default ?? {}) as typeof byChapter;
+} catch {
+  loadError = 'src/data/exercises.json not found — run `npx book-scaffold build-exercises` to generate.';
+}
+
+const chapters = Object.keys(byChapter).sort();
+const total = chapters.reduce((sum, c) => sum + byChapter[c].length, 0);
+---
+<Base title="Exercises" description="All exercises in this book, grouped by chapter with deep links.">
+  <article class="prose">
+    <h1>Exercises</h1>
+    {loadError && (
+      <p class="exercises-empty">{loadError}</p>
+    )}
+    {!loadError && total === 0 && (
+      <p class="exercises-empty">
+        No exercises defined yet. Add <code>&lt;Exercise id="..."&gt;...&lt;/Exercise&gt;</code> to a chapter
+        and run <code>npx book-scaffold build-exercises</code>.
+      </p>
+    )}
+    {total > 0 && (
+      <p class="exercises-summary">
+        {total} exercise{total === 1 ? '' : 's'} across {chapters.length} chapter{chapters.length === 1 ? '' : 's'}.
+      </p>
+    )}
+    {chapters.map((chapter) => (
+      <section class="exercises-chapter" id={`chapter-${chapter}`}>
+        <h2 class="exercises-chapter-title">
+          Chapter: <a href={`/chapters/${chapter}/`}>{chapter}</a>
+        </h2>
+        <ol class="exercises-list">
+          {byChapter[chapter].map((ex) => (
+            <li class="exercises-item">
+              <a href={`/chapters/${chapter}/#exercise-${ex.id}`} class="exercises-link">
+                <strong class="exercises-id">Exercise {ex.id}</strong>
+                <span class="exercises-preview">{ex.problem.slice(0, 120)}{ex.problem.length > 120 ? '…' : ''}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    ))}
+  </article>
+</Base>

@@ -18,6 +18,7 @@ const handlers = {
   'build-bib': '../scripts/build-bib.mjs',
   'build-figures': '../scripts/build-figures.mjs',
   'build-tips': '../scripts/build-tips.mjs',
+  'build-exercises': '../scripts/build-exercises.mjs',
   'render-notebooks': '../scripts/render-notebooks.mjs',
 };
 
@@ -29,6 +30,7 @@ Sub-commands:
   build-bib          BibTeX -> CSL JSON for the <Cite> component.
   build-figures      PDF -> SVG via pdftocairo / pdftoppm fallback (+ TikZ in v4.2.0).
   build-tips         Scan chapters for <Tip> instances; emit src/data/tips.json (v4.3.0).
+  build-exercises    Scan chapters for <Exercise> instances; emit src/data/exercises.json (v4.4.0).
   render-notebooks   ipynb -> HTML via Jupyter nbconvert.
 
   --help, -h         This message.

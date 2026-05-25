@@ -1,0 +1,32 @@
+---
+week: 1
+part: foundations
+title: "Tips chapter (v4.3.0 #70)"
+status: implemented
+---
+import Tip from '@brandon_m_behring/book-scaffold-astro/components/Tip.astro';
+import TipsCard from '@brandon_m_behring/book-scaffold-astro/components/TipsCard.astro';
+
+# Tips
+
+This chapter exercises the `<Tip>` numbered component + the `<TipsCard>` print-friendly back-matter card. Both back the cross-volume tip-registry pattern from the Pragmatic Programmer precedent ([#70](https://github.com/brandon-behring/book-scaffold-astro/issues/70)).
+
+## A first tip
+
+<Tip n="1" title="Care About Your Craft">
+  Why spend your life developing software unless you care about doing it well?
+</Tip>
+
+Tips are referenced by number from later chapters: see Tip 1 above.
+
+## A second tip
+
+<Tip n="2" title="Think About Your Work">
+  Turn off the autopilot and take control. Constantly critique and appraise your work.
+</Tip>
+
+## Back-matter card
+
+The `<TipsCard>` component reads `src/data/tips.json` and renders a print-friendly card listing all tips collected via `book-scaffold build-tips`:
+
+<TipsCard />
