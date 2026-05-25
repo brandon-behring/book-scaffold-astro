@@ -24,6 +24,7 @@ export const academicProfile = defineProfile({
     convergence: false,     // tools-profile-specific
     frontmatter: false,     // opt-in per book; see #7
     tips: false,            // v4.3.0 #70: opt-in per book; requires build-tips
+    exercises: false,       // v4.4.0: opt-in per book; requires build-exercises
   },
   styles: ['tokens.css', 'layout.css', 'callouts.css', 'chapter.css', 'typography.css', 'print.css'],
   katex: true,

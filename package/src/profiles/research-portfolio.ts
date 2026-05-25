@@ -37,6 +37,7 @@ export const researchPortfolioProfile = defineProfile({
     convergence: false,          // tools-profile-specific
     frontmatter: true,           // portfolios universally need title/disclosure/banner pages
     tips: false,                 // v4.3.0 #70: opt-in per book
+    exercises: false,            // v4.4.0: opt-in per book
   },
   styles: ['tokens.css', 'layout.css', 'callouts.css', 'chapter.css', 'typography.css', 'print.css'],
   katex: true,                   // math is common in research content

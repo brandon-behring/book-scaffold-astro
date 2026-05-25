@@ -45,15 +45,21 @@ test('Tip: displays "Tip {n}" label', () => {
 
 // ===== TipsCard (#70) ===================================================
 
-test('TipsCard: imports tips.json via dynamic import', () => {
+test('TipsCard: imports tips.json via import.meta.glob (project-root-relative)', () => {
   const src = read('TipsCard');
-  assert.match(src, /import\(['"][^'"]*tips\.json['"]/);
+  // v4.4.0: switched from `import('...')` to import.meta.glob for
+  // node_modules-compatible resolution. Use [\s\S] (dotall-equivalent)
+  // to span newlines since the path may be on a separate line in the
+  // multi-line call.
+  assert.match(src, /import\.meta\.glob[\s\S]*['"]\/src\/data\/tips\.json['"]/);
 });
 
 test('TipsCard: graceful skip when tips.json missing', () => {
   const src = read('TipsCard');
-  assert.match(src, /try\s*\{/);
-  assert.match(src, /catch\s*\{/);
+  // v4.4.0: import.meta.glob returns an empty object when the path matches no
+  // files. The component checks the entry and falls back to empty tips array.
+  // Older try/catch pattern is no longer needed; nullish coalescing handles it.
+  assert.match(src, /\?\?\s*\[\]/);
 });
 
 test('TipsCard: links to /tips#tip-{n} permalinks', () => {

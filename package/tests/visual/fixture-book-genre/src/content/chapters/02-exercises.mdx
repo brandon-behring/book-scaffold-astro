@@ -1,0 +1,53 @@
+---
+week: 2
+part: foundations
+title: "Exercises chapter (v4.3.0 #71 + v4.4.0 auto)"
+status: implemented
+---
+import Exercise from '@brandon_m_behring/book-scaffold-astro/components/Exercise.astro';
+import Practice from '@brandon_m_behring/book-scaffold-astro/components/Practice.astro';
+import Solution from '@brandon_m_behring/book-scaffold-astro/components/Solution.astro';
+import ExerciseSolutions from '@brandon_m_behring/book-scaffold-astro/components/ExerciseSolutions.astro';
+
+# Exercises
+
+Exercises follow the CS:APP two-tier model ([#71](https://github.com/brandon-behring/book-scaffold-astro/issues/71)): inline `<Exercise>` at concept introduction, end-of-chapter `<Practice>` with difficulty markers, solutions paired by id.
+
+## At concept introduction
+
+<Exercise id="ex-1">
+  Given a CLAUDE.md file with 5 top-level rules, predict which 2 would be most context-burning per session. Justify your reasoning.
+</Exercise>
+
+The concept evolves further...
+
+<Exercise id="ex-2">
+  Refactor the agent loop into 3 phases. Which phase would benefit most from a separate skill?
+</Exercise>
+
+## Practice problems
+
+End-of-chapter `<Practice>` items have explicit difficulty markers (1-4 diamonds):
+
+<Practice id="pr-1" difficulty="1">
+  Read your project's CLAUDE.md. List 3 rules that could be made more concrete.
+</Practice>
+
+<Practice id="pr-2" difficulty="3">
+  Refactor `handbook/CLAUDE.md` into a minimal version preserving only rules invoked by Phase 1 chapter authoring.
+</Practice>
+
+<Practice id="pr-4" difficulty="4">
+  Design + implement a measurement protocol for "context-burn rate" of CLAUDE.md rules. Compare 3 different rules on the same task.
+</Practice>
+
+## Solutions (manual mode — v4.3.0 default)
+
+<ExerciseSolutions>
+  <Solution for="ex-1">
+    Rules 3 and 4 (the project-overview blob + the don't-do-X list) tend to be re-quoted in every session, so they burn most context. Compactness is more important for rules that anchor the session.
+  </Solution>
+  <Solution for="ex-2">
+    The synthesis phase (where Claude proposes a plan from gathered context) benefits most from a dedicated skill because plan-quality variance is highest there.
+  </Solution>
+</ExerciseSolutions>

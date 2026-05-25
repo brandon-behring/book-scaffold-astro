@@ -1,22 +1,97 @@
 ---
 /**
- * ExerciseSolutions — chapter-end wrapper that provides the section
- * heading + container for <Solution> elements (v4.3.0, closes #71).
+ * ExerciseSolutions — chapter-end wrapper (v4.3.0 #71 + v4.4.0 auto mode).
  *
- * Author places this at chapter end and fills it with <Solution for="...">
- * elements. The wrapper provides:
- *   - <h2>Exercise solutions</h2> heading
- *   - Container styling (separates the section visually from preceding prose)
- *   - Anchor (`#exercise-solutions`) so the section is linkable
+ * Two modes:
  *
- * v4.3.0 design: manual <Solution> placement (no auto-collection of
- * <Exercise> content). Auto-collection deferred to v4.4.0+ if real
- * demand surfaces — would require MDX AST traversal at build time.
+ *   1. Manual (default; v4.3.0): author places <Solution for="..."> elements
+ *      inside the wrapper. Full control; works with no build script.
+ *
+ *      <ExerciseSolutions>
+ *        <Solution for="ex-1">Solution text.</Solution>
+ *      </ExerciseSolutions>
+ *
+ *   2. Auto (v4.4.0): reads src/data/exercises.json (emitted by
+ *      `book-scaffold build-exercises`), scopes by the current chapter
+ *      (derived from Astro.url.pathname), and renders an auto-generated
+ *      list of exercise problem statements with placeholder solution
+ *      slots. Author fills solutions by hand-editing the rendered HTML
+ *      OR by switching back to manual mode.
+ *
+ *      <ExerciseSolutions auto />
+ *
+ * Auto mode requires:
+ *   - `routes.chapters: true` (or a custom `/chapters/<slug>/` route pattern)
+ *   - `book-scaffold build-exercises` run before astro build (typically wired
+ *     into the `prebuild` script in package.json)
+ *
+ * Graceful skip: when exercises.json is missing OR no exercises found for
+ * the current chapter, auto mode renders an empty section with a hint.
  *
  * Family: book-genre (cross-profile).
  */
+interface Props {
+  /** v4.4.0: if true, auto-collect exercises from src/data/exercises.json
+   *  (scoped to the current chapter via Astro.url.pathname). Default false
+   *  uses the manual-slot mode from v4.3.0. */
+  auto?: boolean;
+}
+const { auto = false } = Astro.props;
+
+// Derive current chapter slug from URL when in auto mode. Astro.url.pathname
+// for `/chapters/<slug>/` returns `/chapters/<slug>/`; strip prefix+suffix.
+let chapterSlug = '';
+let exercises: Array<{ id: string; problem: string }> = [];
+let autoError: string | null = null;
+
+if (auto) {
+  const path = Astro.url.pathname;
+  const m = path.match(/^\/chapters\/([^/]+)\//);
+  chapterSlug = m ? m[1] : '';
+  if (!chapterSlug) {
+    autoError = `<ExerciseSolutions auto /> requires a /chapters/<slug>/ URL; got ${path}.`;
+  } else {
+    // v4.4.0 fix: project-root-relative import via Vite's import.meta.glob
+    // (the previous `../../../src/data/exercises.json` failed in node_modules contexts).
+    const exModules = import.meta.glob<{ default: Record<string, Array<{ id: string; problem: string }>> }>(
+      '/src/data/exercises.json',
+      { eager: true },
+    );
+    const exEntry = exModules['/src/data/exercises.json'];
+    if (!exEntry) {
+      autoError = `src/data/exercises.json not found — run \`npx book-scaffold build-exercises\` first.`;
+    } else {
+      exercises = exEntry.default[chapterSlug] ?? [];
+    }
+  }
+}
 ---
 <section class="exercise-solutions" id="exercise-solutions">
   <h2 class="exercise-solutions-heading">Exercise solutions</h2>
-  <div class="exercise-solutions-body"><slot /></div>
+  {!auto && (
+    <div class="exercise-solutions-body"><slot /></div>
+  )}
+  {auto && autoError && (
+    <p class="exercise-solutions-hint">{autoError}</p>
+  )}
+  {auto && !autoError && exercises.length === 0 && (
+    <p class="exercise-solutions-hint">
+      No <code>&lt;Exercise&gt;</code> instances found in chapter <code>{chapterSlug}</code>.
+      Run <code>npx book-scaffold build-exercises</code> after adding exercises.
+    </p>
+  )}
+  {auto && !autoError && exercises.length > 0 && (
+    <div class="exercise-solutions-body">
+      {exercises.map((ex) => (
+        <div class="solution" id={`solution-${ex.id}`}>
+          <div class="solution-header">
+            <strong class="solution-label">Exercise {ex.id}</strong>
+            <a href={`#exercise-${ex.id}`} class="solution-backlink">↑ Exercise</a>
+          </div>
+          <blockquote class="solution-problem">{ex.problem}</blockquote>
+          <p class="solution-placeholder"><em>Add your solution here.</em></p>
+        </div>
+      ))}
+    </div>
+  )}
 </section>

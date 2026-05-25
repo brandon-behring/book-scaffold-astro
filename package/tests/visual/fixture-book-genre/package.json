@@ -1,0 +1,21 @@
+{
+  "name": "@brandon_m_behring/book-scaffold-fixture-book-genre",
+  "description": "Visual regression fixture for v4.3.0+ book-genre components: Tip (#70), TipsCard, /tips auto-route, Exercise + Practice + Solution + ExerciseSolutions (#71), and the v4.4.0 ExerciseSolutions auto mode + /exercises auto-route. Uses academic preset; opts into routes.chapters + routes.tips + routes.exercises.",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "BOOK_PRESET=academic astro build",
+    "preview": "BOOK_PRESET=academic astro preview --host 127.0.0.1 --port 4178"
+  },
+  "dependencies": {
+    "@brandon_m_behring/book-scaffold-astro": "*",
+    "@astrojs/mdx": "^5.0.3",
+    "@astrojs/preact": "^5.1.1",
+    "astro": "^6.1.7",
+    "katex": "^0.16.21",
+    "preact": "^10.29.1",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0"
+  }
+}

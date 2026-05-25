@@ -57,6 +57,14 @@ export interface RouteToggles {
    * defineBookConfig({ routes: { tips: true } }).
    */
   tips: boolean;
+  /**
+   * v4.4.0: auto-inject `/exercises` route listing all `<Exercise id="...">`
+   * instances from chapter MDX, grouped by chapter with deep links into
+   * the chapter routes. Requires running `book-scaffold build-exercises`
+   * (via prebuild) which emits src/data/exercises.json. Default `false` per
+   * profile — opt in via defineBookConfig({ routes: { exercises: true } }).
+   */
+  exercises: boolean;
 }
 
 /** Profile definition — declarative shape for one book profile. */
