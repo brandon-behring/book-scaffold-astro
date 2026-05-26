@@ -2,6 +2,35 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.5.1] — 2026-05-26
+
+Patch release. Refactors v4.5.0's landing-config source from `import.meta.env.BOOK_*` env vars to a Vite virtual module (`virtual:book-scaffold/landing-config`). Functionally identical for consumers that don't have stale env-var entries; functionally **correct** for consumers whose `.env` files happen to define `BOOK_TITLE` / `BOOK_DESCRIPTION` / `BOOK_PORTFOLIO`.
+
+### Why
+
+Surfaced during the `double_ml_time_series` deploy that motivated v4.5.0: DML's `web/.env` already had a `BOOK_TITLE=web` line from an earlier exploratory phase. v4.5.0's `vite.define` injection of `import.meta.env.BOOK_TITLE` lost to the `.env`-loaded value at consumer build time — the auto-injected landing rendered `<h1>web</h1>` instead of `<h1>Double Machine Learning for Time Series</h1>`. The right fix is to route landing config through a mechanism that *cannot* collide with env vars.
+
+The underlying architectural mistake in v4.5.0: I mimicked the existing `BOOK_PRESET` / `BOOK_PROFILE` pattern without distinguishing between *preference flags* and *config values*. Preference flags (preset/profile) are exactly the kind of thing where env-based override IS the convention (see `resolvePreset` which reads `process.env` / `.env` as authoritative sources). Config values (title/description/portfolio) should only flow from `defineBookConfig` — env-based override there is a foot-gun. Virtual modules cleanly isolate config-value transport from env-var resolution; the scaffold already uses this pattern for `virtual:book-scaffold/mdx-components`.
+
+This is also a dogfood-loop win: the issue was invisible against the demo (which has no `.env`) and against the test fixtures (same). It only surfaced when a real consumer with a real `.env` file shipped. The patch ships ~30 min after v4.5.0, before DML's deploy proceeds.
+
+### Changed
+
+- **`package/src/integration.ts`**: removed `import.meta.env.BOOK_TITLE` / `BOOK_DESCRIPTION` / `BOOK_PORTFOLIO` / `BOOK_ROUTES_ENABLED` from `vite.define`. Added `makeLandingConfigVitePlugin` (inline, mirrors `makeMdxComponentsVitePlugin`) that exposes the resolved landing config via the virtual module `virtual:book-scaffold/landing-config`.
+- **`package/pages/index.astro`**: replaced `import.meta.env.BOOK_*` reads with `import bookConfig from 'virtual:book-scaffold/landing-config'`. Single import, typed via the ambient module declaration.
+- **`package/src/astro-ambient.d.ts`**: added `declare module 'virtual:book-scaffold/landing-config'` for TS type-checking of the consumer-side virtual import.
+
+`BOOK_PRESET` / `BOOK_PROFILE` env-var injection is unchanged — they remain the right pattern for preference flags.
+
+### Migration
+
+None. v4.5.0 → v4.5.1 is a pure refactor of how landing config moves from `defineBookConfig` to the landing page. Consumers that bumped to v4.5.0 and got the env-var collision bug just need to bump to v4.5.1 (or, equivalently, delete the stale `BOOK_TITLE` line from their `.env` — but the v4.5.1 bump is the future-proof fix).
+
+### Release policy
+
+- Smoke-tested on demo: with demo's custom `src/pages/index.astro` temporarily moved aside, the auto-injected landing rendered correctly via the virtual module — `<h1>book-scaffold-astro</h1>` (title fallback, since demo doesn't set one), route list filtered to academic profile's enabled routes, `Part of brandon-behring.dev` footer present.
+- DML re-bump to `^4.5.1` post-publish verified the title-from-config flow end-to-end against a real `.env` collision.
+
 ## [4.5.0] — 2026-05-26
 
 Minor release. Adds an auto-injected `/` landing page so the root URL works for every consumer out of the box, instead of 404-ing when the consumer doesn't ship their own `src/pages/index.astro`. Triggered by a real consumer (`double_ml_time_series` web/) shipping a bound custom domain and getting a 404 at root because its scaffold-injected routes (`/chapters/`, `/search/`, `/references/`, `/print/`) all worked but `/` had no page. Pre-v4.5.0 the only fix was hand-writing a landing per consumer — replicating across every book in the ecosystem. v4.5.0 inverts: scaffold ships the default, consumers override only if they want to customize.

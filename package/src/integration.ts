@@ -30,6 +30,50 @@ import {
   makeMdxComponentsVitePlugin,
 } from './mdx-components-resolver.js';
 
+/**
+ * v4.5.1: Landing-config virtual module plugin. Exposes book identity
+ * (title, description, portfolio) + the post-merge enabledRoutes list to
+ * the auto-injected `/` page via `virtual:book-scaffold/landing-config`.
+ *
+ * Replaces v4.5.0's env-var approach (`import.meta.env.BOOK_TITLE` etc.)
+ * which was vulnerable to silent override by consumer `.env` files —
+ * surfaced during DML deploy when a stale `BOOK_TITLE=web` line in
+ * web/.env overrode the defineBookConfig({title}) value. Env vars are the
+ * right pattern for *preference flags* (BOOK_PRESET, BOOK_PROFILE — where
+ * the env-based override IS the convention); they are the wrong pattern
+ * for *config values* (title, description, portfolio — which should only
+ * flow from defineBookConfig). Virtual modules solve this cleanly: same
+ * pattern as the existing `virtual:book-scaffold/mdx-components`.
+ *
+ * See ~/.claude/plans/i-want-to-look-streamed-pebble.md §Phase 6-pre
+ * "v4.5.1 refactor" + ~/.claude/projects/.../memory/dogfood-loop.md for
+ * the surfacing-via-deploy story.
+ */
+const LANDING_VIRTUAL_ID = 'virtual:book-scaffold/landing-config';
+const LANDING_RESOLVED_ID = '\0' + LANDING_VIRTUAL_ID;
+
+function makeLandingConfigVitePlugin(config: {
+  title: string | null;
+  description: string | null;
+  portfolio: { url: string; label: string } | false;
+  enabledRoutes: readonly string[];
+}) {
+  // Serialize once at plugin-creation time so subsequent load() calls are O(1).
+  const serialized = `export default ${JSON.stringify(config)};`;
+  return {
+    name: 'book-scaffold:landing-config',
+    enforce: 'pre' as const,
+    resolveId(id: string) {
+      if (id === LANDING_VIRTUAL_ID) return LANDING_RESOLVED_ID;
+      return null;
+    },
+    load(id: string) {
+      if (id !== LANDING_RESOLVED_ID) return null;
+      return serialized;
+    },
+  };
+}
+
 const PACKAGE_NAME = '@brandon_m_behring/book-scaffold-astro';
 
 /** Mapping from route toggle name → injected route metadata.
@@ -170,29 +214,32 @@ export function bookScaffoldIntegration(
         //    Single source of truth across the Astro config + runtime components
         //    + CLI (validate.mjs accepts --preset for its own resolution).
         const presetLiteral = JSON.stringify(profile);
-        // v4.5.0: serialize the landing-page data so /index.astro can read it.
-        // BOOK_ROUTES_ENABLED is the list of route names (e.g. ['chapters', 'search', ...])
-        // that the integration ACTUALLY injected — derived from enabledRoutes
-        // post-merge of profile defaults + consumer overrides. The landing page
-        // uses this to render only links to routes that exist at runtime, so
-        // consumers like dlai-study-notes (routes.chapters: false) don't get
-        // a broken /chapters/ link in their landing.
+        // v4.5.1: landing-page data via virtual module (was env vars in
+        // v4.5.0; refactored after the DML dogfood deploy surfaced a
+        // collision with stale `.env` BOOK_TITLE entries). enabledRouteNames
+        // is the post-merge list — consumers like dlai (routes.chapters:
+        // false) get a landing with no broken /chapters/ link.
         const enabledRouteNames = Object.entries(enabledRoutes)
           .filter(([, on]) => on)
           .map(([name]) => name);
         updateConfig({
           vite: {
-            plugins: [makeMdxComponentsVitePlugin(resolvedMdxPath)],
+            plugins: [
+              makeMdxComponentsVitePlugin(resolvedMdxPath),
+              makeLandingConfigVitePlugin({
+                title: title ?? null,
+                description: description ?? null,
+                portfolio: portfolio ?? false,
+                enabledRoutes: enabledRouteNames,
+              }),
+            ],
             define: {
+              // Preset/profile stay as env vars — preference-flag pattern where
+              // env-based override IS the convention (resolvePreset reads from
+              // process.env / .env explicitly). Config values (title, etc.) now
+              // route through the virtual module above to avoid that override.
               'import.meta.env.BOOK_PRESET': presetLiteral,
               'import.meta.env.BOOK_PROFILE': presetLiteral,
-              // v4.5.0: landing-page data. JSON.stringify on undefined → 'undefined'
-              // (which evaluates to JavaScript undefined at use site); on object →
-              // the JSON literal; on false → 'false'.
-              'import.meta.env.BOOK_TITLE': JSON.stringify(title ?? null),
-              'import.meta.env.BOOK_DESCRIPTION': JSON.stringify(description ?? null),
-              'import.meta.env.BOOK_PORTFOLIO': JSON.stringify(portfolio ?? null),
-              'import.meta.env.BOOK_ROUTES_ENABLED': JSON.stringify(enabledRouteNames),
             },
           },
         });

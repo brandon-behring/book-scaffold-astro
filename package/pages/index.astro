@@ -1,14 +1,22 @@
 ---
 /**
- * /index — minimal default landing page (v4.5.0).
+ * /index — minimal default landing page (v4.5.0; landing-config source
+ * refactored in v4.5.1 from env vars to virtual module).
  *
  * Auto-injected by bookScaffoldIntegration when routes.landing === true
  * (default for every profile). Consumers with their own src/pages/index.astro
  * override automatically — file-system routes win over injectRoute, no extra
  * config needed.
  *
- * Reads book identity + portfolio + enabled-routes from vite.define-injected
- * env vars (see integration.ts §4.5.0). Renders:
+ * Reads book identity + portfolio + enabled-routes from the
+ * `virtual:book-scaffold/landing-config` virtual module exposed by
+ * makeLandingConfigVitePlugin (see integration.ts §4.5.1). v4.5.0 used
+ * import.meta.env.BOOK_* env vars; that pattern was vulnerable to silent
+ * override by consumer .env files (caught during DML deploy when a stale
+ * `BOOK_TITLE=web` in web/.env overrode defineBookConfig({title})). The
+ * virtual module isolates landing config from any env-based override.
+ *
+ * Renders:
  *   - h1 with book title (fallback: 'book-scaffold-astro')
  *   - lead paragraph with description (omitted if not set)
  *   - "Read" list of links to enabled scaffold routes (filtered to only
@@ -23,13 +31,12 @@
  *     or defineBookConfig({ portfolio: false })
  */
 import Base from '../layouts/Base.astro';
+import bookConfig from 'virtual:book-scaffold/landing-config';
 
-// Vite-injected at build time. JSON.stringify(value ?? null) is the
-// integration's convention; null means "not set", an object/string means real value.
-const title = (import.meta.env.BOOK_TITLE as string | null) ?? 'book-scaffold-astro';
-const description = import.meta.env.BOOK_DESCRIPTION as string | null;
-const portfolio = import.meta.env.BOOK_PORTFOLIO as { url: string; label: string } | false | null;
-const enabledRoutes = (import.meta.env.BOOK_ROUTES_ENABLED as string[] | undefined) ?? [];
+const title = bookConfig.title ?? 'book-scaffold-astro';
+const description = bookConfig.description;
+const portfolio = bookConfig.portfolio;
+const enabledRoutes = bookConfig.enabledRoutes;
 
 // Map from internal route name → display label + URL. Only routes that
 // produce a single landing-list entry are listed here (frontmatter is a
