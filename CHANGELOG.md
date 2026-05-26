@@ -2,6 +2,42 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.5.0] — 2026-05-26
+
+Minor release. Adds an auto-injected `/` landing page so the root URL works for every consumer out of the box, instead of 404-ing when the consumer doesn't ship their own `src/pages/index.astro`. Triggered by a real consumer (`double_ml_time_series` web/) shipping a bound custom domain and getting a 404 at root because its scaffold-injected routes (`/chapters/`, `/search/`, `/references/`, `/print/`) all worked but `/` had no page. Pre-v4.5.0 the only fix was hand-writing a landing per consumer — replicating across every book in the ecosystem. v4.5.0 inverts: scaffold ships the default, consumers override only if they want to customize.
+
+All additive; consumers upgrade by bumping version with zero config changes. The auto-injected landing renders if the consumer doesn't have their own `src/pages/index.astro` (file-system routes win over `injectRoute`, so existing custom landings keep working unchanged).
+
+### Added
+
+- **`/` auto-route** — minimal default landing page (~80 lines). Default `routes.landing: true` for all 5 built-in profiles. Renders:
+  - `<h1>` with book title from `defineBookConfig({ title })` (fallback `'book-scaffold-astro'`).
+  - Lead `<p>` with `defineBookConfig({ description })` (omitted if not set).
+  - "Read" `<ul>` listing all enabled scaffold routes (filtered via the integration's post-merge `enabledRoutes` map, so consumers like `dlai-study-notes` with `routes.chapters: false` get a landing with no broken `/chapters/` link).
+  - Portfolio footer `<a>` from `defineBookConfig({ portfolio })`.
+- **`BookConfigOptions.title?: string`** — book title, propagates to the auto-injected landing's H1 + `<title>`. Distinct from per-page `Astro.props.title`.
+- **`BookConfigOptions.description?: string`** — book description, propagates to the landing's lead paragraph + `<meta description>`.
+- **`BookConfigOptions.portfolio?: { url, label } | false`** — portfolio backlink in the landing footer. Defaults to `BRANDON_PORTFOLIO_DEFAULT` (= `{ url: 'https://brandon-behring.dev', label: 'brandon-behring.dev' }`) baked into the scaffold. Single source of truth for the portfolio URL across all Brandon-owned consumers — update in `package/src/config.ts`, bump scaffold, every consumer inherits on next build. Set `portfolio: false` to disable the link, or pass `{ url, label }` to override.
+- **`BRANDON_PORTFOLIO_DEFAULT`** exported from main entry — consumers who want to render a portfolio link in their OWN custom landing can import the same default for visual parity.
+- **`RouteToggles.landing: boolean`** added to `profile-kit.ts` (default `true` for all 5 built-in profiles — academic / tools / minimal / course-notes / research-portfolio). Set `routes.landing: false` in `defineBookConfig` to disable the auto-injection without writing a custom landing.
+- **Four new vite.define-injected env vars** propagate from `defineBookConfig` → the landing page at build time: `BOOK_TITLE`, `BOOK_DESCRIPTION`, `BOOK_PORTFOLIO`, `BOOK_ROUTES_ENABLED`. Matches the existing `BOOK_PRESET` / `BOOK_PROFILE` pattern.
+
+### Changed
+
+None. Pure additive minor release.
+
+### Migration
+
+None for v4.4.x consumers bumping to v4.5.0. The auto-injected `/` lands as a working root page where there was nothing before. Consumers with their own `src/pages/index.astro` (e.g., the demo, `ssm-foundations`) keep their custom landing unchanged — file-system routes win over `injectRoute`. To opt out of the auto-injection entirely without writing a custom landing: `defineBookConfig({ routes: { landing: false } })`.
+
+### Why this design
+
+See `~/.claude/plans/i-want-to-look-streamed-pebble.md` §Phase 6-pre for the full architectural reasoning. Short version: the root page being per-consumer was the only asymmetric exception in a scaffold that already auto-injects 7 other pages (`chapters`, `search`, `references`, `print`, `tips`, `exercises`, `convergence`). v4.5.0 brings the root page in line with the rest. Override mechanism is the existing Astro file-system routing — no new override API.
+
+### Release policy
+
+- Pre-publish smoke gate ran end-to-end against the demo (with its custom index removed, then restored) before publish — auto-injected page rendered correctly with title fallback, route-list filtered to academic profile's enabled routes (no chapters/convergence), portfolio footer linking to brandon-behring.dev.
+
 ## [4.4.0] — 2026-05-25
 
 Minor release. Polish closure of v4.3.0 deferred items. No new consumer issues since v4.3.0 ship — this release closes internal backlog before the next consumer-feedback cycle begins. All additive; consumers upgrade by bumping version with zero config changes.

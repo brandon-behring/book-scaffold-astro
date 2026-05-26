@@ -1,0 +1,111 @@
+---
+/**
+ * /index — minimal default landing page (v4.5.0).
+ *
+ * Auto-injected by bookScaffoldIntegration when routes.landing === true
+ * (default for every profile). Consumers with their own src/pages/index.astro
+ * override automatically — file-system routes win over injectRoute, no extra
+ * config needed.
+ *
+ * Reads book identity + portfolio + enabled-routes from vite.define-injected
+ * env vars (see integration.ts §4.5.0). Renders:
+ *   - h1 with book title (fallback: 'book-scaffold-astro')
+ *   - lead paragraph with description (omitted if not set)
+ *   - "Read" list of links to enabled scaffold routes (filtered to only
+ *     routes the integration actually injected; respects routes.<x>: false)
+ *   - portfolio backlink in the footer (omitted if portfolio: false)
+ *
+ * Override paths:
+ *   - Disable entirely: defineBookConfig({ routes: { landing: false } })
+ *   - Compose differently: create src/pages/index.astro in your consumer
+ *     repo (file wins; this page never renders)
+ *   - Change portfolio target: defineBookConfig({ portfolio: { url, label } })
+ *     or defineBookConfig({ portfolio: false })
+ */
+import Base from '../layouts/Base.astro';
+
+// Vite-injected at build time. JSON.stringify(value ?? null) is the
+// integration's convention; null means "not set", an object/string means real value.
+const title = (import.meta.env.BOOK_TITLE as string | null) ?? 'book-scaffold-astro';
+const description = import.meta.env.BOOK_DESCRIPTION as string | null;
+const portfolio = import.meta.env.BOOK_PORTFOLIO as { url: string; label: string } | false | null;
+const enabledRoutes = (import.meta.env.BOOK_ROUTES_ENABLED as string[] | undefined) ?? [];
+
+// Map from internal route name → display label + URL. Only routes that
+// produce a single landing-list entry are listed here (frontmatter is a
+// slug pattern; chaptersSlug is dynamic; landing IS this page).
+const ROUTE_LABELS: Record<string, { label: string; href: string }> = {
+  chapters:    { label: 'Chapters',     href: '/chapters/' },
+  search:      { label: 'Search',       href: '/search/' },
+  references:  { label: 'References',   href: '/references/' },
+  print:       { label: 'Print view',   href: '/print/' },
+  convergence: { label: 'Convergence',  href: '/convergence/' },
+  tips:        { label: 'Tips',         href: '/tips/' },
+  exercises:   { label: 'Exercises',    href: '/exercises/' },
+};
+
+const visibleRoutes = enabledRoutes
+  .filter((name) => name in ROUTE_LABELS)
+  .map((name) => ROUTE_LABELS[name]!);
+---
+
+<Base title={title} description={description ?? undefined}>
+  <article class="prose landing">
+    <h1>{title}</h1>
+    {description && <p class="lead">{description}</p>}
+
+    {visibleRoutes.length > 0 && (
+      <>
+        <h2 class="read-heading">Read</h2>
+        <ul class="route-list">
+          {visibleRoutes.map((r) => (
+            <li><a href={r.href}>{r.label}</a></li>
+          ))}
+        </ul>
+      </>
+    )}
+
+    {portfolio && portfolio !== false && (
+      <p class="portfolio-footer">
+        <small>
+          Part of <a href={portfolio.url}>{portfolio.label}</a>
+        </small>
+      </p>
+    )}
+  </article>
+</Base>
+
+<style>
+  .landing {
+    max-width: 60ch;
+    margin: 2rem auto;
+  }
+  .lead {
+    font-size: 1.1rem;
+    line-height: 1.5;
+    margin: 1.25rem 0 2.5rem 0;
+  }
+  .read-heading {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted, #555);
+    margin-top: 2.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .route-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .route-list li {
+    padding: 0.4rem 0;
+    font-family: var(--font-sans, sans-serif);
+    font-size: 1rem;
+  }
+  .portfolio-footer {
+    margin-top: 3rem;
+    color: var(--color-text-muted, #555);
+    font-family: var(--font-sans, sans-serif);
+  }
+</style>

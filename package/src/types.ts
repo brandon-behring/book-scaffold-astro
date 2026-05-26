@@ -134,6 +134,31 @@ export interface BookConfigOptions {
    *   });
    */
   katexMacros?: Record<string, string>;
+  /**
+   * v4.5.0: Book title. Read by the auto-injected `/` landing page (heading + <title>).
+   * Optional; landing falls back to `'book-scaffold-astro'` if unset.
+   *
+   * Distinct from per-page `Astro.props.title` (which sets the per-page <title>):
+   * this is the book-level identity, used as the H1 on the landing and as the
+   * default <title> when no per-page title is supplied.
+   */
+  title?: string;
+  /**
+   * v4.5.0: Book description. Read by the auto-injected `/` landing page (lead paragraph + <meta description>).
+   * Optional; landing renders no description paragraph if unset.
+   */
+  description?: string;
+  /**
+   * v4.5.0: Portfolio backlink rendered in the auto-injected `/` landing footer.
+   * Defaults to `{ url: 'https://brandon-behring.dev', label: 'brandon-behring.dev' }` —
+   * baked into the scaffold as `BRANDON_PORTFOLIO_DEFAULT` in `config.ts`. Single
+   * source of truth for the portfolio URL across all Brandon-owned consumers.
+   *
+   * Set explicitly to `false` to disable the footer link entirely. Set to a
+   * different `{ url, label }` to override (e.g., for consumers outside the
+   * brandon-behring.dev ecosystem).
+   */
+  portfolio?: { url: string; label: string } | false;
   /** Escape hatch for any other AstroUserConfig field. */
   [key: string]: unknown;
 }
@@ -166,6 +191,15 @@ export interface BookScaffoldIntegrationOptions {
    */
   mdxComponentsModule?: string;
   extraStyles?: readonly string[];
+  /** v4.5.0: book title, propagated to `/` landing via vite.define. */
+  title?: string;
+  /** v4.5.0: book description, propagated to `/` landing via vite.define. */
+  description?: string;
+  /**
+   * v4.5.0: resolved portfolio backlink (after defineBookConfig applied
+   * BRANDON_PORTFOLIO_DEFAULT). `false` means the landing renders no link.
+   */
+  portfolio?: { url: string; label: string } | false;
 }
 
 /** Raised when the resolved profile is not one of `BOOK_PROFILES`. */

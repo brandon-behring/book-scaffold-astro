@@ -27,6 +27,7 @@ export const courseNotesProfile = defineProfile({
     frontmatter: false,     // opt-in per book; see #7
     tips: false,            // v4.3.0 #70: opt-in per book
     exercises: false,       // v4.4.0: opt-in per book
+    landing: true,          // v4.5.0: auto-inject minimal root landing
   },
   styles: ['tokens.css', 'layout.css', 'callouts.css', 'chapter.css', 'typography.css', 'print.css'],
   // v3.7.0 (#35): course-notes schema has tools-style fields (chapter, volatility, sources) — fallback renderer dispatches via tools renderer

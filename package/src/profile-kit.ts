@@ -42,6 +42,16 @@ export interface RouteToggles {
   chapters: boolean;
   convergence: boolean;
   /**
+   * v4.5.0: auto-inject a minimal `/` landing page that reads the book's
+   * `title`, `description`, and `portfolio` from defineBookConfig and
+   * renders a route list (filtered to enabled routes). Defaults to `true`
+   * on every profile. Consumers with their own `src/pages/index.astro` keep
+   * their custom landing (file-system routes win over `injectRoute`). Set
+   * to `false` to suppress the auto-injection entirely without writing
+   * a custom landing.
+   */
+  landing: boolean;
+  /**
    * v3.4.0 (closes #7): auto-inject `/frontmatter/[slug]/` rendering a
    * consumer-defined `frontmatter` content collection. Default `false` per
    * profile — opt in via defineBookConfig({ routes: { frontmatter: true } })

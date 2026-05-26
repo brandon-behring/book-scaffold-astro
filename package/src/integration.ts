@@ -54,6 +54,11 @@ const ROUTE_REGISTRY = {
   // v4.4.0: exercises index by chapter. Opt-in via routes.exercises: true;
   // pairs with build-exercises script + <ExerciseSolutions auto /> mode.
   exercises:   { pattern: '/exercises',           file: 'exercises.astro' },
+  // v4.5.0: minimal root landing page. Reads title/description/portfolio/routes
+  // from vite.define-injected import.meta.env vars. Default-on per profile;
+  // consumers with their own src/pages/index.astro override (file-system route
+  // wins over injectRoute).
+  landing:     { pattern: '/',                    file: 'index.astro' },
   // v3.4.0 (#7): consumer-collection-backed frontmatter route. Opt-in via
   // routes: { frontmatter: true } AND content.config.ts defining the
   // collection (use frontmatterCollection() helper from /schemas subpath).
@@ -84,7 +89,16 @@ function resolvePage(file: string): string {
 export function bookScaffoldIntegration(
   opts: BookScaffoldIntegrationOptions,
 ): AstroIntegration {
-  const { profile, routes: userOverrides = {}, extraStyles = [], mdxComponentsModule } = opts;
+  const {
+    profile,
+    routes: userOverrides = {},
+    extraStyles = [],
+    mdxComponentsModule,
+    // v4.5.0: landing-page data, propagated via vite.define to /index.astro.
+    title,
+    description,
+    portfolio,
+  } = opts;
   const def = PROFILES[profile];
 
   // Merge per-profile route defaults with user overrides. Last-wins object
@@ -156,12 +170,29 @@ export function bookScaffoldIntegration(
         //    Single source of truth across the Astro config + runtime components
         //    + CLI (validate.mjs accepts --preset for its own resolution).
         const presetLiteral = JSON.stringify(profile);
+        // v4.5.0: serialize the landing-page data so /index.astro can read it.
+        // BOOK_ROUTES_ENABLED is the list of route names (e.g. ['chapters', 'search', ...])
+        // that the integration ACTUALLY injected — derived from enabledRoutes
+        // post-merge of profile defaults + consumer overrides. The landing page
+        // uses this to render only links to routes that exist at runtime, so
+        // consumers like dlai-study-notes (routes.chapters: false) don't get
+        // a broken /chapters/ link in their landing.
+        const enabledRouteNames = Object.entries(enabledRoutes)
+          .filter(([, on]) => on)
+          .map(([name]) => name);
         updateConfig({
           vite: {
             plugins: [makeMdxComponentsVitePlugin(resolvedMdxPath)],
             define: {
               'import.meta.env.BOOK_PRESET': presetLiteral,
               'import.meta.env.BOOK_PROFILE': presetLiteral,
+              // v4.5.0: landing-page data. JSON.stringify on undefined → 'undefined'
+              // (which evaluates to JavaScript undefined at use site); on object →
+              // the JSON literal; on false → 'false'.
+              'import.meta.env.BOOK_TITLE': JSON.stringify(title ?? null),
+              'import.meta.env.BOOK_DESCRIPTION': JSON.stringify(description ?? null),
+              'import.meta.env.BOOK_PORTFOLIO': JSON.stringify(portfolio ?? null),
+              'import.meta.env.BOOK_ROUTES_ENABLED': JSON.stringify(enabledRouteNames),
             },
           },
         });

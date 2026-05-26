@@ -21,6 +21,23 @@ import { composeStyles, type Style } from './lib/define-style.js';
 import { BUILTIN_STYLES } from './styles/built-in.js';
 
 /**
+ * v4.5.0: Default portfolio backlink baked into the scaffold. Rendered in
+ * the auto-injected `/` landing footer for every consumer that doesn't
+ * explicitly override `portfolio` in defineBookConfig.
+ *
+ * Single source of truth for the brandon-behring.dev URL across all
+ * consumers — update here, bump scaffold version, every consumer inherits
+ * on next build. This is the intentional Brandon-specific default
+ * discussed in plan §Phase 6-pre. Consumers outside the brandon-behring.dev
+ * ecosystem set `portfolio: false` (no link) or pass `{ url, label }` to
+ * override.
+ */
+export const BRANDON_PORTFOLIO_DEFAULT = {
+  url: 'https://brandon-behring.dev',
+  label: 'brandon-behring.dev',
+} as const;
+
+/**
  * v4.0.0 migration error (D11) — emitted when consumer code passes the v3
  * `preset:` or `profile:` field. Builds a per-value auto-suggested
  * replacement showing the exact `styles: [<preset>Style]` syntax + import line.
@@ -141,6 +158,13 @@ export async function defineBookConfig(
     ]);
   }
 
+  // v4.5.0: resolve portfolio backlink. Explicit `false` disables; explicit
+  // `{ url, label }` overrides; absent → BRANDON_PORTFOLIO_DEFAULT.
+  const resolvedPortfolio: { url: string; label: string } | false =
+    opts.portfolio === false
+      ? false
+      : opts.portfolio ?? BRANDON_PORTFOLIO_DEFAULT;
+
   const integrations = [
     mdx(),
     preact(),
@@ -149,6 +173,11 @@ export async function defineBookConfig(
       routes: mergedRoutes,
       mdxComponentsModule,
       extraStyles: mergedExtraStyles,
+      // v4.5.0: pass landing-page data through to the integration so it can
+      // be exposed to the auto-injected /index.astro via vite.define.
+      title: opts.title,
+      description: opts.description,
+      portfolio: resolvedPortfolio,
     }),
     ...mergedExtraIntegrations,
   ];
@@ -190,6 +219,10 @@ export async function defineBookConfig(
     extraStyles: _extraStyles,
     markdown: _markdown,
     katexMacros: _katexMacros,
+    // v4.5.0: strip new landing-related opts so they don't leak into AstroUserConfig.
+    title: _title,
+    description: _description,
+    portfolio: _portfolio,
     ...rest
   } = opts;
   void _styles;
@@ -201,6 +234,9 @@ export async function defineBookConfig(
   void _extraStyles;
   void _markdown;
   void _katexMacros;
+  void _title;
+  void _description;
+  void _portfolio;
 
   // KaTeX externals — same v3.7.1 pattern, now gated on the composed preset.
   const katexExternals = wantsKatex ? [] : ['remark-math', 'rehype-katex', 'katex'];

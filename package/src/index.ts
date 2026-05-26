@@ -21,7 +21,7 @@
 
 // ----- Public re-exports -----
 
-export { defineBookConfig } from './config.js';
+export { defineBookConfig, BRANDON_PORTFOLIO_DEFAULT } from './config.js';
 export { bookScaffoldIntegration } from './integration.js';
 export type {
   BookProfile,
