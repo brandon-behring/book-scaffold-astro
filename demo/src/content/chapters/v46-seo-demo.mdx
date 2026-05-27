@@ -1,0 +1,38 @@
+---
+week: 6
+part: integration
+title: v4.6 SEO + article meta-tags demo
+status: scaffolded
+description: >-
+  Sample chapter exercising the v4.6.0 SEO surface — author + published +
+  updated + tags frontmatter all flow into article:* meta tags via
+  Chapter.astro. Used as the demo build's exemplar; grep'd during the
+  release smoke test (see ~/.claude/plans/next-session-pickup-silly-tiger.md
+  Verification).
+author: Brandon Behring
+published: 2026-05-26
+updated: 2026-05-27
+tags:
+  - seo
+  - meta-tags
+  - v4.6
+  - demo
+---
+
+# v4.6 SEO demo
+
+This chapter exists to exercise v4.6's article meta-tag surface end-to-end. When the demo builds, the page should emit:
+
+- `<meta property="og:type" content="article">` (from Chapter.astro passing `ogType="article"`)
+- `<meta property="article:author" content="Brandon Behring">` (from frontmatter `author`)
+- `<meta property="article:published_time" content="2026-05-26T...">` (from `published`)
+- `<meta property="article:modified_time" content="2026-05-27T...">` (from `updated`)
+- `<meta property="article:tag" content="seo">` + 3 more (one per `tags[]` item)
+
+Plus the baseline 11 SEO tags every page gets from Base.astro: canonical, og:title/description/url/type/site_name, twitter:card/title/description, plus og:image/twitter:image (default `/og-default.png` from `defineBookConfig.seo.ogImage`), plus twitter:site (`@brandonbehring`).
+
+## Why a separate chapter?
+
+The other demo chapters (`test-labels.mdx`, `_example-chapter.mdx`, `_week01-hello-world.mdx`) predate v4.6 and have minimal frontmatter. Rather than retrofit them with `author`/`published`/`updated`/`tags` (which would conflate "demo content" with "feature flag"), this chapter is the dedicated v4.6 exemplar.
+
+Future scaffold improvements that touch the chapter meta-tag surface should bump this chapter's frontmatter accordingly (e.g., if v4.7 adds JSON-LD structured data, add fields here that exercise it).
