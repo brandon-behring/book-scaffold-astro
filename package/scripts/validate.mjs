@@ -121,6 +121,46 @@ const PRESET =
 const PROFILE = PRESET;
 const REPO_ROOT = process.env.BOOK_REPO_ROOT ?? null;
 
+// v4.6.0 (issue #76 Layer 3b): chapter-route shadow warning. Detect a
+// consumer-owned `src/pages/chapters/[...slug].astro` that shadows the
+// scaffold v4.3.0+ auto-injected route. Non-blocking — emits to stderr,
+// validate continues normally. Suppressed when the consumer explicitly
+// disabled the scaffold's chapter route (intentional override).
+//
+// Edge cases per issue #76:
+//   file + routes.chapters undefined/true → WARN
+//   file + routes.chapters: false         → silent (intentional override)
+//   no file (any routes config)           → silent
+//
+// Heuristic for "routes.chapters: false": regex-grep astro.config.mjs for
+// the literal `chapters: false`. Light-touch detection that matches the
+// issue's warning-not-error intent; consumers wanting a stricter detector
+// can run `astro check` separately.
+{
+  const consumerChapterRoute = resolve(ROOT, 'src/pages/chapters/[...slug].astro');
+  if (existsSync(consumerChapterRoute)) {
+    const astroConfigPath = resolve(ROOT, 'astro.config.mjs');
+    let chaptersDisabled = false;
+    if (existsSync(astroConfigPath)) {
+      const astroConfig = readFileSync(astroConfigPath, 'utf8');
+      // Match `chapters: false` (with optional whitespace) inside a routes
+      // object. Slight false-positive risk on commented-out code; acceptable
+      // for a non-blocking warning.
+      chaptersDisabled = /\bchapters\s*:\s*false\b/.test(astroConfig);
+    }
+    if (!chaptersDisabled) {
+      console.warn(
+        `\n⚠ Consumer-owned chapter route at src/pages/chapters/[...slug].astro\n` +
+        `  shadows the scaffold v4.3.0+ auto-injected route. Either:\n` +
+        `  • Delete the consumer file to defer to the scaffold (recommended), OR\n` +
+        `  • Set 'routes: { chapters: false }' in defineBookConfig to keep\n` +
+        `    your override (intentional).\n` +
+        `  See: package/recipes/18-chapter-route-ownership.md\n`,
+      );
+    }
+  }
+}
+
 const errors = [];
 const warnings = [];
 const fail = (file, line, msg) => errors.push({ file, line, msg });
@@ -228,6 +268,44 @@ for (const rel of chapterFiles) {
         }
       }
     }
+  }
+}
+
+// ===== v4.6.0 (issue #77): missing-prereq re-framing =====
+//
+// When errors are downstream symptoms of a missing artifact (references.json
+// or labels.json), abort with ONE leading error pointing at the prereq
+// instead of printing 25 "Unknown bibkey" / "Unknown XRef" symptoms. Single
+// clean signal: fix the prereq. Per D12 of the v4.6.0 plan.
+{
+  if (PROFILE === 'academic') {
+    const refsPath = join(DATA_DIR, 'references.json');
+    const hasBibkeyErrors = errors.some((e) => /Unknown bibkey/.test(e.msg));
+    if (hasBibkeyErrors && !existsSync(refsPath)) {
+      console.error(
+        `\n✗ Validate cannot run: src/data/references.json is missing.\n\n` +
+          `This file is generated from bibliography.bib by 'npm run build:bib'.\n` +
+          `Run that first, OR adopt the prevalidate npm hook convention so\n` +
+          `'npm run validate' regenerates it automatically:\n\n` +
+          `  "prevalidate": "npm run build:bib && npm run build:labels --if-present"\n` +
+          `  "validate": "book-scaffold validate"\n\n` +
+          `See package/recipes/19-prevalidate-hook.md.\n`,
+      );
+      process.exit(1);
+    }
+  }
+  const labelsPath = join(DATA_DIR, 'labels.json');
+  const hasXrefErrors = errors.some((e) => /Unknown XRef/.test(e.msg));
+  if (hasXrefErrors && !existsSync(labelsPath)) {
+    console.error(
+      `\n✗ Validate cannot run: src/data/labels.json is missing.\n\n` +
+        `This file is generated from <Theorem id="..."> and <Figure id="..."> markers\n` +
+        `in chapter MDX by 'npm run build:labels'. Run that first, OR adopt the\n` +
+        `prevalidate npm hook convention so 'npm run validate' regenerates it:\n\n` +
+        `  "prevalidate": "npm run build:bib && npm run build:labels --if-present"\n\n` +
+        `See package/recipes/19-prevalidate-hook.md.\n`,
+    );
+    process.exit(1);
   }
 }
 
