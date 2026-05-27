@@ -2,7 +2,12 @@
  * tests/scaffold.test.mjs — node:test suite for the create-book CLI.
  *
  * First tests for this package. Covers v3.6.1 fixes:
- *   #28 — create-book now emits src/pages/index.astro + chapters/[...slug].astro.
+ *   #28 — create-book now emits src/pages/index.astro.
+ *         v4.6.0 (issue #76 Layer 3c) — scaffold NO LONGER emits
+ *         src/pages/chapters/[...slug].astro. The book-scaffold-astro
+ *         package auto-injects that route since v4.3.0; pre-v4.6 templates
+ *         shipped a redundant mechanical copy. New books are clean from
+ *         day one. Tests updated to assert the absence.
  *   #38 — --preset is accepted as canonical synonym of --profile.
  *   #39 — bibliography.bib placeholder is parseable (non-empty + has @entry).
  *
@@ -60,29 +65,80 @@ test('#28: scaffold emits src/pages/index.astro for academic preset', async () =
   assert.match(body, /Base/, 'index.astro should import Base layout');
 });
 
-test('#28: scaffold emits src/pages/chapters/[...slug].astro for tools preset', async () => {
-  const r = runCli(['demo-tools-28', '--preset=tools'], workRoot);
+test('v4.6.0 Layer 3c: scaffold does NOT emit src/pages/chapters/[...slug].astro (tools)', async () => {
+  // book-scaffold-astro v4.3.0+ auto-injects the per-chapter route via
+  // bookScaffoldIntegration (see package/src/integration.ts ROUTE_REGISTRY).
+  // v4.6.0 Layer 3c removed the redundant template copy so new books are
+  // clean from day one. Verify absence.
+  const r = runCli(['demo-tools-46', '--preset=tools'], workRoot);
   assert.equal(r.status, 0, `expected exit 0; stderr: ${r.stderr}`);
   const routePath = join(
     workRoot,
-    'demo-tools-28',
+    'demo-tools-46',
     'src',
     'pages',
     'chapters',
     '[...slug].astro',
   );
-  assert.ok(await exists(routePath), `expected ${routePath} to exist`);
-  const body = await readFile(routePath, 'utf8');
-  assert.match(body, /getCollection/, 'chapter route should call getCollection');
-  assert.match(body, /Chapter/, 'chapter route should use Chapter layout');
+  assert.ok(
+    !(await exists(routePath)),
+    `expected ${routePath} to NOT exist (v4.6.0 Layer 3c — scaffold owns this route)`,
+  );
 });
 
-test('#28: scaffold emits both pages files for minimal preset', async () => {
-  const r = runCli(['demo-minimal-28', '--preset=minimal'], workRoot);
+test('#28 / v4.6.0 Layer 3c: scaffold emits index.astro but NOT chapter route (minimal)', async () => {
+  const r = runCli(['demo-minimal-46', '--preset=minimal'], workRoot);
   assert.equal(r.status, 0, `expected exit 0; stderr: ${r.stderr}`);
-  const dir = join(workRoot, 'demo-minimal-28');
+  const dir = join(workRoot, 'demo-minimal-46');
   assert.ok(await exists(join(dir, 'src', 'pages', 'index.astro')));
-  assert.ok(await exists(join(dir, 'src', 'pages', 'chapters', '[...slug].astro')));
+  assert.ok(
+    !(await exists(join(dir, 'src', 'pages', 'chapters', '[...slug].astro'))),
+    'v4.6.0 Layer 3c: chapter route should NOT be in the scaffold template',
+  );
+});
+
+test('v4.6.0 Layer D: academic preset adds prevalidate hook in package.json', async () => {
+  const r = runCli(['demo-academic-46-d', '--preset=academic'], workRoot);
+  assert.equal(r.status, 0, `expected exit 0; stderr: ${r.stderr}`);
+  const pkgPath = join(workRoot, 'demo-academic-46-d', 'package.json');
+  const pkg = JSON.parse(await readFile(pkgPath, 'utf8'));
+  assert.ok(
+    pkg.scripts.prevalidate,
+    'expected prevalidate npm-lifecycle hook in academic-profile scaffold',
+  );
+  assert.match(
+    pkg.scripts.prevalidate,
+    /build:bib/,
+    'prevalidate should call build:bib so npm run validate auto-regenerates references.json',
+  );
+});
+
+test('v4.6.0 Layer D: research-portfolio preset adds prevalidate hook', async () => {
+  const r = runCli(['demo-rp-46-d', '--preset=research-portfolio'], workRoot);
+  assert.equal(r.status, 0, `expected exit 0; stderr: ${r.stderr}`);
+  const pkgPath = join(workRoot, 'demo-rp-46-d', 'package.json');
+  const pkg = JSON.parse(await readFile(pkgPath, 'utf8'));
+  assert.ok(
+    pkg.scripts.prevalidate,
+    'expected prevalidate in research-portfolio scaffold (cite-key validation enabled)',
+  );
+});
+
+test('v4.6.0 Layer D: tools preset does NOT add prevalidate (no cite-key validation)', async () => {
+  const r = runCli(['demo-tools-46-d', '--preset=tools'], workRoot);
+  assert.equal(r.status, 0, `expected exit 0; stderr: ${r.stderr}`);
+  const pkgPath = join(workRoot, 'demo-tools-46-d', 'package.json');
+  const pkg = JSON.parse(await readFile(pkgPath, 'utf8'));
+  assert.equal(
+    pkg.scripts.prevalidate,
+    undefined,
+    'tools profile has no bib pipeline — prevalidate would be a no-op',
+  );
+  assert.match(
+    pkg.scripts.prebuild,
+    /build:bib/,
+    'non-academic profiles keep the explicit prebuild chain',
+  );
 });
 
 // ===== #38: --preset as alias of --profile =====

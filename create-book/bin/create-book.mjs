@@ -122,8 +122,21 @@ function makeTemplates(name, profile, toolkitVersion) {
   "type": "module",
   "private": true,
   "scripts": {
-    "predev": "npm run build:bib --if-present && npm run build:labels --if-present",
-    "prebuild": "npm run build:bib --if-present && npm run build:labels --if-present && npm run validate --if-present",
+    "predev": "npm run build:bib --if-present && npm run build:labels --if-present",${
+      // v4.6.0: academic + research-portfolio scaffolds add a `prevalidate`
+      // npm lifecycle hook so `npm run validate` auto-runs build:bib +
+      // build:labels first (fixes the gitignored-references.json gap that
+      // surfaced during DML + ssm Phase 1c first-deploys — see recipe
+      // 19-prevalidate-hook). prebuild simplifies to just `npm run validate`;
+      // npm's lifecycle does the rest. Other profiles keep the explicit
+      // prebuild chain (they don't run cite-key validation).
+      (profile === 'academic' || profile === 'research-portfolio')
+        ? `
+    "prevalidate": "npm run build:bib --if-present && npm run build:labels --if-present",
+    "prebuild": "npm run validate --if-present",`
+        : `
+    "prebuild": "npm run build:bib --if-present && npm run build:labels --if-present && npm run validate --if-present",`
+    }
     "build:bib": "book-scaffold build-bib",
     "build:labels": "book-scaffold build-labels",
     "build:figures": "book-scaffold build-figures",
@@ -303,30 +316,13 @@ import Base from '@brandon_m_behring/book-scaffold-astro/layouts/Base.astro';
 </Base>
 `,
 
-    'src/pages/chapters/[...slug].astro': `---
-/**
- * Per-chapter route. Imports chapters from the content collection and
- * delegates rendering to the toolkit's Chapter layout. Schema-agnostic —
- * works for any preset.
- */
-import { getCollection, render } from 'astro:content';
-import Chapter from '@brandon_m_behring/book-scaffold-astro/layouts/Chapter.astro';
-
-export async function getStaticPaths() {
-  const chapters = await getCollection('chapters', (entry) => !entry.data.draft);
-  return chapters.map((entry) => ({
-    params: { slug: entry.id },
-    props: { entry },
-  }));
-}
-
-const { entry } = Astro.props;
-const { Content, headings } = await render(entry);
----
-<Chapter entry={entry} headings={headings}>
-  <Content />
-</Chapter>
-`,
+    // v4.6.0 (issue #76 Layer 3c): removed `src/pages/chapters/[...slug].astro`
+    // from the scaffold template. The book-scaffold-astro package auto-injects
+    // this route since v4.3.0 (per integration.ts ROUTE_REGISTRY.chaptersSlug
+    // — wired in when routes.chapters is true). Pre-v4.6 templates shipped a
+    // mechanical copy that silently shadowed the auto-injected route; new
+    // books on v4.6+ are clean from day one. Consumers who want a custom
+    // chapter layout opt-in via State 2 of recipe 18-chapter-route-ownership.
   };
 
   // Profile-conditional files.
