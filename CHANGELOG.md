@@ -31,9 +31,13 @@ Closes issue #74 (research-portfolio docs gap) and defers #15 (multibook routing
 - **#15 multibook corpus routing + schema** — deferred to v5.x. Single consumer signal (DLAI), no profile-composition design, route-injection refactor required. See PACKAGE_DESIGN.md §15a.
 - **#16 AnkiCard component + extract-cards CLI** — deferred. Component is feasible but coupled to #15's per-book grouping; CLI adds a non-trivial `.apkg` runtime dependency for one consumer's workflow. See Recipe 20 for the consumer-side path.
 
+### Repo hygiene
+
+- **D12 lock-step restored**: `create-book/package.json` bumped from 4.4.0 (last successful workflow-driven publish) to 4.6.1 to match `package/package.json`. Lock-step had drifted across v4.5.0, v4.5.1, v4.6.0 — the publish workflow failed those releases at the lock-step check (toolkit was published outside the workflow). This patch restores workflow-driven publishing for v4.6.1+.
+
 ### Migration
 
-None — all changes are docs + gitignore. Existing consumers are unaffected.
+None — all changes are docs + gitignore + version-bump. Existing consumers are unaffected.
 
 ## [4.6.0] — 2026-05-26
 
