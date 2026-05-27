@@ -1,25 +1,33 @@
 ---
+# required fields — schema will reject the chapter if missing
 title: "Chapter N — Title goes here"
-slug: chN-short-slug
-chapter: 1
-part: 1
+last_verified: 2026-05-19              # required; YAML date (no quotes)
+
+# optional — hierarchy (use whichever fits; all may be omitted)
+slug: chN-short-slug                   # optional; defaults to filename
+chapter: 1                             # optional; tools-style numeric
+part: 1                                # optional; number OR academic-style string enum
 week: 1                                # optional; omit if not on a weekly cadence
-status: prose_only                     # 'prose_only' | 'code_only' | 'implemented' | ...
-freshness: experimental-result         # 'experimental-result' | 'literature-survey' | 'theoretical' | 'reference'
-volatility: feature-surface            # 'stable-principle' | 'architectural-pattern' | 'feature-surface'
-tags:
+
+# optional — status (AUTHORING state) vs freshness (EPISTEMIC type); see Recipe 13
+status: prose_only                     # 'scaffolded'|'prose_only'|'code_only'|'chapter_only'|'reading_only'|'implemented'|'planned'
+freshness: experimental-result         # 'experimental-result'|'literature-survey'|'theoretical'|'reference'
+
+# optional — provenance
+volatility: feature-surface            # 'stable-principle'|'architectural-pattern'|'feature-surface'
+tags:                                  # optional; freeform string array
   - replace-me
   - with
   - real-tags
-sources:
+sources:                               # optional; structured inline T1-T4
   - tier: T1
     url: https://example.invalid/primary-source
     label: Primary source (e.g., NVD CVE / arXiv paper / official spec)
   - tier: T2
     url: https://example.invalid/secondary
     label: Secondary corroboration
-last_verified: 2026-05-19
-draft: true
+
+draft: true                            # optional; defaults to false
 ---
 
 import PreReleaseBanner from '@brandon_m_behring/book-scaffold-astro/components/PreReleaseBanner.astro';

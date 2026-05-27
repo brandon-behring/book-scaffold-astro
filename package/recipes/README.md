@@ -20,6 +20,12 @@ Terse pointers into canonical code for the most common book-authoring workflows.
 | 12 | [Where to file issues](12-where-to-file-issues.md) | any | Consumer-pilot issue template, label conventions |
 | 13 | [Research-portfolio getting started](13-research-portfolio-getting-started.md) | research-portfolio | When to use the preset, frontmatter shape, the 4 new components |
 | 14 | [Port a LaTeX book](14-port-latex-book.md) | typically academic | Operational playbook for porting an existing LaTeX manuscript — bib sharing, inline-upstream-PR loop, common pitfalls |
+| 15 | [Defining styles](15-defining-styles.md) | any | The `defineStyle` API (v4.0+): compose styles per-key, override CSS, share between books |
+| 16 | [TikZ figures](16-tikz-figures.md) | typically academic | `build-figures` TikZ standalone → SVG pipeline |
+| 17 | [Draft chapter workflow](17-draft-chapter-workflow.md) | any | `draft: true` filtering, in-flight chapters, prerequisite gating |
+| 18 | [Chapter route ownership](18-chapter-route-ownership.md) | any | When to override the auto-injected `/chapters/[...slug]/` route |
+| 19 | [Prevalidate hook](19-prevalidate-hook.md) | any | Wire `prevalidate` to run `build:bib` + `build:labels` before `validate` |
+| 20 | [Anki deck export (consumer-side)](20-anki-export.md) | any (esp. course-notes, research-portfolio) | Roll-your-own `<AnkiCard>` + extractor; scaffold deliberately doesn't ship this |
 
 ## How to read recipes
 

@@ -47,6 +47,8 @@ Source: Koller & Friedman, *Probabilistic Graphical Models*, 2009 — chapter st
 | Research synthesis (one paper or theorem per chapter) | Academic | `academic` |
 | A practitioner field-guide across multiple tools | Tools | `tools` |
 | A versioned tech survey with convergence tracking | Tools | `tools` |
+| A research-portfolio with mixed evidence types + AI disclosure | Hybrid | `research-portfolio` (see [Recipe 13](13-research-portfolio-getting-started.md)) |
+| A course-notes / study-derived corpus | Hybrid | `course-notes` |
 | A solo essay collection | either, lean Academic | `minimal` (uses tools schema) |
 
 ## Hybrid books

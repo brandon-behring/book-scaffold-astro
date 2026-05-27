@@ -45,3 +45,12 @@ src/data/references.json
 demo/src/data/references.json
 public/figures/
 public/notebooks/
+
+# CLI build outputs from build-tips (v4.3.0) + build-exercises (v4.4.0).
+# Mirror references.json: derived from <Tip>/<Exercise> components in chapters,
+# regenerated on every prebuild. Specific paths to avoid catching tracked
+# fixtures under package/tests/visual/.
+package/src/data/tips.json
+package/src/data/exercises.json
+demo/src/data/tips.json
+demo/src/data/exercises.json

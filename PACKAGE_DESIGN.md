@@ -419,7 +419,9 @@ import type { z } from 'astro/zod';
 import type { CollectionConfig } from 'astro:content';
 
 export interface BookSchemasOptions {
-  /** Optional. Same precedence as defineBookConfig. */
+  /** Canonical (v3.7+). One of: 'academic' | 'tools' | 'minimal' | 'course-notes' | 'research-portfolio'. */
+  preset?: BookPreset;
+  /** Backward-compat alias for `preset` (pre-v3.7). Same precedence as defineBookConfig. */
   profile?: BookProfile;
   /** Optional. Defaults to `'./src/content/chapters'`. */
   chaptersBase?: string;
@@ -439,10 +441,10 @@ export function defineBookSchemas(opts?: BookSchemasOptions): {
 
 ### Behavior
 
-- Resolves `profile` the same way as `defineBookConfig`.
+- Resolves `preset` the same way as `defineBookConfig`. `profile` is accepted as a backward-compat alias (v3.7 → v4.x deprecation window).
 - Returns `{ collections: { chapters, sources, changelog, patterns } }`:
-  - `chapters` — schema dispatched by profile: `academicChapterSchema` (academic) or `toolsChapterSchema` (tools/minimal). Loader uses `glob({ pattern: ['**/*.{md,mdx}', '!**/_*'], base: chaptersBase })`.
-  - `sources`, `changelog`, `patterns` — tools-profile collateral collections (`file()` / `glob()` loaders against `sources/manifest.yaml`, `changelog/tools/*.yaml`, `changelog/patterns.yaml`). Defined unconditionally; render no-op under academic.
+  - `chapters` — schema dispatched by preset: `academicChapterSchema` (academic), `toolsChapterSchema` (tools/minimal), `courseNotesChapterSchema` (course-notes), or `researchPortfolioChapterSchema` (research-portfolio). Loader uses `glob({ pattern: ['**/*.{md,mdx}', '!**/_*'], base: chaptersBase })`.
+  - `sources`, `changelog`, `patterns` — tools-profile collateral collections (`file()` / `glob()` loaders against `sources/manifest.yaml`, `changelog/tools/*.yaml`, `changelog/patterns.yaml`). Defined unconditionally; render no-op under non-tools presets.
 
 Exact schema fields (verbatim from v2.0 `src/content.config.ts:83-177`, reproduced here so consumers don't need to grep package source):
 
@@ -474,6 +476,46 @@ Exact schema fields (verbatim from v2.0 `src/content.config.ts:83-177`, reproduc
   description:    z.string().optional(),
   draft:          z.boolean().default(false),
   updated:        z.date().optional(),
+}
+
+// researchPortfolioChapterSchema (v3.5.0+) — hybrid academic + tools provenance.
+// Two required fields; everything else optional. `status` (authoring state) and
+// `freshness` (epistemic type) are ORTHOGONAL — see Recipe 13 for the distinction.
+{
+  // required
+  title:         z.string().min(1),
+  last_verified: z.date(),
+
+  // optional — hierarchy (use whichever fits)
+  slug:          z.string().optional(),
+  description:   z.string().optional(),
+  part:          z.union([z.number().int().min(0).max(20), z.string()]).optional(),
+  week:          z.number().int().min(0).max(99).optional(),
+  chapter:       z.number().int().min(0).max(99).optional(),
+
+  // optional — authoring state vs epistemic type (DO NOT CONFLATE)
+  status:    z.enum(['implemented','chapter_only','reading_only','prose_only',
+                     'code_only','scaffolded','planned']).optional(),
+  freshness: z.enum(['experimental-result','literature-survey',
+                     'theoretical','reference']).optional(),
+
+  // optional — provenance + inline T1-T4 sources
+  volatility: z.enum(['stable-principle','architectural-pattern','feature-surface']).optional(),
+  tags:       z.array(z.string()).default([]),
+  sources:    z.array(z.object({
+                tier:  z.enum(['T1','T2','T3','T4']),
+                url:   z.string().url(),
+                label: z.string().min(1),
+              })).default([]),
+
+  // optional — dates + draft
+  updated: z.date().optional(),
+  draft:   z.boolean().default(false),
+
+  // optional — SEO / OpenGraph article:* (v4.6+)
+  author:    z.string().optional(),
+  published: z.date().optional(),
+  image:     z.string().optional(),
 }
 ```
 
@@ -1141,6 +1183,35 @@ Open at the package-publishing level (handled at Phase B start):
 
 - npm scope claim for `@brandon_m_behring` (free for individual users; first publish auto-creates).
 - `npm whoami` returning `ENEEDAUTH` — user action: `npm adduser`.
+
+---
+
+## 15a. Deferred scope (post-v4.x)
+
+The package is in its v4.x **iteration window** — small additive changes triggered by consumer signal. Anything architecturally invasive ships in v5.x or later, and only after repeated independent demand. Items deferred during the v4.x cycle:
+
+### Multi-book corpus routing + schema (closed #15, deferred to v5.x)
+
+**Requested shape**: `defineBookSchemas({ preset, multiBook: true })` with a `books` metadata collection, a chapter `book` discriminator, and injected routes `/<book>/`, `/<book>/<chapter>/`.
+
+**Why deferred**:
+- Only one consumer signal so far (DLAI Study Notes pilot, course-notes preset). Need 2nd-3rd independent ask before committing scope.
+- The 5-profile registry is closed at v4.x; `multiBook` would have to either compose orthogonally with every preset (no design exists for this) or become a new profile family (multibook-academic, multibook-tools, …). Doubling the profile count is not a v4.x move.
+- Route injection in v4.x is flat (`/chapters/[...slug]/`). Per-book scoping (`/<book>/chapters/[...slug]/`) requires refactoring the integration's route dispatcher — not just adding routes.
+- Schema discrimination axis would change from "profile" to "profile × book" — a new shape the Zod union doesn't model today.
+
+**Re-evaluate when**: a 2nd-3rd consumer files an issue with the same shape. At that point: spike on route-injection refactor, decide profile-composition pattern, then design.
+
+### AnkiCard component + extract-cards CLI (closed #16, deferred)
+
+**Requested shape**: ship `<AnkiCard>` MDX component + `book-scaffold extract-cards` CLI from the DLAI pilot to the scaffold.
+
+**Why deferred**:
+- The component is feasible (one-line export, no profile coupling, ~100 LOC). The CLI is harder: it depends on #15's per-book grouping, and adds a non-trivial runtime dependency (a `.apkg` builder — Python `anki` library or a Node port).
+- The scaffold's scope is "books as MDX + Astro + pluggable profiles". Deck-export sync is a workflow-specific feature, more like "export to Notion" or "sync to Roam" than infrastructure every consumer needs.
+- Until DLAI proves the pattern out in production, the right home is a consumer-side recipe ([Recipe 20](package/recipes/20-anki-export.md)) describing how to roll your own `<AnkiCard>` component + a project-local `scripts/extract-anki.mjs` using `getCollection('chapters')`.
+
+**Re-evaluate when**: a 2nd consumer asks for it. At that point, consider shipping a light `build-anki` script (scan-and-emit JSON, no `.apkg`) following the `build-tips` / `build-exercises` pattern.
 
 ---
 

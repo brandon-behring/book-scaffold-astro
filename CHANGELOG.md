@@ -2,6 +2,43 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.6.1] — 2026-05-27
+
+Patch release. Docs-only + repo hygiene. No runtime behavior changes.
+
+Closes issue #74 (research-portfolio docs gap) and defers #15 (multibook routing) + #16 (AnkiCard + extract-cards CLI) to post-v4.x with documented rationale.
+
+### Fixed
+
+- **Recipe 13 — research-portfolio docs gap** (issue #74): `last_verified` is genuinely required in `researchPortfolioChapterSchema` (`z.date()`) but Recipe 13's template treated it as optional alongside hierarchy fields. Consumers adopting v4.5+ failed `astro build` with cryptic `InvalidContentEntryDataError: last_verified: Required`. Added a required-fields table at the top of the template, marked the field explicitly, and added a `status` (authoring state) vs `freshness` (epistemic type) distinction block — the 7-state vs 4-enum confusion was the second sub-bug in the issue (a consumer blanket-set `freshness: exploratory` across 13 chapters; not in the enum AND conceptually conflated with `status`).
+- **`package/CLAUDE.md`** — added a research-portfolio profile section mirroring the academic + tools treatment. Surfaces the `status` vs `freshness` gotcha as a labeled callout.
+- **`package/examples/chapter-template-research-portfolio.mdx`** — annotated each frontmatter field with `# required` / `# optional` comments, matching the CLAUDE.md voice for academic + tools templates.
+- **`package/recipes/07-chapter-shapes.md`** — added research-portfolio + course-notes rows to the shape-picker table (previously only academic + tools were listed).
+- **`PACKAGE_DESIGN.md §5`** — added `researchPortfolioChapterSchema` verbatim alongside the existing academic + tools schemas; fixed `BookSchemasOptions` to document `preset` as the canonical v3.7+ name with `profile` as a backward-compat alias.
+
+### Added
+
+- **Recipe 20 — Anki deck export (consumer-side pattern)**: documents how to roll your own `<AnkiCard>` MDX component + a project-local `scripts/extract-anki.mjs` extractor without adding scaffold infrastructure. Created in response to issue #16's deferral; provides a working path forward for the DLAI pilot pattern.
+- **`PACKAGE_DESIGN.md §15a — Deferred scope (post-v4.x)`**: new section documenting the rationale for deferring multi-book corpus routing (#15) and AnkiCard + extract-cards CLI (#16) until repeated consumer signal. Records the architectural reasons (route-injection refactor, profile composition, runtime-dep concerns) so future re-evaluation has the prior context.
+- **`package/recipes/README.md`** — indexed recipes 15-20 (recipes 15-19 existed but were not in the README index; recipe 20 is new).
+
+### Changed
+
+- **`.gitignore`** — added `package/src/data/{tips,exercises}.json` and `demo/src/data/{tips,exercises}.json` to mirror the existing `references.json` pattern. These are CLI build outputs (from `build-tips` v4.3.0 + `build-exercises` v4.4.0); regenerated on every prebuild. Specific paths avoid catching tracked fixtures under `package/tests/visual/`.
+
+### Closed without ship
+
+- **#15 multibook corpus routing + schema** — deferred to v5.x. Single consumer signal (DLAI), no profile-composition design, route-injection refactor required. See PACKAGE_DESIGN.md §15a.
+- **#16 AnkiCard component + extract-cards CLI** — deferred. Component is feasible but coupled to #15's per-book grouping; CLI adds a non-trivial `.apkg` runtime dependency for one consumer's workflow. See Recipe 20 for the consumer-side path.
+
+### Repo hygiene
+
+- **D12 lock-step restored**: `create-book/package.json` bumped from 4.4.0 (last successful workflow-driven publish) to 4.6.1 to match `package/package.json`. Lock-step had drifted across v4.5.0, v4.5.1, v4.6.0 — the publish workflow failed those releases at the lock-step check (toolkit was published outside the workflow). This patch restores workflow-driven publishing for v4.6.1+.
+
+### Migration
+
+None — all changes are docs + gitignore + version-bump. Existing consumers are unaffected.
+
 ## [4.6.0] — 2026-05-26
 
 Minor release. Bundles four cleanups + one convention discovered during the 2026-05-26 first-deploys of `double_ml_time_series` and `ssm-foundations`, plus the validator-UX follow-on filed as issue #77:
