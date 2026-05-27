@@ -35,9 +35,20 @@ Closes issue #74 (research-portfolio docs gap) and defers #15 (multibook routing
 
 - **D12 lock-step restored**: `create-book/package.json` bumped from 4.4.0 (last successful workflow-driven publish) to 4.6.1 to match `package/package.json`. Lock-step had drifted across v4.5.0, v4.5.1, v4.6.0 — the publish workflow failed those releases at the lock-step check (toolkit was published outside the workflow). This patch restores workflow-driven publishing for v4.6.1+.
 
+### Regression fix — `chapters: true` default for non-tools profiles
+
+Surfaced by v4.6.1's pre-publish smoke gate (which gated lock-step-failed v4.6.0 from running). v4.6.0 commit `34d7479` (issue #76 Layer 3c) removed `src/pages/chapters/[...slug].astro` from all 5 create-book profile templates, **expecting the scaffold's auto-injected route to fire** in its place. But all four non-tools profiles (academic, minimal, course-notes, research-portfolio) defaulted to `routes: { chapters: false }` (a legacy default from before v4.3.0 when consumers shipped their own listings). With the template removed AND the auto-route off, fresh books produced **zero per-chapter HTML** — only `/print`, `/references`, `/search`, `/index.html`.
+
+Mask conditions kept this latent:
+- v4.6.0 publish workflow failed at the lock-step check (smoke gate never ran).
+- Toolkit v4.6.0 was published outside the workflow (manual `npm publish` skips the smoke gate).
+- `create-book` on npm was still at v4.4.0 (with the chapter-route template), so npm consumers running `npx @brandon_m_behring/create-book@latest` didn't hit the regression — only consumers running create-book from local source (or v4.5+ when published) would.
+
+**Fix**: flip `chapters: false → true` in academic + minimal + course-notes + research-portfolio profiles. Consistent with the v4.3.0+ direction (auto-route is the default; consumer overrides via `routes: { chapters: false }` + their own `src/pages/chapters/*` per Recipe 18). Tools profile was already at `chapters: true`.
+
 ### Migration
 
-None — all changes are docs + gitignore + version-bump. Existing consumers are unaffected.
+None — all changes are docs + gitignore + version-bump + a default flip that aligns with the v4.6.0 template removal. Consumers who had explicitly set `routes: { chapters: false }` are unaffected (consumer config wins). Consumers who relied on the v4.6.0 template + auto-route assumption (the same combination smoke caught) now get per-chapter HTML.
 
 ## [4.6.0] — 2026-05-26
 

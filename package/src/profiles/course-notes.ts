@@ -22,7 +22,7 @@ export const courseNotesProfile = defineProfile({
     references: true,
     search: true,
     print: true,
-    chapters: false,        // multi-book consumers route via [book]/[slug] themselves
+    chapters: true,         // v4.6.1 (#75 follow-up): default-on. Multi-book consumers (DLAI-style) override via routes: { chapters: false } + own [book]/[slug] routes — see #15 deferred.
     convergence: false,
     frontmatter: false,     // opt-in per book; see #7
     tips: false,            // v4.3.0 #70: opt-in per book

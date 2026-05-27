@@ -33,7 +33,7 @@ export const researchPortfolioProfile = defineProfile({
     references: true,
     search: true,
     print: true,
-    chapters: false,             // portfolio books ship their own landing/index
+    chapters: true,              // v4.6.1 (#75 follow-up): default-on. Portfolios still ship their own /frontmatter/* + landing; /chapters/* renders the underlying chapter list.
     convergence: false,          // tools-profile-specific
     frontmatter: true,           // portfolios universally need title/disclosure/banner pages
     tips: false,                 // v4.3.0 #70: opt-in per book

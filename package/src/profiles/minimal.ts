@@ -17,7 +17,7 @@ export const minimalProfile = defineProfile({
     references: true,
     search: true,
     print: true,
-    chapters: false,
+    chapters: true,         // v4.6.1 (#75 follow-up): default-on across all profiles. Consumer override via routes: { chapters: false }.
     convergence: false,
     frontmatter: false,     // opt-in per book; see #7
     tips: false,            // v4.3.0 #70: opt-in per book

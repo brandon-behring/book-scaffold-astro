@@ -20,7 +20,7 @@ export const academicProfile = defineProfile({
     references: true,
     search: true,
     print: true,
-    chapters: false,        // academic consumers ship their own week-based /chapters listing
+    chapters: true,         // v4.6.1 (#75 follow-up): auto-injected /chapters/[...slug]/ + /chapters/ index. Pre-v4.3.0 academic books shipped their own listing; v4.6.0 (#76 Layer 3c) removed the consumer template assuming auto-injection. Default flipped here to close the gap. Consumers wanting their own listing override via `routes: { chapters: false }` + their own src/pages/chapters/* — see recipe 18.
     convergence: false,     // tools-profile-specific
     frontmatter: false,     // opt-in per book; see #7
     tips: false,            // v4.3.0 #70: opt-in per book; requires build-tips
