@@ -12,6 +12,7 @@
  */
 import mdx from '@astrojs/mdx';
 import preact from '@astrojs/preact';
+import sitemap from '@astrojs/sitemap';
 import type { AstroUserConfig } from 'astro';
 import type { BookConfigOptions } from './types.js';
 import { BOOK_PRESETS, BookConfigError } from './types.js';
@@ -165,9 +166,25 @@ export async function defineBookConfig(
       ? false
       : opts.portfolio ?? BRANDON_PORTFOLIO_DEFAULT;
 
+  // v4.6.0 (#76 Secondary): resolve sitemap filter per D7 (consumer's
+  // filter REPLACES profile default; only the profile default applies
+  // when consumer omits the filter entirely). `customPages` passes
+  // through unchanged.
+  const profileSitemapFilter = PROFILES[profile]?.sitemapFilter;
+  const sitemapFilter = opts.seo?.sitemap?.filter ?? profileSitemapFilter;
+  const sitemapCustomPages = opts.seo?.sitemap?.customPages;
+  const sitemapOptions: Record<string, unknown> = {};
+  if (sitemapFilter) sitemapOptions.filter = sitemapFilter;
+  if (sitemapCustomPages) sitemapOptions.customPages = sitemapCustomPages;
+
   const integrations = [
     mdx(),
     preact(),
+    // v4.6.0: @astrojs/sitemap default integration. Emits
+    // /sitemap-index.xml + per-route sitemaps from the resolved `site:`
+    // (defineBookConfig throws above if site is missing, so the URL is
+    // always available to the sitemap integration here).
+    sitemap(sitemapOptions),
     bookScaffoldIntegration({
       profile,
       routes: mergedRoutes,

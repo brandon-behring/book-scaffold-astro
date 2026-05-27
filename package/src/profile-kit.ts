@@ -105,6 +105,23 @@ export interface ProfileDefinition {
    * fallbackChaptersRenderer (field-presence dispatch) at route render time.
    */
   chaptersRenderer?: ChaptersRenderer;
+  /**
+   * v4.6.0 (issue #76 Secondary): per-profile default sitemap filter.
+   * Predicate run against every page URL by `@astrojs/sitemap` — return
+   * true to include in sitemap, false to exclude.
+   *
+   * Defaults:
+   *   academic + course-notes  → excludes `/print/` (print-friendly view,
+   *                              crawl-redundant)
+   *   tools + minimal + research-portfolio → omitted (include everything)
+   *
+   * Per D7 of the v4.6.0 plan: when a consumer sets
+   * `defineBookConfig({ seo: { sitemap: { filter } } })`, the consumer's
+   * filter REPLACES this profile default (not composed). Consumers wanting
+   * to also exclude /print/ on top of additional exclusions copy the
+   * profile-default predicate's behavior into their own filter.
+   */
+  sitemapFilter?: (page: string) => boolean;
 }
 
 /**

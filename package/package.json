@@ -152,6 +152,7 @@
     "remark-math": { "optional": true }
   },
   "dependencies": {
+    "@astrojs/sitemap": "^3.6.1",
     "@citation-js/core": "^0.7.21",
     "@citation-js/plugin-bibtex": "^0.7.21",
     "@fontsource-variable/roboto": "^5.2.10",
