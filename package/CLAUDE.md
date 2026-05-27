@@ -58,6 +58,35 @@ sources: []                        # array of source-manifest keys
 ---
 ```
 
+### Research-portfolio profile (`src/schemas.ts:researchPortfolioChapterSchema`)
+
+Hybrid of academic + tools provenance with research-paper-style inline sources. Only `title` + `last_verified` are required; all hierarchy and classification fields are optional.
+
+```yaml
+---
+title: "..."                       # required
+last_verified: 2026-05-19          # date, required
+# optional — hierarchy (use whichever fits; all may be omitted)
+slug: ch01-introduction            # defaults to filename
+chapter: 1
+part: 1                            # number OR academic-style string enum
+week: 1
+# optional — status (AUTHORING state) vs freshness (EPISTEMIC type) are ORTHOGONAL
+status: prose_only                 # 'scaffolded'|'prose_only'|'code_only'|'chapter_only'|'reading_only'|'implemented'|'planned'
+freshness: experimental-result     # 'experimental-result'|'literature-survey'|'theoretical'|'reference'
+# optional — provenance + inline sources (T1-T4 tiers)
+volatility: feature-surface        # 'stable-principle'|'architectural-pattern'|'feature-surface'
+tags: [prompt-injection, ...]      # freeform string array
+sources:
+  - tier: T1
+    url: https://...
+    label: Primary source
+# optional: description, draft, updated, author, published, image (SEO/og:*)
+---
+```
+
+**`status` vs `freshness` is the #1 author gotcha.** `status` = authoring state (have I written it?). `freshness` = epistemic type (what kind of evidence?). A chapter can be `status: scaffolded` (not written yet) AND `freshness: theoretical` (will be a math argument). See Recipe 13 for the full table.
+
 ## Component reference
 
 Two callout families coexist. Authors import what they need.

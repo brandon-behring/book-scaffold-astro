@@ -3,7 +3,7 @@
 The `research-portfolio` preset (v3.5.0+) is for books that combine:
 
 - **Academic structure**: week/part/status, KaTeX math, BibTeX citations, Theorem family
-- **Tools-style provenance**: volatility class, T1–T4 tier-tagged sources, `last_verified` freshness
+- **Tools-style provenance**: volatility class, T1–T4 tier-tagged sources, required `last_verified` date
 - **Portfolio-specific affordances**: pre-release banner, AI collaboration disclosure, blocked-by-upstream callouts, structured ethics/policy references
 
 If your book is primarily a weekly curriculum, use [`academic`](07-chapter-shapes.md#academic). If primarily AI-CLI comparison content, use [`tools`](07-chapter-shapes.md#tools). If a course-derived study notebook, use [`course-notes`](07-chapter-shapes.md#course-notes). Research portfolios sit at the intersection of all three and get their own preset.
@@ -39,28 +39,66 @@ This scaffolds:
 
 ## Chapter frontmatter shape
 
+Two fields are **required** by the schema; everything else is optional.
+
+| Field | Required? | Notes |
+|---|---|---|
+| `title` | **required** | Non-empty string |
+| `last_verified` | **required** | YAML date (`2026-05-19`); used by freshness reports + the v4.6 prevalidate hook |
+| All other fields | optional | See annotations in the template below |
+
+### `status` vs `freshness` — two distinct axes
+
+These look similar but mean different things. Authors often confuse them — getting `freshness` wrong fails the schema with `InvalidContentEntryDataError`.
+
+| Field | Concept | Enum values | Mental check |
+|---|---|---|---|
+| `status` | **Authoring state** — where am I in writing this chapter? | `scaffolded`, `prose_only`, `code_only`, `chapter_only`, `reading_only`, `implemented`, `planned` | "Have I written it?" |
+| `freshness` | **Epistemic type** — what kind of evidence does this chapter rest on? | `experimental-result`, `literature-survey`, `theoretical`, `reference` | "What kind of knowledge is this?" |
+
+A chapter can be `status: scaffolded` (not yet written) AND `freshness: theoretical` (will be a mathematical argument). They're orthogonal.
+
+If you want to mark a chapter as "not written yet", use `status: scaffolded` or `status: planned`. `freshness` has no value for that — it describes the chapter's content type, not its progress.
+
+### Template
+
 ```yaml
 ---
+# required
 title: "Chapter title"
-slug: ch01-introduction          # optional; defaults to filename
-chapter: 1                       # tools-style numeric
-part: 1                          # either number OR academic-style string enum
-week: 1                          # optional; only if you use weekly cadence
-status: prose_only               # academic 7-state (optional)
-freshness: experimental-result   # 'experimental-result' | 'literature-survey' | 'theoretical' | 'reference'
-volatility: feature-surface      # tools-style: 'stable-principle' | 'architectural-pattern' | 'feature-surface'
-tags:                            # freeform string array (NOT the tools_compared enum)
+last_verified: 2026-05-19         # YAML date (no quotes); becomes a JS Date
+
+# optional — hierarchy (use whichever fits; all three may be omitted)
+slug: ch01-introduction           # defaults to filename
+chapter: 1                        # tools-style numeric
+part: 1                           # either number OR academic-style string enum
+week: 1                           # only if you use weekly cadence
+
+# optional — authoring state + epistemic type
+status: prose_only                # 'scaffolded'|'prose_only'|'code_only'|'chapter_only'|'reading_only'|'implemented'|'planned'
+freshness: experimental-result    # 'experimental-result'|'literature-survey'|'theoretical'|'reference'
+
+# optional — provenance
+volatility: feature-surface       # 'stable-principle'|'architectural-pattern'|'feature-surface'
+tags:                             # freeform string array (NOT the tools_compared enum)
   - prompt-injection
   - red-team
   - CVE-2025-32711
-sources:
+sources:                          # structured inline; tier ∈ {T1, T2, T3, T4}
   - tier: T1
     url: https://nvd.nist.gov/vuln/detail/CVE-2025-32711
     label: NVD CVE-2025-32711 (primary advisory)
   - tier: T2
     url: https://arxiv.org/abs/2406.00799
     label: TaskTracker (Wallace et al. 2024)
-last_verified: 2026-05-19
+
+# optional — SEO / OpenGraph (v4.6+)
+description: "..."                # used by Base.astro meta tags
+author: "Brandon Behring"
+published: 2026-05-01
+updated: 2026-05-19
+image: "/og/ch01.png"
+
 draft: false
 ---
 ```
