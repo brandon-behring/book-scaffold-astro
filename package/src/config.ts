@@ -174,10 +174,18 @@ export async function defineBookConfig(
       mdxComponentsModule,
       extraStyles: mergedExtraStyles,
       // v4.5.0: pass landing-page data through to the integration so it can
-      // be exposed to the auto-injected /index.astro via vite.define.
+      // be exposed to the auto-injected /index.astro via the virtual module.
       title: opts.title,
       description: opts.description,
       portfolio: resolvedPortfolio,
+      // v4.6.0: book-level author + SEO config (ogImage, twitterHandle),
+      // propagated through the renamed `book-config` virtual module to
+      // Base.astro + Chapter.astro. `seo.sitemap` is NOT passed through —
+      // it's consumed below at config-time by the @astrojs/sitemap call.
+      author: opts.author,
+      seo: opts.seo
+        ? { ogImage: opts.seo.ogImage, twitterHandle: opts.seo.twitterHandle }
+        : undefined,
     }),
     ...mergedExtraIntegrations,
   ];
@@ -223,6 +231,9 @@ export async function defineBookConfig(
     title: _title,
     description: _description,
     portfolio: _portfolio,
+    // v4.6.0: strip new book-level SEO opts (author + seo block).
+    author: _author,
+    seo: _seo,
     ...rest
   } = opts;
   void _styles;
@@ -237,6 +248,8 @@ export async function defineBookConfig(
   void _title;
   void _description;
   void _portfolio;
+  void _author;
+  void _seo;
 
   // KaTeX externals — same v3.7.1 pattern, now gated on the composed preset.
   const katexExternals = wantsKatex ? [] : ['remark-math', 'rehype-katex', 'katex'];

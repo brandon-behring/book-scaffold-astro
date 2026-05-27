@@ -16,19 +16,30 @@ declare module 'astro:content' {
 }
 
 /**
- * v4.5.1: Landing-config virtual module surface. Resolved at consumer build
- * time by `makeLandingConfigVitePlugin` (see integration.ts). Replaces the
- * v4.5.0 env-var pattern (`import.meta.env.BOOK_TITLE` etc.) which was
- * vulnerable to silent override by consumer `.env` files.
+ * v4.6.0: Book-config virtual module surface (renamed from
+ * `virtual:book-scaffold/landing-config` in v4.5.1). Resolved at consumer
+ * build time by `makeBookConfigVitePlugin` (see integration.ts).
  *
- * Imported by `package/pages/index.astro`.
+ * Originally carried only landing-page data (title/description/portfolio/
+ * enabledRoutes), but v4.6.0's SEO work added `seo` + `author` fields
+ * consumed by `Base.astro` on every page — the name was renamed to reflect
+ * the data's general book-level scope rather than landing-specific.
+ *
+ * Imported by `package/pages/index.astro` (landing) AND
+ * `package/layouts/Base.astro` (every page) AND
+ * `package/layouts/Chapter.astro` (article:author fallback).
  */
-declare module 'virtual:book-scaffold/landing-config' {
+declare module 'virtual:book-scaffold/book-config' {
   const bookConfig: {
     title: string | null;
     description: string | null;
     portfolio: { url: string; label: string } | false;
     enabledRoutes: readonly string[];
+    author: string | null;
+    seo: {
+      ogImage: string | null;
+      twitterHandle: string | null;
+    };
   };
   export default bookConfig;
 }

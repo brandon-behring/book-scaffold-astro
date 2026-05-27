@@ -31,44 +31,49 @@ import {
 } from './mdx-components-resolver.js';
 
 /**
- * v4.5.1: Landing-config virtual module plugin. Exposes book identity
- * (title, description, portfolio) + the post-merge enabledRoutes list to
- * the auto-injected `/` page via `virtual:book-scaffold/landing-config`.
+ * v4.6.0: Book-config virtual module plugin (renamed from
+ * `landing-config` in v4.5.1). Exposes book-level identity + SEO config to
+ * every page that needs it — the auto-injected landing AND `Base.astro` on
+ * every page AND `Chapter.astro` (article:author fallback) via
+ * `virtual:book-scaffold/book-config`.
  *
- * Replaces v4.5.0's env-var approach (`import.meta.env.BOOK_TITLE` etc.)
- * which was vulnerable to silent override by consumer `.env` files —
- * surfaced during DML deploy when a stale `BOOK_TITLE=web` line in
- * web/.env overrode the defineBookConfig({title}) value. Env vars are the
- * right pattern for *preference flags* (BOOK_PRESET, BOOK_PROFILE — where
- * the env-based override IS the convention); they are the wrong pattern
- * for *config values* (title, description, portfolio — which should only
- * flow from defineBookConfig). Virtual modules solve this cleanly: same
- * pattern as the existing `virtual:book-scaffold/mdx-components`.
+ * Previously named `landing-config` (v4.5.1) when only the landing page
+ * consumed it. v4.6.0 added SEO meta tags to Base.astro (Primary item of
+ * issue #76), which means every page now imports this module, and the
+ * "landing" name became misleading. Same plugin shape, broader payload.
  *
- * See ~/.claude/plans/i-want-to-look-streamed-pebble.md §Phase 6-pre
- * "v4.5.1 refactor" + ~/.claude/projects/.../memory/dogfood-loop.md for
- * the surfacing-via-deploy story.
+ * The virtual-module pattern (rather than env-var injection) is preserved
+ * from v4.5.1 — it isolates config values from consumer `.env` collisions
+ * (the DML `BOOK_TITLE=web` bug from the v4.5.0→v4.5.1 dogfood loop).
+ *
+ * See ~/.claude/plans/i-want-to-look-streamed-pebble.md (v4.5.x history)
+ * + ~/.claude/plans/next-session-pickup-silly-tiger.md (v4.6.0 plan).
  */
-const LANDING_VIRTUAL_ID = 'virtual:book-scaffold/landing-config';
-const LANDING_RESOLVED_ID = '\0' + LANDING_VIRTUAL_ID;
+const BOOK_CONFIG_VIRTUAL_ID = 'virtual:book-scaffold/book-config';
+const BOOK_CONFIG_RESOLVED_ID = '\0' + BOOK_CONFIG_VIRTUAL_ID;
 
-function makeLandingConfigVitePlugin(config: {
+function makeBookConfigVitePlugin(config: {
   title: string | null;
   description: string | null;
   portfolio: { url: string; label: string } | false;
   enabledRoutes: readonly string[];
+  author: string | null;
+  seo: {
+    ogImage: string | null;
+    twitterHandle: string | null;
+  };
 }) {
   // Serialize once at plugin-creation time so subsequent load() calls are O(1).
   const serialized = `export default ${JSON.stringify(config)};`;
   return {
-    name: 'book-scaffold:landing-config',
+    name: 'book-scaffold:book-config',
     enforce: 'pre' as const,
     resolveId(id: string) {
-      if (id === LANDING_VIRTUAL_ID) return LANDING_RESOLVED_ID;
+      if (id === BOOK_CONFIG_VIRTUAL_ID) return BOOK_CONFIG_RESOLVED_ID;
       return null;
     },
     load(id: string) {
-      if (id !== LANDING_RESOLVED_ID) return null;
+      if (id !== BOOK_CONFIG_RESOLVED_ID) return null;
       return serialized;
     },
   };
@@ -138,10 +143,14 @@ export function bookScaffoldIntegration(
     routes: userOverrides = {},
     extraStyles = [],
     mdxComponentsModule,
-    // v4.5.0: landing-page data, propagated via vite.define to /index.astro.
+    // v4.5.0: landing-page data, propagated via virtual module to /index.astro.
     title,
     description,
     portfolio,
+    // v4.6.0: book-level author + SEO config, propagated through the
+    // (renamed) book-config virtual module to Base.astro + Chapter.astro.
+    author,
+    seo,
   } = opts;
   const def = PROFILES[profile];
 
@@ -226,11 +235,16 @@ export function bookScaffoldIntegration(
           vite: {
             plugins: [
               makeMdxComponentsVitePlugin(resolvedMdxPath),
-              makeLandingConfigVitePlugin({
+              makeBookConfigVitePlugin({
                 title: title ?? null,
                 description: description ?? null,
                 portfolio: portfolio ?? false,
                 enabledRoutes: enabledRouteNames,
+                author: author ?? null,
+                seo: {
+                  ogImage: seo?.ogImage ?? null,
+                  twitterHandle: seo?.twitterHandle ?? null,
+                },
               }),
             ],
             define: {

@@ -83,6 +83,13 @@ export const academicChapterSchema = z.object({
   notebook_path: z.string().optional(),
   description: z.string().optional(),
   draft: z.boolean().default(false),
+  // v4.6.0: optional SEO / article:* fields consumed by Chapter.astro.
+  // All optional; existing chapters without these continue to work.
+  author: z.string().optional(),
+  published: z.date().optional(),
+  updated: z.date().optional(),
+  tags: z.array(z.string()).default([]),
+  image: z.string().optional(),
 });
 
 export const toolsChapterSchema = z.object({
@@ -96,6 +103,12 @@ export const toolsChapterSchema = z.object({
   description: z.string().optional(),
   draft: z.boolean().default(false),
   updated: z.date().optional(),
+  // v4.6.0: optional SEO / article:* fields consumed by Chapter.astro.
+  // `updated` already existed; the rest are new.
+  author: z.string().optional(),
+  published: z.date().optional(),
+  tags: z.array(z.string()).default([]),
+  image: z.string().optional(),
 });
 
 /** Minimal profile currently aliases the tools schema. */
@@ -147,6 +160,14 @@ export const courseNotesChapterSchema = z.object({
   volatility: z.enum(volatilityLevels).default('architectural-pattern'),
   sources: z.array(z.string()).default([]),
   draft: z.boolean().default(false),
+
+  // v4.6.0: optional SEO / article:* fields consumed by Chapter.astro.
+  // `tags` already existed; the rest are new. `instructor` (line 130) is
+  // attribution metadata — distinct from `author` (the note-writer/curator).
+  author: z.string().optional(),
+  published: z.date().optional(),
+  updated: z.date().optional(),
+  image: z.string().optional(),
 });
 
 /**
@@ -228,6 +249,12 @@ export const researchPortfolioChapterSchema = z.object({
   last_verified: z.date(),
   updated: z.date().optional(),
   draft: z.boolean().default(false),
+
+  // v4.6.0: optional SEO / article:* fields consumed by Chapter.astro.
+  // `tags` + `updated` already existed; `author` + `published` + `image` are new.
+  author: z.string().optional(),
+  published: z.date().optional(),
+  image: z.string().optional(),
 });
 
 // ===== Inferred chapter types — one per schema =====

@@ -159,6 +159,44 @@ export interface BookConfigOptions {
    * brandon-behring.dev ecosystem).
    */
   portfolio?: { url: string; label: string } | false;
+  /**
+   * v4.6.0: Book-level author. Used as the default
+   * `<meta property="article:author">` value on chapter pages when no
+   * per-chapter `author` is set in frontmatter. Most books have one author
+   * across all chapters; this avoids repeating the value in every chapter
+   * file. Per-chapter `author` frontmatter overrides this.
+   */
+  author?: string;
+  /**
+   * v4.6.0: SEO + sitemap configuration. All fields optional.
+   *
+   * `ogImage` — default Open Graph image URL (relative to the site root, or
+   * absolute). When omitted, no `<meta property="og:image">` is emitted by
+   * default; per-page `Astro.props.ogImage` can still set one. Consumers
+   * opt-in to OG cards by adding e.g. `/og-default.png` to their `public/`
+   * AND setting `seo: { ogImage: '/og-default.png' }`. Avoids broken-link
+   * meta tags on consumers who haven't authored an OG image yet.
+   *
+   * `twitterHandle` — adds `<meta name="twitter:site" content="@handle">`
+   * when set. Omitted by default.
+   *
+   * `sitemap.filter` — predicate applied to every page URL before inclusion
+   * in `/sitemap-index.xml`. When set, REPLACES the profile-default filter
+   * (academic/course-notes default-exclude `/print/`). When omitted, the
+   * profile default applies.
+   *
+   * `sitemap.customPages` — additional URLs to include in the sitemap that
+   * Astro's filesystem scan won't discover (passthrough to
+   * `@astrojs/sitemap`'s `customPages` option).
+   */
+  seo?: {
+    ogImage?: string;
+    twitterHandle?: string;
+    sitemap?: {
+      filter?: (page: string) => boolean;
+      customPages?: string[];
+    };
+  };
   /** Escape hatch for any other AstroUserConfig field. */
   [key: string]: unknown;
 }
@@ -200,6 +238,21 @@ export interface BookScaffoldIntegrationOptions {
    * BRANDON_PORTFOLIO_DEFAULT). `false` means the landing renders no link.
    */
   portfolio?: { url: string; label: string } | false;
+  /**
+   * v4.6.0: book-level author, propagated through the book-config virtual
+   * module to Chapter.astro's `<meta property="article:author">` fallback.
+   */
+  author?: string;
+  /**
+   * v4.6.0: SEO payload propagated through the book-config virtual module
+   * to Base.astro. Only `ogImage` + `twitterHandle` are exposed at runtime
+   * — the `sitemap` sub-block is consumed at config-time in defineBookConfig
+   * (it never reaches the integration / virtual module).
+   */
+  seo?: {
+    ogImage?: string;
+    twitterHandle?: string;
+  };
 }
 
 /** Raised when the resolved profile is not one of `BOOK_PROFILES`. */

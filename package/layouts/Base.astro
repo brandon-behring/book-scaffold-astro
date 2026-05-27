@@ -50,6 +50,10 @@ import '../styles/print.css';
 import VersionSelector from '@brandon_m_behring/book-scaffold-astro/components/VersionSelector';
 import ToolFilter from '@brandon_m_behring/book-scaffold-astro/components/ToolFilter';
 import Sidebar from '../components/Sidebar.astro';
+// v4.6.0: SEO meta tags read book-level identity (title fallback,
+// description fallback, ogImage default, twitterHandle) from the
+// book-config virtual module (was landing-config in v4.5.1).
+import bookConfig from 'virtual:book-scaffold/book-config';
 
 const profile = import.meta.env.BOOK_PROFILE ?? 'minimal';
 const showToolsChrome = profile !== 'academic';
@@ -59,9 +63,37 @@ interface Props {
   description?: string;
   lang?: string;
   showSidebar?: boolean;
+  /** v4.6.0: Open Graph image URL (relative to site root, or absolute). */
+  ogImage?: string;
+  /** v4.6.0: Open Graph type. Defaults to 'website'; Chapter.astro passes 'article'. */
+  ogType?: string;
 }
 
-const { title, description, lang = 'en', showSidebar = true } = Astro.props;
+const {
+  title,
+  description,
+  lang = 'en',
+  showSidebar = true,
+  ogImage,
+  ogType = 'website',
+} = Astro.props;
+
+// v4.6.0: canonical + og:url need Astro.site. defineBookConfig throws at
+// config-load if `site` is missing, so Astro.site is guaranteed populated
+// here. `new URL` resolves the relative pathname against it.
+const canonicalURL = new URL(Astro.url.pathname, Astro.site).toString();
+
+// Per D3: og:image emits only when an image is explicitly set — either via
+// per-page Astro.props.ogImage or book-level bookConfig.seo.ogImage. No
+// '/og-default.png' fallback to avoid broken-link meta tags on consumers
+// without an OG image authored.
+const resolvedOgImage = ogImage ?? bookConfig.seo?.ogImage ?? null;
+const absoluteOgImage = resolvedOgImage
+  ? new URL(resolvedOgImage, Astro.site).toString()
+  : null;
+const twitterHandle = bookConfig.seo?.twitterHandle ?? null;
+const ogSiteName = bookConfig.title ?? title;
+const ogDescription = description ?? bookConfig.description ?? '';
 ---
 
 <!doctype html>
@@ -74,6 +106,27 @@ const { title, description, lang = 'en', showSidebar = true } = Astro.props;
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
+
+    {/* v4.6.0: SEO meta-tag block (issue #76 Primary). canonical + og:* +
+        twitter:* on every page; article:* lives in Chapter.astro via the
+        Base `<slot name="head" />` (below). og:image + twitter:image emit
+        only when an image is explicitly set (per D3, avoids broken-link
+        OG tags). sitemap link points at @astrojs/sitemap's auto-emitted
+        index. */}
+    <link rel="canonical" href={canonicalURL} />
+    <link rel="sitemap" type="application/xml" href="/sitemap-index.xml" />
+    <meta property="og:title" content={title} />
+    {ogDescription && <meta property="og:description" content={ogDescription} />}
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={ogSiteName} />
+    {absoluteOgImage && <meta property="og:image" content={absoluteOgImage} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    {ogDescription && <meta name="twitter:description" content={ogDescription} />}
+    {absoluteOgImage && <meta name="twitter:image" content={absoluteOgImage} />}
+    {twitterHandle && <meta name="twitter:site" content={twitterHandle} />}
+
     {/* FOUC prevention — apply saved theme before any paint. */}
     <script is:inline>
       (function () {

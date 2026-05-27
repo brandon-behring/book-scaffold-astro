@@ -9,8 +9,10 @@
  * config needed.
  *
  * Reads book identity + portfolio + enabled-routes from the
- * `virtual:book-scaffold/landing-config` virtual module exposed by
- * makeLandingConfigVitePlugin (see integration.ts §4.5.1). v4.5.0 used
+ * `virtual:book-scaffold/book-config` virtual module exposed by
+ * makeBookConfigVitePlugin (renamed from makeLandingConfigVitePlugin in
+ * v4.6.0 since Base.astro now also imports the module on every page).
+ * v4.5.0 used
  * import.meta.env.BOOK_* env vars; that pattern was vulnerable to silent
  * override by consumer .env files (caught during DML deploy when a stale
  * `BOOK_TITLE=web` in web/.env overrode defineBookConfig({title})). The
@@ -31,7 +33,7 @@
  *     or defineBookConfig({ portfolio: false })
  */
 import Base from '../layouts/Base.astro';
-import bookConfig from 'virtual:book-scaffold/landing-config';
+import bookConfig from 'virtual:book-scaffold/book-config';
 
 const title = bookConfig.title ?? 'book-scaffold-astro';
 const description = bookConfig.description;
