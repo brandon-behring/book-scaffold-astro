@@ -49,8 +49,25 @@ For pre-commit: add to `.pre-commit-config.yaml`:
 
 ## Environment variables
 
-- `BOOK_PROFILE` — `academic` enables Cite-key checking; otherwise skipped.
+- `BOOK_PRESET` (canonical) / `BOOK_PROFILE` (alias) — which preset to validate against. `academic` enables Cite-key checking.
 - `BOOK_REPO_ROOT` — absolute path to the paired code repo for CodeRef checks. Unset → skipped (the scaffold default; minimal/tools books rarely have a paired code repo).
+- `BOOK_CHAPTERS_DIR` — override the chapters directory (default: read from `content.config.ts`, fallback `src/content/chapters`).
+
+## Preset / chaptersBase resolution (v4.7.0+, #75)
+
+The validator resolves both `preset` and `chaptersBase` by consulting multiple sources in a documented order. Notable v4.7.0 addition: the v4.5+ canonical form
+
+```ts
+// src/content.config.ts
+export const { collections } = defineBookSchemas({
+  preset: 'research-portfolio',
+  chaptersBase: './src/content/textbook',
+});
+```
+
+is now read by the CLI (previously it was silently ignored — the CLI defaulted to `profile=minimal` and walked `./src/content/chapters/` while `astro build` applied the correct settings, masking real schema drift).
+
+Full precedence chain documented in [`PACKAGE_DESIGN.md §8 — Preset + chaptersBase resolution`](../../PACKAGE_DESIGN.md#preset--chaptersbase-resolution-v470-closes-75).
 
 ## Output
 

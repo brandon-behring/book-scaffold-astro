@@ -36,6 +36,79 @@ export async function* walkMdx(dir, baseDir = dir) {
 
 /**
  * Read the consumer's `content.config.ts` (or `.mjs` / `.js`) and extract
+ * `defineBookSchemas({ preset?, profile?, chaptersBase? })` options.
+ *
+ * v4.7.0 (closes #75): consumers using the v4.5+ canonical form
+ *
+ *   export const { collections } = defineBookSchemas({
+ *     preset: 'research-portfolio',
+ *     chaptersBase: './src/content/textbook',
+ *   });
+ *
+ * previously had BOTH options ignored by the CLI scripts. `validate` and
+ * `build-labels` resolved preset only from env vars and walked the default
+ * chapters dir, silently checking the wrong directory under the wrong
+ * profile while astro build applied the correct settings — a divergence
+ * masking real schema drift.
+ *
+ * Strategy: regex-parse the source file (avoid runtime import; the file
+ * imports from `astro:content` / `astro/loaders` which don't resolve in
+ * plain Node). Captures the entire `defineBookSchemas({ ... })` options
+ * object, then field-by-field regex within that scope for `preset:`,
+ * `profile:` (alias), and `chaptersBase:`.
+ *
+ * Returns `{ preset, chaptersBase }` — both nullable. Returns `null` for
+ * either field when:
+ *   - content.config.{ts,mjs,js} doesn't exist
+ *   - no `defineBookSchemas(...)` call found
+ *   - the field is absent or uses a dynamic form (variable, template literal)
+ *
+ * `preset` and `profile` are aliases (canonical name flipped in v3.7+);
+ * `preset` wins when both are present.
+ */
+export async function readBookSchemaConfig(projectRoot) {
+  const result = { preset: null, chaptersBase: null };
+  for (const ext of ['ts', 'mjs', 'js']) {
+    const configPath = join(projectRoot, `src/content.config.${ext}`);
+    if (!existsSync(configPath)) continue;
+    let source;
+    try {
+      source = await readFile(configPath, 'utf8');
+    } catch {
+      return result;
+    }
+    // Match `defineBookSchemas({ ... })` — capture the options object body.
+    // Non-greedy `[\s\S]*?` matches the smallest balanced-enough scope; for
+    // typical configs the options object is small (≤200 chars) and any
+    // nested braces (uncommon in this API) would terminate the match early.
+    // Acceptable trade-off: simple regex over a real parser.
+    const callMatch = source.match(
+      /\bdefineBookSchemas\s*\(\s*\{([\s\S]*?)\}\s*\)/,
+    );
+    if (callMatch) {
+      const optsBody = callMatch[1];
+      // preset is canonical (v3.7+); profile is backward-compat alias.
+      const presetMatch =
+        optsBody.match(/\bpreset\s*:\s*'([^']+)'/) ||
+        optsBody.match(/\bpreset\s*:\s*"([^"]+)"/);
+      const profileMatch =
+        optsBody.match(/\bprofile\s*:\s*'([^']+)'/) ||
+        optsBody.match(/\bprofile\s*:\s*"([^"]+)"/);
+      result.preset = presetMatch?.[1] ?? profileMatch?.[1] ?? null;
+      const chaptersBaseMatch =
+        optsBody.match(/\bchaptersBase\s*:\s*'([^']+)'/) ||
+        optsBody.match(/\bchaptersBase\s*:\s*"([^"]+)"/);
+      result.chaptersBase = chaptersBaseMatch?.[1] ?? null;
+    }
+    // First existing file wins (priority: .ts > .mjs > .js).
+    return result;
+  }
+  // No content.config.{ts,mjs,js} at all.
+  return result;
+}
+
+/**
+ * Read the consumer's `content.config.ts` (or `.mjs` / `.js`) and extract
  * the `loader.base` path for the `chapters` content collection.
  *
  * v4.1.1 (closes #63): consumers in the multi-guide / multi-book pattern
@@ -46,6 +119,9 @@ export async function* walkMdx(dir, baseDir = dir) {
  * consumer's config file and returns the actual base path so both scripts
  * discover the consumer's chapter files.
  *
+ * v4.7.0 (closes #75): when the raw Astro form isn't present, also consult
+ * `readBookSchemaConfig()` for `defineBookSchemas({ chaptersBase })`.
+ *
  * Strategy: regex-parse the source file (avoid runtime import; the file
  * imports from `astro:content` / `astro/loaders` which don't resolve in
  * plain Node). Matches both single- and double-quoted string literals;
@@ -55,6 +131,7 @@ export async function* walkMdx(dir, baseDir = dir) {
  * `${projectRoot}/src/content/chapters` when:
  *   - content.config.{ts,mjs,js} doesn't exist
  *   - the file exists but no `chapters` collection or `loader.base` found
+ *     AND no `defineBookSchemas({ chaptersBase: ... })` form found
  *   - the matched base path uses dynamic forms (variables, template literals)
  *     instead of a string literal
  *
@@ -90,6 +167,12 @@ export async function readChaptersBase(projectRoot) {
     const captured = m && (m[1] || m[2]);
     if (captured) {
       return resolve(projectRoot, captured);
+    }
+    // v4.7.0 (closes #75): no raw Astro form match — try the v4.5+ form
+    // `defineBookSchemas({ chaptersBase: '...' })`.
+    const schemaConfig = await readBookSchemaConfig(projectRoot);
+    if (schemaConfig.chaptersBase) {
+      return resolve(projectRoot, schemaConfig.chaptersBase);
     }
     // File exists but no override found — assume the consumer uses the
     // scaffold's defineBookSchemas() default.

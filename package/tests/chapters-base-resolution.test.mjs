@@ -1,8 +1,12 @@
 /**
- * tests/chapters-base-resolution.test.mjs — readChaptersBase (v4.1.1 #63).
+ * tests/chapters-base-resolution.test.mjs — readChaptersBase (v4.1.1 #63)
+ *                                          + readBookSchemaConfig (v4.7.0 #75).
  *
- * Verifies the helper that lets validate.mjs + build-labels.mjs honor
- * `loader.base` overrides in the consumer's content.config.{ts,mjs,js}.
+ * Verifies the helpers that let validate.mjs + build-labels.mjs honor
+ * both consumer config forms:
+ *   - Raw Astro `chapters: defineCollection({ loader: glob({ base: ... }) })`
+ *     (v4.1.1 form, closed #63)
+ *   - v4.5+ `defineBookSchemas({ preset, chaptersBase })` form (v4.7.0, #75)
  *
  * Coverage:
  *   - No content.config file → default src/content/chapters
@@ -13,13 +17,16 @@
  *   - .mjs and .js extensions also work
  *   - Dynamic base (template literal) falls back to default
  *   - BOOK_CHAPTERS_DIR env wins over file parse
+ *   - v4.5+ defineBookSchemas({ chaptersBase }) form picked up (#75)
+ *   - v4.5+ defineBookSchemas({ preset }) extracted by readBookSchemaConfig (#75)
+ *   - `profile` accepted as backward-compat alias for `preset` (#75)
  */
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { writeFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { readChaptersBase } from '../scripts/walk-mdx.mjs';
+import { readChaptersBase, readBookSchemaConfig } from '../scripts/walk-mdx.mjs';
 
 async function withProject(setup, fn) {
   // BUG FIX (v4.1.2): make the harness ACTUALLY async — `try { return fn(dir) }
@@ -195,6 +202,214 @@ export const collections = { notes };
         await readChaptersBase(root),
         resolve(root, 'src/content/chapters'),
       );
+    },
+  );
+});
+
+// ===== v4.7.0 (#75): defineBookSchemas({ preset, chaptersBase }) form =====
+
+test('readChaptersBase: v4.5+ defineBookSchemas({ chaptersBase }) form is picked up (#75)', async () => {
+  await withProject(
+    (root) => {
+      writeFileSync(
+        join(root, 'src/content.config.ts'),
+        `import { defineBookSchemas } from '@brandon_m_behring/book-scaffold-astro/schemas';
+export const { collections } = defineBookSchemas({
+  preset: 'research-portfolio',
+  chaptersBase: './src/content/textbook',
+});
+`,
+      );
+    },
+    async (root) => {
+      assert.equal(
+        await readChaptersBase(root),
+        resolve(root, 'src/content/textbook'),
+      );
+    },
+  );
+});
+
+test('readChaptersBase: defineBookSchemas without chaptersBase returns default', async () => {
+  // Regression: setting only `preset` should not change directory resolution.
+  await withProject(
+    (root) => {
+      writeFileSync(
+        join(root, 'src/content.config.ts'),
+        `import { defineBookSchemas } from '@brandon_m_behring/book-scaffold-astro/schemas';
+export const { collections } = defineBookSchemas({ preset: 'research-portfolio' });
+`,
+      );
+    },
+    async (root) => {
+      assert.equal(
+        await readChaptersBase(root),
+        resolve(root, 'src/content/chapters'),
+      );
+    },
+  );
+});
+
+test('readBookSchemaConfig: missing content.config returns both nulls', async () => {
+  await withProject(
+    () => {},
+    async (root) => {
+      const result = await readBookSchemaConfig(root);
+      assert.deepEqual(result, { preset: null, chaptersBase: null });
+    },
+  );
+});
+
+test('readBookSchemaConfig: defineBookSchemas({ preset }) extracts preset', async () => {
+  await withProject(
+    (root) => {
+      writeFileSync(
+        join(root, 'src/content.config.ts'),
+        `export const { collections } = defineBookSchemas({ preset: 'research-portfolio' });`,
+      );
+    },
+    async (root) => {
+      const result = await readBookSchemaConfig(root);
+      assert.equal(result.preset, 'research-portfolio');
+      assert.equal(result.chaptersBase, null);
+    },
+  );
+});
+
+test('readBookSchemaConfig: profile accepted as backward-compat alias', async () => {
+  await withProject(
+    (root) => {
+      writeFileSync(
+        join(root, 'src/content.config.ts'),
+        `export const { collections } = defineBookSchemas({ profile: 'academic' });`,
+      );
+    },
+    async (root) => {
+      const result = await readBookSchemaConfig(root);
+      assert.equal(result.preset, 'academic');
+    },
+  );
+});
+
+test('readBookSchemaConfig: preset wins when both preset and profile present', async () => {
+  await withProject(
+    (root) => {
+      writeFileSync(
+        join(root, 'src/content.config.ts'),
+        `export const { collections } = defineBookSchemas({
+  preset: 'research-portfolio',
+  profile: 'academic',
+});`,
+      );
+    },
+    async (root) => {
+      const result = await readBookSchemaConfig(root);
+      assert.equal(result.preset, 'research-portfolio');
+    },
+  );
+});
+
+test('readBookSchemaConfig: extracts both preset and chaptersBase', async () => {
+  await withProject(
+    (root) => {
+      writeFileSync(
+        join(root, 'src/content.config.ts'),
+        `export const { collections } = defineBookSchemas({
+  preset: 'research-portfolio',
+  chaptersBase: './src/content/textbook',
+});`,
+      );
+    },
+    async (root) => {
+      const result = await readBookSchemaConfig(root);
+      assert.equal(result.preset, 'research-portfolio');
+      assert.equal(result.chaptersBase, './src/content/textbook');
+    },
+  );
+});
+
+test('readBookSchemaConfig: double-quoted strings work', async () => {
+  await withProject(
+    (root) => {
+      writeFileSync(
+        join(root, 'src/content.config.ts'),
+        `export const { collections } = defineBookSchemas({ preset: "tools", chaptersBase: "src/content/foo" });`,
+      );
+    },
+    async (root) => {
+      const result = await readBookSchemaConfig(root);
+      assert.equal(result.preset, 'tools');
+      assert.equal(result.chaptersBase, 'src/content/foo');
+    },
+  );
+});
+
+test('readBookSchemaConfig: template-literal values fall back to null', async () => {
+  await withProject(
+    (root) => {
+      writeFileSync(
+        join(root, 'src/content.config.ts'),
+        `const dir = 'textbook';
+export const { collections } = defineBookSchemas({
+  preset: 'research-portfolio',
+  chaptersBase: \`./src/content/\${dir}\`,
+});`,
+      );
+    },
+    async (root) => {
+      const result = await readBookSchemaConfig(root);
+      // preset still extracts (string literal), chaptersBase is dynamic → null.
+      assert.equal(result.preset, 'research-portfolio');
+      assert.equal(result.chaptersBase, null);
+    },
+  );
+});
+
+test('readBookSchemaConfig: .mjs config variant also parses', async () => {
+  await withProject(
+    (root) => {
+      writeFileSync(
+        join(root, 'src/content.config.mjs'),
+        `export const { collections } = defineBookSchemas({ preset: 'course-notes' });`,
+      );
+    },
+    async (root) => {
+      const result = await readBookSchemaConfig(root);
+      assert.equal(result.preset, 'course-notes');
+    },
+  );
+});
+
+test('readBookSchemaConfig: no defineBookSchemas call returns both nulls', async () => {
+  await withProject(
+    (root) => {
+      writeFileSync(
+        join(root, 'src/content.config.ts'),
+        // Raw Astro form only — no defineBookSchemas call anywhere.
+        `const chapters = defineCollection({ loader: glob({ base: './src/content/foo' }) });
+export const collections = { chapters };`,
+      );
+    },
+    async (root) => {
+      const result = await readBookSchemaConfig(root);
+      assert.deepEqual(result, { preset: null, chaptersBase: null });
+    },
+  );
+});
+
+test('readBookSchemaConfig: tabs + irregular whitespace in options object', async () => {
+  // Real-world configs sometimes use tabs or unusual whitespace. The
+  // regex must be permissive about whitespace around the colon.
+  await withProject(
+    (root) => {
+      writeFileSync(
+        join(root, 'src/content.config.ts'),
+        `export const { collections } = defineBookSchemas({\n\tpreset:\t'minimal',\n});`,
+      );
+    },
+    async (root) => {
+      const result = await readBookSchemaConfig(root);
+      assert.equal(result.preset, 'minimal');
     },
   );
 });

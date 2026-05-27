@@ -28,7 +28,7 @@
 import { readFile, access } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
-import { walkMdx, readChaptersBase } from './walk-mdx.mjs';
+import { walkMdx, readChaptersBase, readBookSchemaConfig } from './walk-mdx.mjs';
 
 /**
  * Best-effort .env reader. Mirrors `readEnvFile` in src/types.ts; kept inline
@@ -105,17 +105,26 @@ const DATA_DIR = resolve(ROOT, 'src/data');
 
 // Preset resolution (matches resolvePreset in src/types.ts):
 //   --preset flag > BOOK_PRESET env > BOOK_PROFILE env >
-//   .env BOOK_PRESET > .env BOOK_PROFILE > 'minimal'.
+//   .env BOOK_PRESET > .env BOOK_PROFILE >
+//   defineBookSchemas({ preset }) in content.config.ts >
+//   defineBookSchemas({ profile }) in content.config.ts (alias) >
+//   'minimal'.
 // .env fallback closes #20 — without it, consumers who set BOOK_PROFILE in
 // .env (the documented convenience in SKILL.md + create-book defaults) saw
 // the CLI silently default to minimal, hiding academic-profile errors.
+// content.config.ts fallback closes #75 — without it, consumers using the
+// canonical v4.5+ defineBookSchemas({ preset, chaptersBase }) form had the
+// CLI silently default to minimal, hiding research-portfolio (and any
+// non-env-set) profile errors while astro build applied the correct settings.
 const dotenv = readEnvFile(resolve(ROOT, '.env'));
+const schemaConfig = await readBookSchemaConfig(ROOT);
 const PRESET =
   presetFromFlag ??
   process.env.BOOK_PRESET ??
   process.env.BOOK_PROFILE ??
   dotenv.BOOK_PRESET ??
   dotenv.BOOK_PROFILE ??
+  schemaConfig.preset ??
   'minimal';
 // Alias kept for downstream message text only; the resolution above is canonical.
 const PROFILE = PRESET;

@@ -854,6 +854,36 @@ await import(path.resolve(here, handlers[sub]));
 - **Sub-command exits with code 2** = unknown sub-command (typo).
 - **`build-figures` skips silently** when `pdftocairo` and `pdftoppm` are both unavailable (Cloudflare build container case). Committed SVGs are used instead. Not a bug.
 
+### Preset + chaptersBase resolution (v4.7.0+, closes #75)
+
+`validate` and `build-labels` resolve both the active **preset** and the **chapters base directory** by consulting multiple sources in this order. The first source that yields a value wins:
+
+**Preset chain** (`validate` only — `build-labels` does not currently use preset):
+
+1. `--preset <name>` CLI flag
+2. `BOOK_PRESET` env var
+3. `BOOK_PROFILE` env var (backward-compat alias)
+4. `.env` file `BOOK_PRESET`
+5. `.env` file `BOOK_PROFILE`
+6. `defineBookSchemas({ preset })` in `src/content.config.{ts,mjs,js}`
+7. `defineBookSchemas({ profile })` in `src/content.config.ts` (alias)
+8. `'minimal'` fallback
+
+**chaptersBase chain** (both `validate` and `build-labels`):
+
+1. `BOOK_CHAPTERS_DIR` env var
+2. Raw Astro form: `chapters: defineCollection({ loader: glob({ base: '...' }) })` in `content.config.*`
+3. v4.5+ form: `defineBookSchemas({ chaptersBase: '...' })` in `content.config.*`
+4. `'./src/content/chapters'` default
+
+Both chains parse the consumer's config file via regex (string literals only — template literals and dynamic expressions fall back to the next source). The helpers are exported from `package/scripts/walk-mdx.mjs`:
+
+```js
+import { readChaptersBase, readBookSchemaConfig } from '@brandon_m_behring/book-scaffold-astro/...';
+// readBookSchemaConfig(projectRoot) → { preset, chaptersBase }  (both nullable)
+// readChaptersBase(projectRoot)     → string (always returns a resolved abs path)
+```
+
 ---
 
 ## 9. Consumer config snippets

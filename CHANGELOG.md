@@ -2,6 +2,82 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.7.0] — 2026-05-27
+
+Minor release. Closes #75 — CLI/build divergence on the v4.5+ canonical `defineBookSchemas({ preset, chaptersBase })` form. New behavior is purely additive (no breaking changes to existing consumers).
+
+### Why
+
+Consumer `prompt-injection-portfolio` (research-portfolio preset, custom chaptersBase) adopted the v4.5+ canonical config form:
+
+```ts
+// src/content.config.ts
+export const { collections } = defineBookSchemas({
+  preset: 'research-portfolio',
+  chaptersBase: './src/content/textbook',
+});
+```
+
+`astro build` honored both options correctly. But `book-scaffold validate` (and `build-labels`) reported `profile=minimal, 0 chapters` — they were silently checking the wrong directory under the wrong profile while `astro build` applied the correct settings. The divergence masked real schema drift across 13 chapters.
+
+Root cause: `readChaptersBase()` (added in v4.1.1 for closed-#63) was designed for the *raw Astro form* (`chapters: defineCollection({ loader: glob({ base: ... }) })`). Its regex used `\bchapters\b ... \bbase\s*:`, neither of which match the camelCase `chaptersBase` identifier in the new form. There was no equivalent helper for the `preset` option at all — preset resolved only from env vars and `.env`.
+
+### Fixed
+
+- **`book-scaffold validate` now reads `defineBookSchemas({ preset, chaptersBase })`** from `src/content.config.{ts,mjs,js}` (issue #75). Adds a new fallback layer between `.env` and the `'minimal'` default for preset resolution.
+- **`book-scaffold build-labels` chaptersBase pickup** — automatic via the extended `readChaptersBase()` helper; no separate change needed in build-labels.mjs.
+
+### Added
+
+- **`readBookSchemaConfig(projectRoot)` helper** in `package/scripts/walk-mdx.mjs` — returns `{ preset, chaptersBase }` (both nullable) by regex-parsing the consumer's `content.config.{ts,mjs,js}` for the `defineBookSchemas({ ... })` options object. Handles single- + double-quoted string literals; falls back to null for template literals and other dynamic forms. `preset` and `profile` are aliases (preset wins when both present).
+- **`readChaptersBase()` v4.7.0 extension** — when the existing raw Astro form regex doesn't match, consults `readBookSchemaConfig().chaptersBase` before falling back to the default. Existing call sites (v4.1.1 closed-#63 consumers) unaffected.
+- **12 new tests** in `package/tests/chapters-base-resolution.test.mjs` covering: defineBookSchemas form pickup, preset/profile alias, both fields in same call, double-quoted strings, template-literal fallback, .mjs variant, no-call-present case, irregular whitespace. All previous 222 tests still pass; total 234.
+- **PACKAGE_DESIGN.md §8** — new "Preset + chaptersBase resolution" subsection documenting the full precedence chain (8 sources for preset, 4 sources for chaptersBase).
+- **Recipe 09** — section on the v4.7.0 preset/chaptersBase resolution change with cross-link to PACKAGE_DESIGN.md.
+
+### Resolution chain
+
+**Preset** (`validate` only — `build-labels` does not currently use preset):
+
+1. `--preset <name>` CLI flag
+2. `BOOK_PRESET` env var
+3. `BOOK_PROFILE` env var (alias)
+4. `.env BOOK_PRESET` / `.env BOOK_PROFILE`
+5. `defineBookSchemas({ preset })` in `content.config.*`
+6. `defineBookSchemas({ profile })` in `content.config.*` (alias)
+7. `'minimal'` fallback
+
+**chaptersBase** (both `validate` and `build-labels`):
+
+1. `BOOK_CHAPTERS_DIR` env var
+2. Raw Astro form `chapters: defineCollection({ loader: glob({ base: ... }) })`
+3. v4.5+ form `defineBookSchemas({ chaptersBase })`
+4. `'./src/content/chapters'` default
+
+### Verification
+
+Reproduction (before fix):
+
+```bash
+# In a project with src/content.config.ts using defineBookSchemas({
+#   preset: 'research-portfolio', chaptersBase: './src/content/textbook' })
+# and 1 chapter at src/content/textbook/ch01.mdx:
+$ book-scaffold validate
+validate: ✓ 1 chapter(s) checked (profile=minimal); no errors.
+# ^^^ WRONG — should be profile=research-portfolio, the schema drift goes undetected.
+```
+
+After fix:
+
+```bash
+$ book-scaffold validate
+validate: ✓ 1 chapter(s) checked (profile=research-portfolio); no errors.
+```
+
+### Migration
+
+None — additive change. Consumers using env-only preset resolution see no behavior difference. Consumers using `defineBookSchemas({ preset, chaptersBase })` now get accurate CLI output matching what `astro build` was already doing.
+
 ## [4.6.1] — 2026-05-27
 
 Patch release. Docs-only + repo hygiene. No runtime behavior changes.
