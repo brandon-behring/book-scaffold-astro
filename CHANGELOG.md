@@ -2,6 +2,81 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.6.0] — 2026-05-26
+
+Minor release. Bundles four cleanups + one convention discovered during the 2026-05-26 first-deploys of `double_ml_time_series` and `ssm-foundations`, plus the validator-UX follow-on filed as issue #77:
+
+1. **Primary** — `Base.astro` SEO meta-tag parity (canonical + og:* + twitter:* + article:* — closes the two-consumer gap relative to `brandon-behring.dev`'s apex).
+2. **Secondary** — `@astrojs/sitemap` as a scaffold-default integration with per-profile filter defaults.
+3. **Tertiary** — chapter-route ownership cleanup (Layer 3a/3b/3c — recipe + validator warning + create-book template).
+4. **Convention** — recommend the `prevalidate` npm lifecycle hook (replaces the ad-hoc `ci:validate` workaround shipped by DML + ssm during Phase 1c).
+5. **Bonus** (issue #77) — validator re-frames missing-references.json from 25+ "unknown bibkey" symptoms to a single leading error pointing at the prereq.
+
+All additive. Existing consumers upgrade with zero config changes; new features opt-in via the `seo` + `author` defineBookConfig fields.
+
+### Why
+
+Page-source grep across three deployed sites surfaced the gap:
+
+| Tag | ssm-foundations | dml.brandon-behring | brandon-behring.dev |
+|---|---|---|---|
+| `<link rel="canonical">` | 0 | 0 | 1 |
+| `<meta property="og:*">` | 0 | 0 | ≥ 1 each |
+| `<meta name="twitter:*">` | 0 | 0 | ≥ 1 each |
+| `<link rel="sitemap">` | 0 | 0 | 0 |
+| `/sitemap-index.xml` | 404 | 404 | 404 |
+
+Two-consumer evidence on the SEO meta tags + three-consumer gap on sitemap emission made this a v4.6 priority. Bundled with the chapter-route ownership cleanup (also surfaced during the same deploys — Astro's filesystem routes silently shadowing the scaffold's v4.3.0+ auto-injected `/chapters/[...slug]/` route) and the validator-UX recipe pair (`prevalidate` convention + missing-prereq re-framing) since all four touch the same surface area.
+
+### Added
+
+- **Base.astro SEO meta tags** (Layer A, issue #76 Primary): emits 11 baseline tags on every page — `<link rel="canonical">`, `<link rel="sitemap">`, `<meta property="og:title|description|url|type|site_name|image?>`, `<meta name="twitter:card|title|description|image?|site?>`. `og:image` + `twitter:image` only emit when `defineBookConfig.seo.ogImage` (or per-page `Astro.props.ogImage`) is explicitly set — no automatic `'/og-default.png'` fallback (avoids broken-link OG tags on consumers without an OG image authored).
+- **Chapter.astro article:* meta tags** (Layer A): passes `ogType="article"` to Base + emits `<meta property="article:author|published_time|modified_time|tag>` from chapter frontmatter via Base's `<slot name="head">`. Author falls back to top-level `bookConfig.author`.
+- **`defineBookConfig({ author?: string, seo?: { ogImage?, twitterHandle?, sitemap?: { filter?, customPages? } } })`** — new optional fields. `seo.sitemap.filter` REPLACES the per-profile default (not composed); consumers wanting AND-composition copy the profile predicate into their own filter.
+- **Chapter frontmatter `author?: string, published?: Date, updated?: Date, tags?: string[], image?: string`** — additive optional fields across all 4 chapter schemas (academic / tools / course-notes / research-portfolio). Existing chapters work unchanged; new chapters opt-in by declaring fields.
+- **`@astrojs/sitemap` default integration** (Layer B, issue #76 Secondary): emits `/sitemap-index.xml` + per-route sitemaps at build. Per-profile filter defaults: academic + course-notes exclude `/print/`; tools + minimal + research-portfolio include all.
+- **`book-scaffold validate` chapter-route shadow warning** (Layer 3b, issue #76 Tertiary): detects consumer-owned `src/pages/chapters/[...slug].astro` shadowing the scaffold's auto-injected route; emits a non-blocking warning unless the consumer set `routes: { chapters: false }` (intentional override). Edge-case-tested via `tests/v4.6-seo-and-sitemap.test.mjs` (4 cases).
+- **`book-scaffold validate` missing-prereq abort** (Layer E, issue #77): when `src/data/references.json` is missing AND chapters use `<Cite>`, abort with ONE leading error pointing at `npm run build:bib` + the `prevalidate` convention. Replaces the 25+ "Unknown bibkey" symptom list that pointed at content instead of the missing prereq. Same treatment for missing `src/data/labels.json` when chapters use `<XRef>`.
+- **`package/recipes/18-chapter-route-ownership.md`** (Layer 3a, new): documents the 3 valid states (default / intentional override / shadow anti-pattern); includes migration playbook for pre-v4.3.0 consumers.
+- **`package/recipes/19-prevalidate-hook.md`** (Layer D, new): documents the `prevalidate` npm-lifecycle hook convention as the long-term replacement for `ci:validate` wrapper scripts; includes 3-file migration recipe for existing consumers.
+
+### Changed
+
+- **Virtual module rename**: `virtual:book-scaffold/landing-config` → `virtual:book-scaffold/book-config`. The data it carries (title, description, portfolio, enabledRoutes + new seo + author) is no longer landing-specific — `Base.astro` on every page imports it now. Single internal consumer updated (`package/pages/index.astro`). No backward-compat alias — the virtual module is internal-only API. Plugin function renamed `makeLandingConfigVitePlugin` → `makeBookConfigVitePlugin`.
+- **`create-book` templates** (Layer 3c): removed `src/pages/chapters/[...slug].astro` from all 5 profile branches. New books on v4.6+ are clean from day one; scaffold's auto-injected route handles per-chapter rendering. Consumers wanting a custom layout opt-in via State 2 of recipe 18 (consumer-owned file + `routes: { chapters: false }`).
+- **`create-book` templates** (Layer D): added `prevalidate` npm-lifecycle hook for academic + research-portfolio profiles (the two that run cite-key validation). `prebuild` simplifies to just `npm run validate --if-present`; npm's lifecycle handles the prereq chain.
+- **Demo update** (D14): `demo/astro.config.mjs` now sets `title`, `description`, `author`, and a `seo` block (ogImage + twitterHandle) to exercise v4.6's full propagation chain end-to-end. New `demo/src/content/chapters/v46-seo-demo.mdx` exemplifies article:* frontmatter. Demo's `demo/public/og-default.png` placeholder ships with the demo (1200×630, ~53 KB).
+
+### Migration
+
+None for consumers staying on existing functionality. To adopt new features:
+
+```diff
+ // astro.config.mjs
+ export default await defineBookConfig({
+   styles: [academicStyle],
+   site: 'https://your-book.example/',
++  author: 'Your Name',
++  seo: {
++    ogImage: '/og-default.png',  // commit a 1200×630 PNG to public/ first
++    twitterHandle: '@yourhandle',
++  },
+ });
+```
+
+Consumers using the `ci:validate` deploy-time wrapper can migrate to the `prevalidate` npm-lifecycle hook (recipe 19) — drop the wrapper script + revert `validate-command: ci:validate` → `validate` in `.github/workflows/deploy.yml`. Same CI behavior, cleaner `package.json`.
+
+### Release policy
+
+- 6 atomized commits per Layer (A → B → 3b+E → 3a → 3c+D → F).
+- 222 tests pass (215 existing + 7 new in `tests/v4.6-seo-and-sitemap.test.mjs`).
+- 18 create-book tests pass (14 existing + 4 new for Layer 3c + D).
+- Demo build verifies the full SEO + sitemap surface end-to-end:
+  - 11 baseline SEO tags emit on every page.
+  - article:* tags emit on the v46-seo-demo chapter.
+  - `/sitemap-index.xml` + `/sitemap-0.xml` emit; `/print/` excluded per academic-profile default filter.
+- `npm publish` deferred to the maintainer (WebAuthn 2FA can't be CLI-driven; see plan D5).
+
 ## [4.5.1] — 2026-05-26
 
 Patch release. Refactors v4.5.0's landing-config source from `import.meta.env.BOOK_*` env vars to a Vite virtual module (`virtual:book-scaffold/landing-config`). Functionally identical for consumers that don't have stale env-var entries; functionally **correct** for consumers whose `.env` files happen to define `BOOK_TITLE` / `BOOK_DESCRIPTION` / `BOOK_PORTFOLIO`.
