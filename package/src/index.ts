@@ -127,6 +127,10 @@ export {
   sourcesSchema,
   changelogSchema,
   patternsSchema,
+  // v4.8.0: provenance (process-as-artifact audit trail)
+  citationBackstops,
+  provenanceObject,
+  provenanceSchema,
 } from './schemas.js';
 
 // Inferred chapter types per profile (v3.3.0). Type-only re-export from
@@ -140,3 +144,6 @@ export type {
   ResearchPortfolioChapter,    // v3.5.0 (#6)
   ChapterFor,
 } from './profiles/index.js';
+
+// v4.8.0: inferred provenance type (consumed by components/Provenance.astro).
+export type { Provenance } from './schemas.js';

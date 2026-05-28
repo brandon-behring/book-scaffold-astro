@@ -1,0 +1,206 @@
+---
+/**
+ * Provenance — per-chapter "How this was made" audit-trail disclosure (v4.8.0).
+ *
+ * Renders the optional `provenance` chapter frontmatter (see provenanceObject in
+ * src/schemas.ts) as a collapsed <details> block, family-styled with the warm-plum
+ * disclosure language (cf. AICollaborationDisclosure.astro) and the ▸/▾ summary
+ * marker (cf. .chapter-toc in styles/chapter.css). No JavaScript.
+ *
+ * Auto-injected by the chapter route (pages/chapters/[...slug].astro) on EVERY
+ * chapter of EVERY profile — so it is OPT-OUT, not opt-in: a chapter with no
+ * `provenance` still renders, showing a fallback ("Audit history not yet
+ * recorded — initial draft"). This forces awareness and signals to readers that
+ * an audit trail is expected.
+ *
+ * Scope (deliberate): this block owns the PROCESS audit trail (ai_tools, prompts,
+ * decisions, audits, citation backstop). It does NOT render freshness/volatility —
+ * ChapterHeader.astro owns that "is this current?" badge. And it is distinct from
+ * AICollaborationDisclosure (book-level, manual model+role disclosure).
+ *
+ * Claim-safety: references are repo-relative paths (e.g. "audits/AUDIT_x.md",
+ * "DECISIONS.md#anchor") that do NOT resolve on the built static site, so they
+ * render as <code> text. Only genuine http(s) URLs become clickable links — the
+ * site's "no dead links" thesis applied to its own chrome.
+ */
+import type { Provenance } from '../src/schemas.js';
+
+interface Props {
+  data: Provenance | null;
+}
+const { data } = Astro.props;
+
+const isUrl = (s: string) => /^https?:\/\//i.test(s);
+const fmtDate = (d: Date | string) =>
+  (d instanceof Date ? d : new Date(d)).toISOString().slice(0, 10);
+
+const aiTools = data?.ai_tools ?? [];
+const audits = data?.audit_history ?? [];
+const backstop = data?.citation_backstop;
+const promptsArchive = data?.prompts_archive;
+const decisionsLog = data?.decisions_log;
+
+// Opt-out (D3): the block always renders; "empty" → fallback.
+const hasContent =
+  aiTools.length > 0 ||
+  audits.length > 0 ||
+  Boolean(backstop) ||
+  Boolean(promptsArchive) ||
+  Boolean(decisionsLog);
+
+// Teaser digest shown in the <summary> so the signal reads while collapsed.
+const teaserParts: string[] = [];
+if (audits.length) teaserParts.push(`${audits.length} audit${audits.length > 1 ? 's' : ''}`);
+if (backstop) teaserParts.push(`${backstop}-backed`);
+if (!teaserParts.length && aiTools.length) {
+  teaserParts.push(`${aiTools.length} tool${aiTools.length > 1 ? 's' : ''}`);
+}
+const teaser = teaserParts.length ? `How this was made · ${teaserParts.join(' · ')}` : 'How this was made';
+---
+<aside class="provenance" role="note" aria-labelledby="provenance-h">
+  <details class="provenance-details">
+    <summary id="provenance-h">{teaser}</summary>
+
+    {hasContent ? (
+      <div class="provenance-body">
+        {aiTools.length > 0 && (
+          <p class="provenance-row">
+            <span class="provenance-label">AI tools</span>
+            {aiTools.map((t) => <span class="provenance-chip">{t}</span>)}
+          </p>
+        )}
+
+        {(promptsArchive || decisionsLog) && (
+          <p class="provenance-row">
+            <span class="provenance-label">References</span>
+            {promptsArchive && (
+              <span class="provenance-ref">prompts: {isUrl(promptsArchive)
+                ? <a href={promptsArchive}>{promptsArchive}</a>
+                : <code>{promptsArchive}</code>}</span>
+            )}
+            {decisionsLog && (
+              <span class="provenance-ref">decisions: {isUrl(decisionsLog)
+                ? <a href={decisionsLog}>{decisionsLog}</a>
+                : <code>{decisionsLog}</code>}</span>
+            )}
+          </p>
+        )}
+
+        {audits.length > 0 && (
+          <div class="provenance-row">
+            <span class="provenance-label">Audit history</span>
+            <ul class="provenance-audits">
+              {audits.map((a) => (
+                <li>
+                  <time datetime={fmtDate(a.date)}>{fmtDate(a.date)}</time>
+                  <span class="provenance-audit-type">{a.type}</span>
+                  {isUrl(a.file) ? <a href={a.file}>{a.file}</a> : <code>{a.file}</code>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {backstop && (
+          <p class="provenance-row">
+            <span class="provenance-label">Citation backstop</span>
+            <span class={`provenance-badge backstop-${backstop}`}>{backstop}</span>
+          </p>
+        )}
+      </div>
+    ) : (
+      <p class="provenance-fallback">
+        Audit history not yet recorded — initial draft.
+      </p>
+    )}
+  </details>
+</aside>
+
+<style>
+  .provenance {
+    display: block;
+    margin: var(--space-6) 0;
+    padding: var(--space-3) var(--space-4);
+    border-left: var(--border-bar) solid var(--warm-plum);
+    background: var(--warm-plum-tint);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    max-width: var(--measure-main);
+  }
+  .provenance-details > summary {
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--warm-plum);
+    letter-spacing: 0.02em;
+    list-style: none;
+  }
+  .provenance-details > summary::-webkit-details-marker {
+    display: none;
+  }
+  .provenance-details > summary::before {
+    content: '▸ ';
+    display: inline-block;
+  }
+  .provenance-details[open] > summary::before {
+    content: '▾ ';
+  }
+  .provenance-body {
+    margin-top: var(--space-3);
+  }
+  .provenance-row {
+    margin: var(--space-2) 0;
+    text-indent: 0;
+  }
+  .provenance-label {
+    display: inline-block;
+    min-width: 9rem;
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--warm-plum);
+    vertical-align: top;
+  }
+  .provenance-chip,
+  .provenance-badge {
+    display: inline-block;
+    margin: 0 var(--space-1) var(--space-1) 0;
+    padding: 0.1em 0.5em;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--warm-plum) 12%, var(--paper));
+    font-size: var(--text-xs);
+  }
+  .provenance-ref {
+    display: inline-block;
+    margin-right: var(--space-3);
+  }
+  .provenance-ref code,
+  .provenance-audits code {
+    font-family: var(--font-code);
+    font-size: 0.95em;
+    background: var(--color-code-bg);
+    padding: 0.1em 0.4em;
+    border-radius: var(--radius-sm);
+  }
+  .provenance-audits {
+    list-style: none;
+    margin: var(--space-1) 0 0;
+    padding-left: 0;
+  }
+  .provenance-audits li {
+    margin: var(--space-1) 0;
+  }
+  .provenance-audits time {
+    font-family: var(--font-code);
+    margin-right: var(--space-2);
+  }
+  .provenance-audit-type {
+    margin-right: var(--space-2);
+    font-style: italic;
+  }
+  .provenance-fallback {
+    margin: var(--space-3) 0 0;
+    font-style: italic;
+    opacity: 0.8;
+  }
+</style>

@@ -2,6 +2,26 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.8.0] — 2026-05-28
+
+Minor release. Adds a per-chapter **Provenance** audit-trail component + an optional `provenance` frontmatter field on every profile schema. Purely additive — existing chapters validate and render unchanged.
+
+### Why
+
+The scaffold's consumers practice a "process-as-artifact" discipline (DECISIONS logs, a dated `AUDIT_*.md` cadence, research-kb as the citation backstop) that was invisible to readers. v4.8.0 surfaces it: every chapter auto-renders a collapsible "How this was made" block reading the new `provenance` frontmatter. It is **opt-out** — a chapter with no `provenance` shows a fallback ("Audit history not yet recorded"), so an audit trail is visibly expected everywhere. Distinct from `AICollaborationDisclosure` (book-level, manual model+role disclosure); this is per-chapter and audit-focused.
+
+### Added
+
+- **`Provenance.astro`** (`./components/Provenance.astro`) — collapsible `<details>` block, warm-plum disclosure styling, native `<details>` (no JS). The `<summary>` carries a teaser digest (e.g. "How this was made · 2 audits · research-kb-backed") so the signal reads while collapsed. Renders AI tools, prompts/decisions references, dated audit history, and a citation-backstop badge. Repo-relative paths render as `<code>`; only `http(s)` values become links (no dead links).
+- **`provenance` frontmatter object** on all profile schemas (academic / tools / minimal / course-notes / research-portfolio), optional. Fields: `ai_tools[]`, `prompts_archive?`, `decisions_log?`, `audit_history[]` (`{ date, type, file }`), `citation_backstop?`. `audit_history.type` is a free string (real audit types vary); `citation_backstop` is a controlled enum (`research-kb` / `manual` / `unverified`). Path fields use plain `z.string()` — repo-relative paths are not URLs. The object is `.strict()` (unknown keys rejected — fail loud, no silent data loss for an audit feature) and, when present, must be non-empty (`.refine`; omit the key to opt out). New exports: `provenanceObject`, `provenanceSchema`, `citationBackstops`, and the inferred `Provenance` type.
+- **Auto-injected render** in `pages/chapters/[...slug].astro` — placed at the route layer (not a single layout) so it covers BOTH paths: academic/research-portfolio (`Chapter.astro`) and tools/minimal/course-notes (`Base.astro`). Every chapter of every consumer gets the block on upgrade with no consumer code change.
+- **New tests**: `package/tests/provenance.test.mjs` (schema parse with/without provenance across all five profiles, controlled-enum enforcement, relative-path acceptance guarding a `.url()` regression, `.strict` unknown-key + `.refine` empty-object rejection) and `package/tests/provenance-component.test.mjs` (source-contract for the component render logic + route wiring). Total 275 (was 234).
+- **Populated exemplar** in `demo/src/content/chapters/v46-seo-demo.mdx` + a README recipe under "What ships in the package".
+
+### Notes
+
+- The visual-regression suite does **not** currently capture this block: its fixtures define their own chapter routes that shadow the package-injected route, so they never render `Provenance`. Render is instead verified by source-contract tests (`package/tests/provenance-component.test.mjs`) plus the demo build exemplar (`demo/src/content/chapters/v46-seo-demo.mdx`). Adding a fixture that routes through the injected route would extend pixel coverage later.
+
 ## [4.7.0] — 2026-05-27
 
 Minor release. Closes #75 — CLI/build divergence on the v4.5+ canonical `defineBookSchemas({ preset, chaptersBase })` form. New behavior is purely additive (no breaking changes to existing consumers).

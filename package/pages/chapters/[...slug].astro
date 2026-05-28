@@ -17,8 +17,10 @@
  * [...slug].astro for the canonical pattern).
  */
 import { getCollection, render } from 'astro:content';
+import type { Provenance } from '../../src/schemas.js';
 import Chapter from '../../layouts/Chapter.astro';
 import Base from '../../layouts/Base.astro';
+import ProvenanceBlock from '../../components/Provenance.astro';
 
 const BOOK_PRESET = import.meta.env.BOOK_PRESET ?? 'minimal';
 const USE_CHAPTER_LAYOUT = ['academic', 'research-portfolio'].includes(BOOK_PRESET);
@@ -34,7 +36,14 @@ export async function getStaticPaths() {
 const { entry } = Astro.props;
 const { Content, headings } = await render(entry);
 const Layout = USE_CHAPTER_LAYOUT ? Chapter : Base;
+
+// v4.8.0: per-chapter provenance audit trail. Rendered here (not in a single
+// layout) so it reaches BOTH layout paths — Chapter.astro (academic/
+// research-portfolio) AND Base.astro (tools/minimal/course-notes). Opt-out:
+// always rendered; absent `provenance` → the component's fallback.
+const provenance = (entry.data as { provenance?: Provenance }).provenance ?? null;
 ---
 <Layout entry={entry} headings={headings}>
   <Content />
+  <ProvenanceBlock data={provenance} />
 </Layout>
