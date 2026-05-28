@@ -1,7 +1,7 @@
 {
   "name": "@brandon_m_behring/create-book",
   "description": "Bootstrap CLI for @brandon_m_behring/book-scaffold-astro. `npx @brandon_m_behring/create-book <name> --profile=academic|tools|minimal` scaffolds a thin consumer repo with the package wired in.",
-  "version": "4.7.0",
+  "version": "4.8.0",
   "type": "module",
   "license": "MIT",
   "author": "Brandon Behring",

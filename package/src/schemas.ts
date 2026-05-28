@@ -70,6 +70,29 @@ export const chapterStatus = [
   'planned',
 ] as const;
 
+// ===== Provenance (v4.8.0) — process-as-artifact audit trail =====
+//
+// Optional per-chapter block attached to EVERY profile schema below.
+// components/Provenance.astro renders it as a collapsible "How this was made"
+// disclosure (opt-out: absent → fallback). Distinct from AICollaborationDisclosure
+// (book-level, manual). Paths are repo-relative, so prompts_archive / decisions_log
+// use plain z.string() — NOT .url() (which would reject "DECISIONS.md#anchor").
+// audit_history.type is a free string (real audit types vary: 'routine',
+// 'independent', 'first-deploy', ...); citation_backstop is a controlled vocabulary.
+export const citationBackstops = ['research-kb', 'manual', 'unverified'] as const;
+
+export const provenanceObject = z.object({
+  ai_tools: z.array(z.string()).default([]),
+  prompts_archive: z.string().optional(),
+  decisions_log: z.string().optional(),
+  audit_history: z
+    .array(z.object({ date: z.date(), type: z.string(), file: z.string() }))
+    .default([]),
+  citation_backstop: z.enum(citationBackstops).optional(),
+});
+
+export const provenanceSchema = provenanceObject.optional();
+
 // ===== Chapter schemas — one per profile =====
 
 export const academicChapterSchema = z.object({
@@ -90,6 +113,8 @@ export const academicChapterSchema = z.object({
   updated: z.date().optional(),
   tags: z.array(z.string()).default([]),
   image: z.string().optional(),
+  // v4.8.0: optional process-as-artifact audit trail (Provenance.astro).
+  provenance: provenanceSchema,
 });
 
 export const toolsChapterSchema = z.object({
@@ -109,6 +134,8 @@ export const toolsChapterSchema = z.object({
   published: z.date().optional(),
   tags: z.array(z.string()).default([]),
   image: z.string().optional(),
+  // v4.8.0: optional process-as-artifact audit trail (Provenance.astro).
+  provenance: provenanceSchema,
 });
 
 /** Minimal profile currently aliases the tools schema. */
@@ -168,6 +195,8 @@ export const courseNotesChapterSchema = z.object({
   published: z.date().optional(),
   updated: z.date().optional(),
   image: z.string().optional(),
+  // v4.8.0: optional process-as-artifact audit trail (Provenance.astro).
+  provenance: provenanceSchema,
 });
 
 /**
@@ -255,6 +284,8 @@ export const researchPortfolioChapterSchema = z.object({
   author: z.string().optional(),
   published: z.date().optional(),
   image: z.string().optional(),
+  // v4.8.0: optional process-as-artifact audit trail (Provenance.astro).
+  provenance: provenanceSchema,
 });
 
 // ===== Inferred chapter types — one per schema =====
@@ -269,6 +300,7 @@ export type ToolsChapter = z.infer<typeof toolsChapterSchema>;
 export type MinimalChapter = z.infer<typeof minimalChapterSchema>;
 export type CourseNotesChapter = z.infer<typeof courseNotesChapterSchema>;
 export type ResearchPortfolioChapter = z.infer<typeof researchPortfolioChapterSchema>;
+export type Provenance = z.infer<typeof provenanceObject>;
 
 // ===== Collateral collection schemas (tools-profile; always-defined) =====
 

@@ -39,7 +39,7 @@ BOOK_PROFILE=academic
 
 ## What ships in the package
 
-- **38 components** at one flat path (`./components/<Name>.astro`) — Cite / XRef / Figure / Theorem / 18 callouts (academic + tools families) / 2 Preact islands / nav + headers
+- **39 components** at one flat path (`./components/<Name>.astro`) — Cite / XRef / Figure / Theorem / 18 callouts (academic + tools families) / 2 Preact islands / nav + headers / per-chapter `Provenance` audit block (v4.8.0)
 - **8 stylesheets** auto-injected by profile via the dual-purpose Astro Integration (route + style injection)
 - **Default pages** auto-injected: `/references` / `/search` / `/print` (all profiles); `/convergence` (tools profile); `/chapters` (tools profile by default, opt-in for academic via `routes.chapters: true` — schema-aware as of v3.5.2)
 - **Profile-aware Zod schemas** — academic 7-state status / tools volatility + T1-T4 source tiers
@@ -50,6 +50,30 @@ BOOK_PROFILE=academic
 - **`book-scaffold` CLI** dispatcher with sub-commands: `validate`, `build-labels`, `build-bib`, `build-figures`, `render-notebooks`
 - **Cloudflare Workers + Static Assets** deploy via `wrangler.toml`
 - **Warm Tol 5-hue palette** (colorblind-safe; light + dark modes)
+
+### Per-chapter provenance audit trail (v4.8.0)
+
+Every chapter auto-renders a collapsible "How this was made" block (process,
+not freshness — `ChapterHeader` still owns the freshness badge). It is
+**opt-out**: a chapter with no `provenance` shows a fallback ("Audit history not
+yet recorded"), so an audit trail is visibly expected everywhere. Add the
+optional `provenance` object to any chapter's frontmatter:
+
+```yaml
+provenance:
+  ai_tools: ['Claude Code (Opus 4.8)', 'research-kb']
+  prompts_archive: docs/sessions/2026-05-22--ch07.md   # repo-relative path or URL
+  decisions_log: DECISIONS.md#ch07-derivation           # repo-relative path or URL
+  audit_history:
+    - { date: 2026-05-15, type: routine, file: audits/AUDIT_2026-05-15.md }
+    - { date: 2026-05-22, type: independent, file: audits/AUDIT_2026-05-22.md }
+  citation_backstop: research-kb                         # research-kb | manual | unverified
+```
+
+Repo-relative paths render as `<code>` references (they don't resolve on the
+built site); only `http(s)` values become links. Distinct from
+`AICollaborationDisclosure` (book-level, manual). See the populated example in
+`demo/src/content/chapters/v46-seo-demo.mdx`.
 
 ## Reference consumers (Phase G migration, 2026-05-19)
 
