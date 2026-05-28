@@ -21,6 +21,7 @@ import {
   citationBackstops,
   academicChapterSchema,
   toolsChapterSchema,
+  minimalChapterSchema,
   courseNotesChapterSchema,
   researchPortfolioChapterSchema,
 } from '../dist/index.mjs';
@@ -47,6 +48,15 @@ const minimal = {
     tools_compared: ['claude-code'],
     last_verified: new Date('2026-05-01'),
   },
+  // minimal aliases tools (schemas.ts) — same required body.
+  minimal: {
+    title: 'Ch1',
+    part: 1,
+    chapter: 1,
+    volatility: 'stable-principle',
+    tools_compared: ['claude-code'],
+    last_verified: new Date('2026-05-01'),
+  },
   courseNotes: { title: 'Lec1', chapter: 1, last_verified: new Date('2026-05-01') },
   researchPortfolio: { title: 'Note1', last_verified: new Date('2026-05-01') },
 };
@@ -54,6 +64,7 @@ const minimal = {
 const schemas = {
   academic: academicChapterSchema,
   tools: toolsChapterSchema,
+  minimal: minimalChapterSchema,
   courseNotes: courseNotesChapterSchema,
   researchPortfolio: researchPortfolioChapterSchema,
 };
@@ -94,6 +105,16 @@ test('provenanceObject: audit_history.type accepts arbitrary free strings', () =
   assert.equal(r.success, true, 'free-form audit types (real ssm data) must be accepted');
 });
 
+test('provenanceObject: unknown keys are rejected (.strict — fail loud on typos)', () => {
+  const r = provenanceObject.safeParse({ ai_tools: ['x'], desisions_log: 'typo' });
+  assert.equal(r.success, false, 'a misspelled key must fail, not be silently stripped (silent data loss)');
+});
+
+test('provenanceObject: audit_history entries require date + file', () => {
+  const r = provenanceObject.safeParse({ audit_history: [{ type: 'routine' }] });
+  assert.equal(r.success, false, 'an audit row missing date/file must be rejected');
+});
+
 for (const [name, schema] of Object.entries(schemas)) {
   test(`${name} schema: validates WITHOUT provenance (opt-out / backward-compat)`, () => {
     const r = schema.safeParse({ ...minimal[name] });
@@ -110,6 +131,11 @@ for (const [name, schema] of Object.entries(schemas)) {
 
   test(`${name} schema: rejects an invalid provenance backstop`, () => {
     const r = schema.safeParse({ ...minimal[name], provenance: { citation_backstop: 'nope' } });
+    assert.equal(r.success, false);
+  });
+
+  test(`${name} schema: rejects an empty provenance block (present ⇒ non-empty)`, () => {
+    const r = schema.safeParse({ ...minimal[name], provenance: {} });
     assert.equal(r.success, false);
   });
 }

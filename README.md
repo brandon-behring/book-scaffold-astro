@@ -39,7 +39,7 @@ BOOK_PROFILE=academic
 
 ## What ships in the package
 
-- **39 components** at one flat path (`./components/<Name>.astro`) — Cite / XRef / Figure / Theorem / 18 callouts (academic + tools families) / 2 Preact islands / nav + headers / per-chapter `Provenance` audit block (v4.8.0)
+- **53 components** at one flat path (`./components/<Name>.astro`) — Cite / XRef / Figure / Theorem / 18 callouts (academic + tools families) / 2 Preact islands / nav + headers / per-chapter `Provenance` audit block (v4.8.0)
 - **8 stylesheets** auto-injected by profile via the dual-purpose Astro Integration (route + style injection)
 - **Default pages** auto-injected: `/references` / `/search` / `/print` (all profiles); `/convergence` (tools profile); `/chapters` (tools profile by default, opt-in for academic via `routes.chapters: true` — schema-aware as of v3.5.2)
 - **Profile-aware Zod schemas** — academic 7-state status / tools volatility + T1-T4 source tiers

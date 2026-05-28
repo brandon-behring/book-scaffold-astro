@@ -73,6 +73,24 @@ Supported `type` values: `theorem`, `proposition`, `lemma`, `corollary`, `defini
 | `Tag` | Inline volatility/topic tag | `<Tag>stable-principle</Tag>` |
 | `StatusBadge` | Render frontmatter `status` value with color | `<StatusBadge status={frontmatter.status} />` |
 | `ChapterHeader` | Auto-rendered metadata block (week, part, status, companion links) | placed at top of each chapter automatically by Chapter.astro |
+| `Provenance` | Auto-rendered per-chapter audit trail (v4.8.0) | placed at the end of each chapter by the chapter route — not imported |
+
+## Per-chapter provenance (v4.8.0, auto-injected)
+
+`Provenance` renders a collapsible "How this was made" block on **every** chapter — you don't import or place it. It reads the optional `provenance` frontmatter and is **opt-out**: a chapter with no `provenance` shows a fallback ("Audit history not yet recorded"). It surfaces *process* (the audit trail); `ChapterHeader` still owns *freshness*. Distinct from `AICollaborationDisclosure` (book-level, manual model+role disclosure).
+
+```yaml
+provenance:
+  ai_tools: ['Claude Code (Opus 4.8)', 'research-kb']
+  prompts_archive: docs/sessions/2026-05-22--ch07.md   # repo-relative path or URL
+  decisions_log: DECISIONS.md#ch07-derivation           # repo-relative path or URL
+  audit_history:
+    - { date: 2026-05-15, type: routine, file: audits/AUDIT_2026-05-15.md }
+    - { date: 2026-05-22, type: independent, file: audits/AUDIT_2026-05-22.md }
+  citation_backstop: research-kb                         # research-kb | manual | unverified
+```
+
+Repo-relative paths render as `<code>`; only `http(s)` values become links (no dead links). If present, the `provenance` object must be non-empty (omit the key to opt out — unknown keys are rejected). `citation_backstop` is a closed set; `audit_history[].type` is free text.
 
 ## Conditional imports
 

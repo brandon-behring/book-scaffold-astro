@@ -99,6 +99,8 @@ Two callout families coexist. Authors import what they need.
 
 **Utility components** (`src/components/`, any profile): `Cite`, `XRef`, `Figure`, `MarginNote`, `Sidenote`, `WeekRef`, `CodeRef`, `CodeBlock`, `Tag`, `StatusBadge`, `PocLayout` (v4.1.0+; wraps slot in a per-`kind` layout shell — 5 closed-union kinds; see `recipes/15-defining-styles.md`).
 
+**Provenance** (v4.8.0, any profile, **auto-injected by the chapter route — not author-imported**): per-chapter "How this was made" audit-trail block, rendered from the optional `provenance` frontmatter (`ai_tools`, `prompts_archive`, `decisions_log`, `audit_history`, `citation_backstop`). **Opt-out**: a chapter with no `provenance` shows a fallback ("Audit history not yet recorded"). Distinct from `AICollaborationDisclosure` (book-level, manual model+role disclosure). Repo-relative path fields render as `<code>`; only `http(s)` values link.
+
 Full reference in `recipes/04-component-library.md`.
 
 ## Citation patterns

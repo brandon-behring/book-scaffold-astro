@@ -81,17 +81,34 @@ export const chapterStatus = [
 // 'independent', 'first-deploy', ...); citation_backstop is a controlled vocabulary.
 export const citationBackstops = ['research-kb', 'manual', 'unverified'] as const;
 
-export const provenanceObject = z.object({
-  ai_tools: z.array(z.string()).default([]),
-  prompts_archive: z.string().optional(),
-  decisions_log: z.string().optional(),
-  audit_history: z
-    .array(z.object({ date: z.date(), type: z.string(), file: z.string() }))
-    .default([]),
-  citation_backstop: z.enum(citationBackstops).optional(),
-});
+export const provenanceObject = z
+  .object({
+    ai_tools: z.array(z.string()).default([]),
+    prompts_archive: z.string().optional(),
+    decisions_log: z.string().optional(),
+    audit_history: z
+      .array(z.object({ date: z.date(), type: z.string(), file: z.string() }))
+      .default([]),
+    citation_backstop: z.enum(citationBackstops).optional(),
+  })
+  // .strict(): a misspelled key (e.g. `desisions_log`) must fail loud at build,
+  // not be silently stripped — silent data loss is the opposite of an audit trail.
+  .strict();
 
-export const provenanceSchema = provenanceObject.optional();
+// Attached to every chapter schema as an optional field. The `.refine` makes
+// "present ⇒ non-empty": a bare `provenance: {}` is author error (omit the key
+// to opt out instead), so it fails fast rather than rendering a meaningless block.
+export const provenanceSchema = provenanceObject
+  .refine(
+    (p) =>
+      p.ai_tools.length > 0 ||
+      p.audit_history.length > 0 ||
+      Boolean(p.citation_backstop) ||
+      Boolean(p.prompts_archive) ||
+      Boolean(p.decisions_log),
+    { message: 'provenance is present but empty — omit the key, or set at least one field' },
+  )
+  .optional();
 
 // ===== Chapter schemas — one per profile =====
 
