@@ -4,13 +4,22 @@
  * `\label{...}` pattern with a single component.
  *
  * Source assets are emitted under public/figures/weekNN/ by
- * scripts/build-figures.sh (Phase 2.4); src paths are absolute from
- * site root.
+ * scripts/build-figures.mjs; src paths are absolute from site root.
+ *
+ * v4.11.0 (#84): a local pipeline `.svg` is **inlined** (read from public/ +
+ * `set:html`) rather than referenced via `<img>`. Inlining puts the SVG in the
+ * host DOM, so the page's tokens.css `--diagram-*` cascade in — the figure
+ * tracks the in-page dark-mode toggle (an `<img>`-loaded SVG is CSS-isolated
+ * and could only follow the OS preference). Inlining also lets a11y
+ * `<title>`/`<desc>` come from this component's props (assembleSvg). Non-SVG
+ * (the pdftoppm `.png` fallback), remote, or unreadable `src` gracefully keep
+ * the `<img>` render — a figure must never crash a build.
  *
  * Usage:
  *   <Figure
  *     src="/figures/week04/ex2_hippo_eigenvalues.svg"
  *     caption="HiPPO-LegS eigenvalue structure for N = 16 and N = 64."
+ *     alt="Two overlaid eigenvalue spectra forming nested arcs."
  *     width="100%"
  *     id="w4-fig-hippo-eigenvalues"
  *   />
@@ -18,18 +27,41 @@
  * The id prop registers the figure with the cross-reference label map
  * (consumed by `<XRef>`).
  */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { shouldInline, assembleSvg } from '../src/lib/figure.mjs';
+
 interface Props {
   src: string;
   caption?: string;
   width?: string;
   id?: string;
   alt?: string;
+  /** Long-form description → SVG <desc> (alt stays the short accessible name). */
+  desc?: string;
 }
 
-const { src, caption, width = '100%', id, alt } = Astro.props;
+const { src, caption, width = '100%', id, alt, desc } = Astro.props;
 const altText = alt ?? caption ?? '';
+
+// Inline a local pipeline SVG so host CSS variables theme it + a11y nodes come
+// from props. Any read failure falls back to <img> below (never throws).
+let inlineSvg: string | null = null;
+if (shouldInline(src)) {
+  try {
+    const raw = readFileSync(join(process.cwd(), 'public', src), 'utf8');
+    const idBase = id ?? `fig-${src.replace(/^\/+/, '').replace(/\.[^.]+$/, '')}`;
+    inlineSvg = assembleSvg(raw, { caption, alt, desc, width, idBase });
+  } catch {
+    inlineSvg = null;
+  }
+}
 ---
 <figure class="figure" id={id}>
-  <img src={src} alt={altText} style={`width: ${width}; max-width: 100%;`} />
+  {inlineSvg ? (
+    <Fragment set:html={inlineSvg} />
+  ) : (
+    <img src={src} alt={altText} style={`width: ${width}; max-width: 100%;`} />
+  )}
   {caption && <figcaption>{caption}</figcaption>}
 </figure>

@@ -2,6 +2,22 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.11.0] — 2026-05-30
+
+Minor release. Closes #84: TikZ→SVG figures are now **accessible** (carry `<title>`/`<desc>` + `role="img"`) and **dark-mode-aware** (one SVG serves light + dark, tracking the in-page theme toggle). Backward-compatible — adds an optional `<Figure desc>` prop; existing figures render unchanged until re-built.
+
+### Why
+
+TikZ→SVG is the default figure tool (handbook §Figures), but `pdftocairo` bakes fixed black-on-white fills and emits no a11y metadata, so figures stayed bright in dark mode and lacked an accessible description (surfaced by the claude-books "Architect's Reference"). The fix has two halves. **Build:** `build-figures` post-processes each SVG, remapping its *neutral* fills/strokes to `var(--diagram-ink|paper|grid, <original>)` via injected attribute-selector rules — drawing elements are untouched, so the original color is the automatic fallback and light mode is unchanged; saturated accent colors keep their hue. **Render:** `<Figure>` inlines a local `.svg` instead of `<img>`. An `<img>`-loaded SVG is CSS-isolated (a host page's `var(--diagram-*)` can't reach it, so it could only follow the OS preference); inlining puts the SVG in the page DOM, so the book's `tokens.css` — which tracks the manual `[data-theme]` toggle — themes it, and `caption`/`alt`/`desc` become the SVG's `<title>`/`<desc>`.
+
+### Added
+
+- **Theme-aware SVG rewrite** — `book-scaffold build-figures` injects `role="img"` and two `<style>` blocks per SVG: `data-diagram-map` (color→`var(--diagram-*)` rules, kept) and `data-diagram-theme` (standalone `:root` defaults + an OS `@media (prefers-color-scheme: dark)` override, used when the SVG is opened directly / via `<img>`). Idempotent; opt out per figure with a `%! no-theme` line in the source `.tex`. Re-running after upgrade themes pre-existing figures without a source touch.
+- **Inline `<Figure>` for local SVGs** — a `/…/*.svg` `src` is read from `public/` and inlined (`set:html`); `<Figure>` strips the standalone theme block so the host `tokens.css` is the sole source of `--diagram-*`, injects `<title>`/`<desc>` from props + `aria-labelledby`, and sizes the root `<svg>`. `.png` fallbacks, remote, and unreadable `src` keep the `<img>` render (a figure never crashes a build). New optional **`desc`** prop (long description; `alt` stays the short name).
+- **`--diagram-ink|paper|grid` design tokens** (`styles/tokens.css`) — mapped to `--color-text`/`--color-bg`/`--color-border`, so they auto-flip in dark mode with no extra rules.
+- **`src/lib/figure.mjs`** — pure, dependency-free `recolorSvg` / `shouldInline` / `assembleSvg` (shared by the build script + component).
+- **Tests** — `build-figures-recolor.test.mjs` (9) + `figure-inline.test.mjs` (10, incl. the build→render handoff) + extended `build-figures-tikz.test.mjs` (asserts the rewrite on real `pdftocairo` output). Total **311** (was 292).
+
 ## [4.10.0] — 2026-05-30
 
 Minor release. Closes #85: the tools-profile `/references` page now surfaces the sources kept in `sources/manifest.yaml` (it previously read only the BibTeX `references.json`, so it rendered blank for tools books). Adds `yaml` as a dependency. Purely additive — academic/minimal books are unaffected.

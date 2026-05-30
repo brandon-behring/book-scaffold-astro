@@ -64,7 +64,7 @@ Supported `type` values: `theorem`, `proposition`, `lemma`, `corollary`, `defini
 |---|---|---|
 | `Cite` | Inline citation linked to `/references` | `<Cite key="gu2024mamba" page="3" />` |
 | `XRef` | Cross-reference to a labeled element | `<XRef id="thm:zoh-stability" />` |
-| `Figure` | Image + caption + id | `<Figure src="/figures/week04/eigenvalues.svg" caption="…" id="fig-eig" />` |
+| `Figure` | Image/SVG + caption + id; local SVGs inline for a11y + dark mode (`alt`, `desc`) | `<Figure src="/figures/week04/eigenvalues.svg" caption="…" alt="…" id="fig-eig" />` |
 | `MarginNote` | Right-margin annotation (Tufte-style) | `<MarginNote>side comment</MarginNote>` |
 | `Sidenote` | Auto-numbered marginalia | `<Sidenote>numbered note</Sidenote>` |
 | `WeekRef` | Jump-link to a week chapter | `<WeekRef week={4} />` |

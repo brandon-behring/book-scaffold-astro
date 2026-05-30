@@ -51,6 +51,15 @@
   --callout-worked:   var(--warm-plum);
   --callout-learn:    var(--warm-gold);
 
+  /* Diagram semantic roles (v4.11.0, #84): theme-aware TikZ→SVG figures.
+   * build-figures remaps an SVG's neutral fills/strokes to these via
+   * var(--diagram-*, <original>); <Figure> inlines the SVG so this cascade
+   * reaches it. They point at existing roles, so they auto-flip in dark mode
+   * (no dark-block edits) — ink↔text, paper↔page bg, grid↔border. */
+  --diagram-ink:      var(--color-text);
+  --diagram-paper:    var(--color-bg);
+  --diagram-grid:     var(--color-border);
+
   /* ===== Typography scale ===== */
   --font-body: 'Roboto Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-code: 'Source Code Pro Variable', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;

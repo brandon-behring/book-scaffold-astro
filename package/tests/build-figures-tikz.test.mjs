@@ -69,9 +69,19 @@ test('build-figures TikZ: pipeline produces SVG from .tex source', { skip: SKIP_
     assert.match(svgContent, /<svg\b/, 'SVG file should contain <svg> element');
     assert.match(svgContent, /xmlns=/, 'SVG should declare xmlns');
 
-    // Verify the console output mentions tikz compilation.
+    // v4.11.0 (#84): the generated SVG is rewritten to be accessible +
+    // dark-mode-aware. The fixture draws black line art, so the baked
+    // rgb(0%, 0%, 0%) ink must remap to var(--diagram-ink, …).
+    assert.match(svgContent, /<svg\b[^>]*\brole="img"/, 'root <svg> should carry role="img"');
+    assert.match(svgContent, /<style data-diagram-theme>/, 'should inject the standalone theme block');
+    assert.match(svgContent, /<style data-diagram-map>/, 'should inject the color-map block');
+    assert.match(svgContent, /var\(--diagram-ink,\s*rgb\(0%, 0%, 0%\)\)/, 'black ink should remap to var(--diagram-ink, <orig>)');
+    assert.ok(!/data-diagram-map[\s\S]*data-diagram-map/.test(svgContent), 'map block should be injected exactly once');
+
+    // Verify the console output mentions tikz compilation + theming.
     const stdout = (r.stdout ?? Buffer.from('')).toString();
     assert.match(stdout, /tikz/, 'output should mention tikz compilation count');
+    assert.match(stdout, /themed/, 'output should report themed figures');
   } finally {
     rmSync(projectRoot, { recursive: true, force: true });
   }
