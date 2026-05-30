@@ -1,0 +1,15 @@
+# Fixture manifest for build-bib.test.mjs — two sources across tiers.
+- id: alpha-source
+  url: https://example.com/alpha
+  title: Alpha source
+  author: A. Author
+  publish_date: 2024-03-01
+  captured_at: 2026-05-01T00:00:00Z
+  tier: T1-official
+  tool: claude-code
+- id: beta-source
+  url: https://example.com/beta
+  title: Beta source
+  captured_at: 2026-05-02T00:00:00Z
+  tier: T3-practitioner
+  tool: cross-tool

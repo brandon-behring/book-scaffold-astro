@@ -1,16 +1,22 @@
 ---
 /**
- * /references — the book's bibliography page.
+ * /references — the book's bibliography + cited-sources page.
  *
- * Renders every entry in src/data/references.json (produced by
- * scripts/build-bib.mjs from guides/shared/references.bib). Each
- * entry gets an anchor ID matching its bibkey, so `<Cite key="gu2024mamba" />`
- * elsewhere on the site links to /references#gu2024mamba.
+ * Auto-injected on every profile (integration route table). Reads two
+ * independent inputs, each via a defensive `import.meta.glob` (missing file →
+ * empty, never a crash — same pattern <XRef> uses for labels.json):
  *
- * Sorted alphabetically by first-author surname, then by year.
- * arXiv-style notes are surfaced as direct links when present.
+ *   - src/data/references.json — BibTeX entries (academic), from build-bib.
+ *     Each entry's anchor matches its bibkey, so `<Cite key="…" />` links to
+ *     /references#<bibkey>.
+ *   - src/data/sources.json — sources/manifest.yaml entries (tools profile),
+ *     also from build-bib (v4.10.0, #85). Its presence is a profile-safe GATE
+ *     for the <SourceArchive> render: a falsy `&&` never instantiates the
+ *     component, so academic/minimal books (which have no `sources` content
+ *     collection) never call getCollection('sources').
  */
 import Base from '../layouts/Base.astro';
+import SourceArchive from '../components/SourceArchive.astro';
 
 type CslAuthor = { family?: string; given?: string; literal?: string };
 type CslEntry = {
@@ -29,8 +35,7 @@ type CslEntry = {
   note?: string;
 };
 
-// Resolve references.json from consumer's project root. Missing file -> empty
-// list (page renders an "empty bibliography" notice rather than crashing).
+// --- Bibliography: BibTeX → references.json (academic profile). ---
 const refsModules = import.meta.glob<{ default: Record<string, CslEntry> }>(
   '/src/data/references.json',
   { eager: true },
@@ -38,6 +43,18 @@ const refsModules = import.meta.glob<{ default: Record<string, CslEntry> }>(
 const refsModule = refsModules['/src/data/references.json'];
 const map = (refsModule?.default ?? {}) as Record<string, CslEntry>;
 const entries = Object.values(map);
+
+// --- Cited sources: sources/manifest.yaml → sources.json (tools profile).
+// Presence-only gate; the actual render reads the live `sources` collection
+// via <SourceArchive>, which only runs when this gate is true (so it is never
+// reached on profiles without a `sources` collection). ---
+const srcModules = import.meta.glob<{ default: unknown[] }>(
+  '/src/data/sources.json',
+  { eager: true },
+);
+const sourcesData = (srcModules['/src/data/sources.json']?.default ?? []) as unknown[];
+const hasSources = Array.isArray(sourcesData) && sourcesData.length > 0;
+const hasBib = entries.length > 0;
 
 const surname = (a: CslAuthor): string =>
   (a.family ?? a.literal ?? '').toLowerCase();
@@ -73,61 +90,95 @@ function arxivUrl(note?: string): string | null {
   const m = note.match(/arXiv:\s*(\S+)/i);
   return m ? `https://arxiv.org/abs/${m[1]}` : null;
 }
+
+const lede =
+  hasBib && hasSources
+    ? 'Every work cited in this book — the bibliography below, then the external sources grouped by tier.'
+    : hasBib
+      ? 'Every paper, book, and software citation in this book, sorted alphabetically by first-author surname. Click an entry’s anchor to share a deep link, or follow the arXiv / DOI / URL for the source.'
+      : hasSources
+        ? 'Every external source cited in this book, grouped by tier in descending authority.'
+        : 'This book has no references yet.';
 ---
-<Base
-  title="References — Post-Transformers"
-  description="Bibliography for the post_transformers guide, generated from guides/shared/references.bib."
->
+<Base title="References" description="Bibliography and cited sources for this book.">
   <article class="prose">
     <header>
       <h1>References</h1>
-      <p class="lede">
-        Every paper, book, and software citation in this guide, sorted
-        alphabetically by first-author surname. Click an entry's
-        anchor to share a deep link, or follow the arXiv / DOI / URL
-        for the source.
-      </p>
-      <p>
-        <small>
-          {entries.length} entries. Generated from
-          <code>guides/shared/references.bib</code> at build time via
-          <code>scripts/build-bib.mjs</code>.
-        </small>
-      </p>
+      <p class="lede">{lede}</p>
     </header>
 
-    <ol class="references-list">
-      {entries.map((e) => {
-        const y = year(e);
-        const arxiv = arxivUrl(e.note);
-        const primaryUrl = arxiv ?? e.URL ?? (e.DOI ? `https://doi.org/${e.DOI}` : null);
-        return (
-          <li id={e.id} class="reference-entry">
-            <span class="reference-key" aria-label="bibkey">[{e.id}]</span>
-            <span class="reference-text">
-              {formatAuthors(e.author)}
-              {y > 0 && <> ({y})</>}.
-              {' '}
-              <em>{e.title}</em>.
-              {e['container-title'] && <> {e['container-title']}.</>}
-              {e.publisher && !e['container-title'] && <> {e.publisher}.</>}
-              {e.volume && <> Vol. {e.volume}{e.issue && <>, no. {e.issue}</>}.</>}
-              {e.page && <> pp. {e.page}.</>}
-              {primaryUrl && (
-                <>
+    {!hasBib && !hasSources && (
+      <p class="references-empty">
+        No references yet. Add a <code>bibliography.bib</code> (academic) or
+        populate <code>sources/manifest.yaml</code> (tools), then run
+        <code>npm run build:bib</code>.
+      </p>
+    )}
+
+    {hasBib && (
+      <section class="references-bibliography">
+        {hasSources && <h2>Bibliography</h2>}
+        <ol class="references-list">
+          {entries.map((e) => {
+            const y = year(e);
+            const arxiv = arxivUrl(e.note);
+            const primaryUrl = arxiv ?? e.URL ?? (e.DOI ? `https://doi.org/${e.DOI}` : null);
+            return (
+              <li id={e.id} class="reference-entry">
+                <span class="reference-key" aria-label="bibkey">[{e.id}]</span>
+                <span class="reference-text">
+                  {formatAuthors(e.author)}
+                  {y > 0 && <> ({y})</>}.
                   {' '}
-                  <a href={primaryUrl} rel="external noopener">link</a>.
-                </>
-              )}
-            </span>
-          </li>
-        );
-      })}
-    </ol>
+                  <em>{e.title}</em>.
+                  {e['container-title'] && <> {e['container-title']}.</>}
+                  {e.publisher && !e['container-title'] && <> {e.publisher}.</>}
+                  {e.volume && <> Vol. {e.volume}{e.issue && <>, no. {e.issue}</>}.</>}
+                  {e.page && <> pp. {e.page}.</>}
+                  {primaryUrl && (
+                    <>
+                      {' '}
+                      <a href={primaryUrl} rel="external noopener">link</a>.
+                    </>
+                  )}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+    )}
+
+    {hasSources && (
+      <section class="references-sources">
+        <h2>Cited sources</h2>
+        <p class="references-sources-lede">
+          External sources cited inline via <code>&lt;Citation&gt;</code>, grouped
+          by tier in descending authority.
+        </p>
+        <SourceArchive />
+      </section>
+    )}
   </article>
 </Base>
 
 <style>
+  .references-empty {
+    color: var(--color-text-muted);
+    font-style: italic;
+    padding: var(--space-3);
+    background: var(--color-bg-subtle);
+    border-radius: var(--radius-sm);
+    text-indent: 0;
+  }
+  .references-sources {
+    margin-top: var(--space-6);
+  }
+  .references-sources-lede {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    text-indent: 0;
+  }
   .references-list {
     list-style: none;
     padding: 0;

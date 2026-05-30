@@ -2,6 +2,30 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.10.0] — 2026-05-30
+
+Minor release. Closes #85: the tools-profile `/references` page now surfaces the sources kept in `sources/manifest.yaml` (it previously read only the BibTeX `references.json`, so it rendered blank for tools books). Adds `yaml` as a dependency. Purely additive — academic/minimal books are unaffected.
+
+### Why
+
+A tools-profile book cites sources inline via `<Citation src="id" />` (resolved from the `sources` content collection) but keeps no BibTeX `.bib`. The auto-injected `/references` page read only `src/data/references.json`, so it rendered blank for every such book despite the manifest holding dozens of real sources — a visible gap for reference-genre books (surfaced by the claude-books "Architect's Reference"). `build-bib` now ALSO compiles `sources/manifest.yaml` to `src/data/sources.json`, and `/references` renders those sources. The render is **profile-safe**: a defensive `import.meta.glob` of `sources.json` gates the `<SourceArchive>` render, so academic/minimal books (which have no `sources` collection) never call `getCollection('sources')`.
+
+### Added
+
+- **`build-bib` → `src/data/sources.json`** — when `sources/manifest.yaml` exists, `book-scaffold build-bib` compiles it to `sources.json` alongside the BibTeX `references.json`. Absent manifest → no file written (academic/minimal stay clean). The two pipelines are independent: a tools book with a manifest and no `.bib` now gets a populated `/references`. `yaml` added as a dependency for the parse.
+- **Cited-sources section on `/references`** — the auto-injected page renders a tier-grouped "Cited sources" section (reusing `<SourceArchive>`) when `sources.json` is non-empty, in addition to the BibTeX bibliography. Each source carries a `#source-<id>` anchor for `<Citation>` deep-links.
+- **`package/tests/build-bib.test.mjs`** (4 tests) — manifest → `sources.json` shape/ids; no manifest → no file, no crash; pipelines independent. Total **292** (was 288).
+
+### Fixed / Changed
+
+- **`/references` genericized** — no longer hardcodes "Post-Transformers" in its title/description/footer (a latent leak from the original consumer); now profile-neutral, with an honest empty-state notice when neither a bibliography nor sources exist.
+- **`SourceArchive` empty-tier copy** — dropped the consumer-specific "Appendix D is intentionally sparse…" line for a neutral placeholder, since the component now also renders on `/references`.
+- **Manifest header comments** (demo + create-book template) corrected to state the manifest now feeds `src/data/sources.json` via `build-bib`.
+
+### Deferred
+
+- **#82** (Provenance visual-regression baseline) was scoped with this release but deferred: the new pixel baselines must be generated in an environment matching CI (ubuntu + google-chrome). The dev sandbox renders ~22% pixel divergence on unchanged pages, so locally-generated baselines would fail CI. To be landed via a CI-matched baseline pass.
+
 ## [4.9.0] — 2026-05-30
 
 Minor release. Makes the optional `slug` URL-override field **universal** across all profiles, and fixes two latent bugs surfaced by the mathematical-guides / claude-books consumers: an `<XRef>` esbuild crash-on-import and a cross-reference 404 when a chapter sets a custom `slug`. Purely additive — existing chapters validate, render, and resolve unchanged.

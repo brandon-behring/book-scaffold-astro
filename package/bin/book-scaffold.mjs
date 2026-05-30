@@ -27,7 +27,7 @@ const HELP = `Usage: book-scaffold <sub-command> [args...]
 Sub-commands:
   validate           Pre-flight content validator (XRef ids, Cite keys, Figure srcs).
   build-labels       Emit src/data/labels.json for cross-references (Phase C).
-  build-bib          BibTeX -> CSL JSON for the <Cite> component.
+  build-bib          BibTeX -> references.json (+ sources/manifest.yaml -> sources.json).
   build-figures      PDF -> SVG via pdftocairo / pdftoppm fallback (+ TikZ in v4.2.0).
   build-tips         Scan chapters for <Tip> instances; emit src/data/tips.json (v4.3.0).
   build-exercises    Scan chapters for <Exercise> instances; emit src/data/exercises.json (v4.4.0).
