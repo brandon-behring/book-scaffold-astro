@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = resolve(__dirname, '..', 'scripts', 'build-labels.mjs');
 const FIXTURE_CHAPTER = resolve(__dirname, 'fixtures', 'chapters', 'valid-academic.mdx');
+const SLUG_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'slug-override.mdx');
 
 /** Run build-labels.mjs in a temp dir containing one fixture chapter. Returns parsed labels.json. */
 function runInTempDir(fixturePaths = [FIXTURE_CHAPTER]) {
@@ -63,6 +64,16 @@ test('build-labels: href shape is /chapters/<slug>#<id>', () => {
   assert.equal(
     labels['w4:thm:stability'].href,
     '/chapters/valid-academic#w4:thm:stability',
+  );
+});
+
+test('build-labels: frontmatter slug: overrides the filename in the href (v4.9.0)', () => {
+  // slug-override.mdx has filename `slug-override` but `slug: clean-name`.
+  // The href must use the slug (matching Astro's entry.id), NOT the filename.
+  const labels = runInTempDir([SLUG_FIXTURE]);
+  assert.equal(
+    labels['slug:thm:demo'].href,
+    '/chapters/clean-name#slug:thm:demo',
   );
 });
 

@@ -116,6 +116,7 @@ export const academicChapterSchema = z.object({
   week: z.number().int().min(1).max(99),
   part: z.enum(academicParts),
   title: z.string().min(1),
+  slug: z.string().optional(),                 // v4.9.0: explicit URL slug override (else filename → entry.id)
   status: z.enum(chapterStatus),
   roadmap_lines: z.tuple([z.number().int(), z.number().int()]).optional(),
   code_path: z.string().optional(),
@@ -136,6 +137,7 @@ export const academicChapterSchema = z.object({
 
 export const toolsChapterSchema = z.object({
   title: z.string().min(1),
+  slug: z.string().optional(),                 // v4.9.0: explicit URL slug override (else filename → entry.id)
   part: z.number().int().min(0).max(10),
   chapter: z.number().int().min(0).max(99),
   volatility: z.enum(volatilityLevels),
@@ -178,6 +180,7 @@ export const sourceTiersResearch = ['T1', 'T2', 'T3', 'T4'] as const;
 export const courseNotesChapterSchema = z.object({
   // Identity
   title: z.string().min(1),
+  slug: z.string().optional(),                 // v4.9.0: explicit URL slug override (else filename → entry.id)
   chapter: z.number().int().min(0).max(99),
   part: z.number().int().min(0).max(20).default(1),
   description: z.string().optional(),

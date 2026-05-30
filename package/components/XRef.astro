@@ -1,28 +1,31 @@
 ---
-/**
- * XRef — resolves a `\cref{label}` LaTeX reference to a hyperlink.
- *
- * Reads src/data/labels.json built by scripts/build-labels.mjs
- * (Phase 2.6). For each known id, the map provides:
- *   { href: "/chapters/week04#thm-w4-stability", display: "Theorem 4.2" }
- *
- * Runtime: renders `<a href>` for known ids; renders an inline `[?id]`
- * placeholder for unknown ids so the Astro dev server stays running while
- * chapters are being authored or labels are being added.
- *
- * CI: `book-scaffold validate` (Phase 2.6, shipped) catches unknown ids
- * and **fails the build with a non-zero exit code** before unresolved
- * placeholders can reach production. The placeholder is a dev-ergonomic
- * affordance, not a soft-degradation path on the deploy critical line.
- *
- * Bootstrapping note: when porting a book chapter-by-chapter, early
- * chapters that reference yet-to-be-ported targets need either plain-prose
- * substitutes or a temporarily-commented `{/* <XRef …/> */}` until the
- * target chapter (and its `id="…"` attributes) exists.
- *
- * Usage:
- *   By <XRef id="thm:w4:stability" />, the discretized eigenvalues …
- */
+// XRef — resolves a `\cref{label}` LaTeX reference to a hyperlink.
+//
+// Reads src/data/labels.json built by scripts/build-labels.mjs
+// (Phase 2.6). For each known id, the map provides:
+//   { href: "/chapters/week04#thm-w4-stability", display: "Theorem 4.2" }
+//
+// Runtime: renders `<a href>` for known ids; renders an inline `[?id]`
+// placeholder for unknown ids so the Astro dev server stays running while
+// chapters are being authored or labels are being added.
+//
+// CI: `book-scaffold validate` (Phase 2.6, shipped) catches unknown ids
+// and **fails the build with a non-zero exit code** before unresolved
+// placeholders can reach production. The placeholder is a dev-ergonomic
+// affordance, not a soft-degradation path on the deploy critical line.
+//
+// Bootstrapping note: when porting a book chapter-by-chapter, early
+// chapters that reference yet-to-be-ported targets need either plain-prose
+// substitutes or a temporarily-commented `{/* <XRef …/> */}` until the
+// target chapter (and its `id="…"` attributes) exists. MDX uses JSX-style
+// expression comments — the HTML `<` + bang + `--` form is NOT valid MDX.
+//
+// NB: these are `//` line comments, not a `/** */` block, on purpose — the
+// literal `*/` in the example above would otherwise close a block comment
+// early and break esbuild on every MDX import (the v4.9.0 fix).
+//
+// Usage:
+//   By <XRef id="thm:w4:stability" />, the discretized eigenvalues …
 type LabelEntry = { href: string; display: string };
 
 // Resolve labels.json from the consumer's project root (Vite resolves `/`
