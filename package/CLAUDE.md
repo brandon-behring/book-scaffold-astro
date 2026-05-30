@@ -166,9 +166,16 @@ See `recipes/09-validation.md` to extend.
 
 ### Add a figure
 
-1. Drop PDF in `figures/<topic>/<name>.pdf` (or set `BOOK_FIGURES_PATH`).
+1. Drop a PDF in `figures/<topic>/<name>.pdf`, or a TikZ standalone `.tex` (auto-compiled), or set `BOOK_FIGURES_PATH`.
 2. `npm run build:figures` produces `public/figures/<topic>/<name>.svg`.
-3. Reference: `<Figure src="/figures/<topic>/<name>.svg" caption="..." id="..." />`.
+3. Reference: `<Figure src="/figures/<topic>/<name>.svg" caption="..." alt="..." id="..." />`.
+
+**Accessibility + dark mode (v4.11.0, #84).** `build:figures` rewrites every generated SVG so one file serves both themes: it adds `role="img"` and remaps the *neutral* fills/strokes to `var(--diagram-ink|paper|grid, <original>)` (saturated accent colors are left as authored). `<Figure>` **inlines** a local `.svg` (vs `<img>`), so the page's `--diagram-*` tokens cascade in and the figure tracks the in-page dark-mode toggle; `caption`/`alt`/`desc` become the SVG's `<title>`/`<desc>`. Notes:
+
+- `alt` is the short accessible name (defaults to `caption`); `desc` is an optional longer description.
+- Non-SVG (`.png` fallback), remote, or unreadable `src` keep the `<img>` render.
+- Opt a figure out of theming with a `%! no-theme` line in its source `.tex`.
+- After upgrading, re-run `npm run build:figures` to theme pre-existing figures (the rewrite is idempotent).
 
 ### Add a new component
 

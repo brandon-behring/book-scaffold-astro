@@ -23,7 +23,17 @@
  * Falls back to pdftoppm (PNG @ 200 DPI) if pdftocairo produces an
  * unreasonably small (likely malformed) SVG.
  *
- * Idempotent: skips when the target SVG is newer than the source PDF.
+ * v4.11.0 (closes #84): each generated SVG gets a post-export rewrite
+ * (recolorSvg) that injects role="img" + a CSS-variable theming layer so one
+ * SVG serves light + dark. Neutral fills/strokes are remapped to
+ * var(--diagram-ink|paper|grid, <original>) via injected attribute-selector
+ * rules (the original attribute stays as the fallback); saturated accent colors
+ * are left untouched. A `%! no-theme` line in the source .tex opts a figure out.
+ * <Figure> inlines local SVGs so they track the in-page [data-theme] toggle.
+ *
+ * Idempotent: skips when the target SVG is newer than the source PDF (and the
+ * recolor itself is a no-op on an already-themed SVG, so re-runs after an
+ * upgrade safely theme pre-existing figures).
  * Run on `prebuild` so Astro always sees fresh figures.
  *
  * Graceful skip: when pdftocairo / pdftoppm aren't on PATH (e.g. Cloudflare
@@ -32,10 +42,11 @@
  * from PDFs on every `npm run dev`.
  */
 import { readdir, stat, mkdir } from 'node:fs/promises';
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, statSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { recolorSvg } from '../src/lib/figure.mjs';
 
 // --help / -h: non-mutating (closes #14).
 const USAGE = `Usage: book-scaffold build-figures
@@ -43,6 +54,10 @@ const USAGE = `Usage: book-scaffold build-figures
 Figure pipeline. PDF -> SVG via pdftocairo (PNG fallback via pdftoppm at
 200dpi). Walks figures/ (or BOOK_FIGURES_PATH), emits to public/figures/.
 Graceful-skip if pdftocairo / pdftoppm not on PATH.
+
+Each SVG is rewritten to be accessible + dark-mode-aware: role="img" plus
+var(--diagram-ink|paper|grid, orig) fills (a "%! no-theme" line in the
+source .tex opts out). <Figure> inlines local SVGs so they track the theme.
 
 Env:
   BOOK_FIGURES_PATH   Override figures source (default: figures/).
@@ -179,6 +194,25 @@ function convertToSvg(srcPath, dstPath) {
   return size >= MIN_SVG_BYTES;
 }
 
+// v4.11.0 (#84): a `%! no-theme` line (anywhere in the source .tex) opts a
+// figure out of the dark-mode/a11y rewrite. Matches `%!` then `no-theme`,
+// tolerant of surrounding whitespace — distinct from BibTeX `%`-line comments.
+const NO_THEME_RE = /^\s*%!\s*no-theme\b/m;
+
+/**
+ * v4.11.0 (#84): apply the theming rewrite to a generated SVG in place.
+ * No-op (returns false) if the file is absent or recolorSvg leaves it unchanged
+ * (already themed / nothing neutral to remap). Idempotent.
+ */
+function themeIfSvg(svgPath, optOut) {
+  if (!existsSync(svgPath)) return false;
+  const original = readFileSync(svgPath, 'utf8');
+  const themed = recolorSvg(original, { optOut });
+  if (themed === original) return false;
+  writeFileSync(svgPath, themed, 'utf8');
+  return true;
+}
+
 function convertToPng(srcPath, pngStem) {
   // pdftoppm: -r 200 (DPI), -png, single page (first only).
   const r = spawnSync(
@@ -251,6 +285,7 @@ async function main() {
   let converted = 0;
   let skipped = 0;
   let pngFallback = 0;
+  let themed = 0;
 
   for (const { relPath } of pdfs) {
     total++;
@@ -259,7 +294,20 @@ async function main() {
     const svgPath = resolve(FIGURES_DST, `${stem}.svg`);
     const pngPath = resolve(FIGURES_DST, `${stem}.png`);
 
-    if (isUpToDate(srcPath, svgPath) || isUpToDate(srcPath, pngPath)) {
+    // Opt-out via `%! no-theme` in the source .tex (TikZ figures only).
+    const texSibling = resolve(FIGURES_SRC, `${stem}.tex`);
+    const optOut =
+      existsSync(texSibling) && NO_THEME_RE.test(readFileSync(texSibling, 'utf8'));
+
+    // Cached SVG: still run the (idempotent) rewrite so an upgrade themes
+    // pre-existing figures without forcing a source touch. PNG fallbacks are
+    // raster — nothing to theme.
+    if (isUpToDate(srcPath, svgPath)) {
+      if (themeIfSvg(svgPath, optOut)) themed++;
+      skipped++;
+      continue;
+    }
+    if (isUpToDate(srcPath, pngPath)) {
       skipped++;
       continue;
     }
@@ -269,14 +317,17 @@ async function main() {
     if (!svgOK) {
       convertToPng(srcPath, svgPath.replace(/\.svg$/, ''));
       pngFallback++;
+    } else if (themeIfSvg(svgPath, optOut)) {
+      themed++;
     }
     converted++;
   }
 
   const tikzNote = tikzCompiled > 0 ? `, ${tikzCompiled} tikz→pdf` : '';
+  const themedNote = themed > 0 ? `, ${themed} themed` : '';
   console.log(
     `build-figures: ${total} total, ${converted} converted ` +
-      `(${pngFallback} png fallback), ${skipped} cached${tikzNote}`,
+      `(${pngFallback} png fallback), ${skipped} cached${themedNote}${tikzNote}`,
   );
 }
 
