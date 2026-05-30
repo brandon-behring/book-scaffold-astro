@@ -2,6 +2,32 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.9.0] — 2026-05-30
+
+Minor release. Makes the optional `slug` URL-override field **universal** across all profiles, and fixes two latent bugs surfaced by the mathematical-guides / claude-books consumers: an `<XRef>` esbuild crash-on-import and a cross-reference 404 when a chapter sets a custom `slug`. Purely additive — existing chapters validate, render, and resolve unchanged.
+
+### Why
+
+The chapter route already serves `/chapters/<entry.id>`, and Astro's glob loader derives `entry.id` from a frontmatter `slug:` when present — so a book could keep numbered filenames (`00-intro.mdx`, `99-appendix.mdx`) for ordering while publishing clean URLs. That worked only on the research-portfolio profile (the lone schema defining `slug`); the same frontmatter on academic/tools/course-notes/minimal was silently stripped. `slug` is now optional on every chapter schema. Two bugs blocked the path:
+
+- **`<XRef>` crashed esbuild on import.** `components/XRef.astro` documented the temporarily-comment-out idiom with a `{/* … */}` example *inside* a `/** */` JSDoc block in its frontmatter. The literal `*/` closed the JSDoc early; the trailing `}` parsed as code and esbuild threw `Unexpected "}"` the moment any MDX imported the component. Latent for every `<XRef>` consumer (scaffold CI stayed green only because no compiled fixture imported it).
+- **Cross-references 404'd under a custom `slug`.** `scripts/build-labels.mjs` derived the href from the filename, while the route (and index, sidebar, sitemap, canonical) used `entry.id` (= the `slug`). A chapter `99-appendix.mdx` with `slug: appendix` linked to `/chapters/99-appendix#…` while the page lived at `/chapters/appendix/`.
+
+### Added
+
+- **Universal `slug` frontmatter field** — `slug: z.string().optional()` on `academicChapterSchema`, `toolsChapterSchema` (so `minimalChapterSchema` too, by alias), and `courseNotesChapterSchema`; research-portfolio already had it. Overrides the chapter URL (`/chapters/<slug>/`); omitted → filename. Documented in `package/CLAUDE.md` (Frontmatter schemas + per-profile examples).
+
+### Fixed
+
+- **`components/XRef.astro`** — the frontmatter doc comment is now `//` line comments instead of a `/** */` JSDoc block, so the `{/* <XRef …/> */}` example can no longer close a block comment early. Restores the MDX-correct example (the JSX expression-comment form; MDX rejects HTML `<!-- -->`). No render/logic change. Fixes the `Unexpected "}"` esbuild crash on any MDX importing `<XRef>`.
+- **`scripts/build-labels.mjs`** — the cross-reference href now prefers frontmatter `slug:` over the filename (`fm.slug ?? basename`), matching Astro's `entry.id`. Backwards-compatible: chapters without `slug` are unchanged.
+
+### Tests
+
+- `package/tests/xref-component.test.mjs` (new) — esbuild-transforms the `XRef.astro` frontmatter to reproduce the exact crash path (guards the `*/` regression), and asserts the doc keeps `{/* */}` and never advises `<!--`.
+- `package/tests/schema-slug.test.mjs` (new) — `slug` accepted, preserved, and optional on all five profile schemas.
+- `package/tests/build-labels.test.mjs` — adds a slug-override fixture (`tests/fixtures/chapters/slug-override.mdx`) asserting the href uses the slug, not the filename. Total **288** (was 275).
+
 ## [4.8.0] — 2026-05-28
 
 Minor release. Adds a per-chapter **Provenance** audit-trail component + an optional `provenance` frontmatter field on every profile schema. Purely additive — existing chapters validate and render unchanged.

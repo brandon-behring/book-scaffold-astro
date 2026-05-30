@@ -1,0 +1,14 @@
+---
+week: 9
+part: synthesis
+title: Slug override fixture
+slug: clean-name
+status: implemented
+description: Fixture proving a frontmatter `slug:` overrides the filename in build-labels hrefs (v4.9.0). Filename is slug-override.mdx but the href must use clean-name.
+---
+
+import Theorem from '@brandon_m_behring/book-scaffold-astro/components/Theorem.astro';
+
+# Slug override fixture
+
+<Theorem id="slug:thm:demo" type="theorem">Body for the slug-override href test.</Theorem>

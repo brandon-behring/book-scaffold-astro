@@ -25,6 +25,8 @@ When in doubt, run `grep BOOK_PROFILE .env astro.config.mjs src/content.config.t
 
 ## Frontmatter schemas
 
+**Universal field (v4.9.0):** every profile accepts an optional `slug:` string that overrides the URL. A file `99-appendix.mdx` with `slug: appendix` is served at `/chapters/appendix/` — Astro's glob loader maps frontmatter `slug` → `entry.id`, and cross-references (`<XRef>`, via `build-labels`) resolve to the same path. Omit it and the URL falls back to the filename. Use it to keep numbered filenames for ordering while publishing clean URLs.
+
 ### Academic profile (`src/content.config.ts:academicChapterSchema`)
 
 ```yaml
@@ -34,6 +36,7 @@ part: foundations        # required: foundations|ssm-core|beyond-ssm|integration
 title: "..."             # string, required
 status: implemented      # required: implemented|chapter_only|prose_only|code_only|reading_only|scaffolded|planned
 # optional:
+slug: ch01-introduction  # clean URL override; else filename → /chapters/<slug>/
 roadmap_lines: [10, 42]  # [start, end] line refs into roadmap.md
 code_path: experiments/jax/week01/foo.py
 tests_path: experiments/jax/week01/test_foo.py
@@ -54,7 +57,7 @@ volatility: architectural-pattern  # required: stable-principle|architectural-pa
 tools_compared: [claude-code]      # required, ≥1 of: claude-code|gemini-cli|codex-cli|cross-tool
 last_verified: 2026-05-18          # date, required
 sources: []                        # array of source-manifest keys
-# optional: description, draft, updated
+# optional: slug (clean URL override), description, draft, updated
 ---
 ```
 

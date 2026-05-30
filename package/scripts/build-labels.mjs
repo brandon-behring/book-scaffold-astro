@@ -15,10 +15,11 @@
  *   - tools profile: `chapter` field (number).
  *   - academic profile: `week` field (number).
  *
- * Slug used for the href = filename minus `.mdx`. The href shape mirrors
- * the consumer's pages router: `/chapters/<slug>#<id>`. Academic books
- * using `[...slug].astro` get the same shape since Astro slugifies
- * filenames identically.
+ * Slug used for the href: the chapter's frontmatter `slug:` if set,
+ * else filename minus `.mdx`. The href shape mirrors the consumer's pages
+ * router: `/chapters/<slug>#<id>`. Academic books using `[...slug].astro`
+ * get the same shape since Astro slugifies filenames identically when no
+ * frontmatter override is present.
  *
  * Optional override:
  *   <Theorem id="…" label="Custom display" />
@@ -178,7 +179,9 @@ async function main() {
     const source = await readFile(file, 'utf8');
     const fm = parseFrontmatter(source);
     const chapterNum = chapterNumberOf(fm);
-    const slug = basename(file).replace(/\.mdx?$/, '');
+    const slug = (typeof fm.slug === 'string' && fm.slug.length > 0)
+      ? fm.slug
+      : basename(file).replace(/\.mdx?$/, '');
 
     // Per-chapter counters reset for each file.
     const counters = {};
