@@ -12,6 +12,9 @@
 # and is gitignored (for drift detection only — never published). Public-
 # facing pages only render the metadata below plus the Perma.cc link.
 #
+# build-bib compiles this manifest to src/data/sources.json (v4.10.0); the
+# auto-injected /references page renders those sources grouped by tier.
+#
 # Tier scale:
 #   T1-official        — vendor-official documentation or release notes
 #   T2-release-notes   — release blog or changelog (less formal than docs)

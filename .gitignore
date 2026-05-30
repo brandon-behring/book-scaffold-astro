@@ -43,6 +43,8 @@ dist-pdf/
 #   scripts gracefully skip and CI serves the committed artifacts as-is.
 src/data/references.json
 demo/src/data/references.json
+src/data/sources.json
+demo/src/data/sources.json
 public/figures/
 public/notebooks/
 

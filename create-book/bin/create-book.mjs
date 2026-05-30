@@ -359,8 +359,10 @@ import Base from '@brandon_m_behring/book-scaffold-astro/layouts/Base.astro';
   }
 
   if (PROFILE_DEFAULTS[profile].withSources) {
-    templates['sources/manifest.yaml'] = `# sources/manifest.yaml — captured sources for the tools-profile dashboard.
-# Each entry is read by <SourceArchive> and the convergence page.
+    templates['sources/manifest.yaml'] = `# sources/manifest.yaml — captured sources for the tools profile.
+# Each entry is read by inline <Citation src="id" /> and by <SourceArchive>,
+# and is compiled to src/data/sources.json by \`book-scaffold build-bib\`
+# (v4.10.0) so the auto-injected /references page lists them.
 #
 # Format: top-level YAML array of source objects. Each entry needs an
 # explicit \`id\` (used as the citation key in <Citation src="id" />),

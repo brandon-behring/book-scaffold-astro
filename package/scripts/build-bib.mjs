@@ -1,12 +1,18 @@
 #!/usr/bin/env node
 /**
- * scripts/build-bib.mjs — Bibliography pipeline (academic profile).
+ * scripts/build-bib.mjs — Bibliography + source-manifest pipeline.
  *
  * Reads bibliography.bib at scaffold root (BibTeX), parses via @citation-js,
  * emits src/data/references.json keyed by bibkey. The .bib path is
  * overridable via BOOK_BIB_PATH env var for books that keep their .bib
  * elsewhere (e.g. a shared `guides/shared/references.bib` outside the
  * Astro project — the post_transformers pattern).
+ *
+ * v4.10.0 (#85): ALSO reads sources/manifest.yaml (tools-profile sources,
+ * cited inline via <Citation src>) and emits src/data/sources.json so the
+ * auto-injected /references page can surface them. The two steps are
+ * independent — a tools book with a manifest and no .bib still gets a
+ * populated /references.
  *
  * Run on `prebuild` so every Astro build sees fresh bibliography data.
  * Idempotent: re-running with no .bib change produces a byte-identical
@@ -37,8 +43,10 @@ import { fileURLToPath } from 'node:url';
 // --help / -h: non-mutating (closes #14).
 const USAGE = `Usage: book-scaffold build-bib
 
-Bibliography pipeline (academic profile). Reads bibliography.bib (or
-BOOK_BIB_PATH if set), parses via @citation-js, emits src/data/references.json.
+Bibliography + source-manifest pipeline. Reads bibliography.bib (or
+BOOK_BIB_PATH if set) -> src/data/references.json (BibTeX via @citation-js),
+AND sources/manifest.yaml -> src/data/sources.json (tools-profile sources for
+the /references page). Either input may be absent.
 
 Env:
   BOOK_BIB_PATH      Override path to .bib file (default: ./bibliography.bib).
@@ -63,8 +71,10 @@ const BIB_PATH = process.env.BOOK_BIB_PATH
   ? resolve(process.cwd(), process.env.BOOK_BIB_PATH)
   : resolve(PROJECT_ROOT, 'bibliography.bib');
 const OUT_PATH = resolve(PROJECT_ROOT, 'src/data/references.json');
+const SOURCES_PATH = resolve(PROJECT_ROOT, 'sources/manifest.yaml');
+const SOURCES_OUT = resolve(PROJECT_ROOT, 'src/data/sources.json');
 
-async function main() {
+async function buildReferences() {
   // Graceful skip when the .bib file is absent (minimal/tools profile, or
   // an academic book that hasn't authored citations yet). Emits an empty
   // references.json so consumers can still `import refs from '...'`.
@@ -123,6 +133,45 @@ async function main() {
   console.log(
     `build-bib: ${data.length} entries -> ${OUT_PATH.replace(PROJECT_ROOT + '/', '')}`,
   );
+}
+
+// v4.10.0 (closes #85): tools-profile books keep their sources in
+// sources/manifest.yaml (cited inline via <Citation src="id" />); the BibTeX
+// path above never sees them, so the auto-injected /references page rendered
+// blank. Emit those sources to src/data/sources.json so references.astro can
+// surface them via the same defensive import.meta.glob it uses for
+// references.json. Absent manifest -> no file written (academic/minimal books
+// degrade to empty, exactly like a missing .bib). YAML is lazy-imported so the
+// --help / no-manifest paths stay dependency-free.
+async function buildSources() {
+  let yamlText;
+  try {
+    yamlText = await readFile(SOURCES_PATH, 'utf8');
+  } catch (err) {
+    if (err.code === 'ENOENT') return; // no manifest — nothing to emit
+    throw err;
+  }
+
+  const { parse } = await import('yaml');
+  const parsed = parse(yamlText);
+  // The manifest is a YAML array of source objects. Keep only well-formed
+  // entries (a string `id` is the citation key + the /references anchor target).
+  // A blank or comments-only manifest parses to null/undefined/[].
+  const sources = Array.isArray(parsed)
+    ? parsed.filter((s) => s && typeof s.id === 'string')
+    : [];
+
+  await mkdir(dirname(SOURCES_OUT), { recursive: true });
+  await writeFile(SOURCES_OUT, JSON.stringify(sources, null, 2) + '\n', 'utf8');
+  console.log(
+    `build-bib: ${sources.length} source${sources.length === 1 ? '' : 's'} -> ` +
+      `${SOURCES_OUT.replace(PROJECT_ROOT + '/', '')}`,
+  );
+}
+
+async function main() {
+  await buildReferences();
+  await buildSources();
 }
 
 main().catch((err) => {

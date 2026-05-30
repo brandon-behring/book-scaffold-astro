@@ -3,14 +3,14 @@
  * SourceArchive — renders every entry in sources/manifest.yaml grouped
  * by tier in descending authority (T1 → T4).
  *
- * Used from Appendix D (`d-source-archive-index.mdx`) to replace the
- * static hand-maintained listing with an auto-generated view that
- * always reflects the manifest.
+ * Used by the auto-injected /references page (v4.10.0, #85) and by
+ * author-placed source-archive appendices, replacing a static hand-
+ * maintained listing with an auto-generated view that always reflects
+ * the manifest.
  *
  * Empty-tier behavior: renders an honest placeholder ("No sources at
- * this tier yet.") rather than hiding the section. This matches the
- * pedagogy of Appendix D — the archive is intentionally sparse in the
- * early book, and the gap is visible by design.
+ * this tier yet.") rather than hiding the section, so the tier taxonomy
+ * stays visible even before a tier has entries.
  */
 import { sourceTiers } from '@brandon_m_behring/book-scaffold-astro';
 import {
@@ -53,7 +53,7 @@ function year(d: Date | undefined): string | null {
 
         {empty ? (
           <p class="source-archive-empty">
-            No sources at this tier yet. Appendix D is intentionally sparse in the early book; this slot fills as chapters leave draft.
+            No sources at this tier yet.
           </p>
         ) : (
           <ol
