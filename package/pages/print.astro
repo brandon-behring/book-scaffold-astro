@@ -36,12 +36,12 @@ const rendered = await Promise.all(
 ---
 
 <Base title="Book (print edition)" description="Full book rendered as a single paginated document for PDF export.">
-  <main class="prose print-edition">
+  <div class="prose print-edition">
     {rendered.map(({ entry, Content }) => (
       <section class="chapter-print">
         <ChapterHeader data={entry.data} />
         <Content components={mdxComponents} />
       </section>
     ))}
-  </main>
+  </div>
 </Base>

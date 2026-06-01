@@ -43,7 +43,7 @@ Re-tune with Playwright + `browser_take_screenshot` at the four viewports above 
 </Base>
 ```
 
-Default is `showSidebar={true}`. The landing page (`src/pages/index.astro`) sets false because it's a one-page demo with no chapter context. Every chapter route inherits the default (true).
+Default is `showSidebar={true}`. Set it false on full-bleed surfaces — landing pages, splash screens, search results — that have no chapter context (`Base.astro` still emits the page's single `<main>` landmark in that branch). Every chapter route inherits the default (true).
 
 ## Customizing the sidebar
 
