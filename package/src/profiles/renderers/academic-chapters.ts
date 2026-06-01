@@ -28,7 +28,22 @@ const ACADEMIC_PART_ORDINAL: Record<string, number> = {
 
 const UNKNOWN_PART_ORDINAL = 99;
 
-/** Title-case an enum string: "ssm-core" → "Ssm Core". */
+/**
+ * Display labels for the academic-profile `part` enum. An explicit map (not
+ * naive title-casing) so acronyms render correctly: `ssm-core` → "SSM Core",
+ * not "Ssm Core" (#91). Keys mirror ACADEMIC_PART_ORDINAL; unknown/custom
+ * parts fall back to titleCase() in formatPartLabel.
+ */
+const ACADEMIC_PART_LABEL: Record<string, string> = {
+  foundations: 'Foundations',
+  'ssm-core': 'SSM Core',
+  'beyond-ssm': 'Beyond SSM',
+  integration: 'Integration',
+  synthesis: 'Synthesis',
+};
+
+/** Title-case an enum string: "ssm-core" → "Ssm Core". Fallback for parts
+ *  outside the known ACADEMIC_PART_LABEL map (e.g. consumer-custom parts). */
 function titleCase(part: string): string {
   return part
     .split('-')
@@ -43,7 +58,7 @@ export const academicChaptersRenderer: ChaptersRenderer = {
 
   formatPartLabel(part) {
     if (typeof part === 'string' && part.length > 0) {
-      return titleCase(part);
+      return ACADEMIC_PART_LABEL[part] ?? titleCase(part);
     }
     return String(part);
   },

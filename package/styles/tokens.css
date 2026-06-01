@@ -34,7 +34,9 @@
   --color-bg:         var(--paper);
   --color-bg-subtle:  var(--code-bg);
   --color-text:       var(--dark-text);
-  --color-text-muted: color-mix(in srgb, var(--dark-text) 55%, var(--paper));
+  /* 65% clears WCAG AA on --paper (~5.4:1); 55% computed to ≈#807F7E ≈3.9:1, failing AA (#91).
+     color-mix re-resolves in the dark scope (cream over deep bg → higher contrast). */
+  --color-text-muted: color-mix(in srgb, var(--dark-text) 65%, var(--paper));
   --color-border:     var(--code-frame);
   --color-link:       var(--warm-blue);
   --color-heading:    var(--warm-blue);

@@ -2,6 +2,27 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.13.0] — 2026-06-01
+
+Minor release. The **baseline-affecting** half of the 2026-06-01 accessibility audit (#91) — the two fixes that change rendered pixels, split out from v4.12.0 so their visual-regression baselines regenerate in a CI-matched environment. Both propagate to every consumer book.
+
+### Why
+
+`v4.12.0` shipped the pixel-neutral a11y fixes; these two move pixels, so they ride separately (baselines can't be regenerated in the dev sandbox — ~22% divergence vs CI). **Casing**: the academic `part` enum rendered through a naïve title-caser, so `ssm-core` displayed as "Ssm Core" and `beyond-ssm` as "Beyond Ssm" on the `/chapters` index — the acronym was mangled on every academic book. **Contrast**: muted text (`--color-text-muted`) was a 55% `color-mix` of `--dark-text` into `--paper`, computing to ≈`#807F7E` ≈ 3.9:1 — below the WCAG AA 4.5:1 floor for normal text.
+
+### Fixed
+
+- **Acronym-correct part labels** (#91) — `academicChaptersRenderer.formatPartLabel` now resolves an explicit `ACADEMIC_PART_LABEL` map (`ssm-core` → "SSM Core", `beyond-ssm` → "Beyond SSM", …) instead of naïve title-casing; unknown/custom parts fall back to `titleCase`. The map mirrors the existing `ACADEMIC_PART_ORDINAL` enum. Verified in the rendered `/chapters` index.
+- **WCAG-AA muted text** (#91) — `--color-text-muted` bumped from a 55% to a **65%** `color-mix` (≈`#6B6B69` ≈ **5.4:1** on `--paper`); cascades to code comment/punctuation tokens. `color-mix` is preserved, so the dark scope re-resolves automatically (cream over deep bg → higher contrast).
+
+### Changed
+
+- **Visual-regression baselines regenerated in CI** for the academic `/chapters` index + muted-text surfaces, reflecting the two intended pixel changes (the dev sandbox can't produce passing baselines — see CHANGELOG v4.10.0 §Deferred / #82).
+
+### Tests
+
+- `chapters-renderer.test.mjs` — updated the `formatPartLabel` assertion that previously encoded the "Ssm Core" bug, and added `beyond-ssm` / `integration` / `synthesis` + an unknown-part fallback case. Package suite stays **313** (one assertion strengthened, no count change).
+
 ## [4.12.0] — 2026-06-01
 
 Minor release. The pixel-safe half of the 2026-06-01 accessibility audit (#91) plus a decision-log convention for new books (#90). All changes are structural or additive — no rendered-pixel changes, so existing visual baselines are unaffected. (The two baseline-affecting #91 items — slug→title casing and muted-text contrast — are deferred to v4.13.0, which needs a CI-matched baseline regeneration.)

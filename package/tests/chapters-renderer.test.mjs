@@ -104,9 +104,15 @@ test('academic: partKey returns string-enum part', () => {
   assert.equal(academicChaptersRenderer.partKey({ part: 'foundations' }), 'foundations');
 });
 
-test('academic: formatPartLabel title-cases the enum', () => {
+test('academic: formatPartLabel maps the part enum acronym-correctly (#91)', () => {
   assert.equal(academicChaptersRenderer.formatPartLabel('foundations'), 'Foundations');
-  assert.equal(academicChaptersRenderer.formatPartLabel('ssm-core'), 'Ssm Core');
+  // acronym preserved via explicit label map — was "Ssm Core" under naive title-casing
+  assert.equal(academicChaptersRenderer.formatPartLabel('ssm-core'), 'SSM Core');
+  assert.equal(academicChaptersRenderer.formatPartLabel('beyond-ssm'), 'Beyond SSM');
+  assert.equal(academicChaptersRenderer.formatPartLabel('integration'), 'Integration');
+  assert.equal(academicChaptersRenderer.formatPartLabel('synthesis'), 'Synthesis');
+  // unknown/custom part → titleCase fallback (no map entry)
+  assert.equal(academicChaptersRenderer.formatPartLabel('consumer-custom'), 'Consumer Custom');
 });
 
 test('academic: isAppendix always false', () => {
