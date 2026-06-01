@@ -238,6 +238,10 @@ Chapters live under \`src/content/chapters/*.mdx\`. The starter \`week01-hello-w
 
 Available components are documented in the toolkit's [PACKAGE_DESIGN.md §10](https://github.com/brandon-behring/book-scaffold-astro/blob/v3.0/PACKAGE_DESIGN.md#10-mdx-import-patterns).
 
+## Decision log
+
+Significant design decisions are recorded as ADRs under \`decisions/\` — see \`decisions/README.md\` for the convention. Copy \`decisions/ADR_TEMPLATE.md\` to add a new one; the seed \`decisions/0001-*.md\` shows the format.
+
 ## Build + deploy
 
 \`\`\`bash
@@ -260,6 +264,7 @@ This book is built with \`@brandon_m_behring/book-scaffold-astro\` (${profile} p
 - Style customizations: \`src/styles/\` (overrides package styles)
 - Bibliography: \`bibliography.bib\` (academic) → \`src/data/references.json\` via \`npm run build:bib\`
 - Cross-references: ids on \`<Theorem>\` / \`<Figure>\` → \`src/data/labels.json\` via \`npm run build:labels\`
+- Decision log: \`decisions/\` — numbered ADRs (see \`decisions/README.md\`); record significant choices here
 
 **Toolkit reference:** [PACKAGE_DESIGN.md](https://github.com/brandon-behring/book-scaffold-astro/blob/v3.0/PACKAGE_DESIGN.md) — single source of truth for the API. File issues at https://github.com/brandon-behring/book-scaffold-astro/issues with label \`consumer:${name}\`.
 `,
@@ -324,6 +329,103 @@ import Base from '@brandon_m_behring/book-scaffold-astro/layouts/Base.astro';
     // books on v4.6+ are clean from day one. Consumers who want a custom
     // chapter layout opt-in via State 2 of recipe 18-chapter-route-ownership.
   };
+
+  // v4.12.0 (#91): default favicon. Base.astro links /favicon.svg on every
+  // page; without this asset consumer books 404 on it. Minimal theme-neutral
+  // book glyph in the warm palette. Universal across all profiles.
+  templates['public/favicon.svg'] = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Book">
+  <rect width="32" height="32" rx="6" fill="#1A1A19"/>
+  <path d="M9 8h11a3 3 0 0 1 3 3v13H12a3 3 0 0 1-3-3V8z" fill="#FDFCF9"/>
+  <path d="M9 8v13a3 3 0 0 0 3 3" fill="none" stroke="#C8A45C" stroke-width="1.5"/>
+</svg>
+`;
+
+  // v4.12.0 (#90): decision-log convention. Every new book ships a decisions/
+  // dir (numbered ADRs) so the discipline is consistent by construction.
+  // Distinct from the scaffold's own ledger (package/recipes/08-decisions-ledger.md).
+  templates['decisions/ADR_TEMPLATE.md'] = `# ADR-NNN: <short title of the decision>
+
+- **Status**: Proposed | Accepted | Deprecated | Superseded by ADR-MMM
+- **Date**: YYYY-MM-DD
+- **Deciders**: <who decided>
+
+## Context
+
+The situation, problem, or forces that motivate this decision. What
+constraints apply? What alternatives are on the table?
+
+## Decision
+
+What we decided, in active voice ("We will …").
+
+## Consequences
+
+What becomes easier or harder as a result — trade-offs accepted, follow-ups
+created, risks to revisit later.
+
+## Supersedes / Superseded-by
+
+Links to related ADRs. An ADR is immutable once Accepted: to change a past
+decision, write a new ADR that supersedes it (and set this one's Status to
+"Superseded by ADR-MMM").
+`;
+
+  templates['decisions/README.md'] = `# Decision log
+
+An append-only log of the significant decisions made while building this book,
+recorded as **ADRs** (Architecture Decision Records).
+
+## Why
+
+A written decision log keeps the *why* discoverable: future-you (and any
+collaborator or AI assistant) can see what was decided, when, and what
+alternatives were weighed — without reconstructing it from git archaeology.
+
+## Convention
+
+- One decision per file: \`NNNN-short-kebab-title.md\`, numbered sequentially
+  from \`0001\`.
+- Copy \`ADR_TEMPLATE.md\` to start a new record.
+- **ADRs are immutable once Accepted.** To change a past decision, write a new
+  ADR that supersedes it — set the old record's \`Status\` to
+  \`Superseded by ADR-MMM\` and link them. Never rewrite history.
+- Keep each record short: context, decision, consequences.
+
+See \`ADR_TEMPLATE.md\` for the field shape and \`0001-*.md\` for a worked example.
+`;
+
+  templates['decisions/0001-built-on-book-scaffold-astro.md'] = `# ADR-0001: Build "${name}" on book-scaffold-astro
+
+- **Status**: Accepted
+- **Date**: (set to scaffold date)
+- **Deciders**: (you)
+
+## Context
+
+"${name}" is a long-form book that needs MDX authoring, a content schema,
+print/PDF output, full-text search, and a citation/reference pipeline. Building
+that chrome from scratch is high-effort and easy to get subtly wrong
+(accessibility, SEO, dark mode, print CSS).
+
+## Decision
+
+We will build "${name}" as a consumer of
+\`@brandon_m_behring/book-scaffold-astro\` (${profile} profile, v${toolkitVersion}),
+not a bespoke Astro project. The toolkit owns layouts, components, default
+routes, styles, and the validate/build scripts; this repo owns content.
+
+## Consequences
+
+- Upgrades flow in via the npm dependency — we inherit fixes and features but
+  track the toolkit's release cadence and any breaking changes.
+- Customization happens through documented escape hatches (\`src/styles/\`
+  overrides, \`extraStyles\`, route toggles), not by forking the toolkit.
+- This decision log starts here so subsequent choices stay traceable.
+
+## Supersedes / Superseded-by
+
+None (initial decision).
+`;
 
   // Profile-conditional files.
   if (PROFILE_DEFAULTS[profile].withBib) {

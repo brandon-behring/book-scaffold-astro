@@ -6,6 +6,8 @@
 
 The full master plan with discussion lives at `~/.claude/plans/i-want-to-investigate-recursive-yao.md`. The decisions ledger below is the operational summary.
 
+> **Scaffold ledger vs. consumer decision log.** This file is the *scaffold's own* design ledger. Separately, since v4.12.0 (#90) `create-book` scaffolds every new book with a `decisions/` directory (numbered ADRs + `ADR_TEMPLATE.md` + `README.md`) so each book keeps its own decision log by construction. The two are independent: this ledger explains why the scaffold is shaped as it is; a book's `decisions/` explains why that book is shaped as it is.
+
 ## Strategic decisions (Round 1)
 
 ### D1. Canonical repo

@@ -2,6 +2,24 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.12.0] — 2026-06-01
+
+Minor release. The pixel-safe half of the 2026-06-01 accessibility audit (#91) plus a decision-log convention for new books (#90). All changes are structural or additive — no rendered-pixel changes, so existing visual baselines are unaffected. (The two baseline-affecting #91 items — slug→title casing and muted-text contrast — are deferred to v4.13.0, which needs a CI-matched baseline regeneration.)
+
+### Why
+
+The audit of a deployed consumer book surfaced defects that, because the scaffold is shared, propagate to **every** book built on it. Two are fixable without touching rendered pixels: a duplicate `<main>` landmark (two pages emitted their own `<main>` while `Base.astro` already wraps the slot in one — nested landmarks confuse assistive tech and fail the "one main per page" rule), and a favicon `404` on every consumer book (`Base.astro` links `/favicon.svg` but the scaffold shipped no such asset). Separately, the "credibility pass" wants every new book to keep a written decision log by construction, not by remembering to add one.
+
+### Fixed
+
+- **Single `<main>` landmark, owned by the layout** (#91) — `Base.astro` now emits exactly one `<main>` for every page in **both** the sidebar and full-bleed branches (the full-bleed branch previously had none). `pages/search.astro` and `pages/print.astro` no longer wrap their content in a second `<main>` (swapped to `<div>`, class preserved → identical CSS). Pages own `<article>`/`<section>`/`<div>`; the layout owns the landmark — correct by construction for future pages. Guarded by `tests/main-landmark.test.mjs`.
+- **Favicon 404** (#91) — `create-book` now scaffolds a default `public/favicon.svg` (minimal warm-palette book glyph) for every preset, so a fresh book no longer 404s on the `Base.astro` favicon link.
+
+### Added
+
+- **Decision-log convention** (#90) — every book scaffolded by `create-book` now ships a `decisions/` directory: `ADR_TEMPLATE.md` (numbered ADR pattern — `Status` / `Context` / `Decision` / `Consequences` / supersession), a `README.md` documenting the append-only convention, and a seed `0001-built-on-book-scaffold-astro.md`. The generated `README.md` + `CLAUDE.md` point at it. Distinct from the scaffold's own ledger (`recipes/08-decisions-ledger.md`), which gained a cross-reference clarifying the two.
+- **Tests** — `create-book` scaffold suite **+5** (favicon universal across presets; decisions dir/template/seed/README); package suite **+2** (`main-landmark`), now **313** (was 311).
+
 ## [4.11.0] — 2026-05-30
 
 Minor release. Closes #84: TikZ→SVG figures are now **accessible** (carry `<title>`/`<desc>` + `role="img"`) and **dark-mode-aware** (one SVG serves light + dark, tracking the in-page theme toggle). Backward-compatible — adds an optional `<Figure desc>` prop; existing figures render unchanged until re-built.

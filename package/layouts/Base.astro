@@ -26,8 +26,13 @@
  *   import Base from '../layouts/Base.astro';
  *   ---
  *   <Base title="Chapter 1" description="...">
- *     <main>...</main>
+ *     <article class="prose">...</article>
  *   </Base>
+ *
+ * Landmark ownership: Base emits the single `<main>` landmark for every
+ * page (both the sidebar and full-bleed branches below). Slotted content
+ * must NOT wrap itself in `<main>` — use `<article>` / `<section>` / `<div>`
+ * — or the page ends up with duplicate `<main>` landmarks (a11y, #91).
  */
 import '@fontsource-variable/roboto';
 import '@fontsource-variable/source-code-pro';
@@ -169,7 +174,7 @@ const ogDescription = description ?? bookConfig.description ?? '';
         <main class="layout-main"><slot /></main>
       </div>
     ) : (
-      <slot />
+      <main><slot /></main>
     )}
     <script is:inline>
       (function () {

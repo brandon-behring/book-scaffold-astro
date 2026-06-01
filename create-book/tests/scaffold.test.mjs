@@ -188,6 +188,71 @@ test('#38: help text mentions --preset before --profile', async () => {
   );
 });
 
+// ===== v4.12.0 (#91): default favicon =====
+
+test('#91: scaffold emits public/favicon.svg (Base.astro links it on every page)', async () => {
+  const r = runCli(['demo-favicon-91', '--preset=academic'], workRoot);
+  assert.equal(r.status, 0, `expected exit 0; stderr: ${r.stderr}`);
+  const faviconPath = join(workRoot, 'demo-favicon-91', 'public', 'favicon.svg');
+  assert.ok(await exists(faviconPath), `expected ${faviconPath} to exist`);
+  const svg = await readFile(faviconPath, 'utf8');
+  assert.match(svg, /<svg[\s>]/, 'favicon should be valid SVG markup');
+  assert.ok(svg.trim().length > 0, 'favicon should be non-empty');
+});
+
+test('#91: favicon is scaffolded for every preset (universal)', async () => {
+  for (const preset of ['tools', 'minimal', 'research-portfolio', 'course-notes']) {
+    const name = `demo-favicon-91-${preset}`;
+    const r = runCli([name, `--preset=${preset}`], workRoot);
+    assert.equal(r.status, 0, `${preset}: expected exit 0; stderr: ${r.stderr}`);
+    assert.ok(
+      await exists(join(workRoot, name, 'public', 'favicon.svg')),
+      `${preset}: expected public/favicon.svg to be scaffolded`,
+    );
+  }
+});
+
+// ===== v4.12.0 (#90): decision-log convention =====
+
+test('#90: scaffold emits decisions/ dir with template, README, and seed ADR', async () => {
+  const r = runCli(['demo-decisions-90', '--preset=academic'], workRoot);
+  assert.equal(r.status, 0, `expected exit 0; stderr: ${r.stderr}`);
+  const dir = join(workRoot, 'demo-decisions-90', 'decisions');
+  assert.ok(await exists(join(dir, 'ADR_TEMPLATE.md')), 'expected decisions/ADR_TEMPLATE.md');
+  assert.ok(await exists(join(dir, 'README.md')), 'expected decisions/README.md');
+  assert.ok(
+    await exists(join(dir, '0001-built-on-book-scaffold-astro.md')),
+    'expected seed decisions/0001-*.md',
+  );
+
+  const template = await readFile(join(dir, 'ADR_TEMPLATE.md'), 'utf8');
+  assert.match(template, /^# ADR-NNN:/m, 'template should use the numbered ADR-NNN heading');
+  assert.match(template, /\*\*Status\*\*/, 'template should have a Status field');
+  assert.match(template, /Superseded/, 'template should document supersession');
+});
+
+test('#90: seed ADR interpolates the book name + profile and is Accepted', async () => {
+  const r = runCli(['demo-decisions-90-seed', '--preset=tools'], workRoot);
+  assert.equal(r.status, 0, `expected exit 0; stderr: ${r.stderr}`);
+  const seed = await readFile(
+    join(workRoot, 'demo-decisions-90-seed', 'decisions', '0001-built-on-book-scaffold-astro.md'),
+    'utf8',
+  );
+  assert.match(seed, /demo-decisions-90-seed/, 'seed ADR should reference the book name');
+  assert.match(seed, /tools profile/, 'seed ADR should reference the resolved profile');
+  assert.match(seed, /\*\*Status\*\*: Accepted/, 'seed ADR should be Accepted');
+});
+
+test('#90: generated README references the decisions/ log', async () => {
+  const r = runCli(['demo-decisions-90-readme', '--preset=minimal'], workRoot);
+  assert.equal(r.status, 0, `expected exit 0; stderr: ${r.stderr}`);
+  const readme = await readFile(
+    join(workRoot, 'demo-decisions-90-readme', 'README.md'),
+    'utf8',
+  );
+  assert.match(readme, /decisions\//, 'generated README should point at decisions/');
+});
+
 // ===== #39: bibliography.bib is parseable =====
 
 test('#39: academic scaffold ships a bibliography.bib with at least one parseable entry', async () => {
