@@ -11,6 +11,10 @@ name: visual-regression
 # Regenerating baselines locally:
 #   cd package/tests/visual && ./run.sh --update
 # Human-review the PNGs in baselines/ before committing.
+#
+# Regenerating baselines in CI (when your local env diverges from CI — see #82):
+#   gh workflow run update-baselines.yml --ref <branch>
+# Runs ./run.sh --update in this same image and commits the PNGs to the branch.
 
 on:
   pull_request:
