@@ -18,26 +18,17 @@
  * them in as Astro.props from Base.astro if you want per-page overrides.
  */
 import { getCollection } from 'astro:content';
+import { academicParts } from '../src/schemas';
+import { academicPartHeading } from '../src/lib/academic-parts';
 
 const profile = import.meta.env.BOOK_PROFILE ?? 'minimal';
 const siteTitle = 'Book';
 const siteSubtitle = 'A scaffold-astro book';
 
-// Academic profile: part is a string enum.
-const ACADEMIC_PART_ORDER = [
-  'foundations',
-  'ssm-core',
-  'beyond-ssm',
-  'integration',
-  'synthesis',
-] as const;
-const ACADEMIC_PART_LABEL: Record<string, string> = {
-  foundations: 'Part I · Foundations',
-  'ssm-core': 'Part II · SSM Core',
-  'beyond-ssm': 'Part III · Beyond SSMs',
-  integration: 'Part IV · Integration',
-  synthesis: 'Part V · Synthesis',
-};
+// Academic profile: part is a string enum. `academicParts` (schemas.ts) is
+// the canonical order, shared with the renderer and ChapterHeader (#95); the
+// "Part {roman} · {name}" labels come from the same academic-parts module.
+const ACADEMIC_PART_ORDER = academicParts;
 
 const rawChapters = await getCollection('chapters', (entry) => !entry.data.draft);
 
@@ -101,7 +92,7 @@ function isCurrent(id: string): boolean {
 }
 
 function partLabel(key: string): string {
-  if (profile === 'academic') return ACADEMIC_PART_LABEL[key] ?? key;
+  if (profile === 'academic') return academicPartHeading(key);
   return `Part ${key}`;
 }
 ---

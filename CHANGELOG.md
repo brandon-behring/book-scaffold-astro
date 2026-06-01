@@ -2,6 +2,30 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.14.0] — 2026-06-01
+
+Minor release. Two backlog fixes that each propagate to every consumer book: the injected `/convergence` route no longer hard-errors when a tools book has no `patterns` collection (#86), and the academic `part`-label map gets a single source of truth (#95), resolving a latent singular/plural divergence.
+
+### Why
+
+Both are shared-scaffold defects surfaced by consumer books. **#86**: a tools-profile book (claude-books `architect-reference`) that uses the inline `<Convergence>` component but defines no `changelog/patterns.yaml` hit `astro build` errors — `The collection "patterns" does not exist or is empty` — because the auto-injected `/convergence` route called `getCollection('patterns')` on a never-registered collection (the page was already built to render a zero-pattern empty-state; it just crashed before reaching it). **#95**: the independent audit of v4.13.0 (#93) found the academic `part`→label map duplicated across three surfaces (`/chapters` renderer, `Sidebar`, `ChapterHeader`) with no shared source — and they had *silently diverged*: `beyond-ssm` rendered "Beyond SSM" on the `/chapters` index but "Beyond SSMs" in the sidebar/header, with three different unknown-part fallbacks.
+
+### Fixed
+
+- **`/convergence` degrades to its empty-state instead of erroring** (#86) — `pages/convergence.astro` now gates on the presence of `changelog/patterns.yaml` (via `import.meta.glob`) and never calls `getCollection('patterns')` when the collection is unregistered — the same presence-gate `references.astro` uses for the optional `sources` collection. A book with no patterns renders the dashboard's existing "no patterns yet" placeholders (`0 patterns currently tracked`) rather than a build error. Verified by injecting `/convergence` into a fixture with no `patterns` collection: the page builds clean and renders the empty-state. Consumers retain the explicit opt-out `defineBookConfig({ routes: { convergence: false } })`.
+
+### Changed
+
+- **One source of truth for academic part labels and ordinals** (#95, #99) — new module `src/lib/academic-parts.ts` exports `ACADEMIC_PART_NAMES` (base names), `academicPartName()` (bare, for the `/chapters` index), `academicPartHeading()` ("Part {roman} · {name}", for the Sidebar + ChapterHeader), and `academicPartOrdinal()` (1-based position in `academicParts`). The Roman heading prefix **and** the on-page sort key (`academicChaptersRenderer.sortKey`, `chapterSortKey`) now both derive from `academicPartOrdinal` — the previously-duplicated hardcoded ordinal maps in `academic-chapters.ts` and `chapter-sort.ts` are removed, so labels and ordering share one canonical source (`academicParts`) and cannot drift apart (#99 closes the ordinal axis #95 left open). All label surfaces call these helpers; the unknown/custom-part fallback is unified (`titleCase`, no ordinal). Helpers re-exported from the package entry for consumer reuse.
+- **Canonical `beyond-ssm` spelling is the plural "Beyond SSMs"** (#95) — matches the Sidebar/ChapterHeader nav (the prominent surfaces, 2 of the 3 maps). On shipped/fixture content the only rendered change is the academic `/chapters` index group heading, which flips "Beyond SSM" → "Beyond SSMs"; the Sidebar/ChapterHeader output is byte-identical to v4.13.0 for all five known parts (verified by rebuilding `fixture-academic-chapters` and grepping the rendered headings). One deliberate behavior change beyond that: the unified fallback renders an *unknown* academic-meta `part` as its title-cased name (e.g. "Methods") instead of the old `Part: {key}` / raw key — reachable e.g. by a research-portfolio chapter carrying `week` + `status` + a custom string `part`. No fixture or shipped book exercises that path, so no baseline moves.
+- **Visual-regression baselines — none changed.** The `/chapters` heading text edit ("Beyond SSM" → "Beyond SSMs") stays within the visual suite's `MAX_AE` tolerance, so `visual-regression` passes against the *existing* baselines with no regeneration — the same outcome as v4.13.0's "Ssm Core" → "SSM Core" edit, which also shipped baseline-free. Sidebar/ChapterHeader headings are byte-identical, so those baselines are untouched as well. (An initial `update-baselines` dispatch re-committed all ~96 baselines — it stages by byte-diff, not `MAX_AE` — and was dropped after confirming `visual` is green with zero baseline changes; see #98.)
+
+### Tests
+
+- `tests/academic-parts.test.mjs` (new) — `academicPartHeading()` reproduces the pre-v4.14.0 hardcoded nav strings byte-for-byte for all five parts (the byte-identical proof) plus the unified unknown-part fallback; `academicPartName()` + `ACADEMIC_PART_NAMES` assertions.
+- `tests/convergence-empty-state.test.mjs` (new) — source-contract: the `import.meta.glob` presence-gate + `emptyPatternsByCategory()` reuse, with a regression guard against the old unconditional `getCollection('patterns')` call.
+- `tests/chapters-renderer.test.mjs` — the `formatPartLabel('beyond-ssm')` assertion that encoded the singular is updated to the plural. Package suite **322** (was 313; +9 across the two new files).
+
 ## [4.13.0] — 2026-06-01
 
 Minor release. The **baseline-affecting** half of the 2026-06-01 accessibility audit (#91) — the two fixes that change rendered pixels, split out from v4.12.0 so their visual-regression baselines regenerate in a CI-matched environment. Both propagate to every consumer book.

@@ -21,6 +21,7 @@
  */
 import type { CollectionEntry } from 'astro:content';
 import { getFreshness, freshnessLabel } from '../src/lib/freshness';
+import { academicPartHeading } from '../src/lib/academic-parts';
 import StatusBadge from './StatusBadge.astro';
 import CodeRef from './CodeRef.astro';
 
@@ -60,23 +61,15 @@ const freshnessText = freshness
       : 'Stale'
   : null;
 
-// Academic-profile part labels (Roman-numeral · descriptive name).
-// v2.0 post_transformers used this exact mapping; verbatim restore here so
-// the header content density matches at narrow viewports. Keys mirror
-// `academicParts` enum from src/schemas.ts.
-const ACADEMIC_PART_LABELS: Record<string, string> = {
-  foundations: 'Part I · Foundations',
-  'ssm-core': 'Part II · SSM Core',
-  'beyond-ssm': 'Part III · Beyond SSMs',
-  integration: 'Part IV · Integration',
-  synthesis: 'Part V · Synthesis',
-};
-
-// Display strings, profile-tagged for clarity in markup.
+// Display strings, profile-tagged for clarity in markup. Academic part
+// labels ("Part {roman} · {name}") come from the shared academic-parts
+// module — the single source of truth across the /chapters index, Sidebar,
+// and this header (#95). Unknown/custom academic parts fall back to the
+// title-cased name (no ordinal), consistent with the other two surfaces.
 const partLabel = (() => {
   const p = d.part;
-  if (hasAcademicMeta && typeof p === 'string' && p in ACADEMIC_PART_LABELS) {
-    return ACADEMIC_PART_LABELS[p];
+  if (hasAcademicMeta && typeof p === 'string' && p.length > 0) {
+    return academicPartHeading(p);
   }
   if (typeof p === 'number') return `Part ${p}`;
   if (typeof p === 'string' && p.length > 0) return `Part: ${p}`;

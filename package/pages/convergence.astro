@@ -14,15 +14,39 @@ import Base from '../layouts/Base.astro';
 import PatternTimeline from '../components/PatternTimeline.astro';
 import {
   getPatternsByCategory,
+  emptyPatternsByCategory,
   CATEGORY_LABELS,
 } from '../src/lib/patterns';
 import { patternCategories } from '@brandon_m_behring/book-scaffold-astro';
 
-const grouped = await getPatternsByCategory();
+// A tools-profile book may use the inline <Convergence> component yet define
+// no `changelog/patterns.yaml` — then the `patterns` collection is never
+// registered and getCollection('patterns') errors with "The collection
+// 'patterns' does not exist or is empty" (#86). Gate on the manifest's
+// presence and never touch the collection when it is absent — the same
+// presence-gate references.astro uses for the optional `sources` collection.
+// When absent, render the dashboard's honest empty-state from a pure
+// all-empty map (no content-collection access).
+const patternsManifest = import.meta.glob('/changelog/patterns.yaml', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+const hasPatterns = '/changelog/patterns.yaml' in patternsManifest;
+const grouped = hasPatterns
+  ? await getPatternsByCategory()
+  : emptyPatternsByCategory();
 const totalPatterns = Object.values(grouped).reduce(
   (n, arr) => n + arr.length,
   0,
 );
+// Distinguish a missing/misnamed manifest from a legitimately empty registry:
+// a tools book that uses <Convergence> but never created changelog/patterns.yaml
+// would otherwise see a blank dashboard indistinguishable from "no patterns yet".
+// Surface an actionable hint instead — matching tips.astro / references.astro.
+const noManifestHint = hasPatterns
+  ? null
+  : 'No changelog/patterns.yaml found — create it to populate this dashboard, or set routes: { convergence: false } to drop this page.';
 ---
 <Base
   title="Convergence — Agentic Coding"
@@ -43,6 +67,9 @@ const totalPatterns = Object.values(grouped).reduce(
         converge or as historical patterns get backfilled; expect the
         count to drift upward, not the existing entries.
       </p>
+      {noManifestHint && (
+        <p class="convergence-no-manifest" role="note">{noManifestHint}</p>
+      )}
     </header>
 
     {patternCategories.map((cat) => {

@@ -80,6 +80,20 @@ export async function getAllPatterns(): Promise<PatternEntry[]> {
 }
 
 /**
+ * An all-empty category map (every category → []), in the exact shape
+ * getPatternsByCategory returns. Pure — no content-collection access — so it
+ * is safe to call when a book defines no `patterns` collection at all: the
+ * convergence dashboard renders its honest "no patterns yet" placeholders
+ * from it without ever calling getCollection('patterns') (#86, cf. how
+ * references.astro gates the absent `sources` collection).
+ */
+export function emptyPatternsByCategory(): Record<PatternCategory, PatternEntry[]> {
+  return Object.fromEntries(
+    patternCategories.map((c) => [c, [] as PatternEntry[]]),
+  ) as Record<PatternCategory, PatternEntry[]>;
+}
+
+/**
  * Patterns grouped by category; categories that have no patterns are
  * still emitted with an empty array so the dashboard can render
  * honest "no patterns yet" placeholders without checking undefined.
@@ -88,9 +102,7 @@ export async function getPatternsByCategory(): Promise<
   Record<PatternCategory, PatternEntry[]>
 > {
   const all = await getAllPatterns();
-  const grouped = Object.fromEntries(
-    patternCategories.map((c) => [c, [] as PatternEntry[]]),
-  ) as Record<PatternCategory, PatternEntry[]>;
+  const grouped = emptyPatternsByCategory();
   for (const p of all) {
     const cat = p.data.category ?? 'other';
     grouped[cat].push(p);

@@ -77,6 +77,16 @@ export { toolsChaptersRenderer } from './profiles/renderers/tools-chapters.js';
 export { academicChaptersRenderer } from './profiles/renderers/academic-chapters.js';
 export { fallbackChaptersRenderer } from './profiles/renderers/fallback-chapters.js';
 
+// v4.14.0 (#95): single source of truth for academic-profile part labels,
+// shared by the /chapters renderer, Sidebar, and ChapterHeader.
+export {
+  ACADEMIC_PART_NAMES,
+  academicPartName,
+  academicPartHeading,
+  academicPartOrdinal,
+  UNKNOWN_PART_ORDINAL,
+} from './lib/academic-parts.js';
+
 // v4.0.0 defineStyle API: typed, named, importable config bundles composed
 // via `styles: [...]` in defineBookConfig. Replaces the v3 `preset:` shorthand.
 // See recipes/15-defining-styles.md + MIGRATION-v3-to-v4.md.

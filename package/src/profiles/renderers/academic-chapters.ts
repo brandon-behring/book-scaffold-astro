@@ -12,44 +12,11 @@ import type {
   PartKey,
   StatusBadge,
 } from '../../lib/chapters-renderer.js';
-
-/**
- * Ordinal positions for the academic-profile `part` enum (src/schemas.ts:
- * academicParts). Order is load-bearing — drives both grouping order and
- * sort key. Must match academicParts in schemas.ts.
- */
-const ACADEMIC_PART_ORDINAL: Record<string, number> = {
-  foundations: 1,
-  'ssm-core': 2,
-  'beyond-ssm': 3,
-  integration: 4,
-  synthesis: 5,
-};
-
-const UNKNOWN_PART_ORDINAL = 99;
-
-/**
- * Display labels for the academic-profile `part` enum. An explicit map (not
- * naive title-casing) so acronyms render correctly: `ssm-core` → "SSM Core",
- * not "Ssm Core" (#91). Keys mirror ACADEMIC_PART_ORDINAL; unknown/custom
- * parts fall back to titleCase() in formatPartLabel.
- */
-const ACADEMIC_PART_LABEL: Record<string, string> = {
-  foundations: 'Foundations',
-  'ssm-core': 'SSM Core',
-  'beyond-ssm': 'Beyond SSM',
-  integration: 'Integration',
-  synthesis: 'Synthesis',
-};
-
-/** Title-case an enum string: "ssm-core" → "Ssm Core". Fallback for parts
- *  outside the known ACADEMIC_PART_LABEL map (e.g. consumer-custom parts). */
-function titleCase(part: string): string {
-  return part
-    .split('-')
-    .map((w) => (w.length > 0 ? w.charAt(0).toUpperCase() + w.slice(1) : ''))
-    .join(' ');
-}
+import {
+  academicPartName,
+  academicPartOrdinal,
+  UNKNOWN_PART_ORDINAL,
+} from '../../lib/academic-parts.js';
 
 export const academicChaptersRenderer: ChaptersRenderer = {
   partKey(data) {
@@ -58,7 +25,7 @@ export const academicChaptersRenderer: ChaptersRenderer = {
 
   formatPartLabel(part) {
     if (typeof part === 'string' && part.length > 0) {
-      return ACADEMIC_PART_LABEL[part] ?? titleCase(part);
+      return academicPartName(part);
     }
     return String(part);
   },
@@ -107,7 +74,7 @@ export const academicChaptersRenderer: ChaptersRenderer = {
     const partRaw = data.part;
     const partOrdinal =
       typeof partRaw === 'string'
-        ? (ACADEMIC_PART_ORDINAL[partRaw] ?? UNKNOWN_PART_ORDINAL)
+        ? academicPartOrdinal(partRaw)
         : typeof partRaw === 'number'
           ? partRaw
           : UNKNOWN_PART_ORDINAL;
