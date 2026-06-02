@@ -1,0 +1,77 @@
+---
+import Gallery from '../layouts/Gallery.astro';
+import SkillBox from '@brandon_m_behring/book-scaffold-astro/components/SkillBox.astro';
+import CaseStudy from '@brandon_m_behring/book-scaffold-astro/components/CaseStudy.astro';
+import ConceptBox from '@brandon_m_behring/book-scaffold-astro/components/ConceptBox.astro';
+import KeyIdea from '@brandon_m_behring/book-scaffold-astro/components/KeyIdea.astro';
+import TryThis from '@brandon_m_behring/book-scaffold-astro/components/TryThis.astro';
+import Recovery from '@brandon_m_behring/book-scaffold-astro/components/Recovery.astro';
+import Convergence from '@brandon_m_behring/book-scaffold-astro/components/Convergence.astro';
+import Divergence from '@brandon_m_behring/book-scaffold-astro/components/Divergence.astro';
+---
+
+<Gallery title="Callouts — tools family">
+  <section data-gallery="skillbox">
+    <h2 class="gallery-state">SkillBox</h2>
+    <SkillBox title="Cache-warming workflow">
+      Run <code>/context</code> to check the budget, then evict stale memory
+      before the next sprint.
+    </SkillBox>
+  </section>
+
+  <section data-gallery="casestudy">
+    <h2 class="gallery-state">CaseStudy</h2>
+    <CaseStudy date="2026-02" title="The 1M-window launch">
+      Teams filled the new window to ~800K tokens and watched accuracy collapse —
+      proof that ceiling is not the same as usable budget.
+    </CaseStudy>
+  </section>
+
+  <section data-gallery="conceptbox">
+    <h2 class="gallery-state">ConceptBox</h2>
+    <ConceptBox term="Context rot">
+      Degradation of output quality as the KV-cache fills — observable as drift
+      or incoherent edits late in a long session.
+    </ConceptBox>
+  </section>
+
+  <section data-gallery="keyidea">
+    <h2 class="gallery-state">KeyIdea</h2>
+    <KeyIdea>
+      Context is a finite budget. Account for it, spend it deliberately, and
+      reclaim it.
+    </KeyIdea>
+  </section>
+
+  <section data-gallery="trythis">
+    <h2 class="gallery-state">TryThis</h2>
+    <TryThis title="Measure your budget">
+      Open a chapter and run <code>/context</code>. What percentage is already
+      filled before you type a word?
+    </TryThis>
+  </section>
+
+  <section data-gallery="recovery">
+    <h2 class="gallery-state">Recovery</h2>
+    <Recovery pattern="CLAUDE.md bloat" symptom="Compaction every 3 turns">
+      Split CLAUDE.md hub-and-spoke; move project specifics to path-scoped
+      <code>.claude/rules/*.md</code>.
+    </Recovery>
+  </section>
+
+  <section data-gallery="convergence">
+    <h2 class="gallery-state">Convergence</h2>
+    <Convergence tools={['claude-code', 'gemini-cli', 'codex-cli']}>
+      All three now treat context as a budgeted, decaying resource with explicit
+      compaction commands.
+    </Convergence>
+  </section>
+
+  <section data-gallery="divergence">
+    <h2 class="gallery-state">Divergence</h2>
+    <Divergence axis="window size">
+      Claude 200K · Gemini 1M · Codex 128K. The accuracy-vs-ceiling tradeoff is
+      not settled.
+    </Divergence>
+  </section>
+</Gallery>

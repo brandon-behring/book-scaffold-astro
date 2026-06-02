@@ -1,0 +1,41 @@
+---
+import Gallery from '../layouts/Gallery.astro';
+import Pitfall from '@brandon_m_behring/book-scaffold-astro/components/Pitfall.astro';
+import WorkedExample from '@brandon_m_behring/book-scaffold-astro/components/WorkedExample.astro';
+import YouWillLearn from '@brandon_m_behring/book-scaffold-astro/components/YouWillLearn.astro';
+---
+
+<Gallery title="Callouts — pedagogy family">
+  <section data-gallery="youwilllearn">
+    <h2 class="gallery-state">YouWillLearn</h2>
+    <YouWillLearn prerequisites="Linear algebra, eigenvalues">
+      - State-space representations and their stability
+      - How to construct HiPPO bases
+      - Numerical integration for the recurrence
+    </YouWillLearn>
+  </section>
+
+  <section data-gallery="pitfall">
+    <h2 class="gallery-state">Pitfall</h2>
+    <Pitfall title="Stability ≠ boundedness">
+      A marginally-stable system can produce bounded output yet still have
+      eigenvalues on the imaginary axis.
+    </Pitfall>
+  </section>
+
+  <section data-gallery="workedexample-collapsed">
+    <h2 class="gallery-state">WorkedExample — collapsed (default)</h2>
+    <WorkedExample id="hippo-collapsed" title="Computing the HiPPO measure">
+      Step 1: initialize the Legendre basis. Step 2: project the input onto it.
+      Step 3: integrate the coefficient ODE.
+    </WorkedExample>
+  </section>
+
+  <section data-gallery="workedexample-expanded">
+    <h2 class="gallery-state">WorkedExample — expanded</h2>
+    <WorkedExample id="hippo-expanded" title="Computing the HiPPO measure" expanded={true}>
+      Step 1: initialize the Legendre basis. Step 2: project the input onto it.
+      Step 3: integrate the coefficient ODE to update the compressed state.
+    </WorkedExample>
+  </section>
+</Gallery>

@@ -1,0 +1,107 @@
+---
+import Gallery from '../layouts/Gallery.astro';
+import NoteBox from '@brandon_m_behring/book-scaffold-astro/components/NoteBox.astro';
+import ExampleBox from '@brandon_m_behring/book-scaffold-astro/components/ExampleBox.astro';
+import DynConnect from '@brandon_m_behring/book-scaffold-astro/components/DynConnect.astro';
+import InsightBox from '@brandon_m_behring/book-scaffold-astro/components/InsightBox.astro';
+import WarnBox from '@brandon_m_behring/book-scaffold-astro/components/WarnBox.astro';
+import CounterBox from '@brandon_m_behring/book-scaffold-astro/components/CounterBox.astro';
+import TipBox from '@brandon_m_behring/book-scaffold-astro/components/TipBox.astro';
+import OpenQuestion from '@brandon_m_behring/book-scaffold-astro/components/OpenQuestion.astro';
+import PaperBox from '@brandon_m_behring/book-scaffold-astro/components/PaperBox.astro';
+import ResultBox from '@brandon_m_behring/book-scaffold-astro/components/ResultBox.astro';
+import Theorem from '@brandon_m_behring/book-scaffold-astro/components/Theorem.astro';
+---
+
+<Gallery title="Callouts — academic family">
+  <section data-gallery="notebox">
+    <h2 class="gallery-state">NoteBox</h2>
+    <NoteBox title="Learning objectives">
+      By the end of this chapter you will understand context windows and token
+      accounting.
+    </NoteBox>
+  </section>
+
+  <section data-gallery="examplebox">
+    <h2 class="gallery-state">ExampleBox</h2>
+    <ExampleBox title="Token accounting">
+      System prompt (2K) + history (5K) + query (1K) leaves 200K − 8K = 192K of
+      budget.
+    </ExampleBox>
+  </section>
+
+  <section data-gallery="dynconnect">
+    <h2 class="gallery-state">DynConnect</h2>
+    <DynConnect title="Continuous-time stability">
+      This ODE maps to the HiPPO-LegS state matrix via diagonalization.
+    </DynConnect>
+  </section>
+
+  <section data-gallery="insightbox">
+    <h2 class="gallery-state">InsightBox</h2>
+    <InsightBox title="Why eigenvalues matter">
+      The distribution of eigenvalues, not the trace, governs long-term
+      stability.
+    </InsightBox>
+  </section>
+
+  <section data-gallery="warnbox">
+    <h2 class="gallery-state">WarnBox</h2>
+    <WarnBox title="Mind the unit circle">
+      If any eigenvalue lies outside it, the discrete system diverges.
+    </WarnBox>
+  </section>
+
+  <section data-gallery="counterbox">
+    <h2 class="gallery-state">CounterBox</h2>
+    <CounterBox title="A limitation">
+      The claim that selective projection always helps assumes linear attention;
+      it fails under softmax.
+    </CounterBox>
+  </section>
+
+  <section data-gallery="tipbox">
+    <h2 class="gallery-state">TipBox</h2>
+    <TipBox title="Use the Jordan form">
+      For defective matrices, compute the Jordan normal form instead of a plain
+      eigendecomposition.
+    </TipBox>
+  </section>
+
+  <section data-gallery="openquestion">
+    <h2 class="gallery-state">OpenQuestion</h2>
+    <OpenQuestion title="Minimal state dimension">
+      What is the smallest state that preserves lossless recall at
+      Transformer-scale lengths?
+    </OpenQuestion>
+  </section>
+
+  <section data-gallery="paperbox">
+    <h2 class="gallery-state">PaperBox</h2>
+    <PaperBox title="Gu et al. (2020), HiPPO">
+      “We present a theory of high-order polynomial projection operators for
+      equipping recurrence with lossless memory.”
+    </PaperBox>
+  </section>
+
+  <section data-gallery="resultbox">
+    <h2 class="gallery-state">ResultBox</h2>
+    <ResultBox title="Experimental validation">
+      The custom HiPPO kernel cut inference latency 23% with no accuracy loss.
+    </ResultBox>
+  </section>
+
+  <section data-gallery="theorem">
+    <h2 class="gallery-state">Theorem (theorem / definition / proof)</h2>
+    <Theorem kind="theorem" n="4.2" name="Continuous-time stability" id="thm-stability">
+      A linear system with eigenvalues λ ∈ ℂ is stable iff Re(λ) &lt; 0 for all λ.
+    </Theorem>
+    <Theorem kind="definition" n="4.1" name="Hurwitz matrix">
+      A matrix is Hurwitz when every eigenvalue has strictly negative real part.
+    </Theorem>
+    <Theorem kind="proof">
+      Diagonalize A = VΛV⁻¹; each mode evolves as e^(λt), which decays iff
+      Re(λ) &lt; 0. ∎
+    </Theorem>
+  </section>
+</Gallery>
