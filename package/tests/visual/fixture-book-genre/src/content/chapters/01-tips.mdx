@@ -3,6 +3,23 @@ week: 1
 part: foundations
 title: "Tips chapter (v4.3.0 #70)"
 status: implemented
+# provenance: visual-regression exemplar for the package-injected Provenance
+# block (#82). book-genre is the one fixture that does NOT shadow the injected
+# chapter route, so it renders <Provenance>. Populated here (all five sections)
+# so book-genre-tips-chapter-* baselines capture the rendered block; sibling
+# 02-exercises.mdx omits it, keeping the "Audit history not yet recorded"
+# fallback covered too. Values are illustrative fixture data (repo-relative
+# paths render as <code>, not links).
+provenance:
+  ai_tools:
+    - "Claude Code (Opus 4.8)"
+    - research-kb
+  prompts_archive: docs/sessions/2026-06-01--provenance-fixture.md
+  decisions_log: DECISIONS.md#provenance-visual-baseline
+  audit_history:
+    - { date: 2026-06-01, type: routine, file: audits/AUDIT_2026-06-01.md }
+    - { date: 2026-06-02, type: independent, file: audits/AUDIT_2026-06-02_INDEPENDENT.md }
+  citation_backstop: research-kb
 ---
 import Tip from '@brandon_m_behring/book-scaffold-astro/components/Tip.astro';
 import TipsCard from '@brandon_m_behring/book-scaffold-astro/components/TipsCard.astro';
