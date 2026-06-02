@@ -5,23 +5,13 @@
  * in the toolkit's DTS bundle without trying to resolve Astro's virtual
  * modules at build time. The Astro-context wrappers (sortKey, getAllChapters,
  * getNeighbors) live in src/lib/chapters.ts and import from here.
+ *
+ * The academic `part`→ordinal mapping is shared with the label surfaces via
+ * `academicPartOrdinal` (src/lib/academic-parts.ts, also astro:content-free),
+ * so on-page sort order and the Roman heading prefix derive from one canonical
+ * order (`academicParts`) and cannot drift apart (#99).
  */
-
-/**
- * Ordinal positions for the academic-profile `part` enum (src/schemas.ts:
- * academicParts). Order here is load-bearing: it determines the on-page
- * grouping order of academic books. Anything outside the enum (e.g., a
- * consumer-extended part name) sorts to the end.
- */
-const ACADEMIC_PART_ORDINAL: Record<string, number> = {
-  foundations: 1,
-  'ssm-core': 2,
-  'beyond-ssm': 3,
-  integration: 4,
-  synthesis: 5,
-};
-
-const UNKNOWN_PART_ORDINAL = 99;
+import { academicPartOrdinal, UNKNOWN_PART_ORDINAL } from './academic-parts.js';
 
 /**
  * Pure-function sort key from a chapter frontmatter object. Spans both
@@ -43,7 +33,7 @@ export function chapterSortKey(data: Record<string, unknown>): number {
     typeof partRaw === 'number'
       ? partRaw
       : typeof partRaw === 'string'
-        ? (ACADEMIC_PART_ORDINAL[partRaw] ?? UNKNOWN_PART_ORDINAL)
+        ? academicPartOrdinal(partRaw)
         : UNKNOWN_PART_ORDINAL;
   const within =
     typeof data.chapter === 'number'

@@ -108,7 +108,9 @@ test('academic: formatPartLabel maps the part enum acronym-correctly (#91)', () 
   assert.equal(academicChaptersRenderer.formatPartLabel('foundations'), 'Foundations');
   // acronym preserved via explicit label map — was "Ssm Core" under naive title-casing
   assert.equal(academicChaptersRenderer.formatPartLabel('ssm-core'), 'SSM Core');
-  assert.equal(academicChaptersRenderer.formatPartLabel('beyond-ssm'), 'Beyond SSM');
+  // canonical spelling is the plural "Beyond SSMs" — one source of truth
+  // shared with the Sidebar/ChapterHeader headings (#95)
+  assert.equal(academicChaptersRenderer.formatPartLabel('beyond-ssm'), 'Beyond SSMs');
   assert.equal(academicChaptersRenderer.formatPartLabel('integration'), 'Integration');
   assert.equal(academicChaptersRenderer.formatPartLabel('synthesis'), 'Synthesis');
   // unknown/custom part → titleCase fallback (no map entry)
