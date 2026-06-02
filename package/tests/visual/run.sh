@@ -13,7 +13,8 @@
 #
 # Usage:
 #   ./run.sh                  — run tests; fail if any diff > MAX_AE
-#   ./run.sh --update         — regenerate baselines (review before commit)
+#   ./run.sh --update         — regenerate only baselines that changed beyond
+#                               MAX_AE (review before commit; #98)
 #   ./run.sh --keep-server    — leave preview servers running for debug
 #
 # Env:
@@ -117,8 +118,31 @@ for fixture_spec in "${FIXTURES[@]}"; do
       fi
 
       if [ "$UPDATE" -eq 1 ]; then
+        # #98: MAX_AE-aware regen. Chrome's PNG encoder / anti-aliasing is not
+        # byte-deterministic, so an unconditional `cp` rewrites every baseline —
+        # and the update-baselines workflow's byte-level `git diff` then commits
+        # all ~96 PNGs even when none changed beyond the visual tolerance. Only
+        # overwrite a baseline whose pixel diff exceeds the same MAX_AE the test
+        # path uses; otherwise keep the committed bytes so `git diff` stays clean
+        # and the regen commit shows only the baselines that genuinely moved.
+        if [ -f "baselines/$name" ]; then
+          upd_ae=$(compare -metric AE -fuzz 2% "baselines/$name" "$shot" null: 2>&1)
+          upd_rc=$?
+          upd_ae="${upd_ae// /}"
+          [[ "$upd_ae" =~ ^[0-9]+$ ]] || upd_ae=0
+          # rc 2 = compare error (e.g. dimension change) → must regenerate.
+          if [ "$upd_rc" -ne 2 ] && [ "$upd_ae" -le "$MAX_AE" ]; then
+            printf "KEEP      %-40s  AE=%-8s  <= MAX_AE (unchanged)\n" "$name" "$upd_ae"
+            PASS=$((PASS + 1))
+            continue
+          fi
+          cp "$shot" "baselines/$name"
+          printf "UPDATE    %-40s  AE=%-8s  (regenerated)\n" "$name" "$upd_ae"
+          PASS=$((PASS + 1))
+          continue
+        fi
         cp "$shot" "baselines/$name"
-        printf "BASELINE  %-40s  saved\n" "$name"
+        printf "BASELINE  %-40s  created\n" "$name"
         PASS=$((PASS + 1))
         continue
       fi
