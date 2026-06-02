@@ -1,0 +1,37 @@
+---
+import Gallery from '../layouts/Gallery.astro';
+import Provenance from '@brandon_m_behring/book-scaffold-astro/components/Provenance.astro';
+
+// Representative populated provenance (all five sections). Illustrative
+// fixture data — repo-relative paths render as <code>, only http(s) links.
+const populated = {
+  ai_tools: ['Claude Code (Opus 4.8)', 'research-kb'],
+  prompts_archive: 'docs/sessions/2026-06-02--provenance.md',
+  decisions_log: 'DECISIONS.md#provenance',
+  audit_history: [
+    { date: new Date('2026-06-01'), type: 'routine', file: 'audits/AUDIT_2026-06-01.md' },
+    { date: new Date('2026-06-02'), type: 'independent', file: 'audits/AUDIT_2026-06-02_INDEPENDENT.md' },
+  ],
+  citation_backstop: 'research-kb',
+};
+---
+
+<Gallery title="Provenance">
+  <p>
+    The per-chapter "How this was made" audit block (v4.8.0). It renders as a
+    collapsed <code>&lt;details&gt;</code>; the visual test expands it so the
+    populated body (AI-tools chips, references, audit history, citation
+    backstop) is captured — the coverage the old 2000px-viewport suite could
+    not reach (#82).
+  </p>
+
+  <section data-gallery="provenance-populated">
+    <h2 class="gallery-state">Populated</h2>
+    <Provenance data={populated} />
+  </section>
+
+  <section data-gallery="provenance-empty">
+    <h2 class="gallery-state">Empty → fallback</h2>
+    <Provenance data={null} />
+  </section>
+</Gallery>

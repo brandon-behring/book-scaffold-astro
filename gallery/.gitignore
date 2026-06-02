@@ -1,0 +1,6 @@
+# Playwright run artifacts — regenerated each run, never committed.
+# (Baselines under tests/**-snapshots/ ARE committed — they're the gate.)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

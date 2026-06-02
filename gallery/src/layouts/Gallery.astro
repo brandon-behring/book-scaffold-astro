@@ -1,0 +1,71 @@
+---
+/**
+ * Minimal gallery shell. Imports the package's design CSS directly (tokens,
+ * typography, callouts, chapter, convergence) so components render fully
+ * styled — without the bookScaffoldIntegration / book-config / Sidebar
+ * machinery that Base.astro requires. Components bring their own scoped
+ * styles; this provides the design tokens (CSS custom properties) they read.
+ */
+import '@fontsource-variable/roboto';
+import '@fontsource-variable/source-code-pro';
+import '@brandon_m_behring/book-scaffold-astro/styles/tokens.css';
+import '@brandon_m_behring/book-scaffold-astro/styles/typography.css';
+import '@brandon_m_behring/book-scaffold-astro/styles/callouts.css';
+import '@brandon_m_behring/book-scaffold-astro/styles/chapter.css';
+import '@brandon_m_behring/book-scaffold-astro/styles/convergence.css';
+
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>{title} · book-scaffold gallery</title>
+  </head>
+  <body>
+    <main class="prose gallery">
+      <p class="gallery-eyebrow"><a href="/">book-scaffold gallery</a></p>
+      <h1>{title}</h1>
+      <slot />
+    </main>
+
+    <style is:global>
+      body {
+        background: var(--color-paper, #fffdf9);
+        color: var(--color-text, #1a1a1a);
+        margin: 0;
+      }
+      .gallery {
+        max-width: 56rem;
+        margin: 0 auto;
+        padding: 2rem 1.5rem 6rem;
+      }
+      .gallery-eyebrow {
+        font-family: var(--font-code, monospace);
+        font-size: 0.8rem;
+        letter-spacing: 0.04em;
+        color: var(--color-text-muted, #666);
+        margin: 0 0 1rem;
+      }
+      .gallery > section {
+        margin-block: 2.75rem;
+      }
+      .gallery-state {
+        font-family: var(--font-code, monospace);
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--color-text-muted, #666);
+        border-bottom: 1px solid var(--color-border, #e4e0d8);
+        padding-bottom: 0.3rem;
+        margin-bottom: 1rem;
+      }
+    </style>
+  </body>
+</html>
