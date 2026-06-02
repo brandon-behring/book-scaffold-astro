@@ -37,7 +37,9 @@ const { title } = Astro.props;
 
     <style is:global>
       body {
-        background: var(--color-paper, #fffdf9);
+        /* Real semantic tokens (NOT the nonexistent --color-paper) so the
+           whole gallery tracks the dark-mode toggle. */
+        background: var(--color-bg, #fdfcf9);
         color: var(--color-text, #1a1a1a);
         margin: 0;
       }

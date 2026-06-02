@@ -106,6 +106,28 @@ Two callout families coexist. Authors import what they need.
 
 Full reference in `recipes/04-component-library.md`.
 
+### Theme-change event (v4.14.2)
+
+`Base.astro` emits `book:theme:change` on `window` whenever the **effective** theme changes — both the chrome's dark-mode toggle and a system `prefers-color-scheme` flip (the latter only when no explicit theme is pinned). Use it for **canvas / JS islands** that can't recolor via CSS alone; CSS-token elements recolor automatically from the `[data-theme]` attribute.
+
+```ts
+// inside a Preact island (client:visible / client:idle)
+function currentTheme(): 'light' | 'dark' {
+  const t = document.documentElement.getAttribute('data-theme');
+  return t === 'light' || t === 'dark'
+    ? t
+    : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+useEffect(() => {
+  draw(currentTheme());                                 // initial paint
+  const onChange = (e: Event) => draw((e as CustomEvent).detail.theme);
+  window.addEventListener('book:theme:change', onChange);
+  return () => window.removeEventListener('book:theme:change', onChange);
+}, []);
+```
+
+`detail.theme` is `'light' | 'dark'`. Pull design-token colors via `getComputedStyle(document.documentElement).getPropertyValue('--…')` so the canvas matches the page, and respect `prefers-reduced-motion` for any redraw animation. (Event-only by design — a `useThemeColors` helper graduates with the demo kit, #103.)
+
 ## Citation patterns
 
 Academic profile uses BibTeX → `references.json`:
