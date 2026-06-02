@@ -42,7 +42,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.ref_name }}
+          # Check out the source BRANCH (not the PR merge ref). On a
+          # pull_request event `github.ref_name` is `<n>/merge` — a non-branch
+          # ref that checkout can't resolve (git exit 1); `github.head_ref` is
+          # the branch and is empty for push/dispatch, so this falls back
+          # cleanly and still lets the update job push baselines back.
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - uses: actions/setup-node@v6
         with:
