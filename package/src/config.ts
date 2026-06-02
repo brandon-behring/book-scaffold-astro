@@ -271,6 +271,26 @@ export async function defineBookConfig(
   // KaTeX externals — same v3.7.1 pattern, now gated on the composed preset.
   const katexExternals = wantsKatex ? [] : ['remark-math', 'rehype-katex', 'katex'];
 
+  // #102: @fontsource-variable/* ship as `.css` entrypoints. Vite externalizes
+  // them for SSR, and Node's ESM loader can't import a `.css` → `astro dev` 500s
+  // on every page (build + preview are unaffected). `ssr.noExternal` keeps them
+  // in the SSR bundle. Merge (not clobber) any consumer-supplied `vite.ssr`.
+  const restVite = ((rest as Record<string, unknown>).vite as Record<string, unknown> | undefined) ?? {};
+  const restSsr = (restVite.ssr as Record<string, unknown> | undefined) ?? {};
+  const restNoExternal = restSsr.noExternal as string | RegExp | (string | RegExp)[] | boolean | undefined;
+  const noExternal =
+    restNoExternal === true
+      ? true
+      : [
+          '@fontsource-variable/roboto',
+          '@fontsource-variable/source-code-pro',
+          ...(Array.isArray(restNoExternal)
+            ? restNoExternal
+            : restNoExternal != null
+              ? [restNoExternal]
+              : []),
+        ];
+
   const config: AstroUserConfig = {
     site,
     ...rest,
@@ -282,7 +302,11 @@ export async function defineBookConfig(
           external: katexExternals,
         },
       },
-      ...((rest as Record<string, unknown>).vite as object | undefined ?? {}),
+      ...restVite,
+      ssr: {
+        ...restSsr,
+        noExternal,
+      },
     },
   } as AstroUserConfig;
   return config;
