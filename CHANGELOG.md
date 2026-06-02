@@ -2,6 +2,13 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.14.1] — 2026-06-02
+
+Patch release. Fixes a dev-only crash that hit every consumer book on the scaffold.
+
+### Fixed
+- **`astro dev` 500s on every page — `@fontsource-variable` `.css` externalized in SSR (#102).** `Base.astro` imports `@fontsource-variable/roboto` + `…/source-code-pro`, whose package entrypoints are `.css`; Vite externalized them for SSR, and Node's ESM loader can't `import` a `.css` → HTTP 500 on every route under `npm run dev` (`astro build`/`astro preview` were unaffected). `defineBookConfig` now adds the two packages to `vite.ssr.noExternal`, **merging** (not clobbering) any consumer-supplied `vite.ssr` — removing the per-repo `astro.config.mjs` workaround consumers had been carrying. The in-repo `gallery/` app (which configures Astro directly rather than via `defineBookConfig`) gets the same line.
+
 ## [4.14.0] — 2026-06-01
 
 Minor release. Two backlog fixes that each propagate to every consumer book: the injected `/convergence` route no longer hard-errors when a tools book has no `patterns` collection (#86), and the academic `part`-label map gets a single source of truth (#95), resolving a latent singular/plural divergence.
