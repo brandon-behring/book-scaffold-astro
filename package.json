@@ -11,6 +11,7 @@
     "package",
     "create-book",
     "demo",
+    "gallery",
     "package/tests/visual/fixture",
     "package/tests/visual/fixture-course-notes",
     "package/tests/visual/fixture-research-portfolio",

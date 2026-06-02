@@ -1,0 +1,92 @@
+name: visual-pw
+
+# Playwright visual regression against the component gallery (gallery/).
+# Uses the system google-chrome (channel:'chrome') on ubuntu-latest — the
+# same image the baselines are generated in. Replaces the raw-chrome+
+# ImageMagick run.sh suite (which is retired once this covers the fixtures).
+#
+# Regenerate baselines: Actions → visual-pw → Run workflow → update = true.
+# (The bot commit is pushed with GITHUB_TOKEN and won't re-trigger this
+# workflow; push any follow-up commit or re-run to get the green check.)
+
+on:
+  pull_request:
+    paths:
+      - 'package/**'
+      - 'gallery/**'
+      - '.github/workflows/visual-pw.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'package/**'
+      - 'gallery/**'
+      - '.github/workflows/visual-pw.yml'
+  workflow_dispatch:
+    inputs:
+      update:
+        description: 'Regenerate snapshots (--update-snapshots) and commit them to the branch'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: visual-pw-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Check out the source BRANCH (not the PR merge ref). On a
+          # pull_request event `github.ref_name` is `<n>/merge` — a non-branch
+          # ref that checkout can't resolve (git exit 1); `github.head_ref` is
+          # the branch and is empty for push/dispatch, so this falls back
+          # cleanly and still lets the update job push baselines back.
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install (workspace-aware)
+        run: npm install
+
+      - name: Build the toolkit (tsup -> dist/)
+        run: npm run build --workspace package
+
+      - name: System Chrome version (must match the baseline env)
+        run: google-chrome --version
+
+      - name: Run Playwright visual tests
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.update }}
+        run: npm --prefix gallery run test:visual
+
+      - name: Regenerate + commit snapshots
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.update }}
+        run: |
+          npm --prefix gallery run test:visual:update || true
+          if git diff --quiet -- gallery/tests; then
+            echo "No snapshot changes — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gallery/tests
+          git commit -m "test(visual): regenerate Playwright snapshots in CI"
+          git push origin "HEAD:${{ github.ref_name }}"
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            gallery/playwright-report/
+            gallery/test-results/
+          retention-days: 14

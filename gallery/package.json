@@ -1,0 +1,25 @@
+{
+  "name": "@brandon_m_behring/book-scaffold-gallery",
+  "description": "Living style guide + Playwright visual-regression surface for @brandon_m_behring/book-scaffold-astro. Renders every component in its states; deployed at guides.brandon-behring.dev.",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev --port 4331",
+    "build": "astro build",
+    "preview": "astro preview --host 127.0.0.1 --port 4331",
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots"
+  },
+  "dependencies": {
+    "@brandon_m_behring/book-scaffold-astro": "*",
+    "@astrojs/preact": "^5.1.1",
+    "astro": "^6.1.7",
+    "preact": "^10.29.1",
+    "@fontsource-variable/roboto": "^5.2.10",
+    "@fontsource-variable/source-code-pro": "^5.2.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0"
+  }
+}

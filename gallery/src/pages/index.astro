@@ -1,0 +1,20 @@
+---
+import Gallery from '../layouts/Gallery.astro';
+
+// Sections grow per phase. Phase 1 seeds Provenance (the #82 coverage that
+// the old viewport-capped run.sh could never reach).
+const sections = [{ slug: 'provenance', label: 'Provenance' }];
+---
+
+<Gallery title="Components">
+  <p>
+    Living style guide for <code>@brandon_m_behring/book-scaffold-astro</code>.
+    Every component is rendered here in its meaningful states; this page set
+    doubles as the Playwright visual-regression fixture surface.
+  </p>
+  <ul class="gallery-index">
+    {sections.map((s) => (
+      <li><a href={`/${s.slug}/`}>{s.label}</a></li>
+    ))}
+  </ul>
+</Gallery>
