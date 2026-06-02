@@ -2,8 +2,12 @@
 import Gallery from '../layouts/Gallery.astro';
 
 // Sections grow per phase. Phase 1 seeds Provenance (the #82 coverage that
-// the old viewport-capped run.sh could never reach).
-const sections = [{ slug: 'provenance', label: 'Provenance' }];
+// the old viewport-capped run.sh could never reach); v4.14.2 adds the
+// theme-change-hook demo (the engine's interaction+theme differentiator).
+const sections = [
+  { slug: 'provenance', label: 'Provenance' },
+  { slug: 'theme', label: 'Theme toggle + book:theme:change' },
+];
 ---
 
 <Gallery title="Components">

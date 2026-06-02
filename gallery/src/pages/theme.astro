@@ -1,0 +1,104 @@
+---
+import Gallery from '../layouts/Gallery.astro';
+---
+
+<Gallery title="Theme toggle + book:theme:change">
+  <p>
+    Proves the <code>book:theme:change</code> hook (#103, v4.14.2). CSS-token
+    elements recolor from the <code>[data-theme]</code> attribute alone; a
+    <code>&lt;canvas&gt;</code> can't, so it subscribes to the event and
+    repaints from design tokens. The Playwright spec toggles the theme and
+    asserts the canvas corner pixel changed — i.e. the event fired and the
+    island redrew.
+  </p>
+
+  <button id="theme-toggle" type="button" class="theme-toggle-btn" aria-label="Toggle dark mode">
+    Toggle theme
+  </button>
+
+  <section data-gallery="theme-css">
+    <h2 class="gallery-state">CSS-token element — recolors via the attribute</h2>
+    <div class="swatch">
+      <code>--color-bg</code> background · <code>--color-text</code> text
+    </div>
+  </section>
+
+  <section data-gallery="theme-canvas">
+    <h2 class="gallery-state">Canvas — recolors via book:theme:change</h2>
+    <canvas
+      id="theme-canvas"
+      width="240"
+      height="90"
+      role="img"
+      aria-label="Theme demo: page-background fill with an ink-colored bar"></canvas>
+  </section>
+
+  <style>
+    .theme-toggle-btn {
+      font: inherit;
+      padding: 0.4rem 0.9rem;
+      cursor: pointer;
+      color: var(--color-text);
+      background: var(--color-bg-subtle, transparent);
+      border: 1px solid var(--color-border, #ccc);
+      border-radius: 6px;
+    }
+    .swatch {
+      margin-top: 0.5rem;
+      padding: 1.25rem;
+      border-radius: 8px;
+      background: var(--color-bg);
+      color: var(--color-text);
+      border: 1px solid var(--color-border, #ccc);
+    }
+  </style>
+
+  {/*
+    Mirrors Base.astro's toggle + book:theme:change dispatch (the gallery does
+    NOT use Base.astro). Keep in sync with package/layouts/Base.astro.
+  */}
+  <script is:inline>
+    (function () {
+      var root = document.documentElement;
+      function effectiveTheme() {
+        var explicit = root.getAttribute('data-theme');
+        if (explicit === 'light' || explicit === 'dark') return explicit;
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      function emit() {
+        window.dispatchEvent(new CustomEvent('book:theme:change', { detail: { theme: effectiveTheme() } }));
+      }
+      var btn = document.getElementById('theme-toggle');
+      if (btn) {
+        btn.addEventListener('click', function () {
+          var current = root.getAttribute('data-theme') ||
+            (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+          var next = current === 'dark' ? 'light' : 'dark';
+          root.setAttribute('data-theme', next);
+          emit();
+        });
+      }
+    })();
+  </script>
+
+  {/* Canvas island: repaints from design tokens on book:theme:change. */}
+  <script is:inline>
+    (function () {
+      var c = document.getElementById('theme-canvas');
+      if (!c) return;
+      var ctx = c.getContext('2d');
+      function token(name, fallback) {
+        var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        return v || fallback;
+      }
+      function paint() {
+        ctx.fillStyle = token('--color-bg', '#fdfcf9');
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.fillStyle = token('--color-text', '#1a1a1a');
+        ctx.fillRect(12, 12, c.width - 24, c.height - 24);
+      }
+      paint();
+      window.addEventListener('book:theme:change', paint);
+    })();
+  </script>
+</Gallery>

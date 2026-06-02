@@ -2,6 +2,13 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.14.2] — 2026-06-02
+
+Patch release. Adds the theme-change hook the interactive-demo kit needs (#103) — event-only; the broader demo primitives stay incubating in their consumer book until proven.
+
+### Added
+- **`book:theme:change` event (#103).** `Base.astro` now emits a `book:theme:change` CustomEvent on `window` whenever the **effective** theme changes — the chrome's dark-mode toggle, and a system `prefers-color-scheme` flip when no explicit theme is pinned. `detail.theme` is `'light' | 'dark'`. CSS-token elements already recolor from the `[data-theme]` attribute; this lets **canvas / JS islands** (which can't) subscribe and repaint. Event-only by design — a `useThemeColors` helper will graduate later with the demo kit. Authoring contract + example in the package `CLAUDE.md` ("Theme-change event"); exercised by a new `gallery/` theme page + Playwright spec (toggle → asserts the canvas corner pixel recolors).
+
 ## [4.14.1] — 2026-06-02
 
 Patch release. Fixes a dev-only crash that hit every consumer book on the scaffold.
