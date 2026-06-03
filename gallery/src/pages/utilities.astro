@@ -1,0 +1,115 @@
+---
+import Gallery from '../layouts/Gallery.astro';
+// Page-level CSS (only this page needs them — keeps existing baselines stable).
+import '@brandon_m_behring/book-scaffold-astro/styles/layout.css';
+import '@brandon_m_behring/book-scaffold-astro/styles/poc-layouts.css';
+
+import ChapterTOC from '@brandon_m_behring/book-scaffold-astro/components/ChapterTOC.astro';
+import MarginNote from '@brandon_m_behring/book-scaffold-astro/components/MarginNote.astro';
+import Sidenote from '@brandon_m_behring/book-scaffold-astro/components/Sidenote.astro';
+import StatusBadge from '@brandon_m_behring/book-scaffold-astro/components/StatusBadge.astro';
+import Tag from '@brandon_m_behring/book-scaffold-astro/components/Tag.astro';
+import PocLayout from '@brandon_m_behring/book-scaffold-astro/components/PocLayout.astro';
+import Tip from '@brandon_m_behring/book-scaffold-astro/components/Tip.astro';
+import WeekRef from '@brandon_m_behring/book-scaffold-astro/components/WeekRef.astro';
+import Cite from '@brandon_m_behring/book-scaffold-astro/components/Cite.astro';
+import XRef from '@brandon_m_behring/book-scaffold-astro/components/XRef.astro';
+import Figure from '@brandon_m_behring/book-scaffold-astro/components/Figure.astro';
+import TipsCard from '@brandon_m_behring/book-scaffold-astro/components/TipsCard.astro';
+---
+
+<Gallery title="Utilities">
+  <section data-gallery="statusbadge">
+    <h2 class="gallery-state">StatusBadge (7-state → 3 public labels)</h2>
+    <p>
+      <StatusBadge status="implemented" />
+      <StatusBadge status="prose_only" />
+      <StatusBadge status="scaffolded" />
+      <StatusBadge status="planned" />
+    </p>
+  </section>
+
+  <section data-gallery="tag">
+    <h2 class="gallery-state">Tag</h2>
+    <p>
+      Official <Tag kind="official" /> · practitioner <Tag kind="practitioner" /> ·
+      convergence <Tag kind="convergence" />.
+    </p>
+  </section>
+
+  <section data-gallery="cite">
+    <h2 class="gallery-state">Cite (references.json fixture)</h2>
+    <p>The HiPPO construction <Cite key="gu2020hippo" /> underpins S4 <Cite key="gu2020hippo" page="3" />.</p>
+  </section>
+
+  <section data-gallery="xref">
+    <h2 class="gallery-state">XRef (labels.json fixture)</h2>
+    <p>As shown in <XRef id="thm-stability" />, the modes decay. Unknown ids degrade: <XRef id="missing-id" />.</p>
+  </section>
+
+  <section data-gallery="weekref">
+    <h2 class="gallery-state">WeekRef</h2>
+    <WeekRef week={4}>The S4 layer reuses the state matrix from this week.</WeekRef>
+  </section>
+
+  <section data-gallery="sidenote">
+    <h2 class="gallery-state">Sidenote</h2>
+    <p>
+      The argument<Sidenote>A sidenote floats to the margin in a Tufte layout; here it
+      shows the marker + note styling.</Sidenote> was persuasive on its own.
+    </p>
+  </section>
+
+  <section data-gallery="marginnote">
+    <h2 class="gallery-state">MarginNote (note / warning / tip)</h2>
+    <MarginNote variant="note">A neutral aside in the margin column.</MarginNote>
+    <MarginNote variant="warning" label="Gotcha">This setting can hurt performance.</MarginNote>
+    <MarginNote variant="tip">Prefer the Jordan form for defective matrices.</MarginNote>
+  </section>
+
+  <section data-gallery="tip">
+    <h2 class="gallery-state">Tip (numbered, anchored)</h2>
+    <Tip n="14" title="Care about your craft">
+      Write code as if you will maintain it for the rest of your life.
+    </Tip>
+  </section>
+
+  <section data-gallery="poclayout">
+    <h2 class="gallery-state">PocLayout (tutorial / cheat-sheet)</h2>
+    <PocLayout kind="tutorial">
+      <h3>Getting started</h3>
+      <p>A tutorial layout widens measure and relaxes vertical rhythm.</p>
+    </PocLayout>
+    <PocLayout kind="cheat-sheet">
+      <h3>Quick reference</h3>
+      <p>A cheat-sheet layout tightens spacing for scanning.</p>
+    </PocLayout>
+  </section>
+
+  <section data-gallery="figure">
+    <h2 class="gallery-state">Figure (inlined SVG, theme-aware)</h2>
+    <Figure
+      src="/figures/sample.svg"
+      caption="A sample inlined figure."
+      alt="A rounded rectangle containing a blue circle labelled sample"
+      id="fig-sample"
+    />
+  </section>
+
+  <section data-gallery="tipscard">
+    <h2 class="gallery-state">TipsCard (tips.json fixture)</h2>
+    <TipsCard />
+  </section>
+
+  <section data-gallery="chaptertoc">
+    <h2 class="gallery-state">ChapterTOC (interactive details)</h2>
+    <ChapterTOC
+      headings={[
+        { depth: 2, slug: 'intro', text: 'Introduction' },
+        { depth: 3, slug: 'background', text: 'Background' },
+        { depth: 2, slug: 'methods', text: 'Methods' },
+        { depth: 3, slug: 'setup', text: 'Setup' },
+      ]}
+    />
+  </section>
+</Gallery>

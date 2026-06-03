@@ -1,0 +1,11 @@
+{
+  "gu2020hippo": {
+    "id": "gu2020hippo",
+    "author": [
+      { "family": "Gu", "given": "Albert" },
+      { "family": "Dao", "given": "Tri" }
+    ],
+    "issued": { "date-parts": [[2020]] },
+    "title": "HiPPO: Recurrent Memory with Optimal Polynomial Projections"
+  }
+}
