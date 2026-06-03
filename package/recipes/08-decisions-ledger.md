@@ -105,6 +105,23 @@ Not in v2.0:
 
 Until v3.0 triggers, accept that bug fixes don't auto-flow to existing books. Both books are currently low-churn.
 
+## Visual-suite migration → gallery + Playwright (v5.x infra, 2026-06)
+
+### D18 — Replace run.sh with a component gallery + Playwright
+**Decision**: A standalone `gallery/` app renders every component × state × theme; Playwright (`channel:'chrome'`, full-page, pixelmatch) drives it (`playwright.config.ts`) **and** the 6 profile fixtures' 24 routes (`playwright.fixtures.config.ts`). `run.sh` + its 96 baselines + `visual-regression.yml` + `update-baselines.yml` are retired; `visual-pw.yml` is the sole visual gate.
+**Reasoning**: run.sh's `--window-size=Wx2000` cap left below-fold content untested (root of #82); full-page `toHaveScreenshot` removes the fold + adds interaction (expand `<details>`, dark-mode toggle, canvas recolor). `channel:'chrome'` uses system Chrome — dissolves the "chromium-headless-shell won't build on every distro" objection that drove run.sh.
+**Deviate when**: Never reintroduce viewport-capped screenshots. New components → gallery pages; new routes → fixture-suite entries.
+
+### D19 — Baselines are CI-generated (glyph pages especially)
+**Decision**: Commit baselines from the `visual-pw` `update` dispatch (ubuntu + system chrome). ASCII/common-glyph pages are byte-identical CI==local, but math/Unicode-glyph pages (λ, ℂ, Λ) render with platform fallback fonts and MUST be CI-generated.
+**Reasoning**: Cross-OS font rendering diverges; pixelmatch `maxDiffPixels` absorbs AA, not glyph substitution.
+**Deviate when**: Never hand-commit a glyph-page baseline from a dev box.
+
+### D20 — Full route parity before retiring run.sh (Q3)
+**Decision**: The fixture suite covers run.sh's 24 routes (2 widths: mobile 768 + desktop 1280; run.sh's 1440/1920 were redundant) before deletion. Porting caught a stale run.sh route (research-portfolio `/chapters/example/` was a silently-screenshotted 404 — real slug `ch01-fixture`) + the hardcoded-`GITHUB_REPO` CodeRef/CodeBlock wart (#109).
+**Reasoning**: #82 itself was a coverage gap — don't trade coverage for speed.
+**Deviate when**: Never delete a visual gate without equivalent-or-better coverage in the replacement.
+
 ## How to use this ledger
 
 When a future change in the scaffold contradicts a decision above, update this ledger first. Don't change behavior silently — the ledger is the durable record of "why this is shaped like it is."
