@@ -8,7 +8,9 @@ const FIXTURES: { name: string; port: number; routes: string[] }[] = [
   {
     name: 'research-portfolio',
     port: 4175,
-    routes: ['/', '/chapters/example/', '/chapters/ch02-math/', '/frontmatter/title-page/'],
+    // example.mdx has `slug: ch01-fixture` → served at /chapters/ch01-fixture/
+    // (run.sh's /chapters/example/ was a stale 404 it silently screenshotted).
+    routes: ['/', '/chapters/ch01-fixture/', '/chapters/ch02-math/', '/frontmatter/title-page/'],
   },
   {
     name: 'academic-chapters',

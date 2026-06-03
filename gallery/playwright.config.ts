@@ -11,6 +11,10 @@ import { defineConfig } from '@playwright/test';
 // diverges. Regenerate via the `visual-pw` workflow's `update` dispatch.
 export default defineConfig({
   testDir: './tests',
+  // The fixture-route suite has its own config (playwright.fixtures.config.ts)
+  // with the 6-fixture webServer array; exclude it here so the component suite
+  // doesn't try to run those specs against the gallery's own server.
+  testIgnore: ['**/fixtures/**'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? 'github' : 'list',
