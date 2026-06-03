@@ -63,21 +63,26 @@ jobs:
       - name: System Chrome version (must match the baseline env)
         run: google-chrome --version
 
-      - name: Run Playwright visual tests
+      - name: Run Playwright visual tests (gallery components + fixture routes)
         if: ${{ github.event_name != 'workflow_dispatch' || !inputs.update }}
-        run: npm --prefix gallery run test:visual
+        run: |
+          npm --prefix gallery run test:visual
+          npm --prefix gallery run test:fixtures
 
       - name: Regenerate + commit snapshots
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.update }}
         run: |
           npm --prefix gallery run test:visual:update || true
-          if git diff --quiet -- gallery/tests; then
+          npm --prefix gallery run test:fixtures:update || true
+          # Stage first, then check --cached: `git diff --quiet` alone misses
+          # brand-new (untracked) baselines, e.g. the first fixture-route run.
+          git add gallery/tests
+          if git diff --cached --quiet; then
             echo "No snapshot changes — nothing to commit."
             exit 0
           fi
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add gallery/tests
           git commit -m "test(visual): regenerate Playwright snapshots in CI"
           git push origin "HEAD:${{ github.ref_name }}"
 
