@@ -1,0 +1,14 @@
+[
+  {
+    "n": 1,
+    "title": "Care about your craft",
+    "chapter": "intro",
+    "preview": "Write code as if you will maintain it for the rest of your life."
+  },
+  {
+    "n": 2,
+    "title": "Don't live with broken windows",
+    "chapter": "intro",
+    "preview": "Fix bad designs and wrong decisions when you find them."
+  }
+]
