@@ -19,6 +19,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = resolve(__dirname, '..', 'scripts', 'build-labels.mjs');
 const FIXTURE_CHAPTER = resolve(__dirname, 'fixtures', 'chapters', 'valid-academic.mdx');
 const SLUG_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'slug-override.mdx');
+const KINDS_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'theorem-kinds.mdx');
+const BAD_KIND_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'bad-theorem-kind.mdx');
+const OVERRIDE_NOKIND_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'theorem-override-nokind.mdx');
+const NO_KIND_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'bad-theorem-nokind.mdx');
+const NO_CHAPTER_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'theorem-no-chapter.mdx');
 
 /** Run build-labels.mjs in a temp dir containing one fixture chapter. Returns parsed labels.json. */
 function runInTempDir(fixturePaths = [FIXTURE_CHAPTER]) {
@@ -106,4 +111,77 @@ test('build-labels: keys sorted alphabetically (deterministic output)', () => {
   const keys = Object.keys(labels);
   const sortedKeys = [...keys].sort();
   assert.deepEqual(keys, sortedKeys);
+});
+
+// ===== #126: structured number + kind-aware display word =====
+
+test('build-labels: emits a structured number field for auto-counted entries (#126)', () => {
+  const labels = runInTempDir();
+  // Theorem.astro reads `number` by id and renders it, so heading == xref.
+  assert.equal(labels['w4:thm:stability'].number, '4.1');
+  assert.equal(labels['w4:fig:phase-portrait'].number, '4.1');
+  assert.equal(labels['w4:ex:harmonic'].number, '4.1');
+});
+
+test('build-labels: a label override → custom display, number is null (#126)', () => {
+  const labels = runInTempDir();
+  // An override opts out of auto-numbering; number:null → the heading shows no
+  // number rather than mis-parsing the custom string into a wrong one.
+  assert.equal(labels['w4:thm:convergence'].display, 'Convergence (custom)');
+  assert.equal(labels['w4:thm:convergence'].number, null);
+});
+
+test('build-labels: <Theorem kind> is kind-aware and shares one counter (#126)', () => {
+  const labels = runInTempDir([KINDS_FIXTURE]);
+  // Shared <Theorem> counter — one amsthm sequence 9.1 / 9.2 / 9.3 ...
+  assert.equal(labels['w9:thm:main'].number, '9.1');
+  assert.equal(labels['w9:prop:dual'].number, '9.2');
+  assert.equal(labels['w9:lem:helper'].number, '9.3');
+  // ... but the display WORD is the actual kind, not a kind-blind "Theorem".
+  assert.equal(labels['w9:thm:main'].display, 'Theorem 9.1');
+  assert.equal(labels['w9:prop:dual'].display, 'Proposition 9.2');
+  assert.equal(labels['w9:lem:helper'].display, 'Lemma 9.3'); // legacy type=
+});
+
+test('build-labels: an unknown <Theorem> kind FAILS the build (#126, #121 contract)', () => {
+  let threw = false;
+  let stderr = '';
+  try {
+    runInTempDir([BAD_KIND_FIXTURE]);
+  } catch (err) {
+    threw = true;
+    stderr = String(err.stderr ?? '') + String(err.message ?? '');
+  }
+  assert.ok(threw, 'build-labels should exit non-zero on an unknown kind');
+  assert.match(stderr, /thereom|not one of/);
+});
+
+test('build-labels: a label= override needs no kind — no throw, number null (#126)', () => {
+  // Regression guard: computing the kind-aware word for an override entry would
+  // throw on this documented kindless `<Theorem id label="…">` form. The word
+  // is discarded for overrides, so it must not be resolved/validated.
+  const labels = runInTempDir([OVERRIDE_NOKIND_FIXTURE]);
+  assert.equal(labels['w9:ovr:custom'].display, 'Custom display');
+  assert.equal(labels['w9:ovr:custom'].number, null);
+});
+
+test('build-labels: an id <Theorem> with no kind and no label throws "no kind=" (#126)', () => {
+  let stderr = '';
+  try {
+    runInTempDir([NO_KIND_FIXTURE]);
+  } catch (err) {
+    stderr = String(err.stderr ?? '') + String(err.message ?? '');
+  }
+  // The fix normalizes the absent attr to undefined so the message is the
+  // actionable "no kind=", not the misleading kind="null" (extractAttr → null).
+  assert.match(stderr, /no kind=/);
+  assert.doesNotMatch(stderr, /kind="null"/);
+});
+
+test('build-labels: no week/chapter frontmatter → bare-counter number, kind-aware (#126)', () => {
+  const labels = runInTempDir([NO_CHAPTER_FIXTURE]);
+  assert.equal(labels['nochap:thm:a'].number, '1');
+  assert.equal(labels['nochap:thm:a'].display, 'Theorem 1');
+  assert.equal(labels['nochap:lem:b'].number, '2');
+  assert.equal(labels['nochap:lem:b'].display, 'Lemma 2'); // shared counter, kind-aware
 });

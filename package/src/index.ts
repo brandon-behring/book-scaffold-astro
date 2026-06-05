@@ -93,6 +93,7 @@ export {
 // Theorem.astro and unit-tested in tests/theorem-label.test.mjs.
 export {
   theoremLabel,
+  resolveTheoremNumber,
   THEOREM_KINDS,
   KIND_LABEL,
   type TheoremKind,

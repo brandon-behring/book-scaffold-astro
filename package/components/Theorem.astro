@@ -10,29 +10,54 @@
  * (ssm-foundations ch1–11 + the LaTeX-env mental model pass `type=`). `name`
  * is canonical with `title=`/`label=` accepted. An absent or unknown kind
  * THROWS at build (see `src/lib/theorem-label`) — it never renders an empty
- * label. Pass `n` to number the environment.
+ * label.
  *
- * Auto-numbering note: the LaTeX preamble shares a counter between
- * theorem/proposition/lemma/corollary and gives definition/example/exercise/
- * remark their own; in MDX the author passes `n` explicitly when it matters.
+ * Auto-numbering (#126): when the theorem has an `id`, its number is read from
+ * `src/data/labels.json` — the same map <XRef> resolves — so the heading number
+ * EQUALS every cross-reference to it by construction. No hand-passed `n=`, no
+ * drift; inserting a theorem renumbers the chapter from one counter
+ * (`book-scaffold build-labels`). Explicit `n=` stays a fallback for an un-id'd
+ * theorem (or before labels.json is built); when an id resolves, the labels.json
+ * number wins so the two surfaces can never disagree.
  *
  * Usage:
- *   <Theorem kind="theorem" n="4.2" name="Stable continuous-time eigenvalues" id="thm-w4-stability">
- *     For …
+ *   <Theorem kind="theorem" name="Stable continuous-time eigenvalues" id="thm-w4-stability">
+ *     For …                      // number auto-resolved from labels.json
  *   </Theorem>
  *
  *   <Theorem kind="definition" n="4.1" name="HiPPO-LegS">
- *     The HiPPO-LegS state matrix …
+ *     The HiPPO-LegS state matrix …   // explicit n= (un-cross-referenced)
  *   </Theorem>
  */
-import { theoremLabel, type TheoremLabelProps } from '../src/lib/theorem-label';
+import { theoremLabel, resolveTheoremNumber, type TheoremLabelProps } from '../src/lib/theorem-label';
 
 interface Props extends TheoremLabelProps {
   id?: string;
 }
 
+// #126: resolve THIS theorem's number from the same labels.json that <XRef>
+// reads, so the heading number == the cross-reference display by construction.
+// build-labels.mjs writes { href, display, number } keyed by id. Mirror XRef's
+// project-root glob (Vite resolves `/` to the consumer root, not the package);
+// a missing file → empty map → fall back to explicit n= (the same soft-degrade
+// path as XRef — the validator catches unknown ids at CI).
+type LabelEntry = { href: string; display: string; number?: string | null };
+const labelsModules = import.meta.glob<{ default: Record<string, LabelEntry> }>(
+  '/src/data/labels.json',
+  { eager: true },
+);
+const labelsMap = (labelsModules['/src/data/labels.json']?.default ?? {}) as Record<
+  string,
+  LabelEntry
+>;
+
 const { id } = Astro.props;
-const { kind, fullLabel } = theoremLabel(Astro.props);
+// labels.json (by id) is the number source; explicit n= is the fallback when no
+// id resolves. When both exist the shared source wins — that is what guarantees
+// heading == xref (a stale n= can't reintroduce drift).
+const entry = id ? labelsMap[id] : undefined;
+const resolvedN = resolveTheoremNumber(entry, Astro.props.n);
+const { kind, fullLabel } = theoremLabel({ ...Astro.props, n: resolvedN });
 ---
 <div class="theorem" data-kind={kind} id={id}>
   <span class="theorem-label">{fullLabel}.</span>

@@ -15,7 +15,7 @@
  */
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { theoremLabel, THEOREM_KINDS, KIND_LABEL } from '../dist/index.mjs';
+import { theoremLabel, resolveTheoremNumber, THEOREM_KINDS, KIND_LABEL } from '../dist/index.mjs';
 
 test('theoremLabel: canonical kind= resolves the label', () => {
   assert.equal(theoremLabel({ kind: 'theorem' }).fullLabel, 'Theorem');
@@ -56,4 +56,26 @@ test('THEOREM_KINDS + KIND_LABEL: nine amsthm environments, stable contract', ()
   assert.equal(THEOREM_KINDS.length, 9);
   assert.equal(KIND_LABEL.corollary, 'Corollary');
   assert.equal(KIND_LABEL.proof, 'Proof');
+});
+
+test('theoremLabel: word-only resolution (no n/name) — the form build-labels reuses (#126)', () => {
+  // build-labels derives the kind-aware xref word via theoremLabel({kind}).fullLabel,
+  // so heading and cross-reference agree on the kind word, not just the number.
+  assert.equal(theoremLabel({ kind: 'proposition' }).fullLabel, 'Proposition');
+  assert.equal(theoremLabel({ kind: 'lemma' }).fullLabel, 'Lemma');
+  assert.equal(theoremLabel({ type: 'corollary' }).fullLabel, 'Corollary'); // legacy alias
+});
+
+test('resolveTheoremNumber: labels.json number wins; n= is the fallback (#126)', () => {
+  // THE #126 guarantee: when an id resolves in labels.json, the index wins over
+  // a stale hand-passed n= — so heading and <XRef> can never disagree.
+  assert.equal(resolveTheoremNumber({ number: '9.5' }, '4.2'), '9.5');
+  // No entry (un-id'd theorem, or labels.json not built) → explicit n= fallback.
+  assert.equal(resolveTheoremNumber(undefined, '4.2'), '4.2');
+  // label= override (number:null) with an explicit n= → falls through to n=.
+  assert.equal(resolveTheoremNumber({ number: null }, '4.2'), '4.2');
+  // number:null and no n= → undefined (unnumbered, not the string "null").
+  assert.equal(resolveTheoremNumber({ number: null }, undefined), undefined);
+  // Neither → undefined.
+  assert.equal(resolveTheoremNumber(undefined, undefined), undefined);
 });

@@ -1,0 +1,12 @@
+---
+week: 9
+title: Bad theorem kind
+status: implemented
+description: Fixture for build-labels fail-loud (#126) — a typo'd kind must stop the build, mirroring the render-time throw (#121).
+---
+
+import Theorem from '@brandon_m_behring/book-scaffold-astro/components/Theorem.astro';
+
+# Bad kind
+
+<Theorem id="w9:thm:bogus" kind="thereom">Typo'd kind — build-labels must throw rather than emit a kind-blind label.</Theorem>

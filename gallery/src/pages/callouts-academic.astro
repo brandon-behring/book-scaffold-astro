@@ -93,7 +93,10 @@ import Theorem from '@brandon_m_behring/book-scaffold-astro/components/Theorem.a
 
   <section data-gallery="theorem">
     <h2 class="gallery-state">Theorem (theorem / definition / proof)</h2>
-    <Theorem kind="theorem" n="4.2" name="Continuous-time stability" id="thm-stability">
+    {/* #126: no n= — the number resolves from labels.json (== any <XRef> to it).
+        If the auto-number path breaks, this heading loses its "4.2" and the
+        visual baseline diff catches it. */}
+    <Theorem kind="theorem" name="Continuous-time stability" id="thm-stability">
       A linear system with eigenvalues λ ∈ ℂ is stable iff Re(λ) &lt; 0 for all λ.
     </Theorem>
     <Theorem kind="definition" n="4.1" name="Hurwitz matrix">

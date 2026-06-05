@@ -2,6 +2,24 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.18.0] — 2026-06-05
+
+Minor release. `<Theorem>` headings now **auto-number from `labels.json`** (#126), so a heading and every `<XRef>` to it show the same number *by construction* — closing a gap (surfaced by the `ssm-foundations` consumer) where a cross-reference read `Theorem 9.5` from the label index but the heading itself, lacking a hand-passed `n=`, rendered only `Theorem (…)`. The same single-source move makes the cross-reference display **kind-aware** (a `proposition` reads `Proposition 8.1`, not a kind-blind `Theorem 8.1`), and continues the fail-loud line — an unknown `<Theorem>` kind now stops `build-labels`, one step earlier than the render-time throw.
+
+### Fixed
+
+- **`<Theorem>` heading and `<XRef>` numbers agree by construction (#126).** A theorem with an `id` reads its number from the same `src/data/labels.json` that `<XRef>` resolves, instead of requiring a hand-passed `n=` that consumer books never set — so the heading shows `Theorem 9.5 (…)`, equal to every cross-reference to it. No hand-numbering, no drift; inserting a theorem renumbers the chapter from one counter (`book-scaffold build-labels`). Explicit `n=` stays a fallback for an un-id'd theorem (or before `labels.json` is built); when an id resolves the index wins, so a stale `n=` can't reintroduce disagreement. Mirrors `<XRef>`'s project-root glob + soft-degrade (missing file → fall back to `n=`; the validator still catches unknown ids at CI).
+
+### Changed
+
+- **`build-labels` display is kind-aware (#126).** A `<Theorem kind="proposition">` now indexes as `Proposition 8.1`, not a kind-blind `Theorem 8.1`, via the **same** `theorem-label` vocabulary the heading uses — so heading and cross-reference agree on the kind *word*, not only the number. The amsthm family keeps one shared counter (keyed by the component, as amsthm shares its counter), so existing numbers are unchanged; only the word becomes kind-accurate. An absent/unknown kind now **throws in `build-labels`** (the #121 contract, one build step earlier than render).
+- **`labels.json` gains a `number` field (#126).** `build-labels` emits `{ href, display, number }`; `number` is the bare counter (`"8.1"`) the heading reuses, or `null` for a `label=` display override (which opts out of auto-numbering — the heading then shows no number rather than mis-parsing a custom string). Additive: `<XRef>` still reads `display`/`href`. `theorem-label.ts` is emitted as its own lean tsup entry so `build-labels` reuses the one kind vocabulary without pulling the package barrel into a plain-node script.
+- **`validate` check #6 extended (#126).** An id'd `<Theorem>` (without a `label=` override) whose `id` is **absent from `labels.json`** now fails validation — otherwise the heading silently renders *unnumbered* (no visible `[?id]` placeholder, unlike `<XRef>`), so a typo'd or un-rebuilt id slipped through to a published page. Restores symmetry with the XRef id check (#2). The labels-wins-over-`n=` precedence is extracted to `resolveTheoremNumber` (exported + unit-tested), so the core invariant is verified in the pure node:test suite, not only the gallery pixel baseline.
+
+### Tests
+
+- `tests/build-labels.test.mjs` (+7) — the `number` field, the `label=`-override `null`, kind-aware display words sharing one counter (`Theorem 9.1` / `Proposition 9.2` / `Lemma 9.3`), the fail-loud unknown-kind build failure, the kindless `label=` override (no throw), the absent-kind `"no kind="` message, and the no-chapter bare counter. `tests/theorem-label.test.mjs` (+2) — the word-only resolution `build-labels` reuses + the `resolveTheoremNumber` precedence (labels wins over a stale `n=`). `tests/validate-root.test.mjs` (+2) — a `<Theorem id>` in/absent from `labels.json`. Five new fixtures. Package suite **391**. The gallery's id'd `<Theorem>` drops its now-redundant `n=` to exercise the `labels.json` path — pixel-neutral, the number still resolves to `4.2`.
+
 ## [4.17.0] — 2026-06-05
 
 Minor release. The study-guide epic's first increment (#112, epic #122) — **the static spine** of an exam-prep apparatus: a schema-validated `questions` content collection, a per-book `examDomains` taxonomy, a static `/practice-exam` question bank, and an auto-derived objective-coverage map. All build-time and Zod-validated; the interactive scored engine is a deliberate later increment built on this proven data model. Continues the fail-loud line — a malformed question or an unregistered exam domain throws at build, never a silent phantom bucket.

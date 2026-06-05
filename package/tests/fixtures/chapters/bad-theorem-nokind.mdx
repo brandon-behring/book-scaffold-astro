@@ -1,0 +1,12 @@
+---
+week: 9
+title: Missing kind
+status: implemented
+description: Fixture (#126) — an id'd <Theorem> with no kind and no label= must throw "no kind=" (not the misleading kind="null").
+---
+
+import Theorem from '@brandon_m_behring/book-scaffold-astro/components/Theorem.astro';
+
+# Missing kind
+
+<Theorem id="w9:thm:nokind">No kind and no label override — build-labels must throw "no kind=".</Theorem>

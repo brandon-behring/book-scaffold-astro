@@ -96,3 +96,22 @@ export function theoremLabel(props: TheoremLabelProps): ResolvedTheoremLabel {
   const fullLabel = name ? `${numbered} (${name})` : numbered;
   return { kind: raw, fullLabel };
 }
+
+/**
+ * Resolve a theorem's display number for {@link theoremLabel}'s `n` (#126). The
+ * labels.json entry's `number` — the single source `<XRef>` also reads — wins;
+ * an explicit `n=` is the fallback for an un-id'd theorem (or before
+ * labels.json is built). Both `null` (a `label=` display override that opted
+ * out of auto-numbering) and `undefined` (no entry) fall through to `n`.
+ *
+ * The #126 invariant in one place: when an id resolves, the index wins, so a
+ * stale `n=` can't reintroduce heading/cross-reference drift. Extracted from
+ * `Theorem.astro` so the precedence is unit-tested in the pure node:test suite
+ * (Astro is peerDep-only — the `.astro` frontmatter can't be loaded there).
+ */
+export function resolveTheoremNumber(
+  entry: { number?: string | null } | undefined,
+  n: string | undefined,
+): string | undefined {
+  return entry?.number ?? n;
+}

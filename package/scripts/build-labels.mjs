@@ -4,9 +4,18 @@
  *
  * Walks the consumer's `src/content/chapters/**\/*.mdx`, extracts each
  * labelable component invocation (Theorem, Figure, Section, … — see
- * `LABELABLE_TYPES` below), and assigns it a display string of the form
- * `<Type> <chapter>.<n>` (e.g. `Theorem 4.2`), matching the LaTeX `\cref`
- * convention. The resulting map is consumed by XRef.astro via
+ * `LABELABLE_TYPES` below), and assigns it an entry of the form
+ *   { href, display: "Theorem 4.2", number: "4.2" }
+ * matching the LaTeX `\cref` convention. The map is consumed by XRef.astro
+ * (display + href) AND Theorem.astro (#126: `number`, so a heading auto-
+ * numbers from the same source the xref reads — they agree by construction).
+ *
+ * Kind-aware (#126): a `<Theorem kind="proposition">` resolves its display
+ * WORD through the shared theorem-label vocabulary (`Proposition 8.1`), not a
+ * kind-blind `Theorem 8.1`. The theorem family shares one counter (keyed by
+ * the JSX component, as amsthm shares its counter), so numbers are unchanged.
+ *
+ * The resulting map is consumed by XRef.astro via
  * `import.meta.glob('/src/data/labels.json', { eager: true })`.
  *
  * Per-chapter, per-type counter: each chapter resets the counter, so two
@@ -37,6 +46,12 @@
 import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
 import { resolve, relative, join, basename, dirname } from 'node:path';
 import { readChaptersBase } from './walk-mdx.mjs';
+// #126: reuse the ONE kind vocabulary (theorem-label.ts → its own lean tsup
+// entry) so a <Theorem kind="proposition"> xref reads "Proposition N.M", not a
+// kind-blind "Theorem N.M" — and so an unknown/absent kind FAILS HERE (same
+// throw as the render path, #121) one build step earlier. Requires `dist/`
+// (run `npm run build` first; the published tarball ships dist + scripts).
+import { theoremLabel } from '../dist/lib/theorem-label.mjs';
 
 // --help / -h: non-mutating (closes #14).
 const USAGE = `Usage: book-scaffold build-labels
@@ -188,20 +203,52 @@ async function main() {
     let foundInChapter = 0;
 
     for (const match of source.matchAll(tagRegex)) {
-      const [, type, attrs] = match;
+      const [, componentName, attrs] = match;
       const id = extractAttr(attrs, 'id');
       if (!id) continue;
 
-      counters[type] = (counters[type] ?? 0) + 1;
+      // One shared counter per component (keyed by the JSX name, NOT the
+      // amsthm kind) — so theorem/proposition/lemma share a sequence exactly
+      // as they do under amsthm, and existing numbers never shift (#126).
+      counters[componentName] = (counters[componentName] ?? 0) + 1;
       foundInChapter += 1;
       totalIds += 1;
 
+      // Resolve the display word only when it will actually be used. A `label=`
+      // override supplies its own display, so we neither compute nor (for
+      // <Theorem>) kind-validate it — computing would throw on a kindless
+      // override, the documented `<Theorem id label="…">` form. For <Theorem>
+      // the word is kind-aware and THROWS on an absent/unknown kind (the #121
+      // contract, one build step earlier than render). extractAttr returns null
+      // for an absent attr → normalize to undefined so theoremLabel reports
+      // "no kind=" rather than the misleading kind="null".
       const labelOverride = extractAttr(attrs, 'label');
-      const display =
-        labelOverride ??
-        (chapterNum != null
-          ? `${TYPE_DISPLAY[type]} ${chapterNum}.${counters[type]}`
-          : `${TYPE_DISPLAY[type]} ${counters[type]}`);
+      let word;
+      if (labelOverride == null) {
+        if (componentName === 'Theorem') {
+          try {
+            word = theoremLabel({
+              kind: extractAttr(attrs, 'kind') ?? undefined,
+              type: extractAttr(attrs, 'type') ?? undefined,
+            }).fullLabel;
+          } catch (err) {
+            throw new Error(
+              `<Theorem id="${id}"> in ${relative(cwd, file)}: ${err.message}`,
+            );
+          }
+        } else {
+          word = TYPE_DISPLAY[componentName];
+        }
+      }
+
+      // The bare counter string the heading reuses: Theorem.astro reads
+      // `number` by id and renders it, so heading == xref by construction.
+      // A `label=` override opts out of auto-numbering → number is null.
+      const number =
+        chapterNum != null
+          ? `${chapterNum}.${counters[componentName]}`
+          : String(counters[componentName]);
+      const display = labelOverride ?? `${word} ${number}`;
 
       if (labels[id]) {
         // Duplicate id — surface but don't fail; consumer's validator
@@ -214,6 +261,7 @@ async function main() {
       labels[id] = {
         href: `/chapters/${slug}#${id}`,
         display,
+        number: labelOverride ? null : number,
       };
     }
 
