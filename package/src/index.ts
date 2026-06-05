@@ -100,6 +100,17 @@ export {
   type ResolvedTheoremLabel,
 } from './lib/theorem-label.js';
 
+// v4.15.0 (#109): configurable GitHub repo for CodeRef/CodeBlock. parseRepoSlug
+// derives owner/repo from the consumer's package.json repository / git remote;
+// buildGithubUrl takes an explicit repo+branch (no hardcoded post_transformers).
+export {
+  parseRepoSlug,
+  resolveGithubRepo,
+  originUrlFromGitConfig,
+  buildGithubUrl,
+  DEFAULT_GITHUB_BRANCH,
+} from './lib/repo-url.js';
+
 // v4.0.0 defineStyle API: typed, named, importable config bundles composed
 // via `styles: [...]` in defineBookConfig. Replaces the v3 `preset:` shorthand.
 // See recipes/15-defining-styles.md + MIGRATION-v3-to-v4.md.

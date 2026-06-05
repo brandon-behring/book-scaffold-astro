@@ -203,6 +203,9 @@ export async function defineBookConfig(
       seo: opts.seo
         ? { ogImage: opts.seo.ogImage, twitterHandle: opts.seo.twitterHandle }
         : undefined,
+      // v4.15.0 (#109): repo/branch override; integration auto-detects when undefined.
+      githubRepo: opts.githubRepo as string | undefined,
+      githubBranch: opts.githubBranch as string | undefined,
     }),
     ...mergedExtraIntegrations,
   ];
@@ -251,6 +254,9 @@ export async function defineBookConfig(
     // v4.6.0: strip new book-level SEO opts (author + seo block).
     author: _author,
     seo: _seo,
+    // v4.15.0: strip repo opts so they don't leak into AstroUserConfig.
+    githubRepo: _githubRepo,
+    githubBranch: _githubBranch,
     ...rest
   } = opts;
   void _styles;
@@ -267,6 +273,8 @@ export async function defineBookConfig(
   void _portfolio;
   void _author;
   void _seo;
+  void _githubRepo;
+  void _githubBranch;
 
   // KaTeX externals — same v3.7.1 pattern, now gated on the composed preset.
   const katexExternals = wantsKatex ? [] : ['remark-math', 'rehype-katex', 'katex'];

@@ -197,6 +197,17 @@ export interface BookConfigOptions {
       customPages?: string[];
     };
   };
+  /**
+   * v4.15.0 (#109): GitHub `owner/repo` for `<CodeRef>` / `<CodeBlock>` source
+   * links. Optional — when omitted, the scaffold auto-detects it from this
+   * project's own `package.json` `repository` field (or the `origin` git
+   * remote). Set it explicitly to override the auto-detection, or when neither
+   * is present. With nothing resolvable, `<CodeRef>`/`<CodeBlock>` throw at
+   * build rather than linking to the wrong repo.
+   */
+  githubRepo?: string;
+  /** v4.15.0 (#109): branch for CodeRef/CodeBlock links. Defaults to `main`. */
+  githubBranch?: string;
   /** Escape hatch for any other AstroUserConfig field. */
   [key: string]: unknown;
 }
@@ -253,6 +264,14 @@ export interface BookScaffoldIntegrationOptions {
     ogImage?: string;
     twitterHandle?: string;
   };
+  /**
+   * v4.15.0 (#109): GitHub repo/branch override for CodeRef/CodeBlock,
+   * propagated through the book-config virtual module. When `githubRepo` is
+   * undefined the integration auto-detects from the consumer's package.json /
+   * git remote at config-setup time.
+   */
+  githubRepo?: string;
+  githubBranch?: string;
 }
 
 /** Raised when the resolved profile is not one of `BOOK_PROFILES`. */
