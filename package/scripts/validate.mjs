@@ -13,6 +13,8 @@
  *   4. Internal markdown links [text](/foo) — target resolves.
  *   5. <CodeRef path="..." line={N} /> — when BOOK_REPO_ROOT set,
  *      path exists + line in bounds.
+ *   6. <Theorem> — has a resolvable kind= (or legacy type=); else it would
+ *      render an empty label and throw at build (#121).
  *
  * Run from the consumer's project root. Closes #8 (was resolving paths
  * from the package's own directory inside node_modules — false negatives
@@ -209,6 +211,9 @@ const RE_XREF = /<XRef[^>]+id=["']([^"']+)["']/g;
 const RE_FIGURE = /<Figure[^>]+src=["']([^"']+)["']/g;
 const RE_CODEREF = /<CodeRef[^>]+path=["']([^"']+)["'](?:[^>]*line=\{(\d+)\})?(?:[^>]*lineEnd=\{(\d+)\})?/g;
 const RE_MD_LINK = /\[(?:[^\]]*)\]\((\/[^)\s#]+)(?:#[^)]*)?\)/g;
+// #121: a <Theorem> opening tag — capture its attributes to assert a
+// resolvable kind= (or legacy type=) is present.
+const RE_THEOREM = /<Theorem\b([^>]*)>/g;
 
 async function fileExists(p) {
   try {
@@ -276,6 +281,19 @@ for (const rel of chapterFiles) {
           fail(rel, lineOf(content, m.index), `CodeRef line ${lo}-${hi} exceeds file length (${fileLineCount}) in "${path}"`);
         }
       }
+    }
+  }
+
+  // 6. Theorem requires a resolvable kind (#121) — kind= canonical, type=
+  //    legacy alias. Catches the silent-empty-label / build-throw case at the
+  //    earliest gate. (Value typos are caught at build by theoremLabel's throw.)
+  for (const m of content.matchAll(RE_THEOREM)) {
+    if (!/\b(?:kind|type)\s*=/.test(m[1])) {
+      fail(
+        rel,
+        lineOf(content, m.index),
+        `<Theorem> has no kind= (or legacy type=) — renders an empty label / throws at build. Add e.g. kind="theorem".`,
+      );
     }
   }
 }

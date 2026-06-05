@@ -4,15 +4,17 @@
  *
  * Maps LaTeX `\begin{theorem}`, `\begin{proposition}`, `\begin{lemma}`,
  * `\begin{corollary}`, `\begin{definition}`, `\begin{example}`,
- * `\begin{exercise}`, `\begin{remark}` to a single component with a
- * `kind` prop.
+ * `\begin{exercise}`, `\begin{remark}`, `\begin{proof}` to a single component.
+ *
+ * Props (#121): `kind` is canonical; `type=` is an accepted **legacy alias**
+ * (ssm-foundations ch1–11 + the LaTeX-env mental model pass `type=`). `name`
+ * is canonical with `title=`/`label=` accepted. An absent or unknown kind
+ * THROWS at build (see `src/lib/theorem-label`) — it never renders an empty
+ * label. Pass `n` to number the environment.
  *
  * Auto-numbering note: the LaTeX preamble shares a counter between
- * theorem/proposition/lemma/corollary (`\newtheorem{lemma}[theorem]`)
- * and gives each of definition/example/exercise/remark its own counter.
- * In MDX we accept that as a contract: per-chapter counters are
- * implemented in Phase 2.6 (label scanner) — for now, the author
- * passes `n` explicitly when numbering matters.
+ * theorem/proposition/lemma/corollary and gives definition/example/exercise/
+ * remark their own; in MDX the author passes `n` explicitly when it matters.
  *
  * Usage:
  *   <Theorem kind="theorem" n="4.2" name="Stable continuous-time eigenvalues" id="thm-w4-stability">
@@ -23,41 +25,14 @@
  *     The HiPPO-LegS state matrix …
  *   </Theorem>
  */
-type Kind =
-  | 'theorem'
-  | 'proposition'
-  | 'lemma'
-  | 'corollary'
-  | 'definition'
-  | 'example'
-  | 'exercise'
-  | 'remark'
-  | 'proof';
+import { theoremLabel, type TheoremLabelProps } from '../src/lib/theorem-label';
 
-interface Props {
-  kind: Kind;
-  n?: string;
-  name?: string;
+interface Props extends TheoremLabelProps {
   id?: string;
 }
 
-const { kind, n, name, id } = Astro.props;
-
-const KIND_LABEL: Record<Kind, string> = {
-  theorem: 'Theorem',
-  proposition: 'Proposition',
-  lemma: 'Lemma',
-  corollary: 'Corollary',
-  definition: 'Definition',
-  example: 'Example',
-  exercise: 'Exercise',
-  remark: 'Remark',
-  proof: 'Proof',
-};
-
-const label = KIND_LABEL[kind];
-const numbered = n ? `${label} ${n}` : label;
-const fullLabel = name ? `${numbered} (${name})` : numbered;
+const { id } = Astro.props;
+const { kind, fullLabel } = theoremLabel(Astro.props);
 ---
 <div class="theorem" data-kind={kind} id={id}>
   <span class="theorem-label">{fullLabel}.</span>

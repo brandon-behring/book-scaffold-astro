@@ -96,7 +96,7 @@ Two callout families coexist. Authors import what they need.
 
 **Tools family** (`src/components/callouts/`, 8 components): `SkillBox`, `CaseStudy`, `ConceptBox`, `KeyIdea`, `TryThis`, `Recovery`, `Convergence`, `Divergence`.
 
-**Academic family** (`src/components/callouts/`, 10 components): `NoteBox`, `ExampleBox`, `DynConnect`, `InsightBox`, `WarnBox`, `CounterBox`, `TipBox`, `OpenQuestion`, `PaperBox`, `ResultBox`. Plus `Theorem` (unified for theorem/proposition/lemma/corollary/definition/example/exercise/remark/proof).
+**Academic family** (`src/components/callouts/`, 10 components): `NoteBox`, `ExampleBox`, `DynConnect`, `InsightBox`, `WarnBox`, `CounterBox`, `TipBox`, `OpenQuestion`, `PaperBox`, `ResultBox`. Plus `Theorem` (unified for theorem/proposition/lemma/corollary/definition/example/exercise/remark/proof). **Props (v4.14.3, #121):** `kind=` is canonical; `type=` is accepted as a legacy alias (likewise `title=`/`label=` alias `name=`). An absent or unknown kind **throws at build** (via `src/lib/theorem-label`) rather than rendering an empty label; `book-scaffold validate` flags a `<Theorem>` with neither `kind=` nor `type=` even earlier.
 
 **Pedagogy family** (v4.1.0+, any profile, 3 components): `Pitfall` (rose; "common mistake" — distinct from `WarnBox`'s preemptive warning), `WorkedExample` (plum; collapsible `<details>` block with `#worked-example-{id}` anchor for deep links), `YouWillLearn` (gold; chapter-opener with optional `prerequisites` prop). Slot bullets/code freely; render at any preset.
 
