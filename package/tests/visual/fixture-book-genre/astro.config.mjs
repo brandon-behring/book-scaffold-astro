@@ -19,6 +19,7 @@ export default await defineBookConfig({
     practiceExam: true,
   },
   // v4.17.0 (#112): closed exam-domain taxonomy. A question whose `domain` is
-  // not listed here throws at build (assertKnownDomain) — fail-loud.
-  examDomains: ['arrays', 'strings'],
+  // not listed here throws at build (assertKnownDomain) — fail-loud. `recursion`
+  // has NO questions on purpose: it exercises the <ObjectiveMap> honest gap row.
+  examDomains: ['arrays', 'strings', 'recursion'],
 });

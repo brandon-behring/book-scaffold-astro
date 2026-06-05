@@ -18,6 +18,7 @@ export {
   groupByDomain,
   groupByChapter,
   deriveObjectiveMap,
+  distinctChaptersSorted,
 } from './questions-derive.js';
 
 /** All non-draft questions, ordered by chapter then id (stable, deterministic). */

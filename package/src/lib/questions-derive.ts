@@ -81,3 +81,25 @@ export function deriveObjectiveMap<
   }
   return out;
 }
+
+/**
+ * Distinct chapter labels across the entries, in numeric-aware order (numeric
+ * chapters before string slugs, each ordered) — the column set for
+ * `<ObjectiveMap>`. Dedupes by label, sorts the underlying chapter values via
+ * the same `chapterOrder` as `sortQuestions`, then labels. A bare `.sort()` on
+ * the labels would put "10" before "2" (the chapter-column sort bug).
+ */
+export function distinctChaptersSorted<
+  T extends { data: Pick<Question, 'chapter'> },
+>(entries: readonly T[]): string[] {
+  const byLabel = new Map<string, number | string>();
+  for (const e of entries) byLabel.set(chapterLabel(e.data.chapter), e.data.chapter);
+  return [...byLabel.values()]
+    .sort((a, b) => {
+      const [ar, as] = chapterOrder(a);
+      const [br, bs] = chapterOrder(b);
+      if (ar !== br) return ar - br;
+      return as < bs ? -1 : as > bs ? 1 : 0;
+    })
+    .map(chapterLabel);
+}

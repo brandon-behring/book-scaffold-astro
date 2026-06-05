@@ -75,7 +75,7 @@ function difficultyMarks(d: string | undefined): string {
 
     {!hasQuestions && (
       <p class="practice-empty">
-        No <code>src/content/questions/</code> directory found. Add question MDX files
+        No questions found under <code>src/content/questions/</code>. Add question MDX files
         (frontmatter <code>id</code>/<code>type</code>/<code>domain</code> + an MDX stem),
         declare your <code>examDomains</code> in <code>defineBookConfig</code>, and keep
         <code>routes: {'{'} practiceExam: true {'}'}</code>.
@@ -143,9 +143,6 @@ function difficultyMarks(d: string | undefined): string {
                   {q.data.type === 'free' && q.data.answer && (
                     <p class="question-answer-line">{q.data.answer}</p>
                   )}
-                  {q.data.type === 'mcq' && q.data.answer && (
-                    <p class="question-answer-explain">{q.data.answer}</p>
-                  )}
                 </details>
               )}
             </article>
@@ -200,7 +197,6 @@ function difficultyMarks(d: string | undefined): string {
       color: var(--color-accent, #4f46e5);
     }
     .question-answer-line { margin-block: 0.5rem 0.25rem; }
-    .question-answer-explain { color: var(--color-text-muted, #6b7280); }
     .question-reserved { color: var(--color-text-muted, #6b7280); font-style: italic; }
   </style>
 </Base>

@@ -15,6 +15,7 @@ import {
   groupByDomain,
   groupByChapter,
   deriveObjectiveMap,
+  distinctChaptersSorted,
 } from '../dist/index.mjs';
 
 const entry = (id, domain, chapter) => ({ data: { id, domain, chapter } });
@@ -66,4 +67,22 @@ test('deriveObjectiveMap maps each domain → set of covered chapters (the <Obje
 
 test('deriveObjectiveMap on an empty bank yields an empty map (honest no-coverage)', () => {
   assert.equal(deriveObjectiveMap([]).size, 0);
+});
+
+test('sortQuestions orders multi-digit chapters numerically, not lexically (10 after 2)', () => {
+  const bank = [entry('q-c10', 'x', 10), entry('q-c2', 'x', 2), entry('q-c1', 'x', 1)];
+  assert.deepEqual(
+    sortQuestions(bank).map((e) => e.data.id),
+    ['q-c1', 'q-c2', 'q-c10'],
+  );
+});
+
+test('distinctChaptersSorted returns numeric-aware unique labels (the <ObjectiveMap> columns)', () => {
+  const bank = [
+    entry('a', 'x', 10),
+    entry('b', 'x', 2),
+    entry('c', 'x', 2), // duplicate chapter → one column
+    entry('d', 'x', 'appendix'), // string slugs sort after numbers
+  ];
+  assert.deepEqual(distinctChaptersSorted(bank), ['2', '10', 'appendix']);
 });

@@ -5,10 +5,15 @@ domain: strings
 chapter: 2
 bloom_level: apply
 difficulty: "2"
-answer: "Each concatenation allocates a new string, so building in a loop is O(n²) — use a builder/buffer instead."
 options:
   - { id: a, text: "It mutates the original string in place" }
   - { id: b, text: "It allocates a new string each time (O(n²) in a loop)", correct: true }
   - { id: c, text: "It is always O(1)" }
 ---
+import Rationale from '@brandon_m_behring/book-scaffold-astro/components/Rationale.astro';
+
 In a language with **immutable** strings, what is the cost of repeated `+=` concatenation inside a loop?
+
+<Rationale>
+Each concatenation allocates a new string, so building in a loop is O(n²) — use a builder/buffer instead.
+</Rationale>

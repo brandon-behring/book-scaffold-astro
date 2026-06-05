@@ -137,6 +137,7 @@ export {
   groupByDomain,
   groupByChapter,
   deriveObjectiveMap,
+  distinctChaptersSorted,
 } from './lib/questions-derive.js';
 
 // v4.0.0 defineStyle API: typed, named, importable config bundles composed
@@ -201,6 +202,7 @@ export {
   questionDifficulties,
   questionSchema,
   refineQuestion,
+  refinedQuestionSchema,
 } from './schemas.js';
 
 // Inferred chapter types per profile (v3.3.0). Type-only re-export from

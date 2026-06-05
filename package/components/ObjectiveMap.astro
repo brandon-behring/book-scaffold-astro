@@ -20,7 +20,8 @@
  */
 import bookConfig from 'virtual:book-scaffold/book-config';
 import { getCollection } from 'astro:content';
-import { deriveObjectiveMap, chapterLabel } from '../src/lib/questions';
+import { deriveObjectiveMap, distinctChaptersSorted } from '../src/lib/questions';
+import { assertKnownDomain } from '../src/lib/exam-domains';
 
 interface Props {
   /** Heading above the table. Defaults to "Exam objective coverage". */
@@ -39,12 +40,16 @@ const hasQuestions = Object.keys(questionModules).length > 0;
 const entries = hasQuestions
   ? await getCollection('questions', (e) => !e.data.draft)
   : [];
+// Fail loud (like /practice-exam): a question with an unregistered / typo'd
+// domain must throw at build, not silently vanish from the coverage matrix.
+for (const e of entries) {
+  assertKnownDomain(bookConfig.examDomains, e.data.domain, { id: e.data.id });
+}
 const coverage = deriveObjectiveMap(entries);
 const domains = bookConfig.examDomains ?? [];
-// Column set: chapters that actually carry ≥1 question, in stable order.
-const chapters = Array.from(
-  new Set(entries.map((e) => chapterLabel(e.data.chapter))),
-).sort();
+// Column set: chapters that carry ≥1 question, in numeric-aware order
+// (distinctChaptersSorted — a bare .sort() would order "10" before "2").
+const chapters = distinctChaptersSorted(entries);
 ---
 {domains.length === 0 ? (
   <p class="objective-map-empty">

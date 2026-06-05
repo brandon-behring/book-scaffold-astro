@@ -409,6 +409,12 @@ export const bloomLevels = [
 // Reuse the Practice.astro difficulty scale (1–4) verbatim for consistency.
 export const questionDifficulties = ['1', '2', '3', '4'] as const;
 
+// A string chapter/part ref must be a deliberate lowercase kebab slug (matching
+// the scaffold's frontmatter `slug:` convention) — not number-shaped, spaced, or
+// capitalized — so one chapter can't render as two objective-map columns
+// (`1` vs `"Chapter 1"`). Numbers use the numeric arm with its 0–99 / 0–20 bound.
+const CHAPTER_SLUG = /^[a-z0-9][a-z0-9-]*$/;
+
 // One MCQ option. `correct` defaults false; exactly one must be true (enforced
 // in refineQuestion). `.strict()` so a misspelled option key fails loud rather
 // than being silently dropped.
@@ -423,12 +429,12 @@ const mcqOptionObject = z
 export const questionSchema = z
   .object({
     // ----- identity -----
-    id: z.string().min(1), // EXPLICIT cross-ref key (#114 appendix / #116 cards); distinct from file-derived entry.id
+    id: z.string().trim().min(1), // EXPLICIT cross-ref key (#114 appendix / #116 cards); distinct from file-derived entry.id. trim → whitespace-only fails loud.
     type: z.enum(questionTypes),
     // ----- placement (every surface keys on these) -----
-    chapter: z.union([z.number().int().min(0).max(99), z.string()]), // number OR academic-style string
-    part: z.union([z.number().int().min(0).max(20), z.string()]).optional(),
-    domain: z.string().min(1), // value validated at route/build (assertKnownDomain), NOT here
+    chapter: z.union([z.number().int().min(0).max(99), z.string().regex(CHAPTER_SLUG)]), // number OR a kebab-slug string
+    part: z.union([z.number().int().min(0).max(20), z.string().regex(CHAPTER_SLUG)]).optional(),
+    domain: z.string().trim().min(1), // value validated at route/build (assertKnownDomain), NOT here; trim → whitespace-only fails loud
     // ----- pedagogy metadata (used-when-present) -----
     bloom_level: z.enum(bloomLevels).optional(), // #112/#113/#116
     objective_id: z.string().min(1).optional(), // #117 objective-map rows + #116 cards
@@ -453,6 +459,16 @@ export function refineQuestion(
   ctx: z.RefinementCtx,
 ): void {
   if (q.type === 'mcq') {
+    // B1: an MCQ's answer IS the option marked correct: true — `answer` would be
+    // a second, drift-prone source of truth. Explanation goes in a <Rationale>
+    // body block, not `answer`. (Checked first so it fires regardless of options.)
+    if (q.answer !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['answer'],
+        message: `MCQ "${q.id}": the answer is the option marked correct: true — remove \`answer\` and put any explanation in a <Rationale> body block.`,
+      });
+    }
     if (!q.options || q.options.length < 2) {
       ctx.addIssue({
         code: 'custom',
@@ -492,9 +508,29 @@ export function refineQuestion(
         message: `Free-response "${q.id}" needs an "answer" (model answer) for the appendix.`,
       });
     }
+  } else if (q.type === 'cloze') {
+    // B2: cloze is a reserved type (render-deferred) — its full payload contract
+    // waits for its renderer. But a fill-in-the-blank is NOT multiple choice, so
+    // forbid `options` now (symmetric with free) to close the contradictory-MCQ-
+    // payload hole. `answer` stays allowed (the eventual fill value).
+    if (q.options) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['options'],
+        message: `Cloze "${q.id}" must not define MCQ options.`,
+      });
+    }
   }
-  // cloze: reserved — schema-accepted, no invariants until its renderer ships.
 }
+
+/**
+ * The questions collection schema AS REGISTERED: the flat `questionSchema`
+ * composed with the per-type `refineQuestion` invariants. This is the canonical
+ * form — `schemas-entry.ts` registers it and the unit tests exercise it.
+ * Registering the bare `questionSchema` (exported only for `.extend()`) would
+ * silently drop every per-type check, so prefer this value.
+ */
+export const refinedQuestionSchema = questionSchema.superRefine(refineQuestion);
 
 export type Question = z.infer<typeof questionSchema>;
 export type QuestionType = (typeof questionTypes)[number];

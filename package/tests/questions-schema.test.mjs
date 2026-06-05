@@ -12,10 +12,11 @@
  */
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { questionSchema, refineQuestion } from '../dist/index.mjs';
+import { refinedQuestionSchema as schema } from '../dist/index.mjs';
 
-// The exact form Astro validates against (refine wrapped at registration).
-const schema = questionSchema.superRefine(refineQuestion);
+// `refinedQuestionSchema` is the canonical composed form Astro registers
+// (questionSchema.superRefine(refineQuestion)) — the same value schemas-entry.ts
+// uses, so the suite exercises exactly what ships.
 
 const validMcq = {
   id: 'q-tls-1',
@@ -138,4 +139,65 @@ test('accepts an academic-style string chapter + optional bloom/difficulty', () 
     objective_id: '2.1',
   });
   assert.ok(r.success, r.success ? '' : JSON.stringify(r.error.issues));
+});
+
+// ---- remediation (PR #127 review) edge cases ----
+
+test('REJECTS an MCQ that defines `answer` — the answer is the correct option (B1)', () => {
+  const r = schema.safeParse({ ...validMcq, answer: 'option b' });
+  assert.ok(!r.success);
+  assert.match(r.error.issues[0].message, /the answer is the option marked correct/);
+});
+
+test('REJECTS a cloze that defines MCQ options (B2)', () => {
+  const r = schema.safeParse({
+    id: 'q-cloze-bad',
+    type: 'cloze',
+    chapter: 3,
+    domain: 'crypto',
+    options: [{ id: 'a', correct: true }, { id: 'b' }],
+  });
+  assert.ok(!r.success);
+  assert.match(r.error.issues[0].message, /must not define MCQ options/);
+});
+
+test('REJECTS a stray key on a nested option (mcqOptionObject .strict)', () => {
+  const r = schema.safeParse({
+    ...validMcq,
+    options: [
+      { id: 'a', correct: true, lable: 'typo' },
+      { id: 'b' },
+    ],
+  });
+  assert.ok(!r.success);
+});
+
+test('REJECTS an option missing its `id`', () => {
+  const r = schema.safeParse({
+    ...validMcq,
+    options: [{ correct: true }, { id: 'b' }],
+  });
+  assert.ok(!r.success);
+});
+
+test('REJECTS a whitespace-only free-response answer (the .trim() branch)', () => {
+  const r = schema.safeParse({
+    id: 'q-free-ws',
+    type: 'free',
+    chapter: 2,
+    domain: 'crypto',
+    answer: '   ',
+  });
+  assert.ok(!r.success);
+  assert.match(r.error.issues[0].message, /needs an "answer"/);
+});
+
+test('REJECTS a whitespace-only domain (.trim().min(1)) (B4)', () => {
+  const r = schema.safeParse({ ...validMcq, domain: '   ' });
+  assert.ok(!r.success);
+});
+
+test('REJECTS a non-slug string chapter like "Chapter 1" (B4 slug regex)', () => {
+  const r = schema.safeParse({ ...validMcq, chapter: 'Chapter 1' });
+  assert.ok(!r.success);
 });
