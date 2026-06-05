@@ -2,6 +2,23 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.14.3] — 2026-06-05
+
+Patch release. Makes `<Theorem>` fail loud instead of rendering a silent empty label, and accepts the legacy prop names consumer books already use (#121). Pairs with the already-shipped XRef fix (#120, v4.9.0) so a book pinned at v4.8 bumps once and verifies both.
+
+### Fixed
+
+- **`<Theorem>` rendered an empty label for every theorem authored with `type=`/`title=` (#121).** `Theorem.astro` required `kind=`, but ssm-foundations ch1–11 (32+ theorems) and the component's LaTeX-`\begin{<env>}` mental model pass `type=`/`title=` — so `KIND_LABEL[undefined]` resolved to a bare `.` on every theorem, live in production. `book-scaffold validate` never caught it (it doesn't render components). The label logic is now extracted into a pure, unit-tested `theoremLabel()` (`src/lib/theorem-label.ts`, re-exported from the package entry) that (1) accepts `type`→`kind` and `title`/`label`→`name` as **legacy aliases** so existing content renders unchanged, and (2) **throws** a build-failing, actionable error when the kind is absent or unknown — a typo'd `kind`, silent before, now stops the build — instead of degrading to an empty label. Canonical is `kind`; `type` is documented as accepted-legacy.
+
+### Added
+
+- **`validate` check #6 — `<Theorem>` resolvable kind (#121).** `book-scaffold validate` now flags a `<Theorem>` with neither `kind=` nor `type=` at the earliest gate (regex, no render), before `astro build` throws. Mirrors the existing `<XRef id>` / `<CodeRef path>` static checks.
+- **#120 (XRef JSDoc build-break) verified closed — no code change.** Fixed in v4.9.0; the existing `tests/xref-component.test.mjs` esbuild-path guard passes on 4.14.x. Consumers on v4.8 resolve by bumping to 4.14.3, which lands the #121 fix too.
+
+### Tests
+
+- `tests/theorem-label.test.mjs` (new, +6) — `theoremLabel()` canonical + legacy-alias resolution, number/name composition, and the throw-on-unresolvable contract (absent kind, typo'd value). Package suite **330** (was 324).
+
 ## [4.14.2] — 2026-06-02
 
 Patch release. Adds the theme-change hook the interactive-demo kit needs (#103) — event-only; the broader demo primitives stay incubating in their consumer book until proven.

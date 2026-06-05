@@ -87,6 +87,19 @@ export {
   UNKNOWN_PART_ORDINAL,
 } from './lib/academic-parts.js';
 
+// v4.14.3 (#121): fail-loud Theorem label resolver. Accepts legacy
+// `type=`/`title=`/`label=` aliases so existing books render, and THROWS on an
+// unresolvable kind instead of the old silent empty label. Shared by
+// Theorem.astro and unit-tested in tests/theorem-label.test.mjs.
+export {
+  theoremLabel,
+  THEOREM_KINDS,
+  KIND_LABEL,
+  type TheoremKind,
+  type TheoremLabelProps,
+  type ResolvedTheoremLabel,
+} from './lib/theorem-label.js';
+
 // v4.0.0 defineStyle API: typed, named, importable config bundles composed
 // via `styles: [...]` in defineBookConfig. Replaces the v3 `preset:` shorthand.
 // See recipes/15-defining-styles.md + MIGRATION-v3-to-v4.md.
