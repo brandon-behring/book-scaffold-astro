@@ -57,3 +57,11 @@ test('THEOREM_KINDS + KIND_LABEL: nine amsthm environments, stable contract', ()
   assert.equal(KIND_LABEL.corollary, 'Corollary');
   assert.equal(KIND_LABEL.proof, 'Proof');
 });
+
+test('theoremLabel: word-only resolution (no n/name) — the form build-labels reuses (#126)', () => {
+  // build-labels derives the kind-aware xref word via theoremLabel({kind}).fullLabel,
+  // so heading and cross-reference agree on the kind word, not just the number.
+  assert.equal(theoremLabel({ kind: 'proposition' }).fullLabel, 'Proposition');
+  assert.equal(theoremLabel({ kind: 'lemma' }).fullLabel, 'Lemma');
+  assert.equal(theoremLabel({ type: 'corollary' }).fullLabel, 'Corollary'); // legacy alias
+});

@@ -7,6 +7,11 @@ export default defineConfig({
     index: 'src/index.ts',
     schemas: 'src/schemas-entry.ts',
     'lib/katex-macros': 'src/lib/katex-macros.ts',
+    // Standalone lean entry: scripts/build-labels.mjs imports the kind
+    // vocabulary from here (theorem-label.ts has zero deps), so the build
+    // script reuses the ONE KIND_LABEL source without pulling the whole
+    // barrel (citation-js/yaml) into a plain-node process. (#126)
+    'lib/theorem-label': 'src/lib/theorem-label.ts',
     // Pre-compile the .tsx islands so consumers don't have to depend on
     // Vite's JSX transform reaching into node_modules. Without this,
     // SSR breaks with `ReferenceError: React is not defined`.

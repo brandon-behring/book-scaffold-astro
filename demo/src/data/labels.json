@@ -1,18 +1,22 @@
 {
   "w4:ex:harmonic": {
     "href": "/chapters/test-labels#w4:ex:harmonic",
-    "display": "Example 4.1"
+    "display": "Example 4.1",
+    "number": "4.1"
   },
   "w4:fig:phase-portrait": {
     "href": "/chapters/test-labels#w4:fig:phase-portrait",
-    "display": "Figure 4.1"
+    "display": "Figure 4.1",
+    "number": "4.1"
   },
   "w4:thm:convergence": {
     "href": "/chapters/test-labels#w4:thm:convergence",
-    "display": "Convergence (custom label)"
+    "display": "Convergence (custom label)",
+    "number": null
   },
   "w4:thm:stability": {
     "href": "/chapters/test-labels#w4:thm:stability",
-    "display": "Theorem 4.1"
+    "display": "Theorem 4.1",
+    "number": "4.1"
   }
 }

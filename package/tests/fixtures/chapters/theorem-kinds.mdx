@@ -1,0 +1,17 @@
+---
+week: 9
+part: ssm-core
+title: Theorem-kind fixture
+status: implemented
+description: Fixture for build-labels kind-aware display (#126) — proposition/lemma share the <Theorem> counter, with the kind-accurate display word.
+---
+
+import Theorem from '@brandon_m_behring/book-scaffold-astro/components/Theorem.astro';
+
+# Theorem kinds
+
+<Theorem id="w9:thm:main" kind="theorem">A theorem (counter 1).</Theorem>
+
+<Theorem id="w9:prop:dual" kind="proposition">A proposition — shares the theorem counter, but its display word is kind-aware.</Theorem>
+
+<Theorem id="w9:lem:helper" type="lemma">A lemma via the legacy type= alias.</Theorem>
