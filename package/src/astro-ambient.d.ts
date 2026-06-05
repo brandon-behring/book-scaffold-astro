@@ -45,6 +45,8 @@ declare module 'virtual:book-scaffold/book-config' {
     githubBranch: string;
     /** v4.16.0 (#96): sibling-book base-URL registry for <BookLink>. */
     siblingBooks: Record<string, string>;
+    /** v4.17.0 (#112): per-book exam-domain taxonomy for the questions collection. */
+    examDomains: readonly string[];
   };
   export default bookConfig;
 }

@@ -1,0 +1,13 @@
+---
+id: q-arrays-append-cost
+type: free
+domain: arrays
+chapter: 1
+bloom_level: understand
+difficulty: "2"
+answer: >-
+  Amortized O(1): most appends write into spare capacity in O(1); when the
+  backing store is full the array doubles (an O(n) copy), but that cost spread
+  over the n cheap appends preceding it averages to O(1) per append.
+---
+What is the **amortized** time complexity of appending to a dynamic array, and why is it not simply O(n)?

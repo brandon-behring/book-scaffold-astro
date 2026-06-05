@@ -208,6 +208,8 @@ export async function defineBookConfig(
       githubBranch: opts.githubBranch as string | undefined,
       // v4.16.0 (#96): cross-book link registry.
       siblingBooks: opts.siblingBooks as Record<string, string> | undefined,
+      // v4.17.0 (#112): per-book exam-domain taxonomy for the questions collection.
+      examDomains: opts.examDomains as readonly string[] | undefined,
     }),
     ...mergedExtraIntegrations,
   ];
@@ -261,6 +263,8 @@ export async function defineBookConfig(
     githubBranch: _githubBranch,
     // v4.16.0: strip cross-book registry.
     siblingBooks: _siblingBooks,
+    // v4.17.0: strip exam-domain taxonomy.
+    examDomains: _examDomains,
     ...rest
   } = opts;
   void _styles;
@@ -280,6 +284,7 @@ export async function defineBookConfig(
   void _githubRepo;
   void _githubBranch;
   void _siblingBooks;
+  void _examDomains;
 
   // KaTeX externals — same v3.7.1 pattern, now gated on the composed preset.
   const katexExternals = wantsKatex ? [] : ['remark-math', 'rehype-katex', 'katex'];

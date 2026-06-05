@@ -1,0 +1,11 @@
+---
+import Base from '@brandon_m_behring/book-scaffold-astro/layouts/Base.astro';
+import ObjectiveMap from '@brandon_m_behring/book-scaffold-astro/components/ObjectiveMap.astro';
+---
+<Base title="Objective map" description="v4.17.0 #117: auto-derived exam-domain → chapter coverage matrix.">
+  <article class="prose">
+    <h1>Exam objective coverage</h1>
+    <p>The matrix below is derived from <code>getCollection('questions')</code> — no separate data file.</p>
+    <ObjectiveMap />
+  </article>
+</Base>

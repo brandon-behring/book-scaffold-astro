@@ -368,3 +368,134 @@ export const patternsSchema = z.object({
   category: z.enum(patternCategories).optional(),
   convergence_date: z.date().nullable().optional(),
 });
+
+// ===== Study-guide: questions collection (Tier 3, #112 lynchpin) =====
+//
+// The schema-validated question bank that the study-guide surfaces query via
+// getCollection('questions') — /practice-exam (#112) + the auto-derived
+// objective-map (#117) in this increment; #110/#113/#114/#116 downstream.
+//
+// SHAPE: a FLAT ENVELOPE z.object (NOT a top-level z.discriminatedUnion).
+// Astro's content layer augments a collection schema with ZodObject methods
+// (image() injection, id/slug merge), so the top-level schema must be a plain
+// object — like every other schema in this file. `type` discriminates; the
+// per-type invariants live in refineQuestion(), attached via .superRefine AT
+// REGISTRATION (schemas-entry.ts) so this exported base stays a bare,
+// .extend()-able ZodObject (consumers + Astro can extend it).
+//
+// Stem + rationale live in the MDX BODY (render(entry).Content), NOT in
+// frontmatter — same body-render contract as chapters; a <Rationale> body
+// marker lets #114's appendix hoist rationales later. `domain` is validated
+// for membership at the route/build layer (assertKnownDomain, lib/exam-domains)
+// — NOT here — because the per-book examDomains registry isn't visible when
+// this schema is constructed (same constraint that put siblingBooks validation
+// in lib/book-link.ts).
+
+export const questionTypes = ['mcq', 'free', 'cloze'] as const;
+//   mcq   — multiple choice, exactly one correct option (renders in v1)
+//   free  — free-response, prose model answer (renders in v1)
+//   cloze — fill-in-the-blank (RESERVED; schema-accepted, render-deferred to a
+//           later increment so books can author ahead without a migration)
+
+export const bloomLevels = [
+  'remember',
+  'understand',
+  'apply',
+  'analyze',
+  'evaluate',
+  'create',
+] as const;
+
+// Reuse the Practice.astro difficulty scale (1–4) verbatim for consistency.
+export const questionDifficulties = ['1', '2', '3', '4'] as const;
+
+// One MCQ option. `correct` defaults false; exactly one must be true (enforced
+// in refineQuestion). `.strict()` so a misspelled option key fails loud rather
+// than being silently dropped.
+const mcqOptionObject = z
+  .object({
+    id: z.string().min(1), // stable per-option key (e.g. 'a') — anchors + future scoring
+    correct: z.boolean().default(false),
+    text: z.string().optional(), // short option prose inline; long ones via body
+  })
+  .strict();
+
+export const questionSchema = z
+  .object({
+    // ----- identity -----
+    id: z.string().min(1), // EXPLICIT cross-ref key (#114 appendix / #116 cards); distinct from file-derived entry.id
+    type: z.enum(questionTypes),
+    // ----- placement (every surface keys on these) -----
+    chapter: z.union([z.number().int().min(0).max(99), z.string()]), // number OR academic-style string
+    part: z.union([z.number().int().min(0).max(20), z.string()]).optional(),
+    domain: z.string().min(1), // value validated at route/build (assertKnownDomain), NOT here
+    // ----- pedagogy metadata (used-when-present) -----
+    bloom_level: z.enum(bloomLevels).optional(), // #112/#113/#116
+    objective_id: z.string().min(1).optional(), // #117 objective-map rows + #116 cards
+    difficulty: z.enum(questionDifficulties).optional(), // #112 blueprint, #113 routing
+    // ----- type-specific payloads (validated per-type in refineQuestion) -----
+    options: z.array(mcqOptionObject).optional(), // MCQ only
+    answer: z.string().optional(), // free-response model answer (prose)
+    // ----- lifecycle (mirrors chapter schemas) -----
+    draft: z.boolean().default(false),
+    tags: z.array(z.string()).default([]),
+  })
+  .strict(); // typo'd frontmatter key fails the build (matches provenanceObject)
+
+/**
+ * Per-type invariants for a question. Attached as `.superRefine(refineQuestion)`
+ * at collection-registration time (schemas-entry.ts) so `questionSchema` itself
+ * stays a bare ZodObject Astro + consumers can `.extend()`. Exported so the unit
+ * test can exercise the refined form directly.
+ */
+export function refineQuestion(
+  q: z.infer<typeof questionSchema>,
+  ctx: z.RefinementCtx,
+): void {
+  if (q.type === 'mcq') {
+    if (!q.options || q.options.length < 2) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['options'],
+        message: `MCQ "${q.id}" needs ≥2 options (got ${q.options?.length ?? 0}).`,
+      });
+      return;
+    }
+    const correct = q.options.filter((o) => o.correct).length;
+    if (correct !== 1) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['options'],
+        message: `MCQ "${q.id}" must have EXACTLY ONE option with correct: true (got ${correct}).`,
+      });
+    }
+    const ids = q.options.map((o) => o.id);
+    if (new Set(ids).size !== ids.length) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['options'],
+        message: `MCQ "${q.id}" has duplicate option ids (${ids.join(', ')}).`,
+      });
+    }
+  } else if (q.type === 'free') {
+    if (q.options) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['options'],
+        message: `Free-response "${q.id}" must not define MCQ options.`,
+      });
+    }
+    if (!q.answer || q.answer.trim() === '') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['answer'],
+        message: `Free-response "${q.id}" needs an "answer" (model answer) for the appendix.`,
+      });
+    }
+  }
+  // cloze: reserved — schema-accepted, no invariants until its renderer ships.
+}
+
+export type Question = z.infer<typeof questionSchema>;
+export type QuestionType = (typeof questionTypes)[number];
+export type BloomLevel = (typeof bloomLevels)[number];

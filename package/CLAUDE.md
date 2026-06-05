@@ -104,6 +104,8 @@ Two callout families coexist. Authors import what they need.
 
 **Provenance** (v4.8.0, any profile, **auto-injected by the chapter route — not author-imported**): per-chapter "How this was made" audit-trail block, rendered from the optional `provenance` frontmatter (`ai_tools`, `prompts_archive`, `decisions_log`, `audit_history`, `citation_backstop`). **Opt-out**: a chapter with no `provenance` shows a fallback ("Audit history not yet recorded"). Distinct from `AICollaborationDisclosure` (book-level, manual model+role disclosure). Repo-relative path fields render as `<code>`; only `http(s)` values link.
 
+**Study-guide (v4.17.0+, #112; opt-in).** A schema-validated `questions` content collection drives an exam-prep "question bank". Author questions under `src/content/questions/**.{md,mdx}` — frontmatter `id` (unique, required) / `type` (`mcq`|`free`|`cloze`) / `chapter` / `domain` (+ optional `part`/`bloom_level`/`objective_id`/`difficulty`), MDX body = the stem. MCQ carries `options: [{ id, text, correct }]` (exactly one `correct: true`); free-response carries an `answer` (model answer). Declare the per-book domain taxonomy in `defineBookConfig({ examDomains: ['…'] })` — a question whose `domain` isn't registered **throws at build** (fail-loud, like `<BookLink>`'s `siblingBooks`). Enable the static `/practice-exam` route with `defineBookConfig({ routes: { practiceExam: true } })` (renders the bank grouped by domain with answers behind a `<details>` reveal; `cloze` is reserved/render-deferred). `<ObjectiveMap />` renders the exam-domain → chapter coverage matrix auto-derived from the collection (no separate data file). `<Rationale>` is a collapsible answer/explanation marker for a question's MDX body. (Scoring + diagnostics + appendix + flashcards are later increments — see `docs/plans/active/study-guide-epic_*.md`.)
+
 Full reference in `recipes/04-component-library.md`.
 
 ### Theme-change event (v4.14.2)
@@ -168,6 +170,7 @@ For monorepo Astro projects (Astro project in subdir), prefix build + deploy com
 - Unknown `<XRef id>` — id not in `labels.json` (XRef silently renders `[?label]` otherwise)
 - Missing `<Figure src>` files under `public/`
 - Internal markdown links that don't resolve
+- Study-guide questions (v4.17.0, #112) — a question whose frontmatter `domain` isn't in `examDomains`, and duplicate question `id`s
 
 See `recipes/09-validation.md` to extend.
 

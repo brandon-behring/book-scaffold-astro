@@ -121,6 +121,24 @@ export { assertEnumProp } from './lib/assert-prop.js';
 // on an unknown book instead of emitting a dead cross-origin link.
 export { resolveBookHref } from './lib/book-link.js';
 
+// v4.17.0 (Tier 3, #112): exam-domain membership check. assertKnownDomain
+// throws when a question's `domain` is not in the consumer's examDomains
+// registry — the per-book analogue of resolveBookHref's unknown-book throw.
+// Unit-tested in tests/exam-domains.test.mjs.
+export { assertKnownDomain } from './lib/exam-domains.js';
+
+// v4.17.0 (Tier 3, #112/#117): pure questions helpers — grouping + the
+// objective-map coverage derivation. No astro:content dependency (the
+// getCollection wrapper getAllQuestions lives in lib/questions.ts), so these
+// are unit-tested from dist/ in tests/questions.test.mjs.
+export {
+  chapterLabel,
+  sortQuestions,
+  groupByDomain,
+  groupByChapter,
+  deriveObjectiveMap,
+} from './lib/questions-derive.js';
+
 // v4.0.0 defineStyle API: typed, named, importable config bundles composed
 // via `styles: [...]` in defineBookConfig. Replaces the v3 `preset:` shorthand.
 // See recipes/15-defining-styles.md + MIGRATION-v3-to-v4.md.
@@ -175,6 +193,14 @@ export {
   citationBackstops,
   provenanceObject,
   provenanceSchema,
+  // v4.17.0 (Tier 3, #112): study-guide questions collection — enums + schema +
+  // per-type refine. Registered as a collection in schemas-entry.ts; consumed by
+  // /practice-exam + <ObjectiveMap>. Unit-tested in tests/questions-schema.test.mjs.
+  questionTypes,
+  bloomLevels,
+  questionDifficulties,
+  questionSchema,
+  refineQuestion,
 } from './schemas.js';
 
 // Inferred chapter types per profile (v3.3.0). Type-only re-export from
@@ -191,3 +217,7 @@ export type {
 
 // v4.8.0: inferred provenance type (consumed by components/Provenance.astro).
 export type { Provenance } from './schemas.js';
+
+// v4.17.0 (Tier 3, #112): inferred question types for consumers building custom
+// study-guide surfaces over getCollection('questions').
+export type { Question, QuestionType, BloomLevel } from './schemas.js';
