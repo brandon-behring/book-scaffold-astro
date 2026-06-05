@@ -11,12 +11,21 @@
  *
  * Family: book-genre (cross-profile).
  */
-type Difficulty = '1' | '2' | '3' | '4';
+import { assertEnumProp } from '../src/lib/assert-prop';
+
+const PRACTICE_DIFFICULTIES = ['1', '2', '3', '4'] as const;
+type Difficulty = (typeof PRACTICE_DIFFICULTIES)[number];
 interface Props {
   id: string;
   difficulty: Difficulty;
 }
-const { id, difficulty } = Astro.props;
+const { id } = Astro.props;
+// #109 sweep: coerce (tolerates difficulty={3} numeric usage), then fail loud
+// on anything outside 1-4 instead of rendering empty / NaN diamond markers.
+const difficulty = assertEnumProp(String(Astro.props.difficulty), PRACTICE_DIFFICULTIES, {
+  component: 'Practice',
+  prop: 'difficulty',
+});
 const anchorId = `practice-${id}`;
 const filled = Number.parseInt(difficulty, 10);
 const markers = '◆'.repeat(filled) + '◇'.repeat(4 - filled);
