@@ -1,0 +1,32 @@
+---
+/**
+ * BookLink — cross-book link to a sibling scaffold book (#96).
+ *
+ * Each scaffold book is a separate Astro app with its own `labels.json` and
+ * deploy origin, so `<XRef>` can't reach a sibling — a cross-book ref resolves
+ * against the wrong labels and dies. `<BookLink book="design" to="…">` resolves
+ * `book` against the consumer's `siblingBooks` registry
+ * (`defineBookConfig({ siblingBooks })`) — the single place to update when a
+ * sibling redeploys or extracts to its own repo. An unknown `book` throws at
+ * build (fail-loud, see `src/lib/book-link`), never a dead cross-origin link.
+ *
+ * `to` is a path within the sibling book (its router shape), e.g.
+ * `chapters/<slug>/#<id>`. Phase 1 builds the href; Phase 2 (deferred) will
+ * validate `to` against a vendored sibling `labels.json`.
+ *
+ * Usage:
+ *   For design depth see
+ *   <BookLink book="design" to="chapters/patterns/#layered">the layered pattern</BookLink>.
+ */
+import bookConfig from 'virtual:book-scaffold/book-config';
+import { resolveBookHref } from '../src/lib/book-link';
+
+interface Props {
+  book: string;
+  to: string;
+}
+
+const { book, to } = Astro.props;
+const href = resolveBookHref(bookConfig.siblingBooks, book, to);
+---
+<a href={href} rel="external noopener" class="book-link"><slot /></a>

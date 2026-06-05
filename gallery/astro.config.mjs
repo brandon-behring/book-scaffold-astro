@@ -25,6 +25,8 @@ function galleryBookConfigPlugin() {
     seo: { ogImage: null, twitterHandle: null },
     githubRepo: 'brandon-behring/book-scaffold-astro',
     githubBranch: 'main',
+    // #96: sibling-book registry so <BookLink> is galleryable.
+    siblingBooks: { design: 'https://design.example' },
   };
   return {
     name: 'gallery:book-config',

@@ -206,6 +206,8 @@ export async function defineBookConfig(
       // v4.15.0 (#109): repo/branch override; integration auto-detects when undefined.
       githubRepo: opts.githubRepo as string | undefined,
       githubBranch: opts.githubBranch as string | undefined,
+      // v4.16.0 (#96): cross-book link registry.
+      siblingBooks: opts.siblingBooks as Record<string, string> | undefined,
     }),
     ...mergedExtraIntegrations,
   ];
@@ -257,6 +259,8 @@ export async function defineBookConfig(
     // v4.15.0: strip repo opts so they don't leak into AstroUserConfig.
     githubRepo: _githubRepo,
     githubBranch: _githubBranch,
+    // v4.16.0: strip cross-book registry.
+    siblingBooks: _siblingBooks,
     ...rest
   } = opts;
   void _styles;
@@ -275,6 +279,7 @@ export async function defineBookConfig(
   void _seo;
   void _githubRepo;
   void _githubBranch;
+  void _siblingBooks;
 
   // KaTeX externals — same v3.7.1 pattern, now gated on the composed preset.
   const katexExternals = wantsKatex ? [] : ['remark-math', 'rehype-katex', 'katex'];

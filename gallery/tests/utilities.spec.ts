@@ -34,5 +34,11 @@ test('utilities — standalone + data-backed (light + dark)', async ({ page }) =
     /github\.com\/brandon-behring\/book-scaffold-astro\/blob\/main\/package\.json/,
   );
 
+  // BookLink (#96): resolves the sibling-book base URL from the registry stub.
+  await expect(page.locator('[data-gallery="booklink"] a')).toHaveAttribute(
+    'href',
+    'https://design.example/chapters/patterns/#layered',
+  );
+
   await lightAndDark(page, 'utilities');
 });

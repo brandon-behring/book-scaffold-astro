@@ -116,6 +116,11 @@ export {
 // silent broken render. Unit-tested in tests/assert-prop.test.mjs.
 export { assertEnumProp } from './lib/assert-prop.js';
 
+// v4.16.0 (#96): cross-book link resolution. resolveBookHref maps a sibling
+// book key → its base URL from the consumer's siblingBooks registry, throwing
+// on an unknown book instead of emitting a dead cross-origin link.
+export { resolveBookHref } from './lib/book-link.js';
+
 // v4.0.0 defineStyle API: typed, named, importable config bundles composed
 // via `styles: [...]` in defineBookConfig. Replaces the v3 `preset:` shorthand.
 // See recipes/15-defining-styles.md + MIGRATION-v3-to-v4.md.

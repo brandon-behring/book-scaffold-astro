@@ -15,6 +15,8 @@
  *      path exists + line in bounds.
  *   6. <Theorem> — has a resolvable kind= (or legacy type=); else it would
  *      render an empty label and throw at build (#121).
+ *   7. <BookLink book="…" to="…"> (#96) — both props present, and book= is a
+ *      key in the consumer's siblingBooks registry (best-effort).
  *
  * Run from the consumer's project root. Closes #8 (was resolving paths
  * from the package's own directory inside node_modules — false negatives
@@ -214,6 +216,9 @@ const RE_MD_LINK = /\[(?:[^\]]*)\]\((\/[^)\s#]+)(?:#[^)]*)?\)/g;
 // #121: a <Theorem> opening tag — capture its attributes to assert a
 // resolvable kind= (or legacy type=) is present.
 const RE_THEOREM = /<Theorem\b([^>]*)>/g;
+// #96: a <BookLink> opening tag — assert book= + to= present, and (best-effort)
+// that book= is a registered sibling.
+const RE_BOOKLINK = /<BookLink\b([^>]*)>/g;
 
 async function fileExists(p) {
   try {
@@ -226,6 +231,25 @@ async function fileExists(p) {
 
 function lineOf(content, idx) {
   return content.slice(0, idx).split('\n').length;
+}
+
+// #96: best-effort siblingBooks registry keys from astro.config.mjs, so the
+// <BookLink> check can flag an unknown book= earlier than the component's
+// build-time throw. null = couldn't determine → membership not checked (the
+// component still fails loud at build).
+let siblingBookKeys = null;
+{
+  const astroConfigPath = resolve(ROOT, 'astro.config.mjs');
+  if (existsSync(astroConfigPath)) {
+    const block = readFileSync(astroConfigPath, 'utf8').match(/siblingBooks\s*:\s*\{([^}]*)\}/);
+    if (block) {
+      // Anchor each key to an entry boundary ({ , or start) so the `https:` in
+      // a URL value isn't mistaken for a key.
+      siblingBookKeys = new Set(
+        [...block[1].matchAll(/(?:^|[{,])\s*['"]?([\w-]+)['"]?\s*:/g)].map((x) => x[1]),
+      );
+    }
+  }
 }
 
 // ===== Run all checks on each chapter =====
@@ -293,6 +317,23 @@ for (const rel of chapterFiles) {
         rel,
         lineOf(content, m.index),
         `<Theorem> has no kind= (or legacy type=) — renders an empty label / throws at build. Add e.g. kind="theorem".`,
+      );
+    }
+  }
+
+  // 7. BookLink (#96): structural (book= + to=) + best-effort registry membership.
+  for (const m of content.matchAll(RE_BOOKLINK)) {
+    const attrs = m[1];
+    const bookMatch = attrs.match(/\bbook=["']([^"']+)["']/);
+    if (!bookMatch || !/\bto=["']/.test(attrs)) {
+      fail(rel, lineOf(content, m.index), `<BookLink> requires both book="…" and to="…".`);
+      continue;
+    }
+    if (siblingBookKeys && !siblingBookKeys.has(bookMatch[1])) {
+      fail(
+        rel,
+        lineOf(content, m.index),
+        `<BookLink book="${bookMatch[1]}"> — not in defineBookConfig siblingBooks (${[...siblingBookKeys].join(', ') || 'none'}). Register it or fix the key.`,
       );
     }
   }

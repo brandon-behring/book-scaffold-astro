@@ -2,6 +2,19 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.16.0] — 2026-06-05
+
+Minor release. First-class cross-book links (#96): a scaffold book can now link into a sibling book through a single configured registry, instead of a hardcoded cross-origin markdown link with no validation. Continues the fail-loud line — an unknown sibling book throws at build rather than emitting a dead link.
+
+### Added
+
+- **`<BookLink book="…" to="…" />` + `siblingBooks` registry (#96).** Each scaffold book is a separate Astro app with its own `labels.json` + deploy origin, so `<XRef>` can't reach a sibling. `<BookLink>` resolves `book` against `defineBookConfig({ siblingBooks: { design: 'https://design.example' } })` — the single place to update when a sibling redeploys or extracts to its own repo — and builds `{base}/{to}`. An unknown `book` **throws** at build (fail-loud), never a dead link. `resolveBookHref` is exported + unit-tested. Phase 2 (deferred): validate the `to` id against a vendored sibling `labels.json`.
+- **`validate` check #7 — `<BookLink>` (#96).** Flags a `<BookLink>` missing `book=`/`to=`, and (best-effort, when the `siblingBooks` registry is discoverable in `astro.config.mjs`) a `book=` that isn't a registered sibling — an earlier gate than the component's build-time throw.
+
+### Tests
+
+- `tests/book-link.test.mjs` (new, +3) — href join + slash normalization, and the fail-loud unknown-book / no-registry throws. The gallery covers `<BookLink>` with a functional href assertion. Package suite **344**.
+
 ## [4.15.0] — 2026-06-05
 
 Minor release. Two shared-scaffold fixes that convert *silent* component failures into *loud build* failures — the same principle behind the v4.14.3 Theorem fix, generalized. `<CodeRef>`/`<CodeBlock>` now link to the book's own GitHub repo instead of a hardcoded default (#109), and every closed-union-prop component throws on an out-of-range value instead of rendering broken.
