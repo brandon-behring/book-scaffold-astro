@@ -1,0 +1,38 @@
+---
+/**
+ * <Rationale> — collapsible answer/explanation for a study-guide question
+ * (v4.17.0, Tier 3). Renders its slot inside a <details> so the answer stays
+ * hidden until the reader chooses to reveal it (Bjork desirable-difficulties:
+ * delayed feedback aids retention). Authored in a question's MDX body; the
+ * answer-rationale back-appendix (#114) will later hoist these into an appendix
+ * using this same marker — so a rich, cited rationale has a stable home now.
+ *
+ * Any profile. Register it in src/mdx-components.ts (defineMdxComponents) to use
+ * inside src/content/questions/**.mdx. Slot freely: prose, math, <Cite>, code.
+ */
+interface Props {
+  /** Summary label for the reveal. Defaults to "Answer & rationale". */
+  title?: string;
+}
+const { title = 'Answer & rationale' } = Astro.props;
+---
+<details class="question-rationale">
+  <summary>{title}</summary>
+  <div class="question-rationale-body"><slot /></div>
+</details>
+
+<style>
+  .question-rationale {
+    margin-block: 0.75rem;
+    border-inline-start: 3px solid var(--color-accent, #4f46e5);
+    padding-inline-start: 0.75rem;
+  }
+  .question-rationale > summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--color-accent, #4f46e5);
+  }
+  .question-rationale-body {
+    margin-block-start: 0.5rem;
+  }
+</style>

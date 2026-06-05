@@ -31,7 +31,17 @@ const FIXTURES: { name: string; port: number; routes: string[] }[] = [
   {
     name: 'book-genre',
     port: 4178,
-    routes: ['/', '/chapters/01-tips/', '/chapters/02-exercises/', '/tips/', '/exercises/'],
+    // v4.17.0 (#112/#117): /practice-exam (questions collection → static bank
+    // with reveals) + /objective-map (auto-derived domain×chapter coverage).
+    routes: [
+      '/',
+      '/chapters/01-tips/',
+      '/chapters/02-exercises/',
+      '/tips/',
+      '/exercises/',
+      '/practice-exam/',
+      '/objective-map/',
+    ],
   },
 ];
 

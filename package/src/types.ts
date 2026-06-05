@@ -215,6 +215,15 @@ export interface BookConfigOptions {
    * @example siblingBooks: { design: 'https://design.example' }
    */
   siblingBooks?: Record<string, string>;
+  /**
+   * v4.17.0 (Tier 3, #112): closed exam-domain taxonomy for the study-guide
+   * `questions` collection. A question whose `domain` is not in this list
+   * throws at build (`assertKnownDomain`) rather than silently mis-weighting a
+   * blueprint or dropping an objective-map row — the per-book analogue of
+   * `siblingBooks`. Domains are per-book, so they can't be a hardcoded enum.
+   * @example examDomains: ['secure-network-architecture', 'identity-and-access']
+   */
+  examDomains?: readonly string[];
   /** Escape hatch for any other AstroUserConfig field. */
   [key: string]: unknown;
 }
@@ -281,6 +290,8 @@ export interface BookScaffoldIntegrationOptions {
   githubBranch?: string;
   /** v4.16.0 (#96): sibling-book base-URL registry for <BookLink>. */
   siblingBooks?: Record<string, string>;
+  /** v4.17.0 (#112): closed exam-domain taxonomy for the questions collection. */
+  examDomains?: readonly string[];
 }
 
 /** Raised when the resolved profile is not one of `BOOK_PROFILES`. */

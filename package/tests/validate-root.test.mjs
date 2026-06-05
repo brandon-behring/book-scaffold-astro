@@ -60,6 +60,37 @@ Another paragraph.
   writeFileSync(join(dataDir, 'labels.json'), '{}');
 }
 
+/**
+ * Add a study-guide `questions` collection + an `astro.config.mjs` declaring
+ * `examDomains` to a fixture root, for validate check #8 (v4.17.0, #112).
+ * `files` maps filename → MDX body.
+ */
+function setupQuestionsFixture(root, files) {
+  const qDir = join(root, 'src', 'content', 'questions');
+  mkdirSync(qDir, { recursive: true });
+  // validate.mjs regex-extracts examDomains from the config TEXT (never imports it).
+  writeFileSync(
+    join(root, 'astro.config.mjs'),
+    `export default { examDomains: ['arrays', 'strings'] };\n`,
+  );
+  for (const [name, body] of Object.entries(files)) {
+    writeFileSync(join(qDir, name), body);
+  }
+}
+
+/** A minimal valid MCQ question file (frontmatter id/type/domain + a stem). */
+const questionFile = (id, domain) => `---
+id: ${id}
+type: mcq
+domain: ${domain}
+chapter: 1
+options:
+  - { id: a, correct: true }
+  - { id: b }
+---
+A question stem.
+`;
+
 test('validate-root: resolves chapters from CWD (closes #8 — was 0 from package root)', () => {
   const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
   try {
@@ -175,6 +206,57 @@ test('validate-root: BOOK_PROFILE env still wins over .env (closes #20)', () => 
       result.stdout,
       /profile=academic/,
       `process.env.BOOK_PROFILE should win over .env BOOK_PROFILE; got: ${result.stdout}`,
+    );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+// ---- validate check #8: study-guide questions (v4.17.0, #112) ----
+
+test('validate #8: a clean questions fixture passes + reports the question count', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    setupQuestionsFixture(tmp, {
+      '01.mdx': questionFile('q-arrays-1', 'arrays'),
+      '02.mdx': questionFile('q-strings-1', 'strings'),
+    });
+    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(result.status, 0, `clean questions fixture should pass\nstderr: ${result.stderr}`);
+    assert.match(result.stdout, /2 question\(s\) checked/, `got: ${result.stdout}`);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate #8: a duplicate question id fails loud (#112)', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    setupQuestionsFixture(tmp, {
+      '01.mdx': questionFile('q-dup', 'arrays'),
+      '02.mdx': questionFile('q-dup', 'strings'),
+    });
+    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.ok(result.status > 0, `duplicate id should fail (status=${result.status})`);
+    assert.match(result.stderr, /Duplicate question id "q-dup"/, `got stderr: ${result.stderr}`);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate #8: a question domain not in examDomains fails loud (#112)', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    setupQuestionsFixture(tmp, { '01.mdx': questionFile('q-1', 'phantom') });
+    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.ok(result.status > 0, `unknown domain should fail (status=${result.status})`);
+    assert.match(
+      result.stderr,
+      /Question domain "phantom" not in defineBookConfig examDomains/,
+      `got stderr: ${result.stderr}`,
     );
   } finally {
     rmSync(tmp, { recursive: true, force: true });

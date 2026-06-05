@@ -65,6 +65,7 @@ import {
   sourcesSchema,
   changelogSchema,
   patternsSchema,
+  refinedQuestionSchema,
 } from './schemas.js';
 
 /**
@@ -170,6 +171,25 @@ export function defineBookSchemas(opts: BookSchemasOptions = {}) {
     collections.patterns = defineCollection({
       loader: file('changelog/patterns.yaml'),
       schema: patternsSchema,
+    });
+  }
+
+  // v4.17.0 (Tier 3, #112): study-guide `questions` collection. Registered only
+  // when the consumer has a src/content/questions/ directory (same existsSync
+  // gate as the tools-collateral collections above) so books that never adopt
+  // the study-guide don't see a "collection does not exist" content-sync error.
+  //
+  // refinedQuestionSchema is `questionSchema.superRefine(refineQuestion)`,
+  // composed in schemas.ts. The bare `questionSchema` stays a ZodObject Astro
+  // (image()/id augmentation) and consumers (.extend()) can use; this canonical
+  // composed form carries the per-type invariants.
+  if (existsSync('./src/content/questions')) {
+    collections.questions = defineCollection({
+      loader: glob({
+        pattern: ['**/*.{md,mdx}', '!**/_*'],
+        base: './src/content/questions',
+      }),
+      schema: refinedQuestionSchema,
     });
   }
 

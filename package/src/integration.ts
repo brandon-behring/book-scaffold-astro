@@ -72,6 +72,8 @@ function makeBookConfigVitePlugin(config: {
   githubBranch: string;
   // v4.16.0 (#96): sibling-book base-URL registry for <BookLink>.
   siblingBooks: Record<string, string>;
+  // v4.17.0 (#112): per-book exam-domain taxonomy for the questions collection.
+  examDomains: readonly string[];
 }) {
   // Serialize once at plugin-creation time so subsequent load() calls are O(1).
   const serialized = `export default ${JSON.stringify(config)};`;
@@ -144,6 +146,9 @@ const ROUTE_REGISTRY = {
   // v4.4.0: exercises index by chapter. Opt-in via routes.exercises: true;
   // pairs with build-exercises script + <ExerciseSolutions auto /> mode.
   exercises:   { pattern: '/exercises',           file: 'exercises.astro' },
+  // v4.17.0 (Tier 3, #112): static practice question-bank. Opt-in via
+  // routes.practiceExam: true; reads the `questions` collection + examDomains.
+  practiceExam:{ pattern: '/practice-exam',       file: 'practice-exam.astro' },
   // v4.5.0: minimal root landing page. Reads title/description/portfolio/routes
   // from vite.define-injected import.meta.env vars. Default-on per profile;
   // consumers with their own src/pages/index.astro override (file-system route
@@ -197,6 +202,8 @@ export function bookScaffoldIntegration(
     githubBranch,
     // v4.16.0 (#96): sibling-book registry for cross-book <BookLink>.
     siblingBooks,
+    // v4.17.0 (#112): exam-domain taxonomy for the questions collection.
+    examDomains,
   } = opts;
   const def = PROFILES[profile];
 
@@ -300,6 +307,7 @@ export function bookScaffoldIntegration(
                 githubRepo: resolvedGithubRepo,
                 githubBranch: resolvedGithubBranch,
                 siblingBooks: siblingBooks ?? {},
+                examDomains: examDomains ?? [],
               }),
             ],
             define: {

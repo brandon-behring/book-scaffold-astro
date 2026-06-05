@@ -75,6 +75,16 @@ export interface RouteToggles {
    * profile — opt in via defineBookConfig({ routes: { exercises: true } }).
    */
   exercises: boolean;
+  /**
+   * v4.17.0 (Tier 3, #112): auto-inject `/practice-exam` — a static practice
+   * question-bank reading the `questions` content collection (src/content/
+   * questions/**), grouped by domain with collapsible answers/rationale. Each
+   * question's `domain` is validated against defineBookConfig({ examDomains })
+   * at build (fail-loud). Default `false` per profile — opt in via
+   * defineBookConfig({ routes: { practiceExam: true } }) AND add a
+   * src/content/questions/ directory.
+   */
+  practiceExam: boolean;
 }
 
 /** Profile definition — declarative shape for one book profile. */

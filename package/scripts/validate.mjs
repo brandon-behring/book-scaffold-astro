@@ -17,6 +17,9 @@
  *      render an empty label and throw at build (#121).
  *   7. <BookLink book="…" to="…"> (#96) — both props present, and book= is a
  *      key in the consumer's siblingBooks registry (best-effort).
+ *   8. Questions collection (#112) — each question's frontmatter `domain` is a
+ *      member of the consumer's examDomains registry (best-effort), and question
+ *      `id`s are unique (the cross-ref key for the appendix / flashcards).
  *
  * Run from the consumer's project root. Closes #8 (was resolving paths
  * from the package's own directory inside node_modules — false negatives
@@ -339,6 +342,71 @@ for (const rel of chapterFiles) {
   }
 }
 
+// ===== 8. Questions collection (#112): domain membership + unique ids =====
+//
+// The study-guide `questions` collection (src/content/questions/**) is scanned
+// separately from chapters: a question's frontmatter `domain` must be in the
+// consumer's examDomains registry — an unregistered domain throws at build via
+// assertKnownDomain (route layer); we flag it here, earlier, the same way #7
+// pre-flights BookLink. Question `id`s must also be unique (they're the stable
+// cross-ref key the appendix/flashcards resolve against). Best-effort: when
+// examDomains can't be read from astro.config.mjs, membership is left to the
+// build-time throw.
+let questionsChecked = 0;
+{
+  const QUESTIONS_DIR = resolve(ROOT, 'src/content/questions');
+  if (existsSync(QUESTIONS_DIR)) {
+    // examDomains registry from astro.config.mjs (best-effort, mirrors siblingBooks).
+    let examDomains = null;
+    const astroConfigPath = resolve(ROOT, 'astro.config.mjs');
+    if (existsSync(astroConfigPath)) {
+      const block = readFileSync(astroConfigPath, 'utf8').match(/examDomains\s*:\s*\[([^\]]*)\]/);
+      if (block) {
+        examDomains = new Set([...block[1].matchAll(/['"]([^'"]+)['"]/g)].map((x) => x[1]));
+      }
+    }
+
+    const seenIds = new Map(); // question id → first file that declared it
+    const questionFiles = [];
+    for await (const f of walkMdx(QUESTIONS_DIR)) {
+      if (!f.split('/').pop().startsWith('_')) questionFiles.push(f);
+    }
+    for (const rel of questionFiles) {
+      const abs = join(QUESTIONS_DIR, rel);
+      const content = await readFile(abs, 'utf8');
+      const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+      const front = fm ? fm[1] : '';
+      const qrel = `questions/${rel}`;
+
+      const idMatch = front.match(/^id\s*:\s*["']?([^"'\n]+?)["']?\s*$/m);
+      if (idMatch) {
+        const id = idMatch[1].trim();
+        if (seenIds.has(id)) {
+          fail(
+            qrel,
+            1,
+            `Duplicate question id "${id}" — also declared in ${seenIds.get(id)}. Question ids must be unique (cross-ref key for the appendix / flashcards).`,
+          );
+        } else {
+          seenIds.set(id, qrel);
+        }
+      }
+
+      if (examDomains) {
+        const domainMatch = front.match(/^domain\s*:\s*["']?([^"'\n]+?)["']?\s*$/m);
+        if (domainMatch && !examDomains.has(domainMatch[1].trim())) {
+          fail(
+            qrel,
+            1,
+            `Question domain "${domainMatch[1].trim()}" not in defineBookConfig examDomains (${[...examDomains].join(', ') || 'none'}). Register it or fix the value.`,
+          );
+        }
+      }
+    }
+    questionsChecked = questionFiles.length;
+  }
+}
+
 // ===== v4.6.0 (issue #77): missing-prereq re-framing =====
 //
 // When errors are downstream symptoms of a missing artifact (references.json
@@ -384,7 +452,8 @@ if (warnings.length > 0) {
   warnings.forEach((w) => console.warn(format(w)));
 }
 if (errors.length === 0) {
-  console.log(`validate: ✓ ${chapterFiles.length} chapter(s) checked (profile=${PROFILE}); no errors.`);
+  const qNote = questionsChecked > 0 ? ` + ${questionsChecked} question(s)` : '';
+  console.log(`validate: ✓ ${chapterFiles.length} chapter(s)${qNote} checked (profile=${PROFILE}); no errors.`);
   process.exit(0);
 }
 console.error(`validate: ✗ ${errors.length} error(s) in ${chapterFiles.length} chapter(s) (profile=${PROFILE}):`);

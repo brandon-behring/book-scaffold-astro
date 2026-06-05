@@ -1,0 +1,113 @@
+---
+/**
+ * <ObjectiveMap> — exam-domain → chapter coverage matrix (v4.17.0, Tier 3 #117).
+ *
+ * The reader-facing twin of a CompTIA/Cisco objective-coverage table. AUTO-
+ * DERIVED from getCollection('questions'): for each configured exam domain
+ * (defineBookConfig({ examDomains })), it shows which chapters carry ≥1 question
+ * in that domain. There is no separate coverage data file — the matrix is
+ * computed from the question bank, so it cannot drift from reality (and it can't
+ * render at all unless the per-book examDomains taxonomy is populated and
+ * consistent, which is the cheapest proof that taxonomy pays off).
+ *
+ * A domain with no questions renders an honest "—" gap rather than being
+ * omitted, so the table never implies coverage the bank doesn't have (same
+ * coverage-honesty discipline as /convergence).
+ *
+ * Drop into a front-matter / intro page. Any profile. Twin-gated: with no
+ * questions collection, renders an honest note instead of touching the
+ * collection (which would throw when unregistered).
+ */
+import bookConfig from 'virtual:book-scaffold/book-config';
+import { getCollection } from 'astro:content';
+import { deriveObjectiveMap, distinctChaptersSorted } from '../src/lib/questions';
+import { assertKnownDomain } from '../src/lib/exam-domains';
+
+interface Props {
+  /** Heading above the table. Defaults to "Exam objective coverage". */
+  title?: string;
+}
+const { title = 'Exam objective coverage' } = Astro.props;
+
+// Presence-gate: only touch the collection when the directory holds files.
+const questionModules = import.meta.glob('/src/content/questions/**/*.{md,mdx}', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+const hasQuestions = Object.keys(questionModules).length > 0;
+
+const entries = hasQuestions
+  ? await getCollection('questions', (e) => !e.data.draft)
+  : [];
+// Fail loud (like /practice-exam): a question with an unregistered / typo'd
+// domain must throw at build, not silently vanish from the coverage matrix.
+for (const e of entries) {
+  assertKnownDomain(bookConfig.examDomains, e.data.domain, { id: e.data.id });
+}
+const coverage = deriveObjectiveMap(entries);
+const domains = bookConfig.examDomains ?? [];
+// Column set: chapters that carry ≥1 question, in numeric-aware order
+// (distinctChaptersSorted — a bare .sort() would order "10" before "2").
+const chapters = distinctChaptersSorted(entries);
+---
+{domains.length === 0 ? (
+  <p class="objective-map-empty">
+    No <code>examDomains</code> configured. Declare them in
+    <code>defineBookConfig({'{'} examDomains: [&hellip;] {'}'})</code> to render the coverage map.
+  </p>
+) : chapters.length === 0 ? (
+  <p class="objective-map-empty">
+    No questions found under <code>src/content/questions/</code> yet — the coverage map
+    populates as you add questions tagged with these domains.
+  </p>
+) : (
+  <figure class="objective-map">
+    <figcaption class="objective-map-title">{title}</figcaption>
+    <table class="objective-map-table">
+      <thead>
+        <tr>
+          <th scope="col">Domain</th>
+          {chapters.map((c) => <th scope="col">{c}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {domains.map((domain) => {
+          const covered = coverage.get(domain) ?? new Set();
+          const isGap = covered.size === 0;
+          return (
+            <tr class={isGap ? 'objective-map-gap' : undefined}>
+              <th scope="row">{domain}</th>
+              {chapters.map((c) => (
+                <td aria-label={covered.has(c) ? `${domain} covered in ${c}` : undefined}>
+                  {covered.has(c) ? '✓' : '—'}
+                </td>
+              ))}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </figure>
+)}
+
+<style>
+  .objective-map { margin-block: 1.5rem; overflow-x: auto; }
+  .objective-map-title { font-weight: 600; margin-block-end: 0.5rem; }
+  .objective-map-empty { color: var(--color-text-muted, #6b7280); }
+  .objective-map-table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  .objective-map-table th,
+  .objective-map-table td {
+    border: 1px solid var(--color-border, #e5e7eb);
+    padding: 0.35rem 0.55rem;
+    text-align: center;
+  }
+  .objective-map-table th[scope='row'] {
+    text-align: start;
+    text-transform: capitalize;
+    white-space: nowrap;
+  }
+  .objective-map-table td { color: var(--color-accent, #4f46e5); }
+  .objective-map-gap th[scope='row'] { color: var(--color-text-muted, #6b7280); }
+  .objective-map-gap td { color: var(--color-text-muted, #6b7280); }
+</style>

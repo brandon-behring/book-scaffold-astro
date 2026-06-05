@@ -114,6 +114,36 @@ import Cite from '../../components/Cite.astro';
 The HiPPO theory <Cite key="gu2020hippo" /> shows that …
 ```
 
+## Study-guide components (v4.17.0+, #112)
+
+Opt-in exam-prep surfaces backed by the `questions` content collection (`src/content/questions/**.{md,mdx}`). Declare your domains in `defineBookConfig({ examDomains: [...] })`; enable the bank with `routes: { practiceExam: true }`.
+
+```mdx
+---
+id: q-tls-handshake          # unique cross-ref key (required)
+type: mcq                    # mcq | free | cloze
+chapter: 4
+domain: crypto               # must be in examDomains, else build throws
+bloom_level: understand      # optional
+difficulty: "2"              # optional, 1–4
+options:
+  - { id: a, text: "Confidentiality + integrity", correct: true }
+  - { id: b, text: "Availability only" }
+---
+import Rationale from '@brandon_m_behring/book-scaffold-astro/components/Rationale.astro';
+
+What security properties does a TLS session provide?
+
+<Rationale>
+TLS provides confidentiality and integrity via the negotiated cipher suite… <Cite key="rfc8446" />
+</Rationale>
+```
+
+- **`<Rationale title?>`** — collapsible answer/explanation for a question's MDX body (rich prose: math, `<Cite>`, code). Hidden behind a `<details>` so the answer stays delayed (Bjork desirable-difficulties). The seam the #114 back-appendix will hoist from.
+- **`<ObjectiveMap title?>`** — exam-domain → chapter coverage matrix, auto-derived from `getCollection('questions')` (no data file to maintain). Drop into a front-matter / intro page. A domain with no questions renders an honest gap.
+
+The static `/practice-exam` route renders the bank grouped by domain with each answer behind a "Show answer" reveal. `cloze` questions are reserved (schema-accepted, render-deferred). Scoring, diagnostics, the rationale appendix, glossary, and flashcards are later increments — see `docs/plans/active/study-guide-epic_*.md`.
+
 ## Mixing families
 
 You can use tools-family callouts in an academic book or vice versa — nothing stops you. The "default family" per profile is only about what `examples/chapter-template-*.mdx` import for you. Drop in a `<SkillBox>` in an academic chapter when it fits.
