@@ -214,34 +214,40 @@ async function main() {
       foundInChapter += 1;
       totalIds += 1;
 
-      // Display word is kind-aware for <Theorem> (Proposition, Lemma, …) via
-      // the shared resolver, which THROWS on an absent/unknown kind — the same
-      // fail-loud contract as the render path (#121), one build step earlier.
+      // Resolve the display word only when it will actually be used. A `label=`
+      // override supplies its own display, so we neither compute nor (for
+      // <Theorem>) kind-validate it — computing would throw on a kindless
+      // override, the documented `<Theorem id label="…">` form. For <Theorem>
+      // the word is kind-aware and THROWS on an absent/unknown kind (the #121
+      // contract, one build step earlier than render). extractAttr returns null
+      // for an absent attr → normalize to undefined so theoremLabel reports
+      // "no kind=" rather than the misleading kind="null".
+      const labelOverride = extractAttr(attrs, 'label');
       let word;
-      if (componentName === 'Theorem') {
-        try {
-          word = theoremLabel({
-            kind: extractAttr(attrs, 'kind'),
-            type: extractAttr(attrs, 'type'),
-          }).fullLabel;
-        } catch (err) {
-          throw new Error(
-            `<Theorem id="${id}"> in ${relative(cwd, file)}: ${err.message}`,
-          );
+      if (labelOverride == null) {
+        if (componentName === 'Theorem') {
+          try {
+            word = theoremLabel({
+              kind: extractAttr(attrs, 'kind') ?? undefined,
+              type: extractAttr(attrs, 'type') ?? undefined,
+            }).fullLabel;
+          } catch (err) {
+            throw new Error(
+              `<Theorem id="${id}"> in ${relative(cwd, file)}: ${err.message}`,
+            );
+          }
+        } else {
+          word = TYPE_DISPLAY[componentName];
         }
-      } else {
-        word = TYPE_DISPLAY[componentName];
       }
 
       // The bare counter string the heading reuses: Theorem.astro reads
       // `number` by id and renders it, so heading == xref by construction.
-      // A `label=` override opts out of auto-numbering → number is null (the
-      // heading then shows no number rather than mis-parsing a custom string).
+      // A `label=` override opts out of auto-numbering → number is null.
       const number =
         chapterNum != null
           ? `${chapterNum}.${counters[componentName]}`
           : String(counters[componentName]);
-      const labelOverride = extractAttr(attrs, 'label');
       const display = labelOverride ?? `${word} ${number}`;
 
       if (labels[id]) {

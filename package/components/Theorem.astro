@@ -29,7 +29,7 @@
  *     The HiPPO-LegS state matrix …   // explicit n= (un-cross-referenced)
  *   </Theorem>
  */
-import { theoremLabel, type TheoremLabelProps } from '../src/lib/theorem-label';
+import { theoremLabel, resolveTheoremNumber, type TheoremLabelProps } from '../src/lib/theorem-label';
 
 interface Props extends TheoremLabelProps {
   id?: string;
@@ -56,7 +56,7 @@ const { id } = Astro.props;
 // id resolves. When both exist the shared source wins — that is what guarantees
 // heading == xref (a stale n= can't reintroduce drift).
 const entry = id ? labelsMap[id] : undefined;
-const resolvedN = entry?.number ?? Astro.props.n;
+const resolvedN = resolveTheoremNumber(entry, Astro.props.n);
 const { kind, fullLabel } = theoremLabel({ ...Astro.props, n: resolvedN });
 ---
 <div class="theorem" data-kind={kind} id={id}>

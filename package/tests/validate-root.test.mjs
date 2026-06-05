@@ -262,3 +262,66 @@ test('validate #8: a question domain not in examDomains fails loud (#112)', () =
     rmSync(tmp, { recursive: true, force: true });
   }
 });
+
+// ---- validate check #6 (#126): a <Theorem id> must resolve in labels.json ----
+
+test('validate (#126): <Theorem id> present in labels.json passes; a label= override is exempt', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    // Only thm:ok is indexed. thm:custom carries a label= override → opts out of
+    // auto-numbering (number:null) → exempt from the id-in-labels requirement.
+    writeFileSync(
+      join(tmp, 'src', 'data', 'labels.json'),
+      JSON.stringify({
+        'w3:thm:ok': { href: '/chapters/week03#w3:thm:ok', display: 'Theorem 3.1', number: '3.1' },
+      }),
+    );
+    writeFileSync(
+      join(tmp, 'src', 'content', 'chapters', 'week03.mdx'),
+      `---
+week: 3
+part: foundations
+title: "Themed chapter"
+status: implemented
+---
+
+<Theorem id="w3:thm:ok" kind="theorem">Resolvable — present in labels.json.</Theorem>
+
+<Theorem id="w3:thm:custom" kind="theorem" label="Custom">Override — id absent from labels.json, but exempt.</Theorem>
+`,
+    );
+    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(result.status, 0, `id-in-labels + label-override theorems should pass\nstderr: ${result.stderr}`);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#126): a <Theorem id> absent from labels.json fails loud (silent-de-number guard)', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp); // labels.json is {} — present but empty (no collapse)
+    writeFileSync(
+      join(tmp, 'src', 'content', 'chapters', 'week03.mdx'),
+      `---
+week: 3
+part: foundations
+title: "Themed chapter"
+status: implemented
+---
+
+<Theorem id="w3:thm:missing" kind="theorem">Id not in labels.json — heading would silently de-number.</Theorem>
+`,
+    );
+    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.ok(result.status > 0, `absent-id theorem should fail (status=${result.status})`);
+    assert.match(
+      result.stderr,
+      /<Theorem id="w3:thm:missing"> — not in labels\.json/,
+      `validate should name the unresolved theorem id; got stderr: ${result.stderr}`,
+    );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});

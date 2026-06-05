@@ -15,7 +15,7 @@
  */
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { theoremLabel, THEOREM_KINDS, KIND_LABEL } from '../dist/index.mjs';
+import { theoremLabel, resolveTheoremNumber, THEOREM_KINDS, KIND_LABEL } from '../dist/index.mjs';
 
 test('theoremLabel: canonical kind= resolves the label', () => {
   assert.equal(theoremLabel({ kind: 'theorem' }).fullLabel, 'Theorem');
@@ -64,4 +64,18 @@ test('theoremLabel: word-only resolution (no n/name) — the form build-labels r
   assert.equal(theoremLabel({ kind: 'proposition' }).fullLabel, 'Proposition');
   assert.equal(theoremLabel({ kind: 'lemma' }).fullLabel, 'Lemma');
   assert.equal(theoremLabel({ type: 'corollary' }).fullLabel, 'Corollary'); // legacy alias
+});
+
+test('resolveTheoremNumber: labels.json number wins; n= is the fallback (#126)', () => {
+  // THE #126 guarantee: when an id resolves in labels.json, the index wins over
+  // a stale hand-passed n= — so heading and <XRef> can never disagree.
+  assert.equal(resolveTheoremNumber({ number: '9.5' }, '4.2'), '9.5');
+  // No entry (un-id'd theorem, or labels.json not built) → explicit n= fallback.
+  assert.equal(resolveTheoremNumber(undefined, '4.2'), '4.2');
+  // label= override (number:null) with an explicit n= → falls through to n=.
+  assert.equal(resolveTheoremNumber({ number: null }, '4.2'), '4.2');
+  // number:null and no n= → undefined (unnumbered, not the string "null").
+  assert.equal(resolveTheoremNumber({ number: null }, undefined), undefined);
+  // Neither → undefined.
+  assert.equal(resolveTheoremNumber(undefined, undefined), undefined);
 });

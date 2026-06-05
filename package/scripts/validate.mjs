@@ -314,12 +314,25 @@ for (const rel of chapterFiles) {
   // 6. Theorem requires a resolvable kind (#121) — kind= canonical, type=
   //    legacy alias. Catches the silent-empty-label / build-throw case at the
   //    earliest gate. (Value typos are caught at build by theoremLabel's throw.)
+  //    Plus (#126): an id'd <Theorem> without a label= override auto-numbers
+  //    from labels.json — an id absent from the index silently renders the
+  //    heading UNNUMBERED (no [?id] placeholder, unlike <XRef>). Fail loud to
+  //    restore symmetry with check #2. (A label= override opts out → number:null.)
   for (const m of content.matchAll(RE_THEOREM)) {
-    if (!/\b(?:kind|type)\s*=/.test(m[1])) {
+    const attrs = m[1];
+    if (!/\b(?:kind|type)\s*=/.test(attrs)) {
       fail(
         rel,
         lineOf(content, m.index),
         `<Theorem> has no kind= (or legacy type=) — renders an empty label / throws at build. Add e.g. kind="theorem".`,
+      );
+    }
+    const thmId = attrs.match(/\bid=["']([^"']+)["']/);
+    if (thmId && !/\blabel\s*=\s*["']/.test(attrs) && !labels[thmId[1]]) {
+      fail(
+        rel,
+        lineOf(content, m.index),
+        `<Theorem id="${thmId[1]}"> — not in labels.json; heading silently renders unnumbered. Run build:labels, or fix the id.`,
       );
     }
   }
@@ -431,7 +444,9 @@ let questionsChecked = 0;
     }
   }
   const labelsPath = join(DATA_DIR, 'labels.json');
-  const hasXrefErrors = errors.some((e) => /Unknown XRef/.test(e.msg));
+  // #126: also collapse <Theorem id> not-in-labels errors (they share the
+  // "not in labels.json" phrase) under the same missing-prereq message.
+  const hasXrefErrors = errors.some((e) => /not in labels\.json/.test(e.msg));
   if (hasXrefErrors && !existsSync(labelsPath)) {
     console.error(
       `\n✗ Validate cannot run: src/data/labels.json is missing.\n\n` +

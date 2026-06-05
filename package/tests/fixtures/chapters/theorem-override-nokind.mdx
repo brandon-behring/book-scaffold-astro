@@ -1,0 +1,12 @@
+---
+week: 9
+title: Override without kind
+status: implemented
+description: Fixture (#126) — a label= override supplies its own display, so build-labels must NOT require or validate a kind for it (the documented override form).
+---
+
+import Theorem from '@brandon_m_behring/book-scaffold-astro/components/Theorem.astro';
+
+# Override without kind
+
+<Theorem id="w9:ovr:custom" label="Custom display">A label= override needs no kind — build-labels uses the custom display, number null.</Theorem>
