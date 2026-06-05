@@ -18,6 +18,7 @@ import Figure from '@brandon_m_behring/book-scaffold-astro/components/Figure.ast
 import TipsCard from '@brandon_m_behring/book-scaffold-astro/components/TipsCard.astro';
 import CodeRef from '@brandon_m_behring/book-scaffold-astro/components/CodeRef.astro';
 import CodeBlock from '@brandon_m_behring/book-scaffold-astro/components/CodeBlock.astro';
+import BookLink from '@brandon_m_behring/book-scaffold-astro/components/BookLink.astro';
 ---
 
 <Gallery title="Utilities">
@@ -127,5 +128,14 @@ import CodeBlock from '@brandon_m_behring/book-scaffold-astro/components/CodeBlo
   <section data-gallery="codeblock">
     <h2 class="gallery-state">CodeBlock (build-time source embed · #109)</h2>
     <CodeBlock src="package.json" lines="2-4" lang="json" />
+  </section>
+
+  <section data-gallery="booklink">
+    <h2 class="gallery-state">BookLink (cross-book · #96)</h2>
+    <p>
+      For design depth see
+      <BookLink book="design" to="chapters/patterns/#layered">the layered pattern</BookLink>
+      in the sibling book.
+    </p>
   </section>
 </Gallery>

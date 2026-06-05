@@ -43,6 +43,8 @@ declare module 'virtual:book-scaffold/book-config' {
     /** v4.15.0 (#109): resolved GitHub repo for CodeRef/CodeBlock, or null. */
     githubRepo: string | null;
     githubBranch: string;
+    /** v4.16.0 (#96): sibling-book base-URL registry for <BookLink>. */
+    siblingBooks: Record<string, string>;
   };
   export default bookConfig;
 }

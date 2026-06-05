@@ -70,6 +70,8 @@ function makeBookConfigVitePlugin(config: {
   // to the wrong repo).
   githubRepo: string | null;
   githubBranch: string;
+  // v4.16.0 (#96): sibling-book base-URL registry for <BookLink>.
+  siblingBooks: Record<string, string>;
 }) {
   // Serialize once at plugin-creation time so subsequent load() calls are O(1).
   const serialized = `export default ${JSON.stringify(config)};`;
@@ -193,6 +195,8 @@ export function bookScaffoldIntegration(
     // v4.15.0 (#109): optional GitHub repo/branch override for CodeRef/CodeBlock.
     githubRepo,
     githubBranch,
+    // v4.16.0 (#96): sibling-book registry for cross-book <BookLink>.
+    siblingBooks,
   } = opts;
   const def = PROFILES[profile];
 
@@ -295,6 +299,7 @@ export function bookScaffoldIntegration(
                 },
                 githubRepo: resolvedGithubRepo,
                 githubBranch: resolvedGithubBranch,
+                siblingBooks: siblingBooks ?? {},
               }),
             ],
             define: {

@@ -100,7 +100,7 @@ Two callout families coexist. Authors import what they need.
 
 **Pedagogy family** (v4.1.0+, any profile, 3 components): `Pitfall` (rose; "common mistake" — distinct from `WarnBox`'s preemptive warning), `WorkedExample` (plum; collapsible `<details>` block with `#worked-example-{id}` anchor for deep links), `YouWillLearn` (gold; chapter-opener with optional `prerequisites` prop). Slot bullets/code freely; render at any preset.
 
-**Utility components** (`src/components/`, any profile): `Cite`, `XRef`, `Figure`, `MarginNote`, `Sidenote`, `WeekRef`, `CodeRef`, `CodeBlock`, `Tag`, `StatusBadge`, `PocLayout` (v4.1.0+; wraps slot in a per-`kind` layout shell — 5 closed-union kinds; see `recipes/15-defining-styles.md`).
+**Utility components** (`src/components/`, any profile): `Cite`, `XRef`, `Figure`, `MarginNote`, `Sidenote`, `WeekRef`, `CodeRef`, `CodeBlock`, `Tag`, `StatusBadge`, `BookLink` (v4.16.0+; cross-book link — `<BookLink book="design" to="…"/>` resolves `book` against `defineBookConfig({ siblingBooks })` and throws on an unknown book; `<XRef>` is in-book only — #96), `PocLayout` (v4.1.0+; wraps slot in a per-`kind` layout shell — 5 closed-union kinds; see `recipes/15-defining-styles.md`).
 
 **Provenance** (v4.8.0, any profile, **auto-injected by the chapter route — not author-imported**): per-chapter "How this was made" audit-trail block, rendered from the optional `provenance` frontmatter (`ai_tools`, `prompts_archive`, `decisions_log`, `audit_history`, `citation_backstop`). **Opt-out**: a chapter with no `provenance` shows a fallback ("Audit history not yet recorded"). Distinct from `AICollaborationDisclosure` (book-level, manual model+role disclosure). Repo-relative path fields render as `<code>`; only `http(s)` values link.
 

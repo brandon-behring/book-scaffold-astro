@@ -208,6 +208,13 @@ export interface BookConfigOptions {
   githubRepo?: string;
   /** v4.15.0 (#109): branch for CodeRef/CodeBlock links. Defaults to `main`. */
   githubBranch?: string;
+  /**
+   * v4.16.0 (#96): registry of sibling-book base URLs for cross-book
+   * `<BookLink book="…" to="…" />`. Maps a book key (used as `book=`) to its
+   * deployed origin — the single place to update when a sibling redeploys.
+   * @example siblingBooks: { design: 'https://design.example' }
+   */
+  siblingBooks?: Record<string, string>;
   /** Escape hatch for any other AstroUserConfig field. */
   [key: string]: unknown;
 }
@@ -272,6 +279,8 @@ export interface BookScaffoldIntegrationOptions {
    */
   githubRepo?: string;
   githubBranch?: string;
+  /** v4.16.0 (#96): sibling-book base-URL registry for <BookLink>. */
+  siblingBooks?: Record<string, string>;
 }
 
 /** Raised when the resolved profile is not one of `BOOK_PROFILES`. */
