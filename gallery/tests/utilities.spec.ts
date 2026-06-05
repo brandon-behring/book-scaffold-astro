@@ -22,5 +22,17 @@ test('utilities — standalone + data-backed (light + dark)', async ({ page }) =
       .forEach((d) => ((d as HTMLDetailsElement).open = true)),
   );
 
+  // CodeRef/CodeBlock (#109): links resolve to the *configured* repo (the
+  // gallery stub's brandon-behring/book-scaffold-astro), not the old hardcoded
+  // post_transformers default. Functional assertion — would have caught #109.
+  await expect(page.locator('[data-gallery="coderef"] a').first()).toHaveAttribute(
+    'href',
+    /github\.com\/brandon-behring\/book-scaffold-astro\/blob\/main\/.*repo-url\.ts#L51-L71/,
+  );
+  await expect(page.locator('[data-gallery="codeblock"] a')).toHaveAttribute(
+    'href',
+    /github\.com\/brandon-behring\/book-scaffold-astro\/blob\/main\/package\.json/,
+  );
+
   await lightAndDark(page, 'utilities');
 });
