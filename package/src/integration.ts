@@ -21,10 +21,13 @@
  * See PACKAGE_DESIGN.md §6.
  */
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { AstroIntegration } from 'astro';
 import type { BookScaffoldIntegrationOptions } from './types.js';
 import { PROFILES } from './profiles/index.js';
 import { normalizeFrontmatterConfig } from './lib/define-style.js';
+import { resolveGithubRepo, DEFAULT_GITHUB_BRANCH } from './lib/repo-url.js';
 import {
   resolveMdxComponentsPath,
   makeMdxComponentsVitePlugin,
@@ -62,6 +65,11 @@ function makeBookConfigVitePlugin(config: {
     ogImage: string | null;
     twitterHandle: string | null;
   };
+  // v4.15.0 (#109): resolved GitHub repo for CodeRef/CodeBlock — override,
+  // else auto-detected, else null (the components fail loud rather than link
+  // to the wrong repo).
+  githubRepo: string | null;
+  githubBranch: string;
 }) {
   // Serialize once at plugin-creation time so subsequent load() calls are O(1).
   const serialized = `export default ${JSON.stringify(config)};`;
@@ -77,6 +85,37 @@ function makeBookConfigVitePlugin(config: {
       return serialized;
     },
   };
+}
+
+/**
+ * v4.15.0 (#109): resolve the consumer's GitHub `owner/repo` at build time so
+ * CodeRef/CodeBlock link to the book's own repo with zero config. Reads the
+ * consumer's `package.json` `repository` and `.git/config` from the project
+ * root (never the package's own dir) and delegates the precedence — override →
+ * package.json → git origin → null — to the unit-tested `resolveGithubRepo`.
+ */
+function resolveBookGithubRepo(
+  override: string | undefined,
+  consumerRoot: string,
+): string | null {
+  let packageJsonRepository: unknown = null;
+  let gitConfigText: string | null = null;
+  try {
+    packageJsonRepository =
+      JSON.parse(readFileSync(join(consumerRoot, 'package.json'), 'utf8')).repository ?? null;
+  } catch {
+    /* no package.json / unreadable — fall through */
+  }
+  try {
+    gitConfigText = readFileSync(join(consumerRoot, '.git', 'config'), 'utf8');
+  } catch {
+    /* no .git/config (e.g. tarball consumer) — fall through */
+  }
+  return resolveGithubRepo({
+    override,
+    packageJsonRepository: packageJsonRepository as string | { url?: string } | null,
+    gitConfigText,
+  });
 }
 
 const PACKAGE_NAME = '@brandon_m_behring/book-scaffold-astro';
@@ -151,6 +190,9 @@ export function bookScaffoldIntegration(
     // (renamed) book-config virtual module to Base.astro + Chapter.astro.
     author,
     seo,
+    // v4.15.0 (#109): optional GitHub repo/branch override for CodeRef/CodeBlock.
+    githubRepo,
+    githubBranch,
   } = opts;
   const def = PROFILES[profile];
 
@@ -216,6 +258,12 @@ export function bookScaffoldIntegration(
         const consumerRoot = fileURLToPath(config.root);
         const resolvedMdxPath = resolveMdxComponentsPath(consumerRoot, mdxComponentsModule);
 
+        // v4.15.0 (#109): resolve the GitHub repo once — explicit override wins,
+        // else auto-detect from the consumer's package.json / git remote, else
+        // null (CodeRef/CodeBlock then fail loud rather than link the wrong repo).
+        const resolvedGithubRepo = resolveBookGithubRepo(githubRepo, consumerRoot);
+        const resolvedGithubBranch = githubBranch ?? DEFAULT_GITHUB_BRANCH;
+
         // 4. v3.4.0 (#9): propagate the resolved preset to runtime via
         //    vite.define. Consumer components reading import.meta.env.BOOK_PRESET
         //    or import.meta.env.BOOK_PROFILE (alias, back-compat) get the value
@@ -245,6 +293,8 @@ export function bookScaffoldIntegration(
                   ogImage: seo?.ogImage ?? null,
                   twitterHandle: seo?.twitterHandle ?? null,
                 },
+                githubRepo: resolvedGithubRepo,
+                githubBranch: resolvedGithubBranch,
               }),
             ],
             define: {

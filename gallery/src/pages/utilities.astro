@@ -16,6 +16,8 @@ import Cite from '@brandon_m_behring/book-scaffold-astro/components/Cite.astro';
 import XRef from '@brandon_m_behring/book-scaffold-astro/components/XRef.astro';
 import Figure from '@brandon_m_behring/book-scaffold-astro/components/Figure.astro';
 import TipsCard from '@brandon_m_behring/book-scaffold-astro/components/TipsCard.astro';
+import CodeRef from '@brandon_m_behring/book-scaffold-astro/components/CodeRef.astro';
+import CodeBlock from '@brandon_m_behring/book-scaffold-astro/components/CodeBlock.astro';
 ---
 
 <Gallery title="Utilities">
@@ -111,5 +113,19 @@ import TipsCard from '@brandon_m_behring/book-scaffold-astro/components/TipsCard
         { depth: 3, slug: 'setup', text: 'Setup' },
       ]}
     />
+  </section>
+
+  <section data-gallery="coderef">
+    <h2 class="gallery-state">CodeRef (configurable repo · #109)</h2>
+    <p>
+      The URL builder lives at
+      <CodeRef path="package/src/lib/repo-url.ts" line={51} lineEnd={71}>repo-url.ts:51-71</CodeRef>;
+      the bare-path form points at <CodeRef path="package/src/lib/repo-url.ts" />.
+    </p>
+  </section>
+
+  <section data-gallery="codeblock">
+    <h2 class="gallery-state">CodeBlock (build-time source embed · #109)</h2>
+    <CodeBlock src="package.json" lines="2-4" lang="json" />
   </section>
 </Gallery>

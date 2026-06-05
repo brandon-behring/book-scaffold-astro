@@ -40,6 +40,9 @@ declare module 'virtual:book-scaffold/book-config' {
       ogImage: string | null;
       twitterHandle: string | null;
     };
+    /** v4.15.0 (#109): resolved GitHub repo for CodeRef/CodeBlock, or null. */
+    githubRepo: string | null;
+    githubBranch: string;
   };
   export default bookConfig;
 }

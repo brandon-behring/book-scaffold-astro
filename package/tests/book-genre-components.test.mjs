@@ -93,10 +93,14 @@ test('Practice: requires id + difficulty props', () => {
   assert.match(src, /difficulty:\s*Difficulty/);
 });
 
-test('Practice: difficulty type is closed union "1" | "2" | "3" | "4"', () => {
+test('Practice: difficulty is a closed union 1-4, validated fail-loud (#109 sweep)', () => {
   const src = read('Practice');
-  // Inlined as single line per v4.1.0 PocLayout lesson (Astro frontmatter parser).
-  assert.match(src, /type Difficulty\s*=\s*'1'\s*\|\s*'2'\s*\|\s*'3'\s*\|\s*'4'/);
+  // v4.15.0 sweep: the inline union became a const array → derived type, and
+  // an out-of-range difficulty now throws via assertEnumProp instead of
+  // rendering NaN/empty diamond markers. Still exactly 1-4.
+  assert.match(src, /PRACTICE_DIFFICULTIES\s*=\s*\['1',\s*'2',\s*'3',\s*'4'\]\s*as const/);
+  assert.match(src, /type Difficulty\s*=\s*\(typeof PRACTICE_DIFFICULTIES\)\[number\]/);
+  assert.match(src, /assertEnumProp\(/);
 });
 
 test('Practice: anchor id is prefixed "practice-"', () => {

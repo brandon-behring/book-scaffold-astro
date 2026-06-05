@@ -2,6 +2,28 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.15.0] — 2026-06-05
+
+Minor release. Two shared-scaffold fixes that convert *silent* component failures into *loud build* failures — the same principle behind the v4.14.3 Theorem fix, generalized. `<CodeRef>`/`<CodeBlock>` now link to the book's own GitHub repo instead of a hardcoded default (#109), and every closed-union-prop component throws on an out-of-range value instead of rendering broken.
+
+### Added
+
+- **Configurable GitHub repo for `<CodeRef>` / `<CodeBlock>` (#109).** New `defineBookConfig({ githubRepo, githubBranch })`. When omitted, the scaffold **auto-detects** `owner/repo` from the consumer's own `package.json` `repository` field (or the `origin` git remote) — zero-config and correct by default. The previously-hardcoded `brandon-behring/post_transformers` is no longer a fallback: a book with no resolvable repo that actually renders a `<CodeRef>`/`<CodeBlock>` now **throws at build** rather than emitting wrong-but-valid links. `buildGithubUrl` takes an explicit repo+branch; `parseRepoSlug`, `resolveGithubRepo`, `originUrlFromGitConfig` are exported and unit-tested.
+- **`assertEnumProp` — shared fail-loud validator for closed-union props.** Throws an actionable error when a closed-union prop is out of range instead of the silent broken render Astro otherwise produces (empty `StatusBadge` label, `poc-layout-<bogus>` class matching no CSS, NaN `Practice` markers). Applied to `PocLayout` (`kind`), `StatusBadge` (`status`), `Practice` (`difficulty`). Exported and unit-tested.
+
+### Changed
+
+- **`<CodeBlock>` source root is now `BOOK_REPO_ROOT`** (defaults to the Astro project root) instead of the hardcoded `cwd/../..` (the `guides/web/` monorepo assumption) — consistent with how `book-scaffold validate` resolves repo paths. Missing source files still throw.
+- **Gallery covers `<CodeRef>` / `<CodeBlock>`** (skipped pre-#109) with a functional Playwright assertion that the rendered href tracks the configured repo. Visual baselines for the `utilities` page regenerate in CI (new sections).
+
+### Tests
+
+- `tests/repo-url.test.mjs` (new, +7) — slug parse across https/ssh/`git+`/shorthand forms, the override→package.json→git→null precedence, URL building. `tests/assert-prop.test.mjs` (new, +4). `tests/book-genre-components.test.mjs` updated for the const-array `Practice` difficulty. Package suite **341**.
+
+### Consumer notes
+
+- `post_transformers` (the only book that relied on the hardcoded repo) should set `githubRepo` in `defineBookConfig` or rely on its `package.json` `repository`, and set `BOOK_REPO_ROOT` if `<CodeBlock>` source lives above the Astro project root.
+
 ## [4.14.3] — 2026-06-05
 
 Patch release. Makes `<Theorem>` fail loud instead of rendering a silent empty label, and accepts the legacy prop names consumer books already use (#121). Pairs with the already-shipped XRef fix (#120, v4.9.0) so a book pinned at v4.8 bumps once and verifies both.

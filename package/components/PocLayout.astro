@@ -11,12 +11,20 @@
  * Closed `kind` union: discriminated literal type. To add a 6th kind in
  * a future release, expand the union + add a CSS block in poc-layouts.css.
  */
-export type PocLayoutKind = 'tutorial' | 'how-to' | 'tldr' | 'part-summary' | 'cheat-sheet';
+import { assertEnumProp } from '../src/lib/assert-prop';
+
+const POC_LAYOUT_KINDS = ['tutorial', 'how-to', 'tldr', 'part-summary', 'cheat-sheet'] as const;
+export type PocLayoutKind = (typeof POC_LAYOUT_KINDS)[number];
 
 interface Props {
   kind: PocLayoutKind;
 }
-const { kind } = Astro.props;
+// #109 sweep: fail loud on an out-of-union kind instead of emitting a
+// poc-layout-<bogus> class that matches no CSS rule.
+const kind = assertEnumProp(Astro.props.kind, POC_LAYOUT_KINDS, {
+  component: 'PocLayout',
+  prop: 'kind',
+});
 ---
 <div class={`poc-layout poc-layout-${kind}`}>
   <slot />

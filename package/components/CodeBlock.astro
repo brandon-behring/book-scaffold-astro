@@ -4,9 +4,9 @@
  * build time, with syntax highlighting and a "View on GitHub" header
  * link pointing to the exact line range.
  *
- * Reads the file from the repo root (resolved relative to
- * guides/web/), slices `lines` ("N-M" or "N"), and hands the snippet
- * to Astro's `<Code>` component for Shiki rendering.
+ * Reads the file from the code repo root (the consumer's project root by
+ * default; set BOOK_REPO_ROOT for a monorepo subdir layout), slices `lines`
+ * ("N-M" or "N"), and hands the snippet to Astro's `<Code>` for Shiki.
  *
  * Build fails if:
  *   - The file does not exist on disk
@@ -28,6 +28,7 @@ import { Code } from 'astro:components';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { buildGithubUrl } from '../src/lib/repo-url';
+import bookConfig from 'virtual:book-scaffold/book-config';
 
 interface Props {
   src: string;
@@ -37,11 +38,15 @@ interface Props {
 
 const { src, lines, lang } = Astro.props;
 
-// Resolve src relative to repo root. Astro's build runs with cwd =
-// guides/web/, so the repo root is two levels up. Using process.cwd()
+// #109: resolve src relative to the code repo root. Defaults to the consumer's
+// project root (process.cwd() during astro build — book + code in one repo);
+// set BOOK_REPO_ROOT when the code lives elsewhere (e.g. a monorepo where the
+// book is a subdir, the old guides/web/ → '../..' case). Using an env + cwd
 // (not import.meta.dirname) survives Astro's bundling — at runtime
 // import.meta.dirname points to the emitted .mjs chunk, not the source.
-const REPO_ROOT = resolve(process.cwd(), '..', '..');
+const REPO_ROOT = process.env.BOOK_REPO_ROOT
+  ? resolve(process.env.BOOK_REPO_ROOT)
+  : process.cwd();
 const absPath = resolve(REPO_ROOT, src);
 
 if (!existsSync(absPath)) {
@@ -102,7 +107,15 @@ const inferLang = (path: string): string => {
 
 const language = (lang ?? inferLang(src)) as Parameters<typeof Code>[0]['lang'];
 
-const githubUrl = buildGithubUrl(src, startLine, endLine);
+// #109: fail loud rather than link the wrong repo (see CodeRef for the rationale).
+if (!bookConfig.githubRepo) {
+  throw new Error(
+    `<CodeBlock src="${src}">: no GitHub repo resolved. Set githubRepo in ` +
+      `defineBookConfig(), or add a "repository" field to package.json (or an ` +
+      `origin git remote) so the scaffold can auto-detect owner/repo.`,
+  );
+}
+const githubUrl = buildGithubUrl(bookConfig.githubRepo, bookConfig.githubBranch, src, startLine, endLine);
 const rangeText = startLine === endLine ? `:${startLine}` : `:${startLine}-${endLine}`;
 const displayPath = `${src}${rangeText}`;
 ---

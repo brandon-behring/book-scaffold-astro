@@ -1,7 +1,8 @@
 ---
 /**
  * CodeRef — inline reference to a specific file (and optional line range)
- * in the post_transformers repo on GitHub.
+ * in the book's GitHub repo (resolved per book — #109: defineBookConfig
+ * `githubRepo`, else auto-detected from package.json / git remote).
  *
  * Maps the LaTeX `\code{path:N}` and `\path{path}` idioms (which only
  * styled monospace text) to a real hyperlink that lands the reader on
@@ -26,6 +27,7 @@
  * synthesized.
  */
 import { buildGithubUrl } from '../src/lib/repo-url';
+import bookConfig from 'virtual:book-scaffold/book-config';
 
 interface Props {
   path: string;
@@ -34,7 +36,18 @@ interface Props {
 }
 
 const { path, line, lineEnd } = Astro.props;
-const url = buildGithubUrl(path, line, lineEnd);
+
+// #109: fail loud rather than link to the wrong repo. `githubRepo` is null
+// only when neither defineBookConfig({ githubRepo }) nor auto-detection
+// (package.json repository / git remote) resolved one.
+if (!bookConfig.githubRepo) {
+  throw new Error(
+    `<CodeRef path="${path}">: no GitHub repo resolved. Set githubRepo in ` +
+      `defineBookConfig(), or add a "repository" field to package.json (or an ` +
+      `origin git remote) so the scaffold can auto-detect owner/repo.`,
+  );
+}
+const url = buildGithubUrl(bookConfig.githubRepo, bookConfig.githubBranch, path, line, lineEnd);
 const hasSlot = await Astro.slots.has('default');
 const basename = path.split('/').pop() ?? path;
 const defaultText =

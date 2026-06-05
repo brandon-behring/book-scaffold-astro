@@ -11,14 +11,18 @@
  * Internal frontmatter retains the 7-state value for STATUS.md alignment;
  * this component is the public-facing translator.
  */
-type InternalStatus =
-  | 'implemented'
-  | 'chapter_only'
-  | 'reading_only'
-  | 'prose_only'
-  | 'code_only'
-  | 'scaffolded'
-  | 'planned';
+import { assertEnumProp } from '../src/lib/assert-prop';
+
+const INTERNAL_STATUSES = [
+  'implemented',
+  'chapter_only',
+  'reading_only',
+  'prose_only',
+  'code_only',
+  'scaffolded',
+  'planned',
+] as const;
+type InternalStatus = (typeof INTERNAL_STATUSES)[number];
 
 type PublicStatus = 'published' | 'draft' | 'coming-soon';
 
@@ -42,7 +46,12 @@ interface Props {
   status: InternalStatus;
 }
 
-const { status } = Astro.props;
+// #109 sweep: fail loud on an unknown status instead of rendering an empty
+// badge label (PUBLIC_OF[undefined] -> undefined -> blank).
+const status = assertEnumProp(Astro.props.status, INTERNAL_STATUSES, {
+  component: 'StatusBadge',
+  prop: 'status',
+});
 const publicStatus = PUBLIC_OF[status];
 const label = PUBLIC_LABEL[publicStatus];
 ---
