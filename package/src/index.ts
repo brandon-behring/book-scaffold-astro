@@ -141,6 +141,20 @@ export {
   distinctChaptersSorted,
 } from './lib/questions-derive.js';
 
+// v4.19.0 (#112): pure practice-exam engine — sampling (per-domain blueprint) +
+// scoring (per-domain rollup + weak-domain routing). No DOM/Preact; the
+// PracticeExam / AssessmentTest islands are thin UI over these. Unit-tested in
+// tests/exam-engine.test.mjs.
+export {
+  shuffle,
+  sampleExam,
+  scoreExam,
+  type ExamQuestion,
+  type ExamBlueprint,
+  type ExamResult,
+  type DomainScore,
+} from './lib/exam-engine.js';
+
 // v4.0.0 defineStyle API: typed, named, importable config bundles composed
 // via `styles: [...]` in defineBookConfig. Replaces the v3 `preset:` shorthand.
 // See recipes/15-defining-styles.md + MIGRATION-v3-to-v4.md.
