@@ -55,6 +55,7 @@
     "./components/ConceptBox.astro": "./components/ConceptBox.astro",
     "./components/Convergence.astro": "./components/Convergence.astro",
     "./components/CounterBox.astro": "./components/CounterBox.astro",
+    "./components/Diagnostic.astro": "./components/Diagnostic.astro",
     "./components/Divergence.astro": "./components/Divergence.astro",
     "./components/DynConnect.astro": "./components/DynConnect.astro",
     "./components/ExampleBox.astro": "./components/ExampleBox.astro",

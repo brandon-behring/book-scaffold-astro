@@ -210,6 +210,46 @@
   color: var(--color-text);
 }
 
+/* Teal — Diagnostic (#110). A blue+green blend held distinct from the plum
+ * Exercise/Practice and the warm pedagogy callouts. Pre-reading DIKTA
+ * self-check; title + "Diagnostic" chip in a header row, an optional answer
+ * key behind a native <details> reveal. */
+.callout-diagnostic {
+  border-left-color: var(--callout-diagnostic);
+  background: color-mix(in srgb, var(--warm-blue-tint) 50%, var(--warm-green-tint));
+}
+.callout-diagnostic-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+.callout-diagnostic-header .callout-title {
+  margin-bottom: 0;
+}
+.callout-diagnostic .callout-chip {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--callout-diagnostic);
+  border-radius: var(--radius-sm);
+  color: var(--callout-diagnostic);
+}
+.callout-diagnostic .callout-routing {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: var(--space-2) 0;
+}
+.callout-diagnostic-answers {
+  margin-top: var(--space-3);
+}
+.callout-diagnostic-answers > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--callout-diagnostic);
+}
+
 /* ===== v4.3.0 book-genre family =====================================
  * Tip / TipsCard (Pragmatic Programmer precedent, #70)
  * Exercise / Practice / Solution / ExerciseSolutions (CS:APP, #71)

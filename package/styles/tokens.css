@@ -52,6 +52,7 @@
   --callout-pitfall:  var(--warm-crimson);
   --callout-worked:   var(--warm-plum);
   --callout-learn:    var(--warm-gold);
+  --callout-diagnostic: color-mix(in srgb, var(--warm-blue) 55%, var(--warm-green)); /* #110 DIKTA self-check — teal blend, distinct from plum Practice */
 
   /* Diagram semantic roles (v4.11.0, #84): theme-aware TikZ→SVG figures.
    * build-figures remaps an SVG's neutral fills/strokes to these via

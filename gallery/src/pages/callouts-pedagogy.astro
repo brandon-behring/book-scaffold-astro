@@ -1,5 +1,6 @@
 ---
 import Gallery from '../layouts/Gallery.astro';
+import Diagnostic from '@brandon_m_behring/book-scaffold-astro/components/Diagnostic.astro';
 import Pitfall from '@brandon_m_behring/book-scaffold-astro/components/Pitfall.astro';
 import WorkedExample from '@brandon_m_behring/book-scaffold-astro/components/WorkedExample.astro';
 import YouWillLearn from '@brandon_m_behring/book-scaffold-astro/components/YouWillLearn.astro';
@@ -13,6 +14,26 @@ import YouWillLearn from '@brandon_m_behring/book-scaffold-astro/components/YouW
       - How to construct HiPPO bases
       - Numerical integration for the recurrence
     </YouWillLearn>
+  </section>
+
+  <section data-gallery="diagnostic">
+    <h2 class="gallery-state">Diagnostic — basic (no answer key)</h2>
+    <Diagnostic skimTo="Exam essentials">
+      1. What does the HiPPO matrix initialize?
+      2. Name the two stability conditions for the bilinear discretization.
+    </Diagnostic>
+  </section>
+
+  <section data-gallery="diagnostic-answers">
+    <h2 class="gallery-state">Diagnostic — with collapsible answer key</h2>
+    <Diagnostic title="Do I know this already?" skimTo="Exam essentials">
+      1. What property does the ZOH discretization preserve?
+      2. When is the bilinear map stable?
+      <Fragment slot="answers">
+        1. Stability — the discretization is stability-preserving for a small enough step size.
+        2. When the continuous-time eigenvalues stay in the left half-plane.
+      </Fragment>
+    </Diagnostic>
   </section>
 
   <section data-gallery="pitfall">

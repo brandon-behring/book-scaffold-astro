@@ -2,6 +2,14 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.19.0] — unreleased
+
+Minor release. Adds **`<Diagnostic>`** (#110) — the per-chapter pre-reading "Do I Know This Already?" (DIKTA) self-check, the first of the study-guide apparatus's heavier components after the v4.17 static spine. Static, like the spine: the answer reveal is a native `<details>`, with the scored engine remaining the separate #112 increment.
+
+### Added
+
+- **`<Diagnostic>` — per-chapter pre-reading self-check (#110).** A Pearson/Cisco-Press DIKTA callout: a slotted retrieval-question list + a skip/skim/read routing rubric (`skimTo` prop, or a full `routing` override) + an *optional* collapsible answer key (`<Fragment slot="answers">`, presence-gated via `Astro.slots.has`). Pedagogy-family callout in a new teal `--callout-diagnostic` hue (a blue+green blend held distinct from the plum `<Exercise>`/`<Practice>` and the warm Pitfall/WorkedExample/YouWillLearn) — visually marking the *pre*-reading self-check apart from post-chapter practice. Static by design: pre-testing (Bjork desirable-difficulties) wants the retrieval attempt before the answer, which `<details>` delivers with zero JS. Source-contract tests in `pedagogy-callouts.test.mjs`; showcased in the pedagogy gallery (the Playwright visual baseline regenerates on Linux at release). Exported as `./components/Diagnostic.astro`; documented in `CLAUDE.md` + `recipes/04-component-library.md`.
+
 ## [4.18.0] — 2026-06-05
 
 Minor release. `<Theorem>` headings now **auto-number from `labels.json`** (#126), so a heading and every `<XRef>` to it show the same number *by construction* — closing a gap (surfaced by the `ssm-foundations` consumer) where a cross-reference read `Theorem 9.5` from the label index but the heading itself, lacking a hand-passed `n=`, rendered only `Theorem (…)`. The same single-source move makes the cross-reference display **kind-aware** (a `proposition` reads `Proposition 8.1`, not a kind-blind `Theorem 8.1`), and continues the fail-loud line — an unknown `<Theorem>` kind now stops `build-labels`, one step earlier than the render-time throw.
