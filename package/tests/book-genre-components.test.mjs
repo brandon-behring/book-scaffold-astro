@@ -148,3 +148,28 @@ test('ExerciseSolutions: provides slot for manually-placed <Solution> elements',
   const src = read('ExerciseSolutions');
   assert.match(src, /<slot\s*\/?>/);
 });
+
+// ===== PartReview (#111) =================================================
+
+test('PartReview: requires part (number | string), optional title', () => {
+  const src = read('PartReview');
+  assert.match(src, /part:\s*number\s*\|\s*string/);
+  assert.match(src, /title\?:\s*string/);
+});
+
+test('PartReview: reuses the build-exercises index (exercises.json)', () => {
+  const src = read('PartReview');
+  assert.match(src, /\/src\/data\/exercises\.json/);
+});
+
+test('PartReview: scopes to the part via the chapters collection part field', () => {
+  const src = read('PartReview');
+  assert.match(src, /getCollection\(['"]chapters['"]/);
+  assert.match(src, /\.data\.part/);
+});
+
+test('PartReview: renders .part-review and is presence-gated (build hint)', () => {
+  const src = read('PartReview');
+  assert.match(src, /class="part-review"/);
+  assert.match(src, /build-exercises/);
+});

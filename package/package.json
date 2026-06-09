@@ -69,6 +69,7 @@
     "./components/ObjectiveMap.astro": "./components/ObjectiveMap.astro",
     "./components/OpenQuestion.astro": "./components/OpenQuestion.astro",
     "./components/PaperBox.astro": "./components/PaperBox.astro",
+    "./components/PartReview.astro": "./components/PartReview.astro",
     "./components/PatternTimeline.astro": "./components/PatternTimeline.astro",
     "./components/Pitfall.astro": "./components/Pitfall.astro",
     "./components/PocLayout.astro": "./components/PocLayout.astro",
