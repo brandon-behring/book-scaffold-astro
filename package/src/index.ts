@@ -204,6 +204,9 @@ export {
   questionSchema,
   refineQuestion,
   refinedQuestionSchema,
+  // v4.19.0 (#115): study-guide glossary collection schema. Registered in
+  // schemas-entry.ts; consumed by /glossary + <Term>. Tested in tests/glossary.test.mjs.
+  glossarySchema,
 } from './schemas.js';
 
 // Inferred chapter types per profile (v3.3.0). Type-only re-export from
@@ -224,3 +227,7 @@ export type { Provenance } from './schemas.js';
 // v4.17.0 (Tier 3, #112): inferred question types for consumers building custom
 // study-guide surfaces over getCollection('questions').
 export type { Question, QuestionType, BloomLevel } from './schemas.js';
+
+// v4.19.0 (#115): inferred glossary-term type for consumers building custom
+// surfaces over getCollection('glossary').
+export type { GlossaryTerm } from './schemas.js';

@@ -87,6 +87,7 @@
     "./components/SourceArchive.astro": "./components/SourceArchive.astro",
     "./components/StatusBadge.astro": "./components/StatusBadge.astro",
     "./components/Tag.astro": "./components/Tag.astro",
+    "./components/Term.astro": "./components/Term.astro",
     "./components/Theorem.astro": "./components/Theorem.astro",
     "./components/Tip.astro": "./components/Tip.astro",
     "./components/TipBox.astro": "./components/TipBox.astro",

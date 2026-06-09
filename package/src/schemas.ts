@@ -535,3 +535,25 @@ export const refinedQuestionSchema = questionSchema.superRefine(refineQuestion);
 export type Question = z.infer<typeof questionSchema>;
 export type QuestionType = (typeof questionTypes)[number];
 export type BloomLevel = (typeof bloomLevels)[number];
+
+// ===== Study-guide: glossary collection (#115) =====
+//
+// Searchable key-terms glossary (Sybex / Cisco-Press). Author terms under
+// src/content/glossary/**.{md,mdx}; the MDX BODY is the definition (rich prose —
+// math, <Cite>, code), same body-render contract as chapters/questions. The
+// file-derived entry.id is the stable anchor the inline <Term id> links to
+// (/glossary#term-<id>). Registered presence-gated in schemas-entry.ts (like
+// questions), so books that never adopt a glossary see no content-sync error.
+
+export const glossarySchema = z
+  .object({
+    term: z.string().trim().min(1),            // display term (required)
+    aliases: z.array(z.string()).default([]),  // synonyms / alternate spellings (searchable)
+    domain: z.string().optional(),             // optional grouping (e.g. an exam domain)
+    see: z.array(z.string()).default([]),      // related glossary entry ids (cross-links)
+    tags: z.array(z.string()).default([]),
+    draft: z.boolean().default(false),
+  })
+  .strict(); // a typo'd frontmatter key fails the build (matches the other schemas)
+
+export type GlossaryTerm = z.infer<typeof glossarySchema>;

@@ -1,0 +1,33 @@
+---
+/**
+ * Term — inline glossary cross-link (v4.19.0, #115).
+ *
+ * <Term id="agentic-loop">agent loop</Term> renders the slot text as a link to
+ * the glossary entry's anchor (/glossary#term-<id>). `id` is the glossary file's
+ * entry id (filename slug, e.g. `agentic-loop` for agentic-loop.mdx). Static
+ * link — no tooltip/definition preview in v1. Pairs with the `glossary`
+ * collection + the /glossary route (defineBookConfig({ routes: { glossary: true } })).
+ *
+ * Like <XRef>, this does not validate the target at render — a dangling id
+ * produces a link to a missing anchor, caught by review (a future `validate`
+ * check can resolve <Term id> against the glossary collection).
+ */
+interface Props {
+  /** Glossary entry id (filename slug) — the /glossary#term-<id> anchor target. */
+  id: string;
+}
+const { id } = Astro.props;
+---
+<a href={`/glossary#term-${id}`} class="term-link"><slot /></a>
+
+<style>
+  .term-link {
+    color: inherit;
+    text-decoration: underline dotted;
+    text-decoration-color: var(--callout-info, #3B6FA0);
+    text-underline-offset: 0.15em;
+  }
+  .term-link:hover {
+    text-decoration-style: solid;
+  }
+</style>

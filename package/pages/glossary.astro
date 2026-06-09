@@ -1,0 +1,101 @@
+---
+/**
+ * Auto-injected /glossary route (v4.19.0, #115).
+ *
+ * A searchable key-terms glossary: reads the `glossary` content collection
+ * (src/content/glossary/**), lists terms alphabetically (locale-aware) with an
+ * id anchor per term — the target of the inline `<Term id>` link
+ * (/glossary#term-<id>). Pagefind indexes the page like any other, so the site
+ * search covers the terms with no extra wiring.
+ *
+ * Twin-gate (mirrors /practice-exam, /convergence): a book may set
+ * routes.glossary: true without a src/content/glossary/ directory — then the
+ * `glossary` collection is never registered and getCollection('glossary') would
+ * throw. Presence-probe the directory with import.meta.glob and render an honest
+ * empty-state when absent; never touch the collection in that case.
+ */
+import Base from '../layouts/Base.astro';
+import { getCollection, render } from 'astro:content';
+
+// Presence-gate: only touch the collection when the directory holds files.
+const glossModules = import.meta.glob('/src/content/glossary/**/*.{md,mdx}', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+const hasGlossary = Object.keys(glossModules).length > 0;
+
+const entries = hasGlossary ? await getCollection('glossary', (e) => !e.data.draft) : [];
+// Alphabetical by display term (locale-aware so case/accents sort naturally).
+entries.sort((a, b) => a.data.term.localeCompare(b.data.term));
+
+const rendered = await Promise.all(
+  entries.map(async (e) => ({ id: e.id, data: e.data, Content: (await render(e)).Content })),
+);
+const total = rendered.length;
+---
+<Base
+  title="Glossary"
+  description="Searchable key-terms glossary, listed alphabetically."
+>
+  <article class="prose glossary">
+    <h1>Glossary</h1>
+
+    {!hasGlossary && (
+      <p class="glossary-empty">
+        No glossary found under <code>src/content/glossary/</code>. Add term MDX files
+        (frontmatter <code>term</code> + an MDX-body definition), and keep
+        <code>routes: {'{'} glossary: true {'}'}</code>.
+      </p>
+    )}
+
+    {hasGlossary && total === 0 && (
+      <p class="glossary-empty">No terms defined yet.</p>
+    )}
+
+    {total > 0 && <p class="glossary-summary">{total} term{total === 1 ? '' : 's'}.</p>}
+
+    {total > 0 && (
+      <dl class="glossary-list">
+        {rendered.map((t) => {
+          const Content = t.Content;
+          return (
+            <div class="glossary-entry" id={`term-${t.id}`}>
+              <dt class="glossary-term">
+                {t.data.term}
+                {t.data.aliases.length > 0 && (
+                  <span class="glossary-aliases"> ({t.data.aliases.join(', ')})</span>
+                )}
+              </dt>
+              <dd class="glossary-def">
+                <Content />
+                {t.data.see.length > 0 && (
+                  <p class="glossary-see">
+                    See also: {t.data.see.map((s, i) => (
+                      <Fragment>{i > 0 ? ', ' : ''}<a href={`#term-${s}`}>{s}</a></Fragment>
+                    ))}
+                  </p>
+                )}
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+    )}
+  </article>
+
+  <style>
+    .glossary { max-width: 48rem; }
+    .glossary-summary,
+    .glossary-empty { color: var(--color-text-muted, #6b7280); }
+    .glossary-list { margin-block: 1.5rem; }
+    .glossary-entry {
+      padding-block: 0.75rem;
+      border-block-end: 1px solid var(--color-border, #e5e7eb);
+    }
+    .glossary-term { font-weight: 600; }
+    .glossary-aliases { font-weight: 400; color: var(--color-text-muted, #6b7280); }
+    .glossary-def { margin-inline-start: 0; margin-block-start: 0.35rem; }
+    .glossary-see { font-size: 0.9rem; color: var(--color-text-muted, #6b7280); margin-block-start: 0.4rem; }
+  </style>
+</Base>
