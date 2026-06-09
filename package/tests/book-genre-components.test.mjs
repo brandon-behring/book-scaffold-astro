@@ -162,14 +162,19 @@ test('PartReview: reuses the build-exercises index (exercises.json)', () => {
   assert.match(src, /\/src\/data\/exercises\.json/);
 });
 
-test('PartReview: scopes to the part via the chapters collection part field', () => {
+test('PartReview: delegates selection to the pure selectPartExercises helper', () => {
   const src = read('PartReview');
+  assert.match(src, /import \{ selectPartExercises \} from '\.\.\/src\/lib\/part-review'/);
+  assert.match(src, /selectPartExercises\(chapters, byChapter, part\)/);
   assert.match(src, /getCollection\(['"]chapters['"]/);
-  assert.match(src, /\.data\.part/);
 });
 
-test('PartReview: renders .part-review and is presence-gated (build hint)', () => {
+test('PartReview: presence-gated build hint renders the real <code>, not a comment', () => {
   const src = read('PartReview');
   assert.match(src, /class="part-review"/);
-  assert.match(src, /build-exercises/);
+  // Match the RENDERED hint specifically — `build-exercises` also appears in the
+  // doc comment, so a loose /build-exercises/ would pass even if the hint block
+  // were deleted (the F7 false-confidence trap the review caught).
+  assert.match(src, /npx book-scaffold build-exercises<\/code>/);
+  assert.match(src, /No exercises found in this part's chapters yet\./);
 });

@@ -155,6 +155,17 @@ export {
   type DomainScore,
 } from './lib/exam-engine.js';
 
+// v4.19.0 (#111): pure PartReview selection — filter chapters by `part` (String-
+// coerced), sort to book order (chapterSortKey), join the build-exercises index.
+// No DOM; PartReview.astro renders it. Unit-tested in tests/part-review.test.mjs.
+export {
+  selectPartExercises,
+  type ReviewExercise,
+  type ReviewChapter,
+  type PartReviewGroup,
+  type PartReviewSelection,
+} from './lib/part-review.js';
+
 // v4.0.0 defineStyle API: typed, named, importable config bundles composed
 // via `styles: [...]` in defineBookConfig. Replaces the v3 `preset:` shorthand.
 // See recipes/15-defining-styles.md + MIGRATION-v3-to-v4.md.

@@ -33,6 +33,8 @@ const rendered = await Promise.all(
   entries.map(async (e) => ({ id: e.id, data: e.data, Content: (await render(e)).Content })),
 );
 const total = rendered.length;
+// id → display term, so "See also" links show the friendly term, not the kebab id.
+const termById = new Map(rendered.map((t) => [t.id, t.data.term]));
 ---
 <Base
   title="Glossary"
@@ -72,7 +74,7 @@ const total = rendered.length;
                 {t.data.see.length > 0 && (
                   <p class="glossary-see">
                     See also: {t.data.see.map((s, i) => (
-                      <Fragment>{i > 0 ? ', ' : ''}<a href={`#term-${s}`}>{s}</a></Fragment>
+                      <Fragment>{i > 0 ? ', ' : ''}<a href={`#term-${s}`}>{termById.get(s) ?? s}</a></Fragment>
                     ))}
                   </p>
                 )}

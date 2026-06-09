@@ -29,15 +29,21 @@ export interface ExamBlueprint {
   perDomain?: Readonly<Record<string, number>>;
 }
 
-/** Fisher–Yates shuffle with an injectable rng (default Math.random). Pure: it
- *  copies the input rather than mutating it. */
+/**
+ * Fisher–Yates shuffle with an injectable rng (default Math.random). Pure: it
+ * copies the input rather than mutating it.
+ *
+ * `rng` MUST return a value in `[0, 1)` (Math.random's contract). `j` is
+ * additionally clamped to `i` so a defective rng returning exactly `1.0` can't
+ * index out of bounds (`Math.floor(1.0 * (i+1)) === i+1`), which would otherwise
+ * punch a hole into `a` and grow its length.
+ */
 export function shuffle<T>(arr: readonly T[], rng: () => number = Math.random): T[] {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    // i and j are valid indices (0 ≤ j ≤ i < length), so the elements are
-    // present — assert non-undefined for noUncheckedIndexedAccess.
-    const ai = a[i]!;
+    // Clamp to i: a no-op for a correct [0,1) rng; guards a bad rng = 1.0.
+    const j = Math.min(i, Math.floor(rng() * (i + 1)));
+    const ai = a[i]!; // i, j ∈ [0, i] are valid indices (noUncheckedIndexedAccess)
     a[i] = a[j]!;
     a[j] = ai;
   }
@@ -50,6 +56,12 @@ export function shuffle<T>(arr: readonly T[], rng: () => number = Math.random): 
  * topped up from the remaining pool to reach `count`. Never returns duplicates;
  * never more than the pool holds. The result is shuffled so domain-grouped
  * picks aren't clustered.
+ *
+ * Caller contracts: `rng` returns `[0, 1)` (passed through to `shuffle`); and
+ * `Σ perDomain ≤ count` — quotas summing past `count` are honored in
+ * `Object.entries` order until the budget is spent, so later-listed domains are
+ * silently starved. Validating/clamping the blueprint sum is the caller's job;
+ * a guard can graduate here once a real consumer needs it.
  */
 export function sampleExam(
   pool: readonly ExamQuestion[],

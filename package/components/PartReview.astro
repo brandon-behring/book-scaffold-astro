@@ -18,6 +18,7 @@
  * later increments (see docs/plans/active/study-guide-epic_*.md).
  */
 import { getCollection } from 'astro:content';
+import { selectPartExercises } from '../src/lib/part-review';
 
 interface Props {
   /** The part to aggregate. Number (tools/minimal/…) or string (academic enum). */
@@ -37,17 +38,11 @@ const exEntry = exModules['/src/data/exercises.json'];
 const byChapter = exEntry?.default ?? {};
 const hasIndex = Boolean(exEntry);
 
-// Map chapter entry.id -> part, to scope to this part's chapters in book order.
+// Filter this part's chapters, sort to book order, and join the index — pure +
+// unit-tested in src/lib/part-review.ts (`part` is String-coerced, so a
+// number-vs-string prop can't silently miss). This component just renders it.
 const chapters = await getCollection('chapters', (e) => !e.data.draft);
-const partChapterIds = chapters
-  .filter((c) => (c.data.part ?? null) === part)
-  .map((c) => c.id);
-
-// Collect this part's exercises, in chapter order; skip chapters with none.
-const groups = partChapterIds
-  .filter((id) => byChapter[id]?.length)
-  .map((id) => ({ chapter: id, exercises: byChapter[id] }));
-const total = groups.reduce((n, g) => n + g.exercises.length, 0);
+const { groups, total } = selectPartExercises(chapters, byChapter, part);
 const heading = title ?? `Part ${part} Review`;
 ---
 <aside class="part-review" aria-label={heading}>
