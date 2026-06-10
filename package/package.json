@@ -1,7 +1,7 @@
 {
   "name": "@brandon_m_behring/book-scaffold-astro",
   "description": "Astro 6 + MDX toolkit for long-form technical books. Profile-aware (academic / tools / minimal); ships Tufte typography, KaTeX, BibTeX citations, Pagefind, Cloudflare Workers deploy. See PACKAGE_DESIGN.md for the API contract.",
-  "version": "4.20.0",
+  "version": "4.21.0",
   "type": "module",
   "license": "MIT",
   "author": "Brandon Behring",

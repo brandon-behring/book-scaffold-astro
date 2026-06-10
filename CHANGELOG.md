@@ -2,7 +2,7 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
-## [4.21.0] — unreleased
+## [4.21.0] — 2026-06-10
 
 Minor release. The study-guide epic's **interactive layer** (#122) lands on the proven static spine: the scored practice-exam runner (#112-UI), the whole-book front-matter assessment test (#113), and the answer-rationale back-appendix (#114). One architecture carries all three: MDX stems stay server-rendered (they can't serialize into island props), and a single Preact island — fed only the pure `ExamQuestion` manifest — controls the cards, scoring with the SAME `sampleExam`/`scoreExam` engine the node:test suite verifies. No JS → the static bank with radios and `<details>` reveals is the fallback.
 
