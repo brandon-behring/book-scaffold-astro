@@ -82,6 +82,18 @@ If your file has real customization, prefer State 2: keep the file and add `rout
 
 ---
 
+## The landing route (`/`) follows the same rules (v4.20.0, #129)
+
+Everything above applies verbatim to a consumer-owned `src/pages/index.astro` vs the scaffold's auto-injected `/` landing page — with one extra wrinkle: **Astro has announced that static-route collisions become a hard error in a future version**, so the State-3 shadow isn't just confusing here, it's a latent build break.
+
+- **State 1** — no consumer `src/pages/index.astro`; the scaffold's minimal landing renders from your book config.
+- **State 2** — your custom landing page exists AND `defineBookConfig({ routes: { landing: false } })` is set. No injected route, no collision, no future break.
+- **State 3** — your file exists but `routes.landing` is undefined/true. Your page wins today with a `[router]` collision WARN on every build; it stops building when Astro flips the warning to an error. `book-scaffold validate` warns about this state in v4.20.0+.
+
+**Fix**: add `routes: { landing: false }` next to your custom landing page.
+
+---
+
 ## Why this matters
 
 Layer-3 cleanup is part of [issue #76](https://github.com/brandon-behring/book-scaffold-astro/issues/76)'s v4.6 bundle. Related companion: [recipe 19 — prevalidate-hook](./19-prevalidate-hook.md), which fixes another silent-CI gap surfaced during the same first-deploy sessions.
