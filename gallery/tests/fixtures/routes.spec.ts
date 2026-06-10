@@ -35,7 +35,9 @@ const FIXTURES: { name: string; port: number; routes: string[] }[] = [
     // with reveals) + /objective-map (auto-derived domain×chapter coverage).
     // v4.21.0 (#112-UI/#113/#114): /practice-exam gains the ExamRunner island;
     // /assessment-test mounts <AssessmentTest>; /answers is the rationale
-    // appendix. Interaction coverage lives in exam-interaction.spec.ts.
+    // appendix. v4.22.0 (#116) + v4.19.0 (#115): /glossary + its /flashcards
+    // deck. Interaction coverage lives in exam-interaction.spec.ts and
+    // flashcards-interaction.spec.ts.
     routes: [
       '/',
       '/chapters/01-tips/',
@@ -46,6 +48,8 @@ const FIXTURES: { name: string; port: number; routes: string[] }[] = [
       '/objective-map/',
       '/assessment-test/',
       '/answers/',
+      '/glossary/',
+      '/flashcards/',
     ],
   },
 ];

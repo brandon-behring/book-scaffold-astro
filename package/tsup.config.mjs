@@ -18,6 +18,7 @@ export default defineConfig({
     'components/ToolFilter': 'components/ToolFilter.tsx',
     'components/VersionSelector': 'components/VersionSelector.tsx',
     'components/ExamRunner': 'components/ExamRunner.tsx',
+    'components/Flashcards': 'components/Flashcards.tsx',
   },
   esbuildOptions(options) {
     options.jsx = 'automatic';

@@ -2,6 +2,19 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.22.0] — unreleased
+
+Minor release. **Flashcards (#116) — the study-guide epic's (#122) final increment.** The glossary collection becomes a spaced-recall deck on a new `/flashcards` route, reusing the v4.21 island architecture end-to-end: definitions are server-rendered MDX (not island props), the Preact island is a controller over the cards fed only an id+front manifest, and the engine's Fisher–Yates shuffle orders the deck. With this, all eight study-guide issues (#110–#117) are shipped.
+
+### Added
+
+- **`/flashcards` — glossary spaced-recall deck (#116).** New injected route (`routes: { flashcards: true }`, default off on all five profiles; twin-gated on `src/content/glossary/`): every term renders as a card (front = term, back = the rendered definition), listed alphabetically — the same order as `/glossary`, and a perfectly readable no-JS fallback. The **Flashcards island** (`client:idle`, new tsup entry + `./components/Flashcards` export): Start shuffles a deck and shows one card at a time with the back hidden until Flip (recall first — the Bjork point of flashcards); "Knew it" / "Still learning" sort each card into buckets persisted to localStorage (`book:flashcards:known`), surviving reloads; "review unknown only" narrows the next pass, with an honest all-known state (Start disables with a reset affordance — no silent fallback to the full deck). Fail-loud from birth: missing `[data-flashcards-root]` and deck/DOM drift throw named errors, ids are `CSS.escape`d, and a `<noscript>` rule hides the JS-only controls (lessons from the v4.21 review baked in, not re-learned). Styles ship as `styles/flashcards.css` (tokens only). Pure `buildFlashcardDeck` exported from the main entry. Question/objective-derived cards remain a later increment.
+
+### Tests
+
+- `tests/flashcards.test.mjs` (+4) — deck mapping/draft-filtering/locale sort, empty-deck honesty, and the shuffle contract. Package suite **451**.
+- `gallery/tests/fixtures/flashcards-interaction.spec.ts` (3 scenarios × 2 viewports) — the no-JS-shaped list fallback; start → one visible card → back hidden until Flip → bucket persists across reload → unknown-only narrows the deck; End restores the list and reset clears the bucket. The book-genre fixture gains 4 glossary terms + the `glossary`/`flashcards` routes; `/glossary/` + `/flashcards/` join the snapshot matrix (4 new baselines — `/glossary`'s first fixture coverage since it shipped in 4.19.0).
+
 ## [4.21.0] — 2026-06-10
 
 Minor release. The study-guide epic's **interactive layer** (#122) lands on the proven static spine: the scored practice-exam runner (#112-UI), the whole-book front-matter assessment test (#113), and the answer-rationale back-appendix (#114). One architecture carries all three: MDX stems stay server-rendered (they can't serialize into island props), and a single Preact island — fed only the pure `ExamQuestion` manifest — controls the cards, scoring with the SAME `sampleExam`/`scoreExam` engine the node:test suite verifies. No JS → the static bank with radios and `<details>` reveals is the fallback.

@@ -1,0 +1,109 @@
+---
+/**
+ * Auto-injected /flashcards route — the spaced-recall deck (v4.22.0, #116).
+ *
+ * Sybex-style "electronic flashcards" over the glossary collection: each term
+ * is a card (front = the term, back = the rendered MDX definition). The
+ * Flashcards island (client:idle) shuffles a deck and shows one card at a
+ * time with flip + knew-it/still-learning buckets persisted to localStorage;
+ * "review unknown only" survives reloads. Deliberately an appendix-style
+ * surface, not inline (the Bjork cheat-sheet caution: recall practice, not
+ * re-reading prompts inside prose).
+ *
+ * Card backs are MDX (render() components — not serializable), so all cards
+ * are server-rendered and the island is a controller over them (the
+ * ExamRunner architecture). No JS → the full front+back list reads like a
+ * compact glossary; the deck controls hide via <noscript>.
+ *
+ * Gated on routes.flashcards (default false on every profile). Twin-gate
+ * (mirrors /glossary): presence-probe src/content/glossary/ and render an
+ * honest empty state rather than touching an unregistered collection.
+ * Question/objective-derived cards are a later increment.
+ */
+import Base from '../layouts/Base.astro';
+import { getCollection, render } from 'astro:content';
+import Flashcards from '@brandon_m_behring/book-scaffold-astro/components/Flashcards';
+import { buildFlashcardDeck } from '../src/lib/flashcards';
+import '../styles/flashcards.css';
+
+// Presence-gate: only touch the collection when the directory holds files.
+const glossModules = import.meta.glob('/src/content/glossary/**/*.{md,mdx}', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+const hasGlossary = Object.keys(glossModules).length > 0;
+
+const entries = hasGlossary ? await getCollection('glossary', (e) => !e.data.draft) : [];
+const deck = buildFlashcardDeck(entries);
+// Render definitions in deck (alphabetical) order so cards and manifest agree.
+const byId = new Map(entries.map((e) => [e.id, e]));
+const rendered = await Promise.all(
+  deck.map(async (card) => {
+    const entry = byId.get(card.id)!;
+    return { ...card, Content: (await render(entry)).Content };
+  }),
+);
+---
+<Base
+  title="Flashcards"
+  description="Glossary flashcards: shuffled recall practice with flip-to-check and known/still-learning buckets."
+>
+  <article class="prose flashcards-page" data-flashcards-root>
+    <h1>Flashcards</h1>
+
+    {!hasGlossary && (
+      <p class="flashcards-empty">
+        No terms found under <code>src/content/glossary/</code> — flashcards are generated
+        from the glossary collection. Add term MDX files (frontmatter <code>term</code> +
+        a definition body) and keep <code>routes: {'{'} flashcards: true {'}'}</code>.
+      </p>
+    )}
+
+    {hasGlossary && (
+      <Fragment>
+        {/* Without JS the island's deck controls would render dead — hide
+            them; the full card list below stays readable. */}
+        <noscript><style is:inline>.flashcards-runner { display: none; }</style></noscript>
+        <Flashcards client:idle deck={deck.map(({ id, front }) => ({ id, front }))} />
+        <section class="flashcards-list">
+          {rendered.map((card) => {
+            const Content = card.Content;
+            return (
+              <div class="flashcard" data-card-id={card.id} id={`card-${card.id}`}>
+                <p class="flashcard-front">{card.front}</p>
+                <div class="flashcard-back"><Content /></div>
+              </div>
+            );
+          })}
+        </section>
+      </Fragment>
+    )}
+  </article>
+
+  <style>
+    .flashcards-page { max-width: 48rem; }
+    .flashcards-empty { color: var(--color-text-muted, #6b7280); }
+    .flashcard {
+      margin-block: 1rem;
+      padding: 1rem 1.1rem;
+      border: 1px solid var(--color-border, #e5e7eb);
+      border-radius: 0.5rem;
+      background: var(--color-surface, transparent);
+    }
+    .flashcard-front {
+      font-weight: 600;
+      font-size: 1.05rem;
+      margin-block: 0 0.5rem;
+    }
+    /* Deck mode (island sets data-flashcards-mode on the wrapper): the back
+       stays hidden until the card is flipped — that's the recall attempt. */
+    [data-flashcards-mode='deck'] .flashcard {
+      min-height: 8rem;
+      border-color: var(--color-accent, #4f46e5);
+    }
+    [data-flashcards-mode='deck'] .flashcard:not(.flashcard-flipped) .flashcard-back {
+      display: none;
+    }
+  </style>
+</Base>
