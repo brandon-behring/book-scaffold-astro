@@ -370,6 +370,41 @@ test('validate #9: a prose marker with no los declaration fails loud (orphan anc
   }
 });
 
+test('validate #9: flow/inline-map los entries are recognized — `- { text, anchor }` (#130)', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    // YAML flow style — the same shape the questions fixtures use for options.
+    // The first regex version only matched block style; flow-style anchors
+    // were invisible, so every prose marker fired a spurious "orphan" error.
+    writeFileSync(
+      join(tmp, 'src', 'content', 'chapters', 'week04.mdx'),
+      `---
+week: 4
+part: foundations
+title: "Inline-map LOS chapter"
+status: implemented
+los:
+  - { text: "Eval metrics", anchor: eval-metrics }
+  - { anchor: eval-harness, text: "Eval harness" }
+---
+
+{/* anchor: eval-metrics */}
+
+Section one.
+
+{/* anchor: eval-harness */}
+
+Section two.
+`,
+    );
+    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(result.status, 0, `flow-style los anchors should pass\nstderr: ${result.stderr}`);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
 test('validate #9: chapters without a los key are exempt — markers alone do not fire (#130)', () => {
   const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
   try {

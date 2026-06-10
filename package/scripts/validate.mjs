@@ -402,7 +402,15 @@ for (const rel of chapterFiles) {
       const frontOffset = content.indexOf(front);
       const bodyOffset = fmMatch ? fmMatch[0].length : 0;
       const body = content.slice(bodyOffset);
-      const declared = [...front.matchAll(/^\s+(?:-\s+)?anchor\s*:\s*["']?([^"'\n]+?)["']?\s*$/gm)];
+      // Matches both YAML styles: block items (`- anchor: slug` / `anchor: slug`
+      // on its own indented line) and flow/inline maps (`- { text: …, anchor:
+      // slug }`), where the key follows a `{` or `,`. The prefix alternation —
+      // never a bare `.*` — keeps `my-anchor:` from matching as "anchor:".
+      const declared = [
+        ...front.matchAll(
+          /^\s+(?:-\s+|.*[{,]\s*)?anchor\s*:\s*["']?([^"',}\n]+?)["']?\s*(?:[,}].*)?$/gm,
+        ),
+      ];
       const markers = [...body.matchAll(/\{\s*\/\*\s*anchor:\s*([^\s*]+)\s*\*\/\s*\}/g)];
       const markerSlugs = new Set(markers.map((m) => m[1]));
       const declaredSlugs = new Set(declared.map((m) => m[1].trim()));
