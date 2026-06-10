@@ -44,9 +44,12 @@ if (appendix && !(bookConfig.enabledRoutes ?? []).includes('answers')) {
   );
 }
 
-// Trailing-slash + base-path tolerant: on the appendix route itself the full
-// rationale must render (the appendix re-renders question bodies via render()).
-const onAnswersRoute = Astro.url.pathname.replace(/\/+$/, '').endsWith('/answers');
+// Exact match against the configured base — on the appendix route itself the
+// full rationale must render (the appendix re-renders question bodies via
+// render()). BASE_URL-prefixed + trailing-slash tolerant; an endsWith()
+// heuristic would also fire on e.g. a chapter whose slug is "answers".
+const basePath = (import.meta.env.BASE_URL ?? '/').replace(/\/+$/, '');
+const onAnswersRoute = Astro.url.pathname.replace(/\/+$/, '') === `${basePath}/answers`;
 const asLink = appendix && !onAnswersRoute;
 ---
 {asLink ? (

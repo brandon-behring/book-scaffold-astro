@@ -62,15 +62,31 @@ export default function ExamRunner({
   practiceExamHref = null,
 }: Props) {
   const poolSize = manifest.length;
-  const defaultCount = Math.min(count ?? (mode === 'assessment' ? 12 : 10), poolSize);
+  const domainCount = new Set(manifest.map((q) => q.domain)).size;
+  // Assessment floors at one question per domain (see start()); the default
+  // and the input's min respect that so the UI can't request a starved form.
+  const minCount = mode === 'assessment' ? Math.max(1, domainCount) : 1;
+  const defaultCount = Math.min(
+    Math.max(count ?? (mode === 'assessment' ? 12 : 10), minCount),
+    poolSize,
+  );
   const [phase, setPhase] = useState<Phase>('idle');
   const [requested, setRequested] = useState(defaultCount);
   const [form, setForm] = useState<ExamQuestion[]>([]);
   const [result, setResult] = useState<ExamResult | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
-  function root(): HTMLElement | null {
-    return ref.current?.closest('[data-exam-root]') ?? null;
+  function requireRoot(): HTMLElement {
+    // Fail loud (house invariant): a silently dead Start button is the worst
+    // failure mode. The throw surfaces as an uncaught console error.
+    const r = ref.current?.closest<HTMLElement>('[data-exam-root]');
+    if (!r) {
+      throw new Error(
+        'ExamRunner: no [data-exam-root] ancestor — mount the island inside the ' +
+          'wrapper that contains its QuestionCards (see the DOM contract in ExamRunner.tsx).',
+      );
+    }
+    return r;
   }
   function cards(r: HTMLElement): HTMLElement[] {
     // Array.from, not spread — the dts tsconfig lib lacks DOM.Iterable.
@@ -81,15 +97,28 @@ export default function ExamRunner({
   }
 
   function start(): void {
-    const r = root();
-    if (!r) return;
-    const n = Math.max(1, Math.min(requested, poolSize));
+    const r = requireRoot();
+    // Assessment mode floors at one question per domain — a "cross-domain"
+    // form that silently drops late-book domains would betray its own point
+    // (spreadBlueprint's quota order starves the tail otherwise).
+    const n = Math.max(minCount, Math.min(requested, poolSize));
     const sampled =
       mode === 'assessment'
         ? sampleExam(manifest, spreadBlueprint(manifest, n))
         : sampleExam(manifest, { count: n });
     const inForm = new Set(sampled.map((q) => q.id));
-    for (const card of cards(r)) {
+    const allCards = cards(r);
+    // Fail loud on manifest/DOM drift: a sampled question with no rendered
+    // card would be invisible yet scored incorrect — silently wrong results.
+    const cardIds = new Set(allCards.map((c) => c.dataset.questionId));
+    const missing = sampled.filter((q) => !cardIds.has(q.id));
+    if (missing.length > 0) {
+      throw new Error(
+        `ExamRunner: manifest/DOM drift — no rendered card for question(s): ` +
+          `${missing.map((q) => q.id).join(', ')}.`,
+      );
+    }
+    for (const card of allCards) {
       card.hidden = !inForm.has(card.dataset.questionId ?? '');
       card.removeAttribute('data-exam-result');
       const reveal = card.querySelector<HTMLDetailsElement>('details.question-reveal');
@@ -105,16 +134,24 @@ export default function ExamRunner({
   }
 
   function submit(): void {
-    const r = root();
-    if (!r) return;
+    const r = requireRoot();
     const answers: Record<string, string> = {};
     for (const q of form) {
-      const checked = r.querySelector<HTMLInputElement>(`input[name="exam-${q.id}"]:checked`);
+      // CSS.escape: a question id containing a quote would otherwise break
+      // the selector and throw a DOMException mid-submit (frozen exam).
+      const checked = r.querySelector<HTMLInputElement>(
+        `input[name="exam-${CSS.escape(q.id)}"]:checked`,
+      );
       if (checked) answers[q.id] = checked.value;
     }
     for (const q of form) {
-      const card = r.querySelector<HTMLElement>(`[data-question-id="${q.id}"]`);
-      if (!card) continue;
+      const card = r.querySelector<HTMLElement>(
+        `[data-question-id="${CSS.escape(q.id)}"]`,
+      );
+      if (!card) {
+        // start() already guards drift; defense in depth, same loud failure.
+        throw new Error(`ExamRunner: no rendered card for question "${q.id}".`);
+      }
       const right = q.options.some((o) => o.correct === true && o.id === answers[q.id]);
       card.setAttribute('data-exam-result', right ? 'correct' : 'incorrect');
       const reveal = card.querySelector<HTMLDetailsElement>('details.question-reveal');
@@ -126,8 +163,7 @@ export default function ExamRunner({
   }
 
   function reset(): void {
-    const r = root();
-    if (!r) return;
+    const r = requireRoot();
     for (const card of cards(r)) {
       card.hidden = false;
       card.removeAttribute('data-exam-result');
@@ -164,12 +200,12 @@ export default function ExamRunner({
             <input
               type="number"
               class="exam-runner-count"
-              min={1}
+              min={minCount}
               max={poolSize}
               value={requested}
               onInput={(e) => {
                 const v = Number.parseInt((e.target as HTMLInputElement).value, 10);
-                if (Number.isFinite(v)) setRequested(Math.max(1, Math.min(v, poolSize)));
+                if (Number.isFinite(v)) setRequested(Math.max(minCount, Math.min(v, poolSize)));
               }}
             />{' '}
             of {poolSize}

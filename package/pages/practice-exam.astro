@@ -103,7 +103,12 @@ const manifest = buildExamManifest(entries);
     )}
 
     {total > 0 && (
-      <ExamRunner client:idle mode="practice" manifest={manifest} />
+      <Fragment>
+        {/* Without JS the island's Start button would render dead — hide the
+            controls; the static bank below is the fallback. */}
+        <noscript><style is:inline>.exam-runner { display: none; }</style></noscript>
+        <ExamRunner client:idle mode="practice" manifest={manifest} />
+      </Fragment>
     )}
 
     {domainOrder.map((domain) => (

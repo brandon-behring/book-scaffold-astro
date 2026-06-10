@@ -42,6 +42,21 @@ interface Props {
 }
 const { title = 'Assessment test', count, passMark } = Astro.props;
 
+// Fail loud on prop misuse (v4.15.0 closed-union-props line): passMark={70}
+// (percent-vs-fraction confusion) would silently flag EVERY domain weak on
+// every run — confidently-wrong output, the exact class this repo forbids.
+if (passMark !== undefined && !(passMark > 0 && passMark <= 1)) {
+  throw new Error(
+    `<AssessmentTest passMark={${passMark}}> — passMark is a fraction in (0, 1] ` +
+      `(e.g. 0.7 for 70%), not a percent.`,
+  );
+}
+if (count !== undefined && (!Number.isInteger(count) || count < 1)) {
+  throw new Error(
+    `<AssessmentTest count={${count}}> — count must be a positive integer.`,
+  );
+}
+
 // Presence-gate: only touch the collection when the directory holds files
 // (same twin-gate as <ObjectiveMap> / practice-exam.astro).
 const questionModules = import.meta.glob('/src/content/questions/**/*.{md,mdx}', {
@@ -59,6 +74,9 @@ for (const e of entries) {
   assertKnownDomain(bookConfig.examDomains, e.data.domain, { id: e.data.id });
 }
 
+// entries are already draft-filtered (getAllQuestions filters !draft), so this
+// is type-shape filtering only — it matches buildExamManifest's pool exactly,
+// which is what the island's drift guard assumes.
 const scoreable = entries.filter(
   (e) => e.data.type === 'mcq' && (e.data.options?.length ?? 0) > 0,
 );
@@ -81,6 +99,9 @@ const rendered = await Promise.all(
 ) : (
   <section class="assessment-test" data-exam-root aria-label={title}>
     <h2 class="assessment-title">{title}</h2>
+    {/* Without JS the island's Start button would render dead — hide the
+        controls; the cards below remain a manual self-check. */}
+    <noscript><style is:inline>.exam-runner { display: none; }</style></noscript>
     <ExamRunner
       client:idle
       mode="assessment"

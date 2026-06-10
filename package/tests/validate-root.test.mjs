@@ -298,6 +298,85 @@ status: implemented
   }
 });
 
+// ---- validate (#114, v4.21.0): <Rationale appendix> pre-flight ----
+
+test('validate #114: <Rationale appendix> without for= fails; matching for= passes; prose "appendix" is inert', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    setupQuestionsFixture(tmp, {
+      // Bad: appendix without for= (component would throw at build).
+      '01.mdx': `---
+id: q-no-for
+type: mcq
+domain: arrays
+chapter: 1
+options:
+  - { id: a, correct: true }
+  - { id: b }
+---
+Stem.
+
+<Rationale appendix>Missing anchor target.</Rationale>
+`,
+      // Good: appendix with for= equal to this file's id; plus the word
+      // "appendix" inside a title attr must NOT trip the bare-prop anchor.
+      '02.mdx': `---
+id: q-good
+type: mcq
+domain: strings
+chapter: 1
+options:
+  - { id: a, correct: true }
+  - { id: b }
+---
+Stem.
+
+<Rationale appendix for="q-good">Fine.</Rationale>
+
+<Rationale title="See the appendix">Inline, no for= needed.</Rationale>
+`,
+    });
+    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(result.status, 1, `exactly the one missing-for failure expected (status=${result.status})\nstderr: ${result.stderr}`);
+    assert.match(result.stderr, /<Rationale appendix> without for=/, `got stderr: ${result.stderr}`);
+    assert.doesNotMatch(result.stderr, /q-good/, `the matching + prose cases must not fire; got: ${result.stderr}`);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate #114: <Rationale appendix for=> mismatching the question id fails loud (dangling anchor)', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    setupQuestionsFixture(tmp, {
+      '01.mdx': `---
+id: q-real
+type: mcq
+domain: arrays
+chapter: 1
+options:
+  - { id: a, correct: true }
+  - { id: b }
+---
+Stem.
+
+<Rationale appendix for="q-typo">Copy-paste drift.</Rationale>
+`,
+    });
+    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.ok(result.status > 0, `mismatched for= should fail (status=${result.status})`);
+    assert.match(
+      result.stderr,
+      /<Rationale appendix for="q-typo"> does not match this question's id "q-real"/,
+      `got stderr: ${result.stderr}`,
+    );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
 // ---- validate check #9 (#130): los[].anchor ↔ prose anchor-marker binding ----
 
 /** A chapter declaring `los` objectives; `markers` lists the prose-side slugs. */
