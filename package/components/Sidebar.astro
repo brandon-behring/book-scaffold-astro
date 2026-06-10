@@ -14,16 +14,20 @@
  * Visual: ~280px wide, sticky to top, scrollable independently of main.
  * Site title at top doubles as a "home" link.
  *
- * Customize: edit the `siteTitle` / `siteSubtitle` strings below or pass
- * them in as Astro.props from Base.astro if you want per-page overrides.
+ * Customize (v4.23.0, #135): the brand reads `defineBookConfig({ title,
+ * subtitle })` via the book-config virtual module — consumers set both in
+ * astro.config.mjs with zero component overrides. The previous hardcoded
+ * strings remain the fallbacks, so existing books render unchanged until
+ * they configure a title.
  */
 import { getCollection } from 'astro:content';
+import bookConfig from 'virtual:book-scaffold/book-config';
 import { academicParts } from '../src/schemas';
 import { academicPartHeading } from '../src/lib/academic-parts';
 
 const profile = import.meta.env.BOOK_PROFILE ?? 'minimal';
-const siteTitle = 'Book';
-const siteSubtitle = 'A scaffold-astro book';
+const siteTitle = bookConfig.title ?? 'Book';
+const siteSubtitle = bookConfig.subtitle ?? 'A scaffold-astro book';
 
 // Academic profile: part is a string enum. `academicParts` (schemas.ts) is
 // the canonical order, shared with the renderer and ChapterHeader (#95); the

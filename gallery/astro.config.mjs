@@ -18,6 +18,7 @@ function galleryBookConfigPlugin() {
   const resolvedId = '\0' + virtualId;
   const config = {
     title: 'Gallery',
+    subtitle: null,
     description: null,
     portfolio: false,
     enabledRoutes: [],

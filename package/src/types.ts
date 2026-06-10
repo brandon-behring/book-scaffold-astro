@@ -144,6 +144,14 @@ export interface BookConfigOptions {
    */
   title?: string;
   /**
+   * v4.23.0 (#135): Sidebar brand subtitle — the second line under the brand
+   * title in the left chapter-nav. Optional; defaults to the scaffold's
+   * placeholder ('A scaffold-astro book') for backward compatibility. The
+   * brand TITLE is the existing `title` field above (previously the sidebar
+   * hardcoded both strings, so every consumer shipped the placeholder).
+   */
+  subtitle?: string;
+  /**
    * v4.5.0: Book description. Read by the auto-injected `/` landing page (lead paragraph + <meta description>).
    * Optional; landing renders no description paragraph if unset.
    */
@@ -258,6 +266,9 @@ export interface BookScaffoldIntegrationOptions {
   extraStyles?: readonly string[];
   /** v4.5.0: book title, propagated to `/` landing via vite.define. */
   title?: string;
+  /** v4.23.0 (#135): sidebar brand subtitle, propagated via the book-config
+   *  virtual module to Sidebar.astro. */
+  subtitle?: string;
   /** v4.5.0: book description, propagated to `/` landing via vite.define. */
   description?: string;
   /**

@@ -2,6 +2,18 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.23.0] — unreleased
+
+Minor release. A consumer-driven fix from `ssm-foundations` (#135): the sidebar brand finally reads `defineBookConfig` instead of hardcoded placeholder strings — every consumer book had been shipping "Book / A scaffold-astro book" with no escape hatch short of forking the component.
+
+### Fixed
+
+- **Sidebar brand reads `defineBookConfig({ title, subtitle })` (#135).** `Sidebar.astro` hardcoded `siteTitle = 'Book'` / `siteSubtitle = 'A scaffold-astro book'`, with an in-file comment suggesting consumers "edit the strings below" — impossible for an npm dependency (and `Base.astro` passed no props, and no config field existed; verified against 4.16.0's `index.d.ts` by the reporting consumer). The brand now routes the existing `title` config into the first line and a new optional `subtitle` field into the second, through the same `virtual:book-scaffold/book-config` channel the landing/SEO data already uses. The old strings remain the fallbacks, so unconfigured books render unchanged (fixture snapshots are pixel-identical — none set a title). The in-repo demo now sets both fields, smoke-covering the thread end-to-end (`book-scaffold-astro demo` / `Integration smoke book` render in its sidebar).
+
+### Tests
+
+- `tests/sidebar-brand.test.mjs` (+4) — source-contract pins on the component wiring (virtual-module import, both fallback expressions) and the integration threading (`subtitle` in the plugin config + its type). Package suite **455**.
+
 ## [4.22.0] — 2026-06-10
 
 Minor release. **Flashcards (#116) — the study-guide epic's (#122) final increment.** The glossary collection becomes a spaced-recall deck on a new `/flashcards` route, reusing the v4.21 island architecture end-to-end: definitions are server-rendered MDX (not island props), the Preact island is a controller over the cards fed only an id+front manifest, and the engine's Fisher–Yates shuffle orders the deck. With this, all eight study-guide issues (#110–#117) are shipped.

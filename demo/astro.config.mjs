@@ -23,6 +23,8 @@ export default await defineBookConfig({
   styles: [academicStyle],
   site: 'https://example.invalid',
   title: 'book-scaffold-astro demo',
+  // v4.23.0 (#135): sidebar brand subtitle — smoke-covers the new config field.
+  subtitle: 'Integration smoke book',
   description:
     'In-repo demo + integration smoke test for @brandon_m_behring/book-scaffold-astro. ' +
     'Exercises the academic profile end-to-end (KaTeX, BibTeX cite resolution, ' +

@@ -193,6 +193,8 @@ export async function defineBookConfig(
       // v4.5.0: pass landing-page data through to the integration so it can
       // be exposed to the auto-injected /index.astro via the virtual module.
       title: opts.title,
+      // v4.23.0 (#135): sidebar brand subtitle.
+      subtitle: opts.subtitle,
       description: opts.description,
       portfolio: resolvedPortfolio,
       // v4.6.0: book-level author + SEO config (ogImage, twitterHandle),
@@ -253,6 +255,7 @@ export async function defineBookConfig(
     katexMacros: _katexMacros,
     // v4.5.0: strip new landing-related opts so they don't leak into AstroUserConfig.
     title: _title,
+    subtitle: _subtitle,
     description: _description,
     portfolio: _portfolio,
     // v4.6.0: strip new book-level SEO opts (author + seo block).
@@ -277,6 +280,7 @@ export async function defineBookConfig(
   void _markdown;
   void _katexMacros;
   void _title;
+  void _subtitle;
   void _description;
   void _portfolio;
   void _author;
