@@ -1,8 +1,8 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  // Two entries (named for predictable dist layout): the public root and
-  // the lib subpath exposed via package.json#exports.
+  // Named entries (for predictable dist layout): the public root, schemas,
+  // lib subpaths, and pre-compiled islands exposed via package.json#exports.
   entry: {
     index: 'src/index.ts',
     schemas: 'src/schemas-entry.ts',
