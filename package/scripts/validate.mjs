@@ -20,6 +20,9 @@
  *   8. Questions collection (#112) — each question's frontmatter `domain` is a
  *      member of the consumer's examDomains registry (best-effort), and question
  *      `id`s are unique (the cross-ref key for the appendix / flashcards).
+ *   9. Learning-objective anchors (#130) — when a chapter declares frontmatter
+ *      `los:` entries with `anchor:` slugs, the declared set and the prose's
+ *      MDX anchor-comment marker set must agree in both directions.
  *
  * Run from the consumer's project root. Closes #8 (was resolving paths
  * from the package's own directory inside node_modules — false negatives
@@ -171,6 +174,34 @@ const REPO_ROOT = process.env.BOOK_REPO_ROOT ?? null;
         `  • Delete the consumer file to defer to the scaffold (recommended), OR\n` +
         `  • Set 'routes: { chapters: false }' in defineBookConfig to keep\n` +
         `    your override (intentional).\n` +
+        `  See: package/recipes/18-chapter-route-ownership.md\n`,
+      );
+    }
+  }
+}
+
+// v4.20.0 (issue #129): the same shadow warning for the landing route. A
+// consumer-owned `src/pages/index.astro` collides with the scaffold's
+// auto-injected `/` (Astro warns today and has announced a hard error in a
+// future major). The escape hatch already exists — `routes: { landing: false }`
+// — this check makes it discoverable before Astro's break lands. Same edge
+// cases + heuristic as the chapters check above.
+{
+  const consumerLanding = resolve(ROOT, 'src/pages/index.astro');
+  if (existsSync(consumerLanding)) {
+    const astroConfigPath = resolve(ROOT, 'astro.config.mjs');
+    let landingDisabled = false;
+    if (existsSync(astroConfigPath)) {
+      const astroConfig = readFileSync(astroConfigPath, 'utf8');
+      landingDisabled = /\blanding\s*:\s*false\b/.test(astroConfig);
+    }
+    if (!landingDisabled) {
+      console.warn(
+        `\n⚠ Consumer-owned landing page at src/pages/index.astro shadows the\n` +
+        `  scaffold's auto-injected "/" route. Your page wins today, but Astro\n` +
+        `  has announced route collisions become a HARD ERROR in a future\n` +
+        `  version. Set 'routes: { landing: false }' in defineBookConfig to\n` +
+        `  declare the override and silence the collision.\n` +
         `  See: package/recipes/18-chapter-route-ownership.md\n`,
       );
     }
@@ -351,6 +382,49 @@ for (const rel of chapterFiles) {
         lineOf(content, m.index),
         `<BookLink book="${bookMatch[1]}"> — not in defineBookConfig siblingBooks (${[...siblingBookKeys].join(', ') || 'none'}). Register it or fix the key.`,
       );
+    }
+  }
+
+  // 9. Learning-objective anchor binding (#130). Convention (consumer-defined
+  //    `los` frontmatter, guides-ai-engineering): each `los[].anchor` slug has
+  //    a matching MDX comment marker in the prose binding the objective to its
+  //    section. Both drift directions built + validated green before this
+  //    check, so both fail loud: a declared anchor with no marker (dangling
+  //    objective) and a marker with no declaration (orphan). Scoped to
+  //    chapters that opt into the convention (a `los:` frontmatter key) —
+  //    `los` is not a scaffold schema field, so this can't false-fire on
+  //    books that don't use it. Heuristic, like #8: any indented `anchor:`
+  //    line inside the frontmatter counts as a declaration.
+  {
+    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    const front = fmMatch ? fmMatch[1] : '';
+    if (/^los\s*:/m.test(front)) {
+      const frontOffset = content.indexOf(front);
+      const bodyOffset = fmMatch ? fmMatch[0].length : 0;
+      const body = content.slice(bodyOffset);
+      const declared = [...front.matchAll(/^\s+(?:-\s+)?anchor\s*:\s*["']?([^"'\n]+?)["']?\s*$/gm)];
+      const markers = [...body.matchAll(/\{\s*\/\*\s*anchor:\s*([^\s*]+)\s*\*\/\s*\}/g)];
+      const markerSlugs = new Set(markers.map((m) => m[1]));
+      const declaredSlugs = new Set(declared.map((m) => m[1].trim()));
+      for (const d of declared) {
+        const slug = d[1].trim();
+        if (!markerSlugs.has(slug)) {
+          fail(
+            rel,
+            lineOf(content, frontOffset + d.index),
+            `los anchor "${slug}" has no matching {/* anchor: ${slug} */} marker in the prose — dangling learning objective.`,
+          );
+        }
+      }
+      for (const m of markers) {
+        if (!declaredSlugs.has(m[1])) {
+          fail(
+            rel,
+            lineOf(content, bodyOffset + m.index),
+            `prose anchor marker "${m[1]}" has no matching los[].anchor in the frontmatter — orphan anchor.`,
+          );
+        }
+      }
     }
   }
 }

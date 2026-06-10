@@ -298,6 +298,147 @@ status: implemented
   }
 });
 
+// ---- validate check #9 (#130): los[].anchor ↔ prose anchor-marker binding ----
+
+/** A chapter declaring `los` objectives; `markers` lists the prose-side slugs. */
+const losChapter = (declared, markers) => `---
+week: 4
+part: foundations
+title: "LOS chapter"
+status: implemented
+los:
+${declared.map((a, i) => `  - text: "Objective ${i + 1}"\n    anchor: ${a}`).join('\n')}
+---
+
+Intro paragraph.
+
+${markers.map((a) => `{/* anchor: ${a} */}\n\nSection prose for ${a}.`).join('\n\n')}
+`;
+
+test('validate #9: matching los anchors and prose markers pass (#130)', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    writeFileSync(
+      join(tmp, 'src', 'content', 'chapters', 'week04.mdx'),
+      losChapter(['eval-metrics', 'eval-harness'], ['eval-metrics', 'eval-harness']),
+    );
+    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(result.status, 0, `matched los/marker sets should pass\nstderr: ${result.stderr}`);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate #9: a declared los anchor with no prose marker fails loud (dangling objective, #130)', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    writeFileSync(
+      join(tmp, 'src', 'content', 'chapters', 'week04.mdx'),
+      losChapter(['eval-metrics', 'eval-harness'], ['eval-metrics']),
+    );
+    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.ok(result.status > 0, `dangling los anchor should fail (status=${result.status})`);
+    assert.match(
+      result.stderr,
+      /los anchor "eval-harness" has no matching \{\/\* anchor: eval-harness \*\/\} marker/,
+      `validate should name the dangling anchor; got stderr: ${result.stderr}`,
+    );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate #9: a prose marker with no los declaration fails loud (orphan anchor, #130)', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    writeFileSync(
+      join(tmp, 'src', 'content', 'chapters', 'week04.mdx'),
+      losChapter(['eval-metrics'], ['eval-metrics', 'eval-rogue']),
+    );
+    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.ok(result.status > 0, `orphan prose marker should fail (status=${result.status})`);
+    assert.match(
+      result.stderr,
+      /prose anchor marker "eval-rogue" has no matching los\[\]\.anchor/,
+      `validate should name the orphan marker; got stderr: ${result.stderr}`,
+    );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate #9: chapters without a los key are exempt — markers alone do not fire (#130)', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    // A prose marker but NO `los:` frontmatter — the convention isn't opted
+    // into, so the check must stay silent (los is consumer-defined).
+    writeFileSync(
+      join(tmp, 'src', 'content', 'chapters', 'week04.mdx'),
+      `---
+week: 4
+part: foundations
+title: "No-LOS chapter"
+status: implemented
+---
+
+{/* anchor: free-floating */}
+
+Prose using an anchor comment for an unrelated purpose.
+`,
+    );
+    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(result.status, 0, `marker without los: must not fire\nstderr: ${result.stderr}`);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+// ---- landing shadow warning (#129): consumer src/pages/index.astro ----
+
+test('validate (#129): consumer index.astro without landing:false warns about the collision', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    mkdirSync(join(tmp, 'src', 'pages'), { recursive: true });
+    writeFileSync(join(tmp, 'src', 'pages', 'index.astro'), `---\n---\n<h1>Custom landing</h1>\n`);
+    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(result.status, 0, `warning is non-blocking — exit stays 0\nstderr: ${result.stderr}`);
+    assert.match(
+      result.stderr,
+      /Consumer-owned landing page at src\/pages\/index\.astro/,
+      `validate should warn about the landing collision; got stderr: ${result.stderr}`,
+    );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#129): landing:false declares the override — no warning', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    mkdirSync(join(tmp, 'src', 'pages'), { recursive: true });
+    writeFileSync(join(tmp, 'src', 'pages', 'index.astro'), `---\n---\n<h1>Custom landing</h1>\n`);
+    writeFileSync(
+      join(tmp, 'astro.config.mjs'),
+      `export default { routes: { landing: false } };\n`,
+    );
+    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(result.status, 0, `clean fixture should pass\nstderr: ${result.stderr}`);
+    assert.doesNotMatch(
+      result.stderr,
+      /Consumer-owned landing page/,
+      `landing:false should silence the warning; got stderr: ${result.stderr}`,
+    );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
 test('validate (#126): a <Theorem id> absent from labels.json fails loud (silent-de-number guard)', () => {
   const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
   try {

@@ -17,6 +17,9 @@ export default await defineBookConfig({
     tips: true,
     exercises: true,
     practiceExam: true,
+    // This fixture owns src/pages/index.astro — declare the landing override
+    // so the scaffold doesn't inject a colliding "/" (#129).
+    landing: false,
   },
   // v4.17.0 (#112): closed exam-domain taxonomy. A question whose `domain` is
   // not listed here throws at build (assertKnownDomain) — fail-loud. `recursion`

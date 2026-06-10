@@ -2,6 +2,16 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.20.0] — unreleased
+
+Minor release. A consumer-feedback triage batch from `guides-ai-engineering` — two new `validate` surfaces and a blessed multi-guide recipe. Continues the fail-loud line: both validate additions convert silently-green authoring drift into named, located errors.
+
+### Added
+
+- **`validate` check #9 — learning-objective anchor binding (#130).** When a chapter declares frontmatter `los:` entries with `anchor:` slugs, the declared set and the prose's `{/* anchor: <slug> */}` marker set must agree **in both directions**: a declared anchor with no prose marker fails (dangling objective), and a prose marker with no declaration fails (orphan). Scoped to chapters that opt into the convention (a `los:` frontmatter key) — `los` is consumer-defined, so books that don't use it are untouched. Motivated by an independent audit of the Evaluation guide that found four such drifts, all of which built and validated green. Documented in `recipes/09-validation.md`; tests in `validate-root.test.mjs` (+4).
+- **Landing shadow-route warning (#129).** A consumer-owned `src/pages/index.astro` collides with the scaffold's auto-injected `/` — the consumer page wins today with a `[router]` WARN on every build, but Astro has announced the collision becomes a **hard error** in a future version. `validate` now emits the same non-blocking shadow warning the chapters route has had since v4.6.0, pointing at the existing escape hatch: `routes: { landing: false }`. Recipe 18 gains the landing-route section; the book-genre fixture (which owns its index) now declares the override. Tests in `validate-root.test.mjs` (+2).
+- **Recipe 21 — multiple guides in one app (#132).** The blessed interim pattern for hosting >1 guide in a single Astro app: one `chapters` collection at `src/content/` with a `generateId` that namespaces ids by guide folder, riding the scaffold's existing `/chapters/[...slug]/` rest-param route unchanged. Documents the flat-slug footgun (without `generateId`, slugs silently must be globally unique across guides — a route collision, not a clear error), the `validate` over-count caveat, and the per-guide-index workaround. First-class multibook support remains tracked on #15, for which `guides-ai-engineering` is the second-consumer signal.
+
 ## [4.19.0] — 2026-06-09
 
 Minor release. Adds three static study-guide apparatus components after the v4.17 spine — **`<Diagnostic>`** (#110, the per-chapter DIKTA pre-reading self-check), **`<PartReview>`** (#111, Part-level interleaved `<Exercise>`-review aggregation), and a **searchable glossary** (#115, the `glossary` collection + `<Term>` + `/glossary`). All static (no new client islands): the scored engine remains the separate #112 increment. Also repairs the published **TypeScript type surface** (#133) — the shared `.d.ts` chunk now ships, with a CI guard so it can't silently regress.

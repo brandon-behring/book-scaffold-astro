@@ -13,6 +13,12 @@
 | `<Figure src="/...">` file exists under `public/` | all | Figure.astro emits a broken-image icon for missing files; build doesn't fail. |
 | `[text](/internal-link)` resolves to known chapter slug or top-level route | all | Astro won't fail on dead internal links. Warning, not error (regex misses dynamic routes). |
 | `<CodeRef path="..." line={N} />` path exists + line in bounds | all, if `BOOK_REPO_ROOT` set | Catches stale line numbers after code refactors in the paired experiments/ repo. |
+| `<Theorem>` has a resolvable `kind=` (or legacy `type=`); an id'd theorem resolves in `labels.json` (#121, #126) | all | An absent kind throws at build with less context; an unindexed id silently renders the heading unnumbered. |
+| `<BookLink book= to=>` both present; `book=` registered in `siblingBooks` (#96) | all | Pre-flights the component's build-time throw across all files at once. |
+| Questions collection: unique `id`s + `domain` in `examDomains` (#112) | all, when `src/content/questions/` exists | Duplicate ids break the appendix/flashcards cross-ref key; an unregistered domain throws one-at-a-time at build. |
+| `los[].anchor` ↔ `{/* anchor: <slug> */}` prose markers agree both ways (#130, v4.20.0) | all, when frontmatter has `los:` | A declared objective whose prose marker is missing/misspelled (or an orphan marker) builds green otherwise — frontmatter↔prose drift only a hand audit would catch. |
+
+Validate also emits two **non-blocking shadow-route warnings** (exit code unaffected): a consumer-owned `src/pages/chapters/[...slug].astro` without `routes: { chapters: false }` (v4.6.0, #76), and a consumer-owned `src/pages/index.astro` without `routes: { landing: false }` (v4.20.0, #129 — Astro has announced this collision becomes a hard error). See [recipe 18](./18-chapter-route-ownership.md).
 
 ## What is NOT checked (already covered elsewhere)
 
