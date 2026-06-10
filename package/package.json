@@ -107,6 +107,10 @@
       "types": "./dist/components/ExamRunner.d.ts",
       "import": "./dist/components/ExamRunner.mjs"
     },
+    "./components/Flashcards": {
+      "types": "./dist/components/Flashcards.d.ts",
+      "import": "./dist/components/Flashcards.mjs"
+    },
     "./components/WarnBox.astro": "./components/WarnBox.astro",
     "./components/WeekRef.astro": "./components/WeekRef.astro",
     "./components/WorkedExample.astro": "./components/WorkedExample.astro",
@@ -122,6 +126,7 @@
     "./styles/poc-layouts.css": "./styles/poc-layouts.css",
     "./styles/tool-filter.css": "./styles/tool-filter.css",
     "./styles/exam-runner.css": "./styles/exam-runner.css",
+    "./styles/flashcards.css": "./styles/flashcards.css",
     "./layouts/Base.astro": "./layouts/Base.astro",
     "./layouts/Chapter.astro": "./layouts/Chapter.astro",
     "./lib": {

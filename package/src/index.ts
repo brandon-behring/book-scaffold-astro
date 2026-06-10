@@ -167,6 +167,11 @@ export {
   type RoutingChapter,
 } from './lib/exam-manifest.js';
 
+// v4.22.0 (#116): pure flashcard-deck manifest from the glossary collection —
+// the island receives id+front only (backs are server-rendered MDX). Unit-
+// tested in tests/flashcards.test.mjs.
+export { buildFlashcardDeck, type FlashcardRef } from './lib/flashcards.js';
+
 // v4.19.0 (#111): pure PartReview selection — filter chapters by `part` (String-
 // coerced), sort to book order (chapterSortKey), join the build-exercises index.
 // No DOM; PartReview.astro renders it. Unit-tested in tests/part-review.test.mjs.

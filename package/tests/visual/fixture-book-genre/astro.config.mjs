@@ -20,6 +20,9 @@ export default await defineBookConfig({
     // v4.21.0 (#114): answer-rationale back-appendix; q-arrays-bounds uses
     // <Rationale appendix for=…> which throws at build unless this is on.
     answers: true,
+    // v4.22.0 (#116) + v4.19.0 (#115): glossary + its flashcards deck.
+    glossary: true,
+    flashcards: true,
     // This fixture owns src/pages/index.astro — declare the landing override
     // so the scaffold doesn't inject a colliding "/" (#129).
     landing: false,

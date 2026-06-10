@@ -30,6 +30,7 @@ export const courseNotesProfile = defineProfile({
     practiceExam: false,    // v4.17.0 #112: opt-in per book; requires src/content/questions/
     glossary: false,        // v4.19.0 #115: opt-in per book; requires src/content/glossary/
     answers: false, // v4.21.0 #114: opt-in per book; requires src/content/questions/
+    flashcards: false, // v4.22.0 #116: opt-in per book; requires src/content/glossary/
     landing: true,          // v4.5.0: auto-inject minimal root landing
   },
   styles: ['tokens.css', 'layout.css', 'callouts.css', 'chapter.css', 'typography.css', 'print.css'],

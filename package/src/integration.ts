@@ -155,6 +155,9 @@ const ROUTE_REGISTRY = {
   // v4.21.0 (#114): answer-rationale back-appendix. Opt-in via routes.answers:
   // true; reads the `questions` collection with everything revealed.
   answers:     { pattern: '/answers',             file: 'answers.astro' },
+  // v4.22.0 (#116): glossary flashcards deck. Opt-in via routes.flashcards:
+  // true; reads the `glossary` collection (src/content/glossary/).
+  flashcards:  { pattern: '/flashcards',          file: 'flashcards.astro' },
   // v4.5.0: minimal root landing page. Reads title/description/portfolio/routes
   // from vite.define-injected import.meta.env vars. Default-on per profile;
   // consumers with their own src/pages/index.astro override (file-system route

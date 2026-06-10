@@ -102,6 +102,14 @@ export interface RouteToggles {
    * add a src/content/questions/ directory.
    */
   answers: boolean;
+  /**
+   * v4.22.0 (#116): auto-inject `/flashcards` — a spaced-recall deck generated
+   * from the `glossary` collection (front = term, back = definition), with a
+   * shuffle/flip/known-bucket island persisted to localStorage. Default
+   * `false` per profile — opt in via defineBookConfig({ routes:
+   * { flashcards: true } }) AND add a src/content/glossary/ directory.
+   */
+  flashcards: boolean;
 }
 
 /** Profile definition — declarative shape for one book profile. */
