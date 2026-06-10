@@ -1,6 +1,6 @@
 # RFC: Study-guide system (epic #122)
 
-**Status:** Increment 1 shipped (v4.17.0, 2026-06-05). Increments 2–N planned.
+**Status:** COMPLETE (2026-06-10) — all eight issues (#110–#117) shipped across v4.17.0 → v4.22.0.
 **Issues:** epic #122; #110–#117. **Tracking plan:** `~/.claude/plans/examine-the-git-issue-steady-goose.md` (Tier 3).
 
 ## Problem
@@ -34,13 +34,12 @@ The static spine is **not hollow**: Bjork "desirable difficulties" pedagogy want
 
 Frontmatter: `id` (req), `type` (req: `mcq`|`free`|`cloze`), `chapter` (req: number | string), `domain` (req), `part?`, `bloom_level?`, `objective_id?`, `difficulty?` (1–4), `options?` (MCQ: `{id, correct?, text?}[]`), `answer?` (free-response model answer), `draft?`, `tags?`. Body = stem (MDX). `.strict()`. Invariants in `refineQuestion`: MCQ ≥2 options / exactly-one-correct / unique ids; free needs `answer` and no options.
 
-## Increment roadmap
+## Increment roadmap (as shipped — grouping drifted from the original plan; content didn't)
 
-- **Inc. 1 — static spine → v4.17.0 (shipped).** `questions` collection + `examDomains` registry + `assertKnownDomain` + `lib/questions(-derive)` + static `/practice-exam` + `<ObjectiveMap>` (#117) + `<Rationale>` + `validate` #8 + tests + fixture route-snapshots.
-- **Inc. 2 — interactive engine (#112-engine) + `<Diagnostic>` (#110).** A Preact island scoring MCQs client-side (per-domain % + weak-domain routing) using the `book:theme:change` event; the per-chapter "Do I Know This Already?" diagnostic. First interactive layer; additive schema only. When the sampler needs blueprint weights, widen `examDomains` from `string[]` to `Array<string | {id; title?; weight?}>` (backward-compatible) or graduate to a `domains` collection.
-- **Inc. 3 — `<AssessmentTest>` (#113) + answer-rationale appendix (#114).** Front-matter cross-domain test routing to weak chapters; the Sybex back-appendix collecting `<Rationale>` slots (static; opt-in inline-vs-appendix).
-- **Inc. 4 — glossary (#115) + flashcards (#116).** `glossary` collection + `<Term>` + `/glossary` (static, pagefind-filtered); flashcard island generating cards from glossary terms + question objectives (Anki-export precedent: `recipes/20-anki-export.md`).
-- **#111 (PartReview)** — independent of the questions model (aggregates existing `<Exercise>`/`<Practice>` via a `build-practice` script like `build-exercises`); schedulable any time.
+- **Inc. 1 — static spine → v4.17.0 (2026-06-05).** `questions` collection + `examDomains` registry + `assertKnownDomain` + `lib/questions(-derive)` + static `/practice-exam` + `<ObjectiveMap>` (#117) + `<Rationale>` + `validate` #8 + tests + fixture route-snapshots.
+- **Inc. 2 — statics + pure engine → v4.19.0 (2026-06-10).** `<Diagnostic>` (#110), `<PartReview>` (#111), glossary + `<Term>` + `/glossary` (#115 — pulled forward from the planned Inc. 4), and the PURE exam engine (`sampleExam`/`scoreExam`, #112-core) — engine before island, so the logic was node-tested before any browser entered the picture.
+- **Inc. 3 — interactive layer → v4.21.0 (2026-06-10).** The ExamRunner island over server-rendered QuestionCards (#112-UI; stems can't serialize into island props — controller-over-DOM architecture), `<AssessmentTest>` (#113, `spreadBlueprint` cross-domain form + weak-domain chapter routing), and the `/answers` appendix (#114, `<Rationale appendix for=…>` with build-time throws). The planned `book:theme:change` canvas dependency proved unnecessary — CSS tokens recolor everything. Pre-merge multi-lens review hardened the island to the same fail-loud bar as the build half (named throws over silent no-ops, `CSS.escape`, prop validation, per-domain floor).
+- **Inc. 4 — flashcards → v4.22.0 (2026-06-10).** `/flashcards` + the Flashcards island over the glossary (#116): shuffled recall-first deck, localStorage knew-it/still-learning buckets, review-unknown-only pass. Question/objective-derived cards deferred (noted on #116); `examDomains` blueprint-weights widening deferred until a consumer needs it.
 
 ## Reuse inventory
 

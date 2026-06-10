@@ -2,7 +2,7 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
-## [4.22.0] — unreleased
+## [4.22.0] — 2026-06-10
 
 Minor release. **Flashcards (#116) — the study-guide epic's (#122) final increment.** The glossary collection becomes a spaced-recall deck on a new `/flashcards` route, reusing the v4.21 island architecture end-to-end: definitions are server-rendered MDX (not island props), the Preact island is a controller over the cards fed only an id+front manifest, and the engine's Fisher–Yates shuffle orders the deck. With this, all eight study-guide issues (#110–#117) are shipped.
 
