@@ -57,6 +57,8 @@ const BOOK_CONFIG_RESOLVED_ID = '\0' + BOOK_CONFIG_VIRTUAL_ID;
 
 function makeBookConfigVitePlugin(config: {
   title: string | null;
+  // v4.23.0 (#135): sidebar brand subtitle.
+  subtitle: string | null;
   description: string | null;
   portfolio: { url: string; label: string } | false;
   enabledRoutes: readonly string[];
@@ -200,6 +202,7 @@ export function bookScaffoldIntegration(
     mdxComponentsModule,
     // v4.5.0: landing-page data, propagated via virtual module to /index.astro.
     title,
+    subtitle,
     description,
     portfolio,
     // v4.6.0: book-level author + SEO config, propagated through the
@@ -305,6 +308,7 @@ export function bookScaffoldIntegration(
               makeMdxComponentsVitePlugin(resolvedMdxPath),
               makeBookConfigVitePlugin({
                 title: title ?? null,
+                subtitle: subtitle ?? null,
                 description: description ?? null,
                 portfolio: portfolio ?? false,
                 enabledRoutes: enabledRouteNames,

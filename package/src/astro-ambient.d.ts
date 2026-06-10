@@ -32,6 +32,8 @@ declare module 'astro:content' {
 declare module 'virtual:book-scaffold/book-config' {
   const bookConfig: {
     title: string | null;
+    /** v4.23.0 (#135): sidebar brand subtitle (Sidebar.astro). */
+    subtitle: string | null;
     description: string | null;
     portfolio: { url: string; label: string } | false;
     enabledRoutes: readonly string[];
