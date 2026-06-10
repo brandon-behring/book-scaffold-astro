@@ -1,0 +1,189 @@
+---
+/**
+ * Auto-injected /answers route — the answer-rationale back-appendix
+ * (v4.21.0, #114).
+ *
+ * The Sybex "Answers to Review Questions" appendix: every question grouped by
+ * chapter, with the stem, the option list (correct one marked), the
+ * frontmatter answer line, and the full <Rationale> body — everything
+ * REVEALED, unlike /practice-exam's delayed-feedback bank. Authors who want
+ * chapter bodies clean of inline rationales point readers here via
+ * <Rationale appendix for="<id>"> (which renders as a link to
+ * /answers#answer-<id> everywhere EXCEPT on this route, where the full
+ * rationale renders — see Rationale.astro).
+ *
+ * Gated on routes.answers (default false on every profile). Twin-gate +
+ * fail-loud identical to practice-exam.astro: presence-probe the questions
+ * directory; assertKnownDomain throws on an unregistered domain.
+ *
+ * A tiny inline script force-opens the rationale/answer <details> — the
+ * rendered MDX body carries them collapsed, and props can't be threaded
+ * through render(); without JS the appendix still works (details are
+ * clickable), it just isn't pre-expanded.
+ */
+import Base from '../layouts/Base.astro';
+import { render } from 'astro:content';
+import bookConfig from 'virtual:book-scaffold/book-config';
+import { getAllQuestions, groupByChapter } from '../src/lib/questions';
+import { assertKnownDomain } from '../src/lib/exam-domains';
+
+// Presence-gate: only touch the collection when the directory holds files.
+const questionModules = import.meta.glob('/src/content/questions/**/*.{md,mdx}', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+const hasQuestions = Object.keys(questionModules).length > 0;
+
+const entries = hasQuestions ? await getAllQuestions() : [];
+for (const entry of entries) {
+  assertKnownDomain(bookConfig.examDomains, entry.data.domain, { id: entry.data.id });
+}
+
+const rendered = await Promise.all(
+  entries.map(async (entry) => ({
+    data: entry.data,
+    reserved: entry.data.type === 'cloze',
+    Content: entry.data.type === 'cloze' ? null : (await render(entry)).Content,
+  })),
+);
+
+const byChapter = groupByChapter(rendered);
+const total = rendered.length;
+const practiceHref = (bookConfig.enabledRoutes ?? []).includes('practiceExam')
+  ? '/practice-exam'
+  : null;
+
+/** A string chapter ref is a slug (schema kebab-case branch) → linkable. */
+function chapterHref(chapter: number | string): string | null {
+  return typeof chapter === 'string' ? `/chapters/${chapter}/` : null;
+}
+---
+<Base
+  title="Answers & rationales"
+  description="Answer appendix: every practice question with its correct answer and full rationale, grouped by chapter."
+>
+  <article class="prose answers-appendix">
+    <h1>Answers &amp; rationales</h1>
+
+    {!hasQuestions && (
+      <p class="answers-empty">
+        No questions found under <code>src/content/questions/</code> — this appendix
+        collects the question bank's answers and rationales.
+      </p>
+    )}
+
+    {hasQuestions && total > 0 && (
+      <p class="answers-summary">
+        {total} question{total === 1 ? '' : 's'}, grouped by chapter, with answers and
+        rationales expanded.
+        {practiceHref && (
+          <Fragment> Test yourself first in the <a href={practiceHref}>practice question bank</a>.</Fragment>
+        )}
+      </p>
+    )}
+
+    {[...byChapter.entries()].map(([chapterKey, qs]) => {
+      const href = chapterHref(qs[0]!.data.chapter);
+      return (
+        <section class="answers-chapter" id={`chapter-${chapterKey}`}>
+          <h2 class="answers-chapter-title">
+            Chapter {href ? <a href={href}>{chapterKey}</a> : chapterKey}
+          </h2>
+          {qs.map((q) => {
+            const Content = q.Content;
+            const correct = q.data.type === 'mcq' && q.data.options
+              ? q.data.options.find((o) => o.correct)
+              : undefined;
+            return (
+              <article class="answer" id={`answer-${q.data.id}`}>
+                <header class="answer-header">
+                  <span class="answer-meta-id">{q.data.id}</span>
+                  <span class="answer-meta-domain">{q.data.domain}</span>
+                  {practiceHref && (
+                    <a class="answer-backlink" href={`${practiceHref}#question-${q.data.id}`}>
+                      ↑ question in bank
+                    </a>
+                  )}
+                </header>
+
+                {q.reserved ? (
+                  <p class="answer-reserved">Cloze question — rendering deferred.</p>
+                ) : (
+                  Content && <div class="answer-body"><Content /></div>
+                )}
+
+                {q.data.type === 'mcq' && q.data.options && (
+                  <ol class="answer-options" type="a">
+                    {q.data.options.map((o) => (
+                      <li class={o.correct ? 'answer-option answer-option-correct' : 'answer-option'}>
+                        {o.text ?? o.id}{o.correct && <span class="answer-correct-mark"> ✓</span>}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+
+                {q.data.type === 'mcq' && correct && (
+                  <p class="answer-line">Correct: <strong>{correct.text ?? correct.id}</strong></p>
+                )}
+                {q.data.type === 'free' && q.data.answer && (
+                  <p class="answer-line">{q.data.answer}</p>
+                )}
+              </article>
+            );
+          })}
+        </section>
+      );
+    })}
+  </article>
+
+  <script is:inline>
+    // Appendix context: rationales/answers render expanded. The MDX body ships
+    // them as collapsed <details> (props can't reach components inside
+    // render()); without JS they remain clickable — just not pre-opened.
+    document
+      .querySelectorAll('.answers-appendix details')
+      .forEach((d) => { d.open = true; });
+  </script>
+
+  <style>
+    .answers-appendix { max-width: 48rem; }
+    .answers-summary,
+    .answers-empty { color: var(--color-text-muted, #6b7280); }
+    .answers-chapter { margin-block-start: 2rem; }
+    .answers-chapter-title {
+      border-block-end: 2px solid var(--color-border, #e5e7eb);
+      padding-block-end: 0.25rem;
+    }
+    .answer {
+      margin-block: 1.25rem;
+      padding: 1rem 1.1rem;
+      border: 1px solid var(--color-border, #e5e7eb);
+      border-radius: 0.5rem;
+      background: var(--color-surface, transparent);
+    }
+    .answer-header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      font-size: 0.78rem;
+      color: var(--color-text-muted, #6b7280);
+      margin-block-end: 0.5rem;
+    }
+    .answer-meta-id { font-family: var(--font-mono, ui-monospace, monospace); }
+    .answer-meta-domain {
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.05rem 0.4rem;
+      border-radius: 0.25rem;
+      background: var(--color-code-bg, rgba(127, 127, 127, 0.12));
+    }
+    .answer-backlink { margin-inline-start: auto; }
+    .answer-options { margin-block: 0.6rem; }
+    .answer-option-correct { font-weight: 600; }
+    .answer-correct-mark { color: var(--color-success, #15803d); }
+    .answer-line { margin-block: 0.5rem 0.25rem; }
+    .answer-reserved { color: var(--color-text-muted, #6b7280); font-style: italic; }
+  </style>
+</Base>

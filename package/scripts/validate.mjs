@@ -497,6 +497,20 @@ let questionsChecked = 0;
           );
         }
       }
+
+      // v4.21.0 (#114): <Rationale appendix> needs for= (the /answers#answer-<id>
+      // anchor target) — the component throws at build; flag it here, earlier,
+      // the same way #7 pre-flights BookLink.
+      for (const m of content.matchAll(/<Rationale\b([^>]*)>/g)) {
+        const attrs = m[1];
+        if (/\bappendix\b/.test(attrs) && !/\bfor\s*=/.test(attrs)) {
+          fail(
+            qrel,
+            lineOf(content, m.index),
+            `<Rationale appendix> without for="<question-id>" — no appendix anchor target; throws at build.`,
+          );
+        }
+      }
     }
     questionsChecked = questionFiles.length;
   }

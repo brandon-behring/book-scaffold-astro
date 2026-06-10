@@ -1,0 +1,23 @@
+---
+id: q-arrays-bounds
+type: mcq
+domain: arrays
+chapter: 1
+bloom_level: apply
+difficulty: "2"
+options:
+  - { id: a, text: "undefined behavior in every language" }
+  - { id: b, text: "language-dependent: an exception, undefined, or UB", correct: true }
+  - { id: c, text: "always returns null" }
+---
+import Rationale from '@brandon_m_behring/book-scaffold-astro/components/Rationale.astro';
+
+What happens when you read **past the end** of an array?
+
+<Rationale appendix for="q-arrays-bounds">
+Bounds behavior is a language contract, not a universal: Java/Python raise
+(`ArrayIndexOutOfBoundsException` / `IndexError`), JavaScript yields
+`undefined`, and C/C++ make it undefined behavior. Exam answers that say
+"always" are the trap options. (v4.21.0 #114: this rationale renders as an
+appendix link in the bank and in full on /answers.)
+</Rationale>

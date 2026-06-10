@@ -152,6 +152,9 @@ const ROUTE_REGISTRY = {
   // v4.19.0 (#115): searchable key-terms glossary. Opt-in via routes.glossary:
   // true; reads the `glossary` collection (src/content/glossary/).
   glossary:    { pattern: '/glossary',            file: 'glossary.astro' },
+  // v4.21.0 (#114): answer-rationale back-appendix. Opt-in via routes.answers:
+  // true; reads the `questions` collection with everything revealed.
+  answers:     { pattern: '/answers',             file: 'answers.astro' },
   // v4.5.0: minimal root landing page. Reads title/description/portfolio/routes
   // from vite.define-injected import.meta.env vars. Default-on per profile;
   // consumers with their own src/pages/index.astro override (file-system route

@@ -93,6 +93,15 @@ export interface RouteToggles {
    * AND add a src/content/glossary/ directory.
    */
   glossary: boolean;
+  /**
+   * v4.21.0 (#114): auto-inject `/answers` — the Sybex-style answer-rationale
+   * back-appendix reading the `questions` collection grouped by chapter with
+   * answers + rationales expanded. Pairs with `<Rationale appendix for="…">`
+   * (inline body renders as a link into this appendix). Default `false` per
+   * profile — opt in via defineBookConfig({ routes: { answers: true } }) AND
+   * add a src/content/questions/ directory.
+   */
+  answers: boolean;
 }
 
 /** Profile definition — declarative shape for one book profile. */

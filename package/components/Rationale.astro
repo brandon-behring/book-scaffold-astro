@@ -1,34 +1,78 @@
 ---
 /**
  * <Rationale> — collapsible answer/explanation for a study-guide question
- * (v4.17.0, Tier 3). Renders its slot inside a <details> so the answer stays
- * hidden until the reader chooses to reveal it (Bjork desirable-difficulties:
- * delayed feedback aids retention). Authored in a question's MDX body; the
- * answer-rationale back-appendix (#114) will later hoist these into an appendix
- * using this same marker — so a rich, cited rationale has a stable home now.
+ * (v4.17.0, Tier 3; appendix mode v4.21.0, #114). Renders its slot inside a
+ * <details> so the answer stays hidden until the reader chooses to reveal it
+ * (Bjork desirable-difficulties: delayed feedback aids retention).
+ *
+ * Appendix mode (#114): `<Rationale appendix for="<question-id>">` keeps the
+ * chapter/bank body clean Sybex-style — everywhere EXCEPT the /answers route
+ * it renders a link to /answers#answer-<id> instead of the details; on
+ * /answers itself (where the full question body is re-rendered) it renders the
+ * details as normal so the appendix carries the content. Fail-loud, both
+ * misuse modes throw at build: `appendix` without `for=` (no anchor target),
+ * and `appendix` with the answers route disabled (the link would 404).
  *
  * Any profile. Register it in src/mdx-components.ts (defineMdxComponents) to use
  * inside src/content/questions/**.mdx. Slot freely: prose, math, <Cite>, code.
  */
+import bookConfig from 'virtual:book-scaffold/book-config';
+
 interface Props {
   /** Summary label for the reveal. Defaults to "Answer & rationale". */
   title?: string;
+  /** Render as a link into the /answers appendix instead of inline details
+   *  (except on /answers itself). Requires `for` + routes.answers enabled. */
+  appendix?: boolean;
+  /** The question's frontmatter `id` — the /answers#answer-<id> anchor target.
+   *  Required with `appendix`. */
+  for?: string;
 }
-const { title = 'Answer & rationale' } = Astro.props;
+const { title = 'Answer & rationale', appendix = false, for: forId } = Astro.props;
+
+if (appendix && !forId) {
+  throw new Error(
+    `<Rationale appendix> requires for="<question-id>" — it is the ` +
+      `/answers#answer-<id> anchor target.`,
+  );
+}
+if (appendix && !(bookConfig.enabledRoutes ?? []).includes('answers')) {
+  throw new Error(
+    `<Rationale appendix for="${forId}"> — the answers route is not enabled, so ` +
+      `the appendix link would 404. Set routes: { answers: true } in ` +
+      `defineBookConfig (or drop the appendix prop for an inline reveal).`,
+  );
+}
+
+// Trailing-slash + base-path tolerant: on the appendix route itself the full
+// rationale must render (the appendix re-renders question bodies via render()).
+const onAnswersRoute = Astro.url.pathname.replace(/\/+$/, '').endsWith('/answers');
+const asLink = appendix && !onAnswersRoute;
 ---
-<details class="question-rationale">
-  <summary>{title}</summary>
-  <div class="question-rationale-body"><slot /></div>
-</details>
+{asLink ? (
+  <p class="question-rationale-ref">
+    <a href={`/answers#answer-${forId}`}>{title} →</a>
+  </p>
+) : (
+  <details class="question-rationale">
+    <summary>{title}</summary>
+    <div class="question-rationale-body"><slot /></div>
+  </details>
+)}
 
 <style>
-  .question-rationale {
+  .question-rationale,
+  .question-rationale-ref {
     margin-block: 0.75rem;
     border-inline-start: 3px solid var(--color-accent, #4f46e5);
     padding-inline-start: 0.75rem;
   }
   .question-rationale > summary {
     cursor: pointer;
+    font-weight: 600;
+    color: var(--color-accent, #4f46e5);
+  }
+  .question-rationale-ref > a {
     font-weight: 600;
     color: var(--color-accent, #4f46e5);
   }

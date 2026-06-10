@@ -24,6 +24,7 @@ export const toolsProfile = defineProfile({
     exercises: false,       // v4.4.0: opt-in per book
     practiceExam: false,    // v4.17.0 #112: opt-in per book; requires src/content/questions/
     glossary: false,        // v4.19.0 #115: opt-in per book; requires src/content/glossary/
+    answers: false, // v4.21.0 #114: opt-in per book; requires src/content/questions/
     landing: true,          // v4.5.0: auto-inject minimal root landing
   },
   styles: [

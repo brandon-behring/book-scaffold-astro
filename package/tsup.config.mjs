@@ -17,6 +17,7 @@ export default defineConfig({
     // SSR breaks with `ReferenceError: React is not defined`.
     'components/ToolFilter': 'components/ToolFilter.tsx',
     'components/VersionSelector': 'components/VersionSelector.tsx',
+    'components/ExamRunner': 'components/ExamRunner.tsx',
   },
   esbuildOptions(options) {
     options.jsx = 'automatic';

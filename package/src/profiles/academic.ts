@@ -27,6 +27,7 @@ export const academicProfile = defineProfile({
     exercises: false,       // v4.4.0: opt-in per book; requires build-exercises
     practiceExam: false,    // v4.17.0 #112: opt-in per book; requires src/content/questions/
     glossary: false,        // v4.19.0 #115: opt-in per book; requires src/content/glossary/
+    answers: false, // v4.21.0 #114: opt-in per book; requires src/content/questions/
     landing: true,          // v4.5.0: auto-inject minimal root landing; consumers override via src/pages/index.astro
   },
   styles: ['tokens.css', 'layout.css', 'callouts.css', 'chapter.css', 'typography.css', 'print.css'],

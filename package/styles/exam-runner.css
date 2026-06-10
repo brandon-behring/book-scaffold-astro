@@ -1,0 +1,90 @@
+/* ExamRunner island (v4.21.0, #112-UI/#113) — imported by practice-exam.astro
+ * and AssessmentTest.astro (framework-component markup is outside Astro's
+ * style scoping, so these ship as a plain stylesheet like tool-filter.css).
+ * Colors via design tokens only; recolors with [data-theme] automatically. */
+
+.exam-runner {
+  margin-block: 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--color-accent, #4f46e5);
+  border-radius: 0.5rem;
+  background: var(--color-surface, transparent);
+}
+
+.exam-runner-empty {
+  color: var(--color-text-muted, #6b7280);
+  font-style: italic;
+}
+
+.exam-runner-intro,
+.exam-runner-status {
+  margin-block: 0 0.75rem;
+  font-size: 0.95rem;
+}
+
+.exam-runner-count-label {
+  display: inline-block;
+  margin-block-end: 0.75rem;
+  margin-inline-end: 1rem;
+  font-size: 0.95rem;
+}
+
+.exam-runner-count {
+  width: 4.5rem;
+  padding: 0.15rem 0.35rem;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 0.25rem;
+  background: var(--color-bg, transparent);
+  color: inherit;
+  font: inherit;
+}
+
+.exam-runner-button {
+  cursor: pointer;
+  padding: 0.35rem 0.9rem;
+  margin-inline-end: 0.5rem;
+  border: 1px solid var(--color-accent, #4f46e5);
+  border-radius: 0.35rem;
+  background: transparent;
+  color: var(--color-accent, #4f46e5);
+  font: inherit;
+  font-weight: 600;
+}
+
+.exam-runner-start,
+.exam-runner-submit {
+  background: var(--color-accent, #4f46e5);
+  color: var(--color-bg, #fff);
+}
+
+.exam-runner-score {
+  font-size: 1.15rem;
+  margin-block: 0 0.75rem;
+}
+
+.exam-runner-domains {
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin-block-end: 0.75rem;
+}
+
+.exam-runner-domains th,
+.exam-runner-domains td {
+  border: 1px solid var(--color-border, #e5e7eb);
+  padding: 0.3rem 0.6rem;
+  text-align: start;
+}
+
+.exam-runner-domains th[scope='row'] { text-transform: capitalize; }
+
+.exam-runner-weak th[scope='row'],
+.exam-runner-weak td {
+  color: var(--color-danger, #b91c1c);
+}
+
+.exam-runner-weak-mark { font-weight: 600; }
+
+.exam-runner-routing { margin-block-end: 0.75rem; }
+.exam-runner-routing-lead { margin-block: 0 0.35rem; font-weight: 600; }
+.exam-runner-routing-list { margin-block: 0; }
+.exam-runner-routing-domain { text-transform: capitalize; }

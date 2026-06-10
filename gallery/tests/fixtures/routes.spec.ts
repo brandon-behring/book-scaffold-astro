@@ -33,6 +33,9 @@ const FIXTURES: { name: string; port: number; routes: string[] }[] = [
     port: 4178,
     // v4.17.0 (#112/#117): /practice-exam (questions collection → static bank
     // with reveals) + /objective-map (auto-derived domain×chapter coverage).
+    // v4.21.0 (#112-UI/#113/#114): /practice-exam gains the ExamRunner island;
+    // /assessment-test mounts <AssessmentTest>; /answers is the rationale
+    // appendix. Interaction coverage lives in exam-interaction.spec.ts.
     routes: [
       '/',
       '/chapters/01-tips/',
@@ -41,6 +44,8 @@ const FIXTURES: { name: string; port: number; routes: string[] }[] = [
       '/exercises/',
       '/practice-exam/',
       '/objective-map/',
+      '/assessment-test/',
+      '/answers/',
     ],
   },
 ];
