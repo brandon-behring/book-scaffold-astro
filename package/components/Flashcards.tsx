@@ -64,7 +64,14 @@ export default function Flashcards({ deck }: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setKnown(readKnown());
+    // Intersect the stored bucket with the CURRENT deck: a term deleted from
+    // the glossary would otherwise inflate "marked known" forever (even past
+    // deck.length) — evict stale ids on mount and persist the cleaned set.
+    const stored = readKnown();
+    const deckIds = new Set(deck.map((c) => c.id));
+    const cleaned = new Set([...stored].filter((id) => deckIds.has(id)));
+    if (cleaned.size !== stored.size) writeKnown(cleaned);
+    setKnown(cleaned);
   }, []);
 
   function requireRoot(): HTMLElement {
