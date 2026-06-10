@@ -385,6 +385,21 @@ for (const rel of chapterFiles) {
     }
   }
 
+  // <Rationale appendix> in CHAPTER bodies (v4.21.0, #114): same missing-for=
+  // pre-flight as the questions scan below (the for===id rule is
+  // question-file-scoped and doesn't apply here). The component still throws
+  // at build either way; this just catches it at the earliest gate.
+  for (const m of content.matchAll(/<Rationale\b([^>]*)>/g)) {
+    const attrs = m[1];
+    if (/(^|\s)appendix(\s|=|$)/.test(attrs) && !/\bfor\s*=/.test(attrs)) {
+      fail(
+        rel,
+        lineOf(content, m.index),
+        `<Rationale appendix> without for="<question-id>" — no appendix anchor target; throws at build.`,
+      );
+    }
+  }
+
   // 9. Learning-objective anchor binding (#130). Convention (consumer-defined
   //    `los` frontmatter, guides-ai-engineering): each `los[].anchor` slug has
   //    a matching MDX comment marker in the prose binding the objective to its
@@ -494,6 +509,33 @@ let questionsChecked = 0;
             qrel,
             1,
             `Question domain "${domainMatch[1].trim()}" not in defineBookConfig examDomains (${[...examDomains].join(', ') || 'none'}). Register it or fix the value.`,
+          );
+        }
+      }
+
+      // v4.21.0 (#114): <Rationale appendix> needs for= (the /answers#answer-<id>
+      // anchor target) — the component throws at build; flag it here, earlier,
+      // the same way #7 pre-flights BookLink. Inside a question's own body the
+      // natural invariant is for= === this file's frontmatter id — a mismatch
+      // (copy-paste drift) anchors the reader to the wrong (or no) answer,
+      // which the component CAN'T check (it has no collection access).
+      // `(^|\s)appendix(\s|=|$)` anchors the bare prop so prose like
+      // title="See the appendix" can't false-fire.
+      for (const m of content.matchAll(/<Rationale\b([^>]*)>/g)) {
+        const attrs = m[1];
+        if (!/(^|\s)appendix(\s|=|$)/.test(attrs)) continue;
+        const forMatch = attrs.match(/\bfor\s*=\s*["']([^"']+)["']/);
+        if (!forMatch) {
+          fail(
+            qrel,
+            lineOf(content, m.index),
+            `<Rationale appendix> without for="<question-id>" — no appendix anchor target; throws at build.`,
+          );
+        } else if (idMatch && forMatch[1] !== idMatch[1].trim()) {
+          fail(
+            qrel,
+            lineOf(content, m.index),
+            `<Rationale appendix for="${forMatch[1]}"> does not match this question's id "${idMatch[1].trim()}" — the /answers anchor would land on the wrong (or no) answer.`,
           );
         }
       }

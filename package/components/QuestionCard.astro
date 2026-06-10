@@ -1,0 +1,166 @@
+---
+/**
+ * QuestionCard — one server-rendered question card (v4.21.0, #112-UI/#113).
+ *
+ * The shared partial between /practice-exam and <AssessmentTest>: renders the
+ * MDX stem (passed as a rendered Content component — stems can't cross into
+ * island props), MCQ options as radio inputs the ExamRunner island reads on
+ * submit, and the answer behind the static <details> reveal (the no-JS
+ * fallback — radios still work as a manual self-check without the island).
+ *
+ * DOM contract with ExamRunner.tsx (see its module doc): data-question-id /
+ * data-exam-scoreable on the article; input[name="exam-<id>"] per option;
+ * details.question-reveal. The exam-phase CSS lives here (with :global() for
+ * the [data-exam-phase] ancestor the island sets on the wrapper section):
+ * answers hide during an active exam, cards get a result border on review.
+ */
+import type { Question } from '../src/schemas.js';
+
+interface Props {
+  /** The question's frontmatter (CollectionEntry data). */
+  data: Question;
+  /** The rendered MDX stem, or null for reserved (cloze) questions. */
+  Content: any | null;
+  /** True for cloze — schema-accepted, render-deferred. */
+  reserved: boolean;
+}
+const { data, Content, reserved } = Astro.props;
+
+const scoreable = data.type === 'mcq' && (data.options?.length ?? 0) > 0;
+const correct = data.type === 'mcq' && data.options
+  ? data.options.find((o) => o.correct)
+  : undefined;
+
+/** Filled/hollow diamonds for a 1–4 difficulty, mirroring Practice.astro. */
+function difficultyMarks(d: string | undefined): string {
+  if (!d) return '';
+  const n = Number.parseInt(d, 10);
+  return '◆'.repeat(n) + '◇'.repeat(4 - n);
+}
+---
+<article
+  class="question"
+  id={`question-${data.id}`}
+  data-question-id={data.id}
+  data-question-domain={data.domain}
+  data-exam-scoreable={scoreable ? 'true' : 'false'}
+>
+  <header class="question-header">
+    <span class="question-meta-id">{data.id}</span>
+    <span class="question-meta-type">{data.type}</span>
+    {data.bloom_level && <span class="question-meta-bloom">{data.bloom_level}</span>}
+    {data.difficulty && (
+      <span class="question-meta-difficulty" aria-label={`Difficulty ${data.difficulty} of 4`}>
+        {difficultyMarks(data.difficulty)}
+      </span>
+    )}
+  </header>
+
+  {reserved ? (
+    <p class="question-reserved">
+      Cloze question — interactive rendering deferred to a later release.
+    </p>
+  ) : (
+    Content && (
+      <div class="question-stem"><Content /></div>
+    )
+  )}
+
+  {data.type === 'mcq' && data.options && (
+    <fieldset class="question-options">
+      <legend class="question-options-legend">Options</legend>
+      {data.options.map((o) => (
+        <label class="question-option">
+          <input type="radio" name={`exam-${data.id}`} value={o.id} />
+          <span class="question-option-key">{o.id}.</span>
+          <span class="question-option-text">{o.text ?? o.id}</span>
+        </label>
+      ))}
+    </fieldset>
+  )}
+
+  {!reserved && (
+    <details class="question-reveal">
+      <summary>Show answer</summary>
+      {data.type === 'mcq' && correct && (
+        <p class="question-answer-line">
+          Correct: <strong>{correct.text ?? correct.id}</strong>
+        </p>
+      )}
+      {data.type === 'free' && data.answer && (
+        <p class="question-answer-line">{data.answer}</p>
+      )}
+    </details>
+  )}
+</article>
+
+<style>
+  .question {
+    margin-block: 1.25rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.5rem;
+    background: var(--color-surface, transparent);
+  }
+  .question-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 0.78rem;
+    color: var(--color-text-muted, #6b7280);
+    margin-block-end: 0.5rem;
+  }
+  .question-meta-id { font-family: var(--font-mono, ui-monospace, monospace); }
+  .question-meta-type,
+  .question-meta-bloom {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.05rem 0.4rem;
+    border-radius: 0.25rem;
+    background: var(--color-code-bg, rgba(127, 127, 127, 0.12));
+  }
+  .question-meta-difficulty { margin-inline-start: auto; letter-spacing: 0.1em; }
+  .question-options {
+    margin-block: 0.6rem;
+    border: none;
+    padding: 0;
+  }
+  .question-options-legend {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .question-option {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+    margin-block: 0.25rem;
+    cursor: pointer;
+  }
+  .question-option-key { color: var(--color-text-muted, #6b7280); }
+  .question-reveal { margin-block-start: 0.6rem; }
+  .question-reveal > summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--color-accent, #4f46e5);
+  }
+  .question-answer-line { margin-block: 0.5rem 0.25rem; }
+  .question-reserved { color: var(--color-text-muted, #6b7280); font-style: italic; }
+
+  /* Exam phases (ExamRunner island sets data-exam-phase on the wrapper
+     section): no peeking at answers during an active exam; result borders +
+     re-opened reveals on review. :global() crosses the wrapper's scope — the
+     element side stays scoped to this card. */
+  :global([data-exam-phase='active']) .question-reveal { display: none; }
+  .question[data-exam-result='correct'] {
+    border-color: var(--color-success, #15803d);
+    box-shadow: inset 3px 0 0 var(--color-success, #15803d);
+  }
+  .question[data-exam-result='incorrect'] {
+    border-color: var(--color-danger, #b91c1c);
+    box-shadow: inset 3px 0 0 var(--color-danger, #b91c1c);
+  }
+</style>

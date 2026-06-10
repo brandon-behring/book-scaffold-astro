@@ -155,6 +155,18 @@ export {
   type DomainScore,
 } from './lib/exam-engine.js';
 
+// v4.21.0 (#112-UI/#113): pure manifest/routing bridge between the questions
+// collection and the ExamRunner island — scoreable-MCQ filtering, weak-domain →
+// chapter routing (string chapters link, numeric chapters label — no fabricated
+// URLs), and the cross-domain assessment blueprint. Unit-tested in
+// tests/exam-manifest.test.mjs.
+export {
+  buildExamManifest,
+  deriveDomainRouting,
+  spreadBlueprint,
+  type RoutingChapter,
+} from './lib/exam-manifest.js';
+
 // v4.19.0 (#111): pure PartReview selection — filter chapters by `part` (String-
 // coerced), sort to book order (chapterSortKey), join the build-exercises index.
 // No DOM; PartReview.astro renders it. Unit-tested in tests/part-review.test.mjs.

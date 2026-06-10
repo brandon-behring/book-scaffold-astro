@@ -1,0 +1,124 @@
+---
+/**
+ * <AssessmentTest> — whole-book front-matter assessment test (v4.21.0, #113).
+ *
+ * The Sybex-style "where do I stand?" diagnostic: a cross-domain sampled form
+ * drawn from the WHOLE question bank, scored client-side with a weak-domain
+ * readout that routes the reader to the chapters carrying those domains'
+ * questions. Drop into a front-matter / intro page (like <ObjectiveMap>);
+ * any profile.
+ *
+ * Server side (this file): presence-gate the questions collection, fail loud on
+ * unregistered domains (assertKnownDomain), render every scoreable MCQ as a
+ * QuestionCard (stems are MDX — they can't cross into island props), and mount
+ * the ExamRunner island in assessment mode with the pure manifest + the
+ * domain→chapters routing map (deriveDomainRouting: string chapters link to
+ * /chapters/<slug>/, numeric chapters render as labels — no fabricated URLs).
+ * Cross-domain spread is the island's blueprint (spreadBlueprint).
+ *
+ * free/cloze questions are omitted here entirely (not just hidden): the
+ * assessment is the scored diagnostic, while /practice-exam remains the
+ * complete bank listing.
+ *
+ * No-JS fallback: the cards render with radios as a manual self-check and
+ * <details> answer reveals.
+ */
+import bookConfig from 'virtual:book-scaffold/book-config';
+import { render } from 'astro:content';
+import QuestionCard from './QuestionCard.astro';
+import ExamRunner from '@brandon_m_behring/book-scaffold-astro/components/ExamRunner';
+import { getAllQuestions } from '../src/lib/questions';
+import { assertKnownDomain } from '../src/lib/exam-domains';
+import { buildExamManifest, deriveDomainRouting } from '../src/lib/exam-manifest';
+import '../styles/exam-runner.css';
+
+interface Props {
+  /** Heading above the test. Defaults to "Assessment test". */
+  title?: string;
+  /** Default form size (clamped to the scoreable pool). Defaults to 12. */
+  count?: number;
+  /** Weak-domain threshold (0–1) passed to scoreExam. Defaults to 0.7. */
+  passMark?: number;
+}
+const { title = 'Assessment test', count, passMark } = Astro.props;
+
+// Fail loud on prop misuse (v4.15.0 closed-union-props line): passMark={70}
+// (percent-vs-fraction confusion) would silently flag EVERY domain weak on
+// every run — confidently-wrong output, the exact class this repo forbids.
+if (passMark !== undefined && !(passMark > 0 && passMark <= 1)) {
+  throw new Error(
+    `<AssessmentTest passMark={${passMark}}> — passMark is a fraction in (0, 1] ` +
+      `(e.g. 0.7 for 70%), not a percent.`,
+  );
+}
+if (count !== undefined && (!Number.isInteger(count) || count < 1)) {
+  throw new Error(
+    `<AssessmentTest count={${count}}> — count must be a positive integer.`,
+  );
+}
+
+// Presence-gate: only touch the collection when the directory holds files
+// (same twin-gate as <ObjectiveMap> / practice-exam.astro).
+const questionModules = import.meta.glob('/src/content/questions/**/*.{md,mdx}', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+const hasQuestions = Object.keys(questionModules).length > 0;
+
+const entries = hasQuestions ? await getAllQuestions() : [];
+
+// Fail loud: an unregistered/typo'd domain must throw at build, not silently
+// skew the assessment's domain spread.
+for (const e of entries) {
+  assertKnownDomain(bookConfig.examDomains, e.data.domain, { id: e.data.id });
+}
+
+// entries are already draft-filtered (getAllQuestions filters !draft), so this
+// is type-shape filtering only — it matches buildExamManifest's pool exactly,
+// which is what the island's drift guard assumes.
+const scoreable = entries.filter(
+  (e) => e.data.type === 'mcq' && (e.data.options?.length ?? 0) > 0,
+);
+const manifest = buildExamManifest(entries);
+const domainRouting = deriveDomainRouting(entries);
+const practiceExamHref = (bookConfig.enabledRoutes ?? []).includes('practiceExam')
+  ? '/practice-exam'
+  : null;
+
+const rendered = await Promise.all(
+  scoreable.map(async (e) => ({ data: e.data, Content: (await render(e)).Content })),
+);
+---
+{!hasQuestions ? (
+  <p class="assessment-empty">
+    No questions found under <code>src/content/questions/</code> — the assessment
+    test draws from the question bank. Add question MDX files and declare your
+    <code>examDomains</code> in <code>defineBookConfig</code>.
+  </p>
+) : (
+  <section class="assessment-test" data-exam-root aria-label={title}>
+    <h2 class="assessment-title">{title}</h2>
+    {/* Without JS the island's Start button would render dead — hide the
+        controls; the cards below remain a manual self-check. */}
+    <noscript><style is:inline>.exam-runner { display: none; }</style></noscript>
+    <ExamRunner
+      client:idle
+      mode="assessment"
+      manifest={manifest}
+      count={count}
+      passMark={passMark}
+      domainRouting={domainRouting}
+      practiceExamHref={practiceExamHref}
+    />
+    {rendered.map((q) => (
+      <QuestionCard data={q.data} Content={q.Content} reserved={false} />
+    ))}
+  </section>
+)}
+
+<style>
+  .assessment-test { margin-block: 1.5rem; }
+  .assessment-title { margin-block-end: 0.5rem; }
+  .assessment-empty { color: var(--color-text-muted, #6b7280); }
+</style>

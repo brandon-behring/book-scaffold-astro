@@ -42,6 +42,7 @@
     },
     "./package.json": "./package.json",
     "./components/AICollaborationDisclosure.astro": "./components/AICollaborationDisclosure.astro",
+    "./components/AssessmentTest.astro": "./components/AssessmentTest.astro",
     "./components/BlockedByCallout.astro": "./components/BlockedByCallout.astro",
     "./components/BookLink.astro": "./components/BookLink.astro",
     "./components/CaseStudy.astro": "./components/CaseStudy.astro",
@@ -77,6 +78,7 @@
     "./components/Practice.astro": "./components/Practice.astro",
     "./components/PreReleaseBanner.astro": "./components/PreReleaseBanner.astro",
     "./components/Provenance.astro": "./components/Provenance.astro",
+    "./components/QuestionCard.astro": "./components/QuestionCard.astro",
     "./components/Rationale.astro": "./components/Rationale.astro",
     "./components/Recovery.astro": "./components/Recovery.astro",
     "./components/ResultBox.astro": "./components/ResultBox.astro",
@@ -101,6 +103,10 @@
       "types": "./dist/components/VersionSelector.d.ts",
       "import": "./dist/components/VersionSelector.mjs"
     },
+    "./components/ExamRunner": {
+      "types": "./dist/components/ExamRunner.d.ts",
+      "import": "./dist/components/ExamRunner.mjs"
+    },
     "./components/WarnBox.astro": "./components/WarnBox.astro",
     "./components/WeekRef.astro": "./components/WeekRef.astro",
     "./components/WorkedExample.astro": "./components/WorkedExample.astro",
@@ -115,6 +121,7 @@
     "./styles/convergence.css": "./styles/convergence.css",
     "./styles/poc-layouts.css": "./styles/poc-layouts.css",
     "./styles/tool-filter.css": "./styles/tool-filter.css",
+    "./styles/exam-runner.css": "./styles/exam-runner.css",
     "./layouts/Base.astro": "./layouts/Base.astro",
     "./layouts/Chapter.astro": "./layouts/Chapter.astro",
     "./lib": {

@@ -17,6 +17,9 @@ export default await defineBookConfig({
     tips: true,
     exercises: true,
     practiceExam: true,
+    // v4.21.0 (#114): answer-rationale back-appendix; q-arrays-bounds uses
+    // <Rationale appendix for=…> which throws at build unless this is on.
+    answers: true,
     // This fixture owns src/pages/index.astro — declare the landing override
     // so the scaffold doesn't inject a colliding "/" (#129).
     landing: false,
