@@ -23,9 +23,12 @@ export default defineConfig({
     options.jsxImportSource = 'preact';
   },
   format: ['esm'],
-  // dts.resolve inlines cross-entry types into each entry's .d.ts so tsup
-  // doesn't emit a shared `types-<hash>.d.ts` file that leaks into the
-  // published tarball.
+  // dts.resolve inlines EXTERNAL types into the .d.ts output. It does NOT
+  // inline cross-entry sharing: types reachable from more than one entry
+  // (index + schemas) are emitted as a shared `types-<hash>.d.ts` chunk
+  // that both entries re-export from. That chunk MUST ship in the tarball —
+  // a build that drops it breaks every re-routed type for TS consumers
+  // while runtime stays green (#133). `npm run check:types` guards this.
   dts: { resolve: true },
   outDir: 'dist',
   // Match the exports map (`./dist/index.mjs`, `./dist/lib/katex-macros.mjs`).

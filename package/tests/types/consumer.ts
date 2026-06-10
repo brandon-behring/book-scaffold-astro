@@ -1,0 +1,56 @@
+/**
+ * Type-surface guard (#133).
+ *
+ * Imports the symbols that dist/index.d.ts re-exports through the shared
+ * hashed declaration chunk (dist/types-<hash>.d.ts). If a build stops
+ * shipping that file — as `tsup && rm -f dist/types-*.d.ts` did — runtime
+ * stays green (dist/index.mjs is self-contained) so node:test never
+ * notices, while every symbol below silently degrades to `any` for
+ * TypeScript consumers: tsc reports the unresolved import only *inside*
+ * the .d.ts, which skipLibCheck suppresses (and skipLibCheck:false drowns
+ * in third-party d.ts noise — astro/unstorage optional peers).
+ *
+ * So each symbol is guarded by inversion: a deliberately illegal
+ * assignment under `@ts-expect-error`. A real type rejects the assignment
+ * and the directive consumes that error; a degraded `any` accepts it and
+ * the directive itself fails the build (TS2578 "Unused '@ts-expect-error'
+ * directive") — an error in THIS file, which skipLibCheck never skips.
+ * (`0 extends 1 & T` any-detection does NOT work here: the unresolved
+ * import yields TS's error type, which collapses the conditional so both
+ * branches satisfy.)
+ *
+ * `npm run check:types` compiles this against the built dist via package
+ * self-reference — the same exports-map path a real consumer resolves.
+ */
+import type {
+  GlossaryTerm,
+  PartialRouteToggles,
+  Question,
+  RouteToggles,
+} from '@brandon_m_behring/book-scaffold-astro';
+import {
+  glossarySchema,
+  questionSchema,
+} from '@brandon_m_behring/book-scaffold-astro';
+import { defineBookSchemas } from '@brandon_m_behring/book-scaffold-astro/schemas';
+
+declare const glossaryTerm: GlossaryTerm;
+declare const routeToggles: RouteToggles;
+declare const partialRouteToggles: PartialRouteToggles;
+declare const question: Question;
+
+// Each line must keep erroring; if one stops, that symbol degraded to `any`.
+// @ts-expect-error GlossaryTerm is a real object type, never a number
+export const guardGlossaryTerm: number = glossaryTerm;
+// @ts-expect-error RouteToggles is a real object type, never a number
+export const guardRouteToggles: number = routeToggles;
+// @ts-expect-error PartialRouteToggles is a real object type, never a number
+export const guardPartialRouteToggles: number = partialRouteToggles;
+// @ts-expect-error Question is a real object type, never a number
+export const guardQuestion: number = question;
+// @ts-expect-error glossarySchema is a real zod schema, never a number
+export const guardGlossarySchema: number = glossarySchema;
+// @ts-expect-error questionSchema is a real zod schema, never a number
+export const guardQuestionSchema: number = questionSchema;
+// @ts-expect-error defineBookSchemas is a real function, never a number
+export const guardDefineBookSchemas: number = defineBookSchemas;
