@@ -53,6 +53,9 @@ jobs:
       - name: Test (node:test against fixtures)
         run: npm test
 
+      - name: Type-surface check (consumer-facing .d.ts resolves — #133)
+        run: npm run check:types
+
       - name: Verify exports map shape
         run: |
           test -f dist/index.mjs    || (echo "missing dist/index.mjs" && exit 1)
