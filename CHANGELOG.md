@@ -2,7 +2,7 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
-## [4.20.0] — unreleased
+## [4.20.0] — 2026-06-10
 
 Minor release. A consumer-feedback triage batch from `guides-ai-engineering` — two new `validate` surfaces and a blessed multi-guide recipe. Continues the fail-loud line: both validate additions convert silently-green authoring drift into named, located errors.
 
