@@ -141,6 +141,31 @@ export {
   distinctChaptersSorted,
 } from './lib/questions-derive.js';
 
+// v4.19.0 (#112): pure practice-exam engine — sampling (per-domain blueprint) +
+// scoring (per-domain rollup + weak-domain routing). No DOM/Preact; the
+// PracticeExam / AssessmentTest islands are thin UI over these. Unit-tested in
+// tests/exam-engine.test.mjs.
+export {
+  shuffle,
+  sampleExam,
+  scoreExam,
+  type ExamQuestion,
+  type ExamBlueprint,
+  type ExamResult,
+  type DomainScore,
+} from './lib/exam-engine.js';
+
+// v4.19.0 (#111): pure PartReview selection — filter chapters by `part` (String-
+// coerced), sort to book order (chapterSortKey), join the build-exercises index.
+// No DOM; PartReview.astro renders it. Unit-tested in tests/part-review.test.mjs.
+export {
+  selectPartExercises,
+  type ReviewExercise,
+  type ReviewChapter,
+  type PartReviewGroup,
+  type PartReviewSelection,
+} from './lib/part-review.js';
+
 // v4.0.0 defineStyle API: typed, named, importable config bundles composed
 // via `styles: [...]` in defineBookConfig. Replaces the v3 `preset:` shorthand.
 // See recipes/15-defining-styles.md + MIGRATION-v3-to-v4.md.
@@ -204,6 +229,9 @@ export {
   questionSchema,
   refineQuestion,
   refinedQuestionSchema,
+  // v4.19.0 (#115): study-guide glossary collection schema. Registered in
+  // schemas-entry.ts; consumed by /glossary + <Term>. Tested in tests/glossary.test.mjs.
+  glossarySchema,
 } from './schemas.js';
 
 // Inferred chapter types per profile (v3.3.0). Type-only re-export from
@@ -224,3 +252,7 @@ export type { Provenance } from './schemas.js';
 // v4.17.0 (Tier 3, #112): inferred question types for consumers building custom
 // study-guide surfaces over getCollection('questions').
 export type { Question, QuestionType, BloomLevel } from './schemas.js';
+
+// v4.19.0 (#115): inferred glossary-term type for consumers building custom
+// surfaces over getCollection('glossary').
+export type { GlossaryTerm } from './schemas.js';

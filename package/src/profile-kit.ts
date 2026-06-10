@@ -85,6 +85,14 @@ export interface RouteToggles {
    * src/content/questions/ directory.
    */
   practiceExam: boolean;
+  /**
+   * v4.19.0 (#115): auto-inject `/glossary` — a searchable key-terms glossary
+   * reading the `glossary` content collection (src/content/glossary/**), listed
+   * alphabetically with id anchors the inline `<Term id>` links to. Default
+   * `false` per profile — opt in via defineBookConfig({ routes: { glossary: true } })
+   * AND add a src/content/glossary/ directory.
+   */
+  glossary: boolean;
 }
 
 /** Profile definition — declarative shape for one book profile. */

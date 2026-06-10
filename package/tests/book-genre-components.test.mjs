@@ -148,3 +148,33 @@ test('ExerciseSolutions: provides slot for manually-placed <Solution> elements',
   const src = read('ExerciseSolutions');
   assert.match(src, /<slot\s*\/?>/);
 });
+
+// ===== PartReview (#111) =================================================
+
+test('PartReview: requires part (number | string), optional title', () => {
+  const src = read('PartReview');
+  assert.match(src, /part:\s*number\s*\|\s*string/);
+  assert.match(src, /title\?:\s*string/);
+});
+
+test('PartReview: reuses the build-exercises index (exercises.json)', () => {
+  const src = read('PartReview');
+  assert.match(src, /\/src\/data\/exercises\.json/);
+});
+
+test('PartReview: delegates selection to the pure selectPartExercises helper', () => {
+  const src = read('PartReview');
+  assert.match(src, /import \{ selectPartExercises \} from '\.\.\/src\/lib\/part-review'/);
+  assert.match(src, /selectPartExercises\(chapters, byChapter, part\)/);
+  assert.match(src, /getCollection\(['"]chapters['"]/);
+});
+
+test('PartReview: presence-gated build hint renders the real <code>, not a comment', () => {
+  const src = read('PartReview');
+  assert.match(src, /class="part-review"/);
+  // Match the RENDERED hint specifically — `build-exercises` also appears in the
+  // doc comment, so a loose /build-exercises/ would pass even if the hint block
+  // were deleted (the F7 false-confidence trap the review caught).
+  assert.match(src, /npx book-scaffold build-exercises<\/code>/);
+  assert.match(src, /No exercises found in this part's chapters yet\./);
+});

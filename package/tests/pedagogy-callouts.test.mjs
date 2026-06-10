@@ -122,3 +122,45 @@ test('PocLayout: exports PocLayoutKind type publicly', () => {
   const src = readComponent('PocLayout');
   assert.match(src, /export type PocLayoutKind/);
 });
+
+// ===== Diagnostic (#110) =================================================
+
+test('Diagnostic: default title is "Do I know this already?"', () => {
+  const src = readComponent('Diagnostic');
+  assert.match(src, /title = ['"]Do I know this already\?['"]/, 'default title literal');
+});
+
+test('Diagnostic: default skimTo is "Exam essentials"', () => {
+  const src = readComponent('Diagnostic');
+  assert.match(src, /skimTo = ['"]Exam essentials['"]/, 'default skimTo literal');
+});
+
+test('Diagnostic: renders .callout-diagnostic class', () => {
+  const src = readComponent('Diagnostic');
+  assert.match(src, /class="callout callout-diagnostic"/);
+});
+
+test('Diagnostic: accepts optional title / skimTo / routing props', () => {
+  const src = readComponent('Diagnostic');
+  assert.match(src, /title\?:\s*string/);
+  assert.match(src, /skimTo\?:\s*string/);
+  assert.match(src, /routing\?:\s*string/);
+});
+
+test('Diagnostic: emits a "Diagnostic" chip', () => {
+  const src = readComponent('Diagnostic');
+  assert.match(src, /class="callout-chip"/);
+  assert.match(src, />Diagnostic</);
+});
+
+test('Diagnostic: optional "answers" slot is presence-gated via Astro.slots.has', () => {
+  const src = readComponent('Diagnostic');
+  assert.match(src, /Astro\.slots\.has\(['"]answers['"]\)/, 'presence-gates the answers slot');
+  assert.match(src, /<slot name="answers"/);
+});
+
+test('Diagnostic: answer key uses native <details> for reveal (no JS)', () => {
+  const src = readComponent('Diagnostic');
+  assert.match(src, /<details class="callout-diagnostic-answers">/);
+  assert.match(src, /<summary>Check your answers<\/summary>/);
+});

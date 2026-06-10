@@ -210,6 +210,90 @@
   color: var(--color-text);
 }
 
+/* Teal — Diagnostic (#110). A blue+green blend held distinct from the plum
+ * Exercise/Practice and the warm pedagogy callouts. Pre-reading DIKTA
+ * self-check; title + "Diagnostic" chip in a header row, an optional answer
+ * key behind a native <details> reveal. */
+.callout-diagnostic {
+  border-left-color: var(--callout-diagnostic);
+  background: color-mix(in srgb, var(--warm-blue-tint) 50%, var(--warm-green-tint));
+}
+.callout-diagnostic-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+.callout-diagnostic-header .callout-title {
+  margin-bottom: 0;
+}
+.callout-diagnostic .callout-chip {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--callout-diagnostic);
+  border-radius: var(--radius-sm);
+  color: var(--callout-diagnostic);
+}
+.callout-diagnostic .callout-routing {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: var(--space-2) 0;
+}
+.callout-diagnostic-answers {
+  margin-top: var(--space-3);
+}
+.callout-diagnostic-answers > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--callout-diagnostic);
+}
+
+/* PartReview (#111) — Part-level interleaved exercise-review aggregation.
+ * A framed section aggregator (sibling to .exercise-solutions), not a
+ * left-bar callout — it collects a Part's <Exercise> items in one place. */
+.part-review {
+  margin: var(--space-8) 0 var(--space-6) 0;
+  padding: var(--space-5) var(--space-5) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+}
+.part-review-title {
+  margin: 0 0 var(--space-2) 0;
+}
+.part-review-summary {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-4);
+}
+.part-review-empty {
+  color: var(--color-text-muted);
+}
+.part-review-chapter {
+  margin-block: var(--space-4);
+}
+.part-review-chapter-title {
+  font-size: var(--text-base);
+  margin: 0 0 var(--space-2) 0;
+}
+.part-review-list {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+.part-review-item {
+  margin-block: var(--space-2);
+}
+.part-review-item-id {
+  font-family: var(--font-code);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin-right: var(--space-2);
+}
+
 /* ===== v4.3.0 book-genre family =====================================
  * Tip / TipsCard (Pragmatic Programmer precedent, #70)
  * Exercise / Practice / Solution / ExerciseSolutions (CS:APP, #71)

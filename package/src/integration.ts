@@ -149,6 +149,9 @@ const ROUTE_REGISTRY = {
   // v4.17.0 (Tier 3, #112): static practice question-bank. Opt-in via
   // routes.practiceExam: true; reads the `questions` collection + examDomains.
   practiceExam:{ pattern: '/practice-exam',       file: 'practice-exam.astro' },
+  // v4.19.0 (#115): searchable key-terms glossary. Opt-in via routes.glossary:
+  // true; reads the `glossary` collection (src/content/glossary/).
+  glossary:    { pattern: '/glossary',            file: 'glossary.astro' },
   // v4.5.0: minimal root landing page. Reads title/description/portfolio/routes
   // from vite.define-injected import.meta.env vars. Default-on per profile;
   // consumers with their own src/pages/index.astro override (file-system route

@@ -66,6 +66,7 @@ import {
   changelogSchema,
   patternsSchema,
   refinedQuestionSchema,
+  glossarySchema,
 } from './schemas.js';
 
 /**
@@ -190,6 +191,19 @@ export function defineBookSchemas(opts: BookSchemasOptions = {}) {
         base: './src/content/questions',
       }),
       schema: refinedQuestionSchema,
+    });
+  }
+
+  // v4.19.0 (#115): study-guide `glossary` collection — searchable key-terms.
+  // Same existsSync gate as questions: registered only when the consumer has a
+  // src/content/glossary/ directory, so books that don't use it see no error.
+  if (existsSync('./src/content/glossary')) {
+    collections.glossary = defineCollection({
+      loader: glob({
+        pattern: ['**/*.{md,mdx}', '!**/_*'],
+        base: './src/content/glossary',
+      }),
+      schema: glossarySchema,
     });
   }
 

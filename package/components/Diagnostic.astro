@@ -1,0 +1,56 @@
+---
+/**
+ * Diagnostic — pre-reading "Do I Know This Already?" self-check (#110).
+ *
+ * Pearson / Cisco-Press DIKTA pattern: a short retrieval list the reader
+ * attempts BEFORE reading, plus a skip/skim/read routing rubric — visually
+ * distinct from the post-chapter <Exercise>/<Practice>. Static: the optional
+ * answer key reveals via native <details> (no JS; the scored engine is the
+ * separate #112 increment). Pedagogically this is pre-testing (Bjork): a
+ * retrieval attempt before study strengthens later recall even when the guess
+ * is wrong, so the reader should try before peeking.
+ *
+ * Slots:
+ *   default     — the numbered question list (the retrieval items)
+ *   "answers"   — OPTIONAL collapsible answer key (rendered only when provided)
+ *
+ * Family: teal (--callout-diagnostic, a blue+green blend) — a cool hue held
+ * distinct from the warm pedagogy callouts (Pitfall crimson, WorkedExample
+ * plum, YouWillLearn gold) and the plum Exercise/Practice.
+ */
+interface Props {
+  /** Heading. Default "Do I know this already?". */
+  title?: string;
+  /** Section to skim ahead to when confident. Default "Exam essentials". */
+  skimTo?: string;
+  /** Full override of the routing sentence (else built from skimTo). */
+  routing?: string;
+}
+const {
+  title = 'Do I know this already?',
+  skimTo = 'Exam essentials',
+  routing,
+} = Astro.props;
+const hasAnswers = Astro.slots.has('answers');
+---
+<aside class="callout callout-diagnostic" role="note">
+  <div class="callout-diagnostic-header">
+    <strong class="callout-title">{title}</strong>
+    <span class="callout-chip">Diagnostic</span>
+  </div>
+  <p class="callout-routing">
+    {routing ? routing : (
+      <Fragment>
+        Answer these confidently and you can skim ahead to <strong>{skimTo}</strong>;
+        if any is shaky, read closely — each is developed below.
+      </Fragment>
+    )}
+  </p>
+  <div class="callout-body"><slot /></div>
+  {hasAnswers && (
+    <details class="callout-diagnostic-answers">
+      <summary>Check your answers</summary>
+      <div class="callout-body"><slot name="answers" /></div>
+    </details>
+  )}
+</aside>
