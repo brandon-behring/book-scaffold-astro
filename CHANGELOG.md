@@ -2,7 +2,7 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
-## [4.23.0] — unreleased
+## [4.23.0] — 2026-06-10
 
 Minor release. A consumer-driven fix from `ssm-foundations` (#135): the sidebar brand finally reads `defineBookConfig` instead of hardcoded placeholder strings — every consumer book had been shipping "Book / A scaffold-astro book" with no escape hatch short of forking the component.
 
