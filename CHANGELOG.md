@@ -2,9 +2,9 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
-## [4.19.0] — unreleased
+## [4.19.0] — 2026-06-09
 
-Minor release. Adds three static study-guide apparatus components after the v4.17 spine — **`<Diagnostic>`** (#110, the per-chapter DIKTA pre-reading self-check), **`<PartReview>`** (#111, Part-level interleaved `<Exercise>`-review aggregation), and a **searchable glossary** (#115, the `glossary` collection + `<Term>` + `/glossary`). All static (no new client islands): the scored engine remains the separate #112 increment.
+Minor release. Adds three static study-guide apparatus components after the v4.17 spine — **`<Diagnostic>`** (#110, the per-chapter DIKTA pre-reading self-check), **`<PartReview>`** (#111, Part-level interleaved `<Exercise>`-review aggregation), and a **searchable glossary** (#115, the `glossary` collection + `<Term>` + `/glossary`). All static (no new client islands): the scored engine remains the separate #112 increment. Also repairs the published **TypeScript type surface** (#133) — the shared `.d.ts` chunk now ships, with a CI guard so it can't silently regress.
 
 ### Added
 
