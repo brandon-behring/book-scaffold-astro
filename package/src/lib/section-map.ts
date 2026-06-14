@@ -51,10 +51,13 @@ export interface VisibleHeading {
  *      visible heading with the SMALLEST non-negative `top`. That's the section
  *      the reader has just scrolled to / is reading into.
  *   2. If every visible heading is above the fold (all `top` negative — e.g. a
- *      tall section whose own heading scrolled off, but nothing below it has
- *      entered yet), fall back to the one nearest the fold from above: the
+ *      heading STRADDLING the top edge: its top is slightly negative but its box
+ *      still overlaps the top zone, so it's intersecting yet has no non-negative
+ *      sibling below it), fall back to the one nearest the fold from above: the
  *      GREATEST `top` (closest to 0 from the negative side). That keeps the
- *      enclosing section lit instead of going dark mid-section.
+ *      enclosing section lit instead of going dark mid-section. (A heading whose
+ *      box FULLY scrolled above the top has left `inView` entirely — it isn't in
+ *      `visible` at all, and is handled by the empty-set → `prev` branch below.)
  *   3. If NOTHING is visible (the observer reports an empty set — between two
  *      sparse intersections, or scrolled past the last heading), retain `prev`
  *      so the highlight is sticky rather than flickering off.

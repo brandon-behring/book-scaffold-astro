@@ -7,6 +7,9 @@
  */
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { tocHeadings, pickActive } from '../dist/index.mjs';
 
 const h = (depth, slug, text = slug) => ({ depth, slug, text });
@@ -96,4 +99,41 @@ test('pickActive: exact-zero top counts as in view (>= 0), beats a negative', ()
 test('pickActive: total — never throws on degenerate input', () => {
   assert.doesNotThrow(() => pickActive([], null));
   assert.doesNotThrow(() => pickActive([{ slug: 'x', top: 0 }], null));
+});
+
+// ===== section-map.css sidenote handshake (source contract, #151) =====
+//
+// The gutter map and <Sidenote>s float into the SAME right column, so a chapter
+// with sidenotes must yield the gutter to them (map hidden, ChapterTOC kept as
+// the nav). That collision can't be unit-tested without a browser, but the CSS
+// rules that implement it CAN be asserted as a source contract — mirroring
+// margin-figure.test.mjs — so a future edit can't silently drop a handshake half.
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const sectionMapCss = readFileSync(
+  join(__dirname, '..', 'styles', 'section-map.css'),
+  'utf8',
+);
+
+// Pull a selector's rule body so `display: none` is asserted on THAT rule, not
+// merely somewhere in the file.
+const ruleBody = (css, selector) => {
+  const i = css.indexOf(selector);
+  if (i === -1) return null;
+  const open = css.indexOf('{', i);
+  const close = css.indexOf('}', open);
+  if (open === -1 || close === -1) return null;
+  return css.slice(open + 1, close);
+};
+
+test('section-map.css: a chapter WITH sidenotes suppresses the gutter map', () => {
+  const body = ruleBody(sectionMapCss, '.prose:has(.sidenote) .section-map');
+  assert.ok(body, '.prose:has(.sidenote) .section-map rule exists (#151 handshake)');
+  assert.match(body, /display:\s*none/);
+});
+
+test('section-map.css: a chapter WITHOUT sidenotes hides the collapsed ChapterTOC', () => {
+  const body = ruleBody(sectionMapCss, '.prose:not(:has(.sidenote)) .chapter-toc');
+  assert.ok(body, '.prose:not(:has(.sidenote)) .chapter-toc rule exists (#151 handshake)');
+  assert.match(body, /display:\s*none/);
 });

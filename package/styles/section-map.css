@@ -13,7 +13,10 @@
  * Visibility handshake with ChapterTOC (chapter.css): the gutter map shows ONLY
  * at >= 64rem (the sidebar/gutter breakpoint, where there's room for a margin
  * column); the collapsed top ChapterTOC is the < 64rem fallback. Each is hidden
- * in the other's range so they never double-show.
+ * in the other's range so they never double-show. At >= 64rem the handshake is
+ * ALSO sidenote-aware: the gutter is a single column the sidenotes already float
+ * into (layout.css), so a chapter with <Sidenote>s yields it back to them — the
+ * map hides and ChapterTOC stays as the nav (see the @media block below, #151).
  */
 
 /* Default (< 64rem): the gutter has no room — the collapsed ChapterTOC is the
@@ -28,10 +31,22 @@
 }
 
 @media (min-width: 64rem) {
-  /* Show the gutter map; hide the collapsed top TOC (chapter.css owns the
-   * .chapter-toc rule — overriding display here keeps the handshake in one
-   * file). */
-  .chapter-toc {
+  /* Sidenote-aware handshake (#151). The gutter map and <Sidenote>s float into
+   * the SAME ~28ch right column (layout.css), so they cannot coexist there:
+   *   - A chapter WITH sidenotes → the gutter belongs to the sidenotes; suppress
+   *     the map (else its sticky float overlaps the notes on scroll) and keep the
+   *     collapsed ChapterTOC visible as the nav.
+   *   - A chapter with NO sidenotes → the gutter map IS the nav; hide the
+   *     collapsed top ChapterTOC so the two don't double-show (the original
+   *     handshake).
+   * The suppressed .section-map stays in the DOM (display:none) — its island
+   * still runs but only toggles hidden links, which is harmless. (:has() is
+   * within the scaffold's CSS baseline — tokens.css already uses it.) */
+  .prose:has(.sidenote) .section-map {
+    display: none;
+  }
+
+  .prose:not(:has(.sidenote)) .chapter-toc {
     display: none;
   }
 

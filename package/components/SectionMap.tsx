@@ -73,6 +73,11 @@ export default function SectionMap({ headings }: Props) {
           `resolve to an element (#${headings.map((h) => h.slug).join(', #')}).`,
       );
     }
+    // The last tracked heading in document order (bound here, where the length
+    // guard above proves it exists — `at(-1)`'s type is still `Tracked | undefined`
+    // under noUncheckedIndexedAccess, so narrow it once). Used by the
+    // scrolled-to-bottom path to force the final section active.
+    const lastTracked = tracked[tracked.length - 1] as Tracked;
 
     // Link lookup by slug (CSS.escape on every slug used in a selector).
     function linkFor(slug: string): HTMLElement | null {
@@ -81,22 +86,17 @@ export default function SectionMap({ headings }: Props) {
       );
     }
 
-    // Current viewport-relative top of each tracked heading → pickActive input.
-    const slugFor = new Map<Element, string>(tracked.map((t) => [t.el, t.slug]));
+    // Which tracked headings are currently intersecting; recompute reads `tracked`
+    // (document order) and filters by membership so `visible` is document-ordered
+    // too — pickActive's "ties resolve to document order" then actually holds.
     const inView = new Set<Element>();
     let active: string | null = null;
 
-    function recompute(): void {
-      const visible: VisibleHeading[] = [];
-      for (const el of inView) {
-        const slug = slugFor.get(el);
-        if (slug === undefined) continue;
-        visible.push({ slug, top: el.getBoundingClientRect().top });
-      }
-      const next = pickActive(visible, active);
+    // Set the active slug: clear the previous link, light the next one. Toggle
+    // ONLY class/attr on existing SSR links → no layout shift. Shared by the
+    // observer path (via recompute) and the scrolled-to-bottom path below.
+    function setActive(next: string | null): void {
       if (next === active) return;
-      // Clear the previous link, light the next one. Toggle ONLY class/attr on
-      // existing SSR links → no layout shift.
       if (active !== null) {
         const prevLink = linkFor(active);
         if (prevLink) {
@@ -114,6 +114,18 @@ export default function SectionMap({ headings }: Props) {
       active = next;
     }
 
+    function recompute(): void {
+      // Iterate `tracked` (document order) filtering by inView — NOT the Set
+      // (insertion order) — so equal-top ties resolve to document order.
+      const visible: VisibleHeading[] = [];
+      for (const t of tracked) {
+        if (inView.has(t.el)) {
+          visible.push({ slug: t.slug, top: t.el.getBoundingClientRect().top });
+        }
+      }
+      setActive(pickActive(visible, active));
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -129,7 +141,26 @@ export default function SectionMap({ headings }: Props) {
     );
     for (const t of tracked) observer.observe(t.el);
 
-    return () => observer.disconnect();
+    // Last-section reachability: the -70% bottom margin confines "active" to the
+    // top 30% of the viewport, so a final heading with little content below it
+    // can never scroll INTO that zone — it would never light. When the page is
+    // scrolled to the bottom, force the LAST tracked heading active so the foot
+    // of the chapter always highlights its own section. Passive listeners (no
+    // preventDefault) keep scrolling smooth.
+    function onScroll(): void {
+      const atBottom =
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - 2;
+      if (atBottom) setActive(lastTracked.slug);
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
   }, [headings]);
 
   // A zero-footprint anchor: the island renders only this <span> so it can find

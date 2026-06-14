@@ -15,6 +15,8 @@ last_verified: 2026-05-23
 draft: false
 ---
 
+import Sidenote from '@brandon_m_behring/book-scaffold-astro/components/Sidenote.astro';
+
 # Math notation fixture
 
 Exercises KaTeX rendering of common probability / statistics notation in
@@ -27,7 +29,7 @@ through to the MDX layer as JSX expressions instead of intercepted by
 ## Expectation and variance
 
 The expected value of a random variable is $\mathbb{E}\{X\}$, and its
-variance is $\mathrm{Var}\{X\} = \mathbb{E}\{X^2\} - \mathbb{E}\{X\}^2$.
+variance is $\mathrm{Var}\{X\} = \mathbb{E}\{X^2\} - \mathbb{E}\{X\}^2$.<Sidenote>This chapter carries a sidenote so the #151 gutter handshake hides the section map here and keeps ChapterTOC as the nav.</Sidenote>
 
 Conditional expectation: $\mathbb{E}\{Y | X = x\}$.
 
