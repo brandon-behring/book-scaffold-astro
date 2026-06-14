@@ -1,0 +1,115 @@
+/* section-map.css — right-gutter sticky "On this page" scrollspy (#section-map).
+ *
+ * The SectionMap island is framework-component-driven markup outside Astro's
+ * style scoping, so its nav ships as a plain stylesheet (like exam-runner.css /
+ * flashcards.css). Colors via design tokens only — recolors with [data-theme]
+ * automatically.
+ *
+ * Layout: the nav lives in the .prose RIGHT gutter — the same ~28ch column the
+ * sidenotes float into (layout.css). It uses the identical float + negative
+ * margin-right technique so it sits beside the running text rather than pushing
+ * it, and is `position: sticky` so it tracks the reader down the page.
+ *
+ * Visibility handshake with ChapterTOC (chapter.css): the gutter map shows ONLY
+ * at >= 64rem (the sidebar/gutter breakpoint, where there's room for a margin
+ * column); the collapsed top ChapterTOC is the < 64rem fallback. Each is hidden
+ * in the other's range so they never double-show.
+ */
+
+/* Default (< 64rem): the gutter has no room — the collapsed ChapterTOC is the
+ * fallback. Hidden until the breakpoint opens it below. */
+.section-map {
+  display: none;
+}
+
+/* The island's mount node is a zero-footprint anchor; never shown. */
+.section-map-mount {
+  display: none !important;
+}
+
+@media (min-width: 64rem) {
+  /* Show the gutter map; hide the collapsed top TOC (chapter.css owns the
+   * .chapter-toc rule — overriding display here keeps the handshake in one
+   * file). */
+  .chapter-toc {
+    display: none;
+  }
+
+  .section-map {
+    display: block;
+    /* Float into the right margin — same technique as .sidenote: the negative
+     * margin-right pulls it into the gutter column so it sits beside the text
+     * instead of pushing the measure. */
+    float: right;
+    clear: right;
+    width: var(--measure-side);
+    margin-right: calc(-1 * (var(--measure-side) + var(--space-6)));
+    margin-top: 0.3rem;
+    margin-bottom: var(--space-3);
+    padding-left: var(--space-3);
+    border-left: var(--border-bar) solid var(--color-border);
+    /* Sticky: stay in view as the reader scrolls; cap height + scroll its own
+     * overflow so a long TOC never runs off-screen. */
+    position: sticky;
+    top: var(--space-8);
+    max-height: calc(100vh - 2 * var(--space-8));
+    overflow: auto;
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+  }
+
+  .section-map-label {
+    margin: 0 0 var(--space-1);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+
+  .section-map-title {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+    font-weight: 600;
+  }
+
+  .section-map-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+  }
+
+  .section-map-list li {
+    margin: var(--space-1) 0;
+  }
+
+  .section-map-list a {
+    display: block;
+    text-decoration: none;
+    color: var(--color-text-muted);
+    /* The active link gains a left border (border-bar); reserve its width on
+     * every link so lighting one doesn't shift the others horizontally. */
+    border-left: var(--border-bar) solid transparent;
+    padding-left: var(--space-2);
+    margin-left: calc(-1 * var(--space-2));
+    transition: color 120ms ease;
+  }
+
+  /* h3 links indent under their h2. */
+  .section-map-list a.toc-h3 {
+    padding-left: var(--space-5);
+  }
+
+  .section-map-list a:hover {
+    color: var(--color-link);
+  }
+
+  /* Active section (scrollspy): the island sets aria-current="page" + .active. */
+  .section-map-list a.active,
+  .section-map-list a[aria-current='page'] {
+    color: var(--color-link);
+    border-left-color: var(--color-link);
+    font-weight: 500;
+  }
+}

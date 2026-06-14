@@ -8,15 +8,22 @@
  *
  * If the chapter has fewer than 3 matching headings, the TOC renders
  * nothing — an anchor list for a short chapter is clutter.
+ *
+ * The h2/h3 filter is the shared `tocHeadings` (lib/section-map.ts) — the SAME
+ * one the right-gutter SectionMap island uses, so this collapsed fallback and
+ * the gutter map carry identical entries (#section-map). On desktop (>= 64rem)
+ * this <details> is CSS-hidden and the gutter map takes over; below it, this is
+ * the fallback.
  */
 import type { MarkdownHeading } from 'astro';
+import { tocHeadings } from '../src/lib/section-map';
 
 interface Props {
   headings: MarkdownHeading[];
 }
 const { headings } = Astro.props;
 
-const toc = headings.filter((h) => h.depth >= 2 && h.depth <= 3);
+const toc = tocHeadings(headings);
 const showToc = toc.length >= 3;
 ---
 {showToc && (

@@ -44,7 +44,7 @@ export const researchPortfolioProfile = defineProfile({
     flashcards: false, // v4.22.0 #116: opt-in per book; requires src/content/glossary/
     landing: true,               // v4.5.0: auto-inject minimal root landing
   },
-  styles: ['tokens.css', 'layout.css', 'callouts.css', 'chapter.css', 'typography.css', 'print.css'],
+  styles: ['tokens.css', 'layout.css', 'callouts.css', 'chapter.css', 'typography.css', 'print.css', 'section-map.css'],
   katex: true,                   // math is common in research content
   // v3.7.0 (#35): portfolio schema is a union of academic + tools shapes — fallback renderer dispatches per chapter via field presence
   chaptersRenderer: fallbackChaptersRenderer,

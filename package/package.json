@@ -82,6 +82,7 @@
     "./components/Rationale.astro": "./components/Rationale.astro",
     "./components/Recovery.astro": "./components/Recovery.astro",
     "./components/ResultBox.astro": "./components/ResultBox.astro",
+    "./components/SectionMap.astro": "./components/SectionMap.astro",
     "./components/Sidebar.astro": "./components/Sidebar.astro",
     "./components/Sidenote.astro": "./components/Sidenote.astro",
     "./components/SkillBox.astro": "./components/SkillBox.astro",
@@ -111,6 +112,10 @@
       "types": "./dist/components/Flashcards.d.ts",
       "import": "./dist/components/Flashcards.mjs"
     },
+    "./components/SectionMap": {
+      "types": "./dist/components/SectionMap.d.ts",
+      "import": "./dist/components/SectionMap.mjs"
+    },
     "./components/WarnBox.astro": "./components/WarnBox.astro",
     "./components/WeekRef.astro": "./components/WeekRef.astro",
     "./components/WorkedExample.astro": "./components/WorkedExample.astro",
@@ -127,6 +132,7 @@
     "./styles/tool-filter.css": "./styles/tool-filter.css",
     "./styles/exam-runner.css": "./styles/exam-runner.css",
     "./styles/flashcards.css": "./styles/flashcards.css",
+    "./styles/section-map.css": "./styles/section-map.css",
     "./layouts/Base.astro": "./layouts/Base.astro",
     "./layouts/Chapter.astro": "./layouts/Chapter.astro",
     "./lib": {

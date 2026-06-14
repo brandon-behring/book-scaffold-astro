@@ -172,6 +172,16 @@ export {
 // tested in tests/flashcards.test.mjs.
 export { buildFlashcardDeck, type FlashcardRef } from './lib/flashcards.js';
 
+// (#section-map): pure section-map logic — the shared h2/h3 TOC filter
+// (tocHeadings, used by both ChapterTOC.astro and the SectionMap island) and
+// the scrollspy active-pick (pickActive, fed IntersectionObserver state by the
+// island). No DOM/Preact; unit-tested in tests/section-map.test.mjs.
+export {
+  tocHeadings,
+  pickActive,
+  type VisibleHeading,
+} from './lib/section-map.js';
+
 // v4.19.0 (#111): pure PartReview selection — filter chapters by `part` (String-
 // coerced), sort to book order (chapterSortKey), join the build-exercises index.
 // No DOM; PartReview.astro renders it. Unit-tested in tests/part-review.test.mjs.

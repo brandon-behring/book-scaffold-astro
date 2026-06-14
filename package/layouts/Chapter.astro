@@ -25,6 +25,7 @@ import Base from './Base.astro';
 import bookConfig from 'virtual:book-scaffold/book-config';
 import ChapterHeader from '../components/ChapterHeader.astro';
 import ChapterTOC from '../components/ChapterTOC.astro';
+import SectionMap from '../components/SectionMap.astro';
 import ChapterNav from '../components/ChapterNav.astro';
 
 interface Props {
@@ -44,6 +45,30 @@ const articlePublished = (entry.data as { published?: Date }).published;
 const articleUpdated = (entry.data as { updated?: Date }).updated;
 const articleTags = ((entry.data as { tags?: string[] }).tags ?? []) as string[];
 const chapterImage = (entry.data as { image?: string }).image;
+
+// (#section-map): best-effort context label for the gutter section map, e.g.
+// "Part 2 · Ch 4" or "Week 1". All hierarchy fields are profile-dependent and
+// Zod-optional (academic carries part+week; tools/research-portfolio carry
+// part+chapter; minimal carries none), so each piece is included only when
+// present — the label is omitted entirely (undefined) when nothing is derivable.
+const dataAny = entry.data as {
+  part?: string | number;
+  chapter?: number;
+  week?: number;
+};
+const labelParts: string[] = [];
+if (dataAny.part !== undefined && dataAny.part !== '') {
+  // Numeric part → "Part N"; string-enum part (academic, e.g. "foundations")
+  // → title-case it as-is.
+  labelParts.push(
+    typeof dataAny.part === 'number'
+      ? `Part ${dataAny.part}`
+      : dataAny.part.charAt(0).toUpperCase() + dataAny.part.slice(1),
+  );
+}
+if (dataAny.chapter !== undefined) labelParts.push(`Ch ${dataAny.chapter}`);
+else if (dataAny.week !== undefined) labelParts.push(`Week ${dataAny.week}`);
+const sectionMapLabel = labelParts.length > 0 ? labelParts.join(' · ') : undefined;
 ---
 
 <Base
@@ -65,6 +90,7 @@ const chapterImage = (entry.data as { image?: string }).image;
   <article class="prose">
     <ChapterHeader data={entry.data} />
     <ChapterTOC headings={headings} />
+    <SectionMap headings={headings} label={sectionMapLabel} />
     <slot />
     <ChapterNav currentId={entry.id} />
   </article>
