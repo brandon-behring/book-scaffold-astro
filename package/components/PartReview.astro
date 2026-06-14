@@ -27,6 +27,7 @@ interface Props {
   title?: string;
 }
 const { part, title } = Astro.props;
+const baseUrl = import.meta.env.BASE_URL ?? '/';
 
 // Reuse the build-exercises index (keyed by chapter slug). Project-root-relative
 // glob (the tips.astro / exercises.astro lesson) so it resolves across consumers.
@@ -65,7 +66,7 @@ const heading = title ?? `Part ${part} Review`;
       </p>
       {groups.map((g) => (
         <section class="part-review-chapter">
-          <h3 class="part-review-chapter-title"><a href={`/chapters/${g.chapter}/`}>{g.chapter}</a></h3>
+          <h3 class="part-review-chapter-title"><a href={`${baseUrl}chapters/${g.chapter}/`}>{g.chapter}</a></h3>
           <ol class="part-review-list">
             {g.exercises.map((ex) => (
               <li id={`review-${ex.id}`} class="part-review-item">

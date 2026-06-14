@@ -62,9 +62,9 @@ test('TipsCard: graceful skip when tips.json missing', () => {
   assert.match(src, /\?\?\s*\[\]/);
 });
 
-test('TipsCard: links to /tips#tip-{n} permalinks', () => {
+test('TipsCard: links to base-aware /tips#tip-{n} permalinks (#140)', () => {
   const src = read('TipsCard');
-  assert.match(src, /\/tips#tip-\$\{tip\.n\}/);
+  assert.match(src, /\$\{baseUrl\}tips#tip-\$\{tip\.n\}/);
 });
 
 // ===== Exercise (#71) ====================================================

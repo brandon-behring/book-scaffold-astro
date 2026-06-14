@@ -20,6 +20,7 @@ const tipsModules = import.meta.glob<{ default: Array<{ n: number; title: string
   { eager: true },
 );
 const tips = tipsModules['/src/data/tips.json']?.default ?? [];
+const baseUrl = import.meta.env.BASE_URL ?? '/';
 ---
 <aside class="tips-card" role="contentinfo">
   <h2 class="tips-card-title">Tips</h2>
@@ -33,7 +34,7 @@ const tips = tipsModules['/src/data/tips.json']?.default ?? [];
     <ol class="tips-card-list">
       {tips.map((tip) => (
         <li class="tips-card-item">
-          <a href={`/tips#tip-${tip.n}`} class="tips-card-link">
+          <a href={`${baseUrl}tips#tip-${tip.n}`} class="tips-card-link">
             <span class="tips-card-number">{tip.n}.</span>
             <strong class="tips-card-rule">{tip.title}</strong>
           </a>

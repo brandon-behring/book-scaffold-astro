@@ -54,7 +54,7 @@ const asLink = appendix && !onAnswersRoute;
 ---
 {asLink ? (
   <p class="question-rationale-ref">
-    <a href={`/answers#answer-${forId}`}>{title} →</a>
+    <a href={`${basePath}/answers#answer-${forId}`}>{title} →</a>
   </p>
 ) : (
   <details class="question-rationale">

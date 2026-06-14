@@ -45,6 +45,7 @@ interface Props {
 }
 
 const { key, page } = Astro.props;
+const baseUrl = import.meta.env.BASE_URL ?? '/';
 const entry = map[key];
 if (!entry) {
   throw new Error(
@@ -66,6 +67,6 @@ else authorText = `${surname(authors[0])} et al.`;
 const year = entry.issued?.['date-parts']?.[0]?.[0] ?? 'n.d.';
 const yearText = page ? `${year}, p. ${page}` : `${year}`;
 ---
-<a href={`/references#${key}`} class="cite" title={entry.title ?? key}>
+<a href={`${baseUrl}references#${key}`} class="cite" title={entry.title ?? key}>
   {authorText} ({yearText})
 </a>

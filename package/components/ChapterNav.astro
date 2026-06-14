@@ -10,17 +10,18 @@ interface Props {
 }
 const { currentId } = Astro.props;
 const { prev, next } = await getNeighbors(currentId);
+const baseUrl = import.meta.env.BASE_URL ?? '/';
 ---
 {(prev || next) && (
   <nav class="chapter-nav" aria-label="Chapter navigation">
     {prev && (
-      <a href={`/${prev.id}/`} class="prev">
+      <a href={`${baseUrl}chapters/${prev.id}/`} class="prev">
         <span class="nav-label">← Previous</span>
         <span class="nav-title">{prev.data.title}</span>
       </a>
     )}
     {next && (
-      <a href={`/${next.id}/`} class="next">
+      <a href={`${baseUrl}chapters/${next.id}/`} class="next">
         <span class="nav-label">Next →</span>
         <span class="nav-title">{next.data.title}</span>
       </a>

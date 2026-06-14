@@ -99,13 +99,14 @@ const absoluteOgImage = resolvedOgImage
 const twitterHandle = bookConfig.seo?.twitterHandle ?? null;
 const ogSiteName = bookConfig.title ?? title;
 const ogDescription = description ?? bookConfig.description ?? '';
+const baseUrl = import.meta.env.BASE_URL ?? '/';
 ---
 
 <!doctype html>
 <html lang={lang}>
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href={`${baseUrl}favicon.svg`} />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <meta name="generator" content={Astro.generator} />
@@ -119,7 +120,7 @@ const ogDescription = description ?? bookConfig.description ?? '';
         OG tags). sitemap link points at @astrojs/sitemap's auto-emitted
         index. */}
     <link rel="canonical" href={canonicalURL} />
-    <link rel="sitemap" type="application/xml" href="/sitemap-index.xml" />
+    <link rel="sitemap" type="application/xml" href={`${baseUrl}sitemap-index.xml`} />
     <meta property="og:title" content={title} />
     {ogDescription && <meta property="og:description" content={ogDescription} />}
     <meta property="og:url" content={canonicalURL} />
@@ -150,7 +151,7 @@ const ogDescription = description ?? bookConfig.description ?? '';
       {showToolsChrome && <ToolFilter client:idle />}
       {showToolsChrome && <VersionSelector client:idle />}
       <a
-        href="/search/"
+        href={`${baseUrl}search/`}
         class="chrome-button"
         aria-label="Search the book"
         title="Search"

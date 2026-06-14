@@ -67,9 +67,9 @@ test('Term: requires id: string prop', () => {
   assert.match(src, /id:\s*string/);
 });
 
-test('Term: links to the /glossary#term-<id> anchor', () => {
+test('Term: links to the base-aware /glossary#term-<id> anchor (#140)', () => {
   const src = readComponent('Term');
-  assert.match(src, /\/glossary#term-\$\{id\}/);
+  assert.match(src, /\$\{baseUrl\}glossary#term-\$\{id\}/);
 });
 
 test('Term: renders .term-link and a slot', () => {

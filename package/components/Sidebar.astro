@@ -28,6 +28,7 @@ import { academicPartHeading } from '../src/lib/academic-parts';
 const profile = import.meta.env.BOOK_PROFILE ?? 'minimal';
 const siteTitle = bookConfig.title ?? 'Book';
 const siteSubtitle = bookConfig.subtitle ?? 'A scaffold-astro book';
+const baseUrl = import.meta.env.BASE_URL ?? '/';
 
 // Academic profile: part is a string enum. `academicParts` (schemas.ts) is
 // the canonical order, shared with the renderer and ChapterHeader (#95); the
@@ -91,8 +92,10 @@ for (const r of rows) {
 }
 
 const currentPath = Astro.url.pathname;
+const chaptersIndexHref = `${baseUrl}chapters/`;
+const referencesHref = `${baseUrl}references/`;
 function isCurrent(id: string): boolean {
-  return currentPath === `/chapters/${id}/` || currentPath === `/chapters/${id}`;
+  return currentPath === `${baseUrl}chapters/${id}/` || currentPath === `${baseUrl}chapters/${id}`;
 }
 
 function partLabel(key: string): string {
@@ -103,22 +106,22 @@ function partLabel(key: string): string {
 
 <aside class="sidebar" aria-label="Chapter navigation">
   <div class="sidebar-inner">
-    <a href="/" class="sidebar-home">
+    <a href={baseUrl} class="sidebar-home">
       <strong>{siteTitle}</strong>
       <span class="sidebar-subtitle">{siteSubtitle}</span>
     </a>
 
     <nav class="sidebar-nav">
       <a
-        href="/chapters/"
-        class={`sidebar-link sidebar-link-index ${currentPath === '/chapters/' ? 'is-current' : ''}`}
+        href={chaptersIndexHref}
+        class={`sidebar-link sidebar-link-index ${currentPath === chaptersIndexHref ? 'is-current' : ''}`}
       >
         All chapters
       </a>
       {profile === 'academic' && (
         <a
-          href="/references/"
-          class={`sidebar-link sidebar-link-index ${currentPath === '/references/' ? 'is-current' : ''}`}
+          href={referencesHref}
+          class={`sidebar-link sidebar-link-index ${currentPath === referencesHref ? 'is-current' : ''}`}
         >
           References
         </a>
@@ -131,7 +134,7 @@ function partLabel(key: string): string {
             {list.map((r) => (
               <li>
                 <a
-                  href={`/chapters/${r.id}/`}
+                  href={`${baseUrl}chapters/${r.id}/`}
                   class={`sidebar-link ${isCurrent(r.id) ? 'is-current' : ''}`}
                 >
                   <span class="sidebar-week">{r.prefix}</span>

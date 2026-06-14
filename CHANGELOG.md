@@ -2,6 +2,19 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.24.0] — 2026-06-13
+
+Minor release. **Base-unaware navigation links (#140, #141)** — fixes books built with a non-root Astro `base` (a path-proxied multi-guide series, e.g. `guides-ai-engineering` at `base: '/ai-engineering/'`), where scaffold-emitted nav links ignored the base and escaped the prefix onto the host root.
+
+### Fixed
+
+- **ChapterNav routes through `/chapters/` and respects the base (#141).** `ChapterNav.astro` emitted a root-relative `/${prev.id}/` href — missing both the `/chapters/` route segment *and* the configured base, so prev/next links 404'd on every chapter (latent for all consumers; surfaced by a link sweep of the `base: '/ai-engineering/'` consumer). Now built from `import.meta.env.BASE_URL` as `${baseUrl}chapters/${id}/`.
+- **All route + anchor links derive from `BASE_URL` (#140).** `Sidebar` (home, chapters index, references, per-chapter links, and the `is-current` matching), `Base` (the search chrome button + favicon/sitemap asset links), and the anchor components `Cite` (`/references#`), `Term` (`/glossary#`), `TipsCard` (`/tips#`), `PartReview` (`/chapters/`), and `Rationale` (`/answers#`) hardcoded root-relative hrefs that ignored a non-root `base`. All now prefix `import.meta.env.BASE_URL` (the pattern `Rationale` already used for its route detection). **No-op at `base: '/'`** — identical output for existing root-based consumers; the only behaviour change is ChapterNav gaining the `/chapters/` segment it always lacked.
+
+### Tests
+
+- `tests/base-aware-links.test.mjs` (+2) — source-contract guards: every nav/anchor component reads `import.meta.env.BASE_URL` and carries no bare root-relative href; ChapterNav prev/next route through the base + `/chapters/`. Updated the TipsCard (#70) and Term (#115) permalink assertions to the base-aware shape. Package suite **457**.
+
 ## [4.23.0] — 2026-06-10
 
 Minor release. A consumer-driven fix from `ssm-foundations` (#135): the sidebar brand finally reads `defineBookConfig` instead of hardcoded placeholder strings — every consumer book had been shipping "Book / A scaffold-astro book" with no escape hatch short of forking the component.
