@@ -145,3 +145,54 @@ th {
   font-weight: 600;
   color: var(--color-heading);
 }
+
+/* ===== Tufte typographic openers (v4.25.0) =====
+ * Ported from the LaTeX book (interview-preamble-tufte.sty): the run-in
+ * <Newthought> section opener and the chapter-opening <Epigraph>. Markup is in
+ * the matching .astro components; styling stays here so it's always loaded.
+ * Token-only colors — recolor with [data-theme] automatically. */
+
+/* <Newthought>: run-in small-caps opener. TRUE small-caps via the smcp OpenType
+ * feature (the Roboto variable face ships it) — font-variant: small-caps would
+ * synthesize faux small-caps by scaling capitals. Slightly heavier + tracked
+ * out for the Tufte look. */
+.newthought {
+  font-feature-settings: "smcp";
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* <Epigraph>: italic chapter-opening quotation with a right-aligned
+ * attribution. Inherits the running measure from .prose / --measure-main rather
+ * than forcing a width that would fight the Tufte measure. */
+.epigraph {
+  margin: 0 0 var(--space-8) 0;
+}
+.epigraph blockquote {
+  /* Override the global blockquote left-bar: an epigraph reads as an opener,
+   * not a pull-quote. Keep it italic + muted. */
+  border-left: 0;
+  padding: 0;
+  margin: 0;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+.epigraph .epigraph-attribution {
+  margin-top: var(--space-2);
+  text-align: right;
+  font-style: normal;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+/* The em-dash lead-in is conventional for an attribution; authors may also
+ * write it themselves, so it is not auto-inserted. */
+
+/* .heading-accent — OPT-IN colored-italic heading utility (warm-blue italic).
+ * The global h1–h6 are already blue-italic (above); this class is for a heading
+ * an author wants to force into the accent style outside that cascade (e.g. a
+ * heading inside a card whose local styles reset it). Deliberately NOT applied
+ * to the global headings — restyling those would churn every page + baseline. */
+.heading-accent {
+  color: var(--warm-blue);
+  font-style: italic;
+}

@@ -25,6 +25,7 @@ import Base from './Base.astro';
 import bookConfig from 'virtual:book-scaffold/book-config';
 import ChapterHeader from '../components/ChapterHeader.astro';
 import ChapterTOC from '../components/ChapterTOC.astro';
+import SectionMap from '../components/SectionMap.astro';
 import ChapterNav from '../components/ChapterNav.astro';
 
 interface Props {
@@ -44,6 +45,39 @@ const articlePublished = (entry.data as { published?: Date }).published;
 const articleUpdated = (entry.data as { updated?: Date }).updated;
 const articleTags = ((entry.data as { tags?: string[] }).tags ?? []) as string[];
 const chapterImage = (entry.data as { image?: string }).image;
+
+// (#section-map): best-effort context label for the gutter section map, e.g.
+// "Part 2 · Ch 4" or "Week 1". All hierarchy fields are profile-dependent and
+// Zod-optional (academic carries part+week; tools/research-portfolio carry
+// part+chapter; minimal carries none), so each piece is included only when
+// present — the label is omitted entirely (undefined) when nothing is derivable.
+const dataAny = entry.data as {
+  part?: string | number;
+  chapter?: number;
+  week?: number;
+  layout?: 'default' | 'wide';
+};
+
+// 1d: per-page width knob. `layout` is Zod-optional on every profile schema
+// (closed enum 'default'|'wide'). Emit `data-layout` ONLY for a non-default
+// value so existing chapters (no `layout`, or `layout: default`) render the
+// attribute-free <article> byte-identically — `undefined` makes Astro drop the
+// attribute, and only `.prose[data-layout="wide"]` carries a rule in layout.css.
+const layoutMode =
+  dataAny.layout && dataAny.layout !== 'default' ? dataAny.layout : undefined;
+const labelParts: string[] = [];
+if (dataAny.part !== undefined && dataAny.part !== '') {
+  // Numeric part → "Part N"; string-enum part (academic, e.g. "foundations")
+  // → title-case it as-is.
+  labelParts.push(
+    typeof dataAny.part === 'number'
+      ? `Part ${dataAny.part}`
+      : dataAny.part.charAt(0).toUpperCase() + dataAny.part.slice(1),
+  );
+}
+if (dataAny.chapter !== undefined) labelParts.push(`Ch ${dataAny.chapter}`);
+else if (dataAny.week !== undefined) labelParts.push(`Week ${dataAny.week}`);
+const sectionMapLabel = labelParts.length > 0 ? labelParts.join(' · ') : undefined;
 ---
 
 <Base
@@ -62,9 +96,10 @@ const chapterImage = (entry.data as { image?: string }).image;
     )}
     {articleTags.map((t) => <meta property="article:tag" content={t} />)}
   </Fragment>
-  <article class="prose">
+  <article class="prose" data-layout={layoutMode}>
     <ChapterHeader data={entry.data} />
     <ChapterTOC headings={headings} />
+    <SectionMap headings={headings} label={sectionMapLabel} />
     <slot />
     <ChapterNav currentId={entry.id} />
   </article>

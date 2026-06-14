@@ -19,6 +19,7 @@ export default defineConfig({
     'components/VersionSelector': 'components/VersionSelector.tsx',
     'components/ExamRunner': 'components/ExamRunner.tsx',
     'components/Flashcards': 'components/Flashcards.tsx',
+    'components/SectionMap': 'components/SectionMap.tsx',
   },
   esbuildOptions(options) {
     options.jsx = 'automatic';

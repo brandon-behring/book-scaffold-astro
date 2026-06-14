@@ -31,6 +31,7 @@ export const toolsProfile = defineProfile({
   styles: [
     'tokens.css', 'layout.css', 'callouts.css', 'chapter.css',
     'typography.css', 'print.css', 'convergence.css', 'tool-filter.css',
+    'section-map.css',
   ],
   chaptersRenderer: toolsChaptersRenderer,   // v3.7.0 (#35) — owns /chapters semantics for tools shape
 });

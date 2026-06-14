@@ -31,7 +31,7 @@ export const academicProfile = defineProfile({
     flashcards: false, // v4.22.0 #116: opt-in per book; requires src/content/glossary/
     landing: true,          // v4.5.0: auto-inject minimal root landing; consumers override via src/pages/index.astro
   },
-  styles: ['tokens.css', 'layout.css', 'callouts.css', 'chapter.css', 'typography.css', 'print.css'],
+  styles: ['tokens.css', 'layout.css', 'callouts.css', 'chapter.css', 'typography.css', 'print.css', 'section-map.css'],
   katex: true,
   chaptersRenderer: academicChaptersRenderer,   // v3.7.0 (#35) — owns /chapters semantics if consumer opts in via routes.chapters
   // v4.6.0 (#76 Secondary): exclude /print/ from sitemap — print-friendly

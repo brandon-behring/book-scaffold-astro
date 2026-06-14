@@ -1,0 +1,56 @@
+---
+/**
+ * SectionMap.astro — the right-gutter sticky "On this page" section map
+ * (#section-map).
+ *
+ * Renders a real anchor list (h2/h3 slug links) into the .prose right gutter and
+ * mounts the SectionMap island (client:idle) as a controller over it. The island
+ * observes the heading elements and lights the active link as the reader scrolls
+ * (scrollspy). The collapsed top ChapterTOC remains the mobile/no-JS fallback —
+ * section-map.css hides THIS nav below 64rem (the gutter breakpoint) and hides
+ * ChapterTOC at/above it, so the two never double-show.
+ *
+ * Gated identically to ChapterTOC: renders nothing below 3 matching headings
+ * (an anchor list for a 1–2 heading chapter is clutter). Uses the shared
+ * `tocHeadings` filter so the gutter map and the fallback carry IDENTICAL
+ * entries. The island is imported via the package exports map (consumers must
+ * not compile raw .tsx out of node_modules — same as practice-exam.astro's
+ * ExamRunner import).
+ *
+ * DOM contract (see SectionMap.tsx): the <nav> is [data-section-map-root]; each
+ * link is a[data-section-id="<slug>"]; the island mounts INSIDE the nav so its
+ * closest() finds the root.
+ */
+import type { MarkdownHeading } from 'astro';
+import { tocHeadings } from '../src/lib/section-map';
+// Pre-compiled island via the exports map — consumers must not compile raw
+// .tsx out of node_modules (same as practice-exam.astro's ExamRunner import).
+import SectionMap from '@brandon_m_behring/book-scaffold-astro/components/SectionMap';
+import '../styles/section-map.css';
+
+interface Props {
+  headings: MarkdownHeading[];
+  /** Optional context label, e.g. "Part II · Ch 4". Omitted when not derivable. */
+  label?: string;
+}
+const { headings, label } = Astro.props;
+
+const toc = tocHeadings(headings);
+const showMap = toc.length >= 3;
+---
+{showMap && (
+  <nav class="section-map" data-section-map-root aria-label="On this page">
+    {label && <p class="section-map-label">{label}</p>}
+    <p class="section-map-title">On this page</p>
+    <ol class="section-map-list">
+      {toc.map((h) => (
+        <li class={`toc-h${h.depth}`}>
+          <a data-section-id={h.slug} href={`#${h.slug}`} class={`toc-h${h.depth}`}>
+            {h.text}
+          </a>
+        </li>
+      ))}
+    </ol>
+    <SectionMap client:idle headings={toc} />
+  </nav>
+)}

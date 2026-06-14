@@ -1,0 +1,49 @@
+---
+/**
+ * MarginFigure — a Figure pulled into the RIGHT margin (Tufte margin figure).
+ *
+ * Floats into the .prose right gutter using the SAME float + negative
+ * margin-right technique as `.sidenote` and SectionMap (layout.css,
+ * `.margin-figure`) — NOT a grid. Shown at >= 64rem (the gutter breakpoint);
+ * below that the float rule doesn't apply, so it reflows INLINE in document
+ * flow right where it appears (mobile gets the figure, just full-width).
+ *
+ * Rendering is DELEGATED to <Figure> — this component does not reinvent the
+ * inline-SVG / <img> / caption / a11y logic; it only wraps Figure in the
+ * gutter-floated <aside> and forwards every prop. The wrapper is an <aside>
+ * because a margin figure is supplementary to the running text.
+ *
+ * `width` defaults to "100%" (of the narrow gutter column, ~28ch) rather than
+ * Figure's page-width default — a margin figure should fill its column, not
+ * the page. Caption is shrunk to --text-xs in layout.css (margin context).
+ *
+ * Usage (same props as <Figure>):
+ *   <MarginFigure
+ *     src="/figures/week04/ex2_hippo_eigenvalues.svg"
+ *     caption="HiPPO-LegS eigenvalue structure."
+ *     alt="Two overlaid eigenvalue spectra forming nested arcs."
+ *     id="w4-fig-hippo-eigenvalues"
+ *   />
+ *
+ * For a full-width (not margin) figure, use <Figure> with class="wide" (or
+ * class="column-page"). For a generic non-figure block in the gutter, use a
+ * plain element with class="column-margin".
+ */
+import Figure from './Figure.astro';
+
+interface Props {
+  src: string;
+  caption?: string;
+  /** Defaults to 100% of the gutter column (not Figure's page-width default). */
+  width?: string;
+  id?: string;
+  alt?: string;
+  /** Long-form description → SVG <desc> (alt stays the short accessible name). */
+  desc?: string;
+}
+
+const { src, caption, width = '100%', id, alt, desc } = Astro.props;
+---
+<aside class="margin-figure" role="group">
+  <Figure src={src} caption={caption} width={width} id={id} alt={alt} desc={desc} />
+</aside>

@@ -154,3 +154,67 @@
   max-width: none !important;
   width: 100%;
 }
+
+/* ===== 1d: additive figure/content placement + per-page width knob =====
+ *
+ * STRICTLY ADDITIVE. Nothing here changes `.prose`'s block layout or the
+ * `.sidenote` float — the gutter placements below REUSE the same Tufte
+ * float + negative-margin-right technique `.sidenote` and SectionMap use
+ * (the full float→grid migration is deferred). All values are tokens.
+ *
+ * .column-margin   — generic "float a block into the right gutter" utility
+ *                    (the un-figure version of MarginFigure's placement).
+ * .margin-figure   — MarginFigure's wrapper: the same gutter float, tuned for
+ *                    a figure (small caption, no italic).
+ * .column-page     — full-width breakout; an ALIAS of `.wide` (which already
+ *                    does the max-width override). Use either.
+ * .prose[data-layout="wide"] — the per-page width knob: widen the main text
+ *                    measure. Only applies when Chapter.astro emits
+ *                    data-layout="wide" from frontmatter `layout: wide`.
+ */
+
+/* Float a block into the right gutter — same mechanism as .sidenote: the
+ * negative margin-right pulls the box into the --measure-side column so it
+ * sits BESIDE the running text instead of pushing the measure. Shown only at
+ * >= 64rem (the gutter breakpoint, matching SectionMap); below that it reflows
+ * inline in document flow (the rule simply doesn't apply). */
+@media (min-width: 64rem) {
+  .column-margin,
+  .margin-figure {
+    float: right;
+    clear: right;
+    width: var(--measure-side);
+    margin-right: calc(-1 * (var(--measure-side) + var(--space-6)));
+    margin-top: 0.3rem;
+    margin-bottom: var(--space-3);
+  }
+}
+
+/* MarginFigure: a Figure wrapped for the gutter. The wrapped <figure> fills
+ * the column; the caption stays small (margin context = less room) without
+ * touching the global .figure/figcaption rules. */
+.margin-figure > .figure {
+  margin: 0;
+  max-width: none;
+}
+.margin-figure figcaption {
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}
+
+/* Full-width breakout: an alias of `.wide` (figures, wide tables, code that
+ * need the whole container including the gutter column). `.wide` is the
+ * canonical escape; `.column-page` reads better next to `.column-margin`. */
+.column-page {
+  max-width: none !important;
+  width: 100%;
+}
+
+/* Per-page width knob (frontmatter `layout: wide`). Widen ONLY the main text
+ * measure; the container + gutter math in `.prose` already references
+ * --measure-main, so this one override flows through. Additive: absent
+ * data-layout (or "default") matches nothing, so existing chapters are
+ * unaffected. 80ch matches the wide-desktop tier's main measure (tokens.css). */
+.prose[data-layout="wide"] {
+  --measure-main: 80ch;
+}
