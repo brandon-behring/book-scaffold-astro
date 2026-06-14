@@ -67,6 +67,7 @@
     "./components/Figure.astro": "./components/Figure.astro",
     "./components/InsightBox.astro": "./components/InsightBox.astro",
     "./components/KeyIdea.astro": "./components/KeyIdea.astro",
+    "./components/MarginFigure.astro": "./components/MarginFigure.astro",
     "./components/MarginNote.astro": "./components/MarginNote.astro",
     "./components/Newthought.astro": "./components/Newthought.astro",
     "./components/NoteBox.astro": "./components/NoteBox.astro",

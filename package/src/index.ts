@@ -228,6 +228,7 @@ export {
   // Enum arrays
   academicParts,
   chapterStatus,
+  layoutModes,                           // 1d: per-page width knob ('default'|'wide')
   toolSlugs,
   volatilityLevels,
   sourceTiers,

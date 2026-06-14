@@ -70,6 +70,17 @@ export const chapterStatus = [
   'planned',
 ] as const;
 
+// ===== Per-page width knob (1d) — any profile =====
+//
+// Optional `layout:` on EVERY chapter schema below. A CLOSED enum (a typo'd
+// value fails loud at content load — that IS the validation, no assertEnumProp
+// needed). Threaded by Chapter.astro as `data-layout` on <article class="prose">;
+// layout.css maps `[data-layout="wide"]` → a wider --measure-main. ADDITIVE:
+// 'default' (or an omitted field) applies no rule, so existing chapters render
+// byte-identically. 'wide' widens the main text measure (e.g. 80ch) for
+// figure-heavy or table-heavy chapters.
+export const layoutModes = ['default', 'wide'] as const;
+
 // ===== Provenance (v4.8.0) — process-as-artifact audit trail =====
 //
 // Optional per-chapter block attached to EVERY profile schema below.
@@ -117,6 +128,7 @@ export const academicChapterSchema = z.object({
   part: z.enum(academicParts),
   title: z.string().min(1),
   slug: z.string().optional(),                 // v4.9.0: explicit URL slug override (else filename → entry.id)
+  layout: z.enum(layoutModes).optional(),      // 1d: per-page width knob (default measure | 'wide'); threaded as data-layout
   status: z.enum(chapterStatus),
   roadmap_lines: z.tuple([z.number().int(), z.number().int()]).optional(),
   code_path: z.string().optional(),
@@ -138,6 +150,7 @@ export const academicChapterSchema = z.object({
 export const toolsChapterSchema = z.object({
   title: z.string().min(1),
   slug: z.string().optional(),                 // v4.9.0: explicit URL slug override (else filename → entry.id)
+  layout: z.enum(layoutModes).optional(),      // 1d: per-page width knob (default measure | 'wide'); threaded as data-layout
   part: z.number().int().min(0).max(10),
   chapter: z.number().int().min(0).max(99),
   volatility: z.enum(volatilityLevels),
@@ -181,6 +194,7 @@ export const courseNotesChapterSchema = z.object({
   // Identity
   title: z.string().min(1),
   slug: z.string().optional(),                 // v4.9.0: explicit URL slug override (else filename → entry.id)
+  layout: z.enum(layoutModes).optional(),      // 1d: per-page width knob (default measure | 'wide'); threaded as data-layout
   chapter: z.number().int().min(0).max(99),
   part: z.number().int().min(0).max(20).default(1),
   description: z.string().optional(),
@@ -244,6 +258,7 @@ export const researchPortfolioChapterSchema = z.object({
   // Identity
   title: z.string().min(1),
   slug: z.string().optional(),                 // explicit slug override (otherwise filename)
+  layout: z.enum(layoutModes).optional(),      // 1d: per-page width knob (default measure | 'wide'); threaded as data-layout
   description: z.string().optional(),
 
   // Hierarchy — accept either academic-style or tools-style; all optional.

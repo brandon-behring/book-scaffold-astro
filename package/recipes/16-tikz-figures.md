@@ -95,6 +95,45 @@ Common failures:
 
 If you hit friction with the TikZ pipeline (a TikZ feature that doesn't compile, an obscure error message, a workflow pattern that doesn't fit), file an issue at https://github.com/brandon-behring/book-scaffold-astro/issues with the `consumer:<your-workspace>` label. v4.x is the iteration window.
 
+## Margin & full-width figure placement (1d)
+
+Once a figure exists, three placements are available — all reuse the existing Tufte float + gutter technique (the same one `Sidenote`/SectionMap use); none introduce a grid.
+
+**In the running text (default).** Plain `<Figure>` constrained to the main measure:
+
+```mdx
+<Figure src="/figures/topic/diagram.svg" caption="…" alt="…" id="fig-x" />
+```
+
+**In the right margin** — `<MarginFigure>` floats into the gutter at ≥64rem and reflows inline below on mobile. Same props as `<Figure>` (rendering is delegated to it); `width` defaults to `100%` of the ~28ch gutter column, and the caption shrinks:
+
+```mdx
+import MarginFigure from '@brandon_m_behring/book-scaffold-astro/components/MarginFigure.astro';
+
+<MarginFigure src="/figures/topic/diagram.svg" caption="A small aside figure." alt="…" id="fig-x-margin" />
+```
+
+**Full-bleed** — a wide figure/table/code block that spans the gutter column too. Use the canonical `.wide` escape (or its alias `.column-page`):
+
+```mdx
+<Figure src="/figures/topic/wide-plot.svg" caption="…" alt="…" id="fig-wide" class="wide" />
+```
+
+**Generic gutter block** — to float a non-figure block (a small note, a key figure number) into the margin, add `class="column-margin"` to any element. It uses the identical gutter float.
+
+### Per-page width knob: `layout: wide`
+
+For a chapter that's figure- or table-heavy, widen the **main text measure** via an optional frontmatter field (closed enum `default` | `wide`, accepted by every profile):
+
+```yaml
+---
+title: "Architecture Atlas"
+layout: wide      # widens --measure-main to 80ch; omit (or 'default') for the standard 65ch
+---
+```
+
+`Chapter.astro` threads this as `data-layout="wide"` on `<article class="prose">`, and `layout.css` maps `.prose[data-layout="wide"] { --measure-main: 80ch }`. Omitting the field (or setting `layout: default`) emits no attribute and applies no rule — existing chapters render unchanged. A value outside the enum fails the build at content load.
+
 ## See also
 
 - `recipes/06-figures.md` — overall figure pipeline + matplotlib/svg sources

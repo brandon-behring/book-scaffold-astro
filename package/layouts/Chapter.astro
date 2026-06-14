@@ -55,7 +55,16 @@ const dataAny = entry.data as {
   part?: string | number;
   chapter?: number;
   week?: number;
+  layout?: 'default' | 'wide';
 };
+
+// 1d: per-page width knob. `layout` is Zod-optional on every profile schema
+// (closed enum 'default'|'wide'). Emit `data-layout` ONLY for a non-default
+// value so existing chapters (no `layout`, or `layout: default`) render the
+// attribute-free <article> byte-identically — `undefined` makes Astro drop the
+// attribute, and only `.prose[data-layout="wide"]` carries a rule in layout.css.
+const layoutMode =
+  dataAny.layout && dataAny.layout !== 'default' ? dataAny.layout : undefined;
 const labelParts: string[] = [];
 if (dataAny.part !== undefined && dataAny.part !== '') {
   // Numeric part → "Part N"; string-enum part (academic, e.g. "foundations")
@@ -87,7 +96,7 @@ const sectionMapLabel = labelParts.length > 0 ? labelParts.join(' · ') : undefi
     )}
     {articleTags.map((t) => <meta property="article:tag" content={t} />)}
   </Fragment>
-  <article class="prose">
+  <article class="prose" data-layout={layoutMode}>
     <ChapterHeader data={entry.data} />
     <ChapterTOC headings={headings} />
     <SectionMap headings={headings} label={sectionMapLabel} />
