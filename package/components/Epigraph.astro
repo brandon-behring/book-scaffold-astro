@@ -1,0 +1,28 @@
+---
+/**
+ * Epigraph — a chapter-opening quotation in the Tufte style: an italic block
+ * quote with a right-aligned attribution. Maps the LaTeX `epigraph`-style
+ * opener from interview-preamble-tufte.sty.
+ *
+ * The quote text goes in the default slot; the attribution goes in the named
+ * `attribution` slot (rendered in a <footer>, right-aligned). The measure is
+ * inherited from the running text tokens (--measure-main / .prose) rather than
+ * a fixed % width, so it doesn't fight the Tufte measure. CSS lives in the
+ * shared typography.css (always loaded). The footer renders only when the
+ * attribution slot is filled.
+ *
+ * Usage:
+ *   <Epigraph>
+ *     The purpose of computing is insight, not numbers.
+ *     <Fragment slot="attribution">Richard Hamming</Fragment>
+ *   </Epigraph>
+ */
+---
+<div class="epigraph">
+  <blockquote>
+    <slot />
+    {Astro.slots.has('attribution') && (
+      <footer class="epigraph-attribution"><slot name="attribution" /></footer>
+    )}
+  </blockquote>
+</div>

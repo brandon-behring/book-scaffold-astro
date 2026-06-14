@@ -1,0 +1,18 @@
+---
+/**
+ * Newthought — Tufte run-in section opener. Maps LaTeX `\newthought{…}`:
+ * the first few words of a new line of thought set in small-caps, used in
+ * place of (or alongside) a subheading to mark a shift without breaking the
+ * paragraph flow.
+ *
+ * TRUE small-caps via `font-feature-settings: "smcp"` (NOT
+ * `font-variant: small-caps`, which synthesizes faux small-caps by scaling
+ * the capitals) — the Roboto variable face ships the smcp feature. CSS lives
+ * in the shared typography.css (always loaded via every profile's styles
+ * array), so this component is markup-only.
+ *
+ * Usage (inline at the start of a paragraph):
+ *   <p><Newthought>In practice</Newthought>, the kernel is computed once …</p>
+ */
+---
+<span class="newthought"><slot /></span>

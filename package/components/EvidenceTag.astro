@@ -1,0 +1,102 @@
+---
+/**
+ * EvidenceTag — inline claim-confidence marker, placed immediately after a
+ * stated claim to calibrate how far the reader should trust it. Ported from
+ * the user's Tufte-LaTeX evidence tags (interview-preamble-tufte.sty).
+ *
+ * Sibling of <Tag> (practice provenance): Tag flags WHERE a claim comes from
+ * (official / practitioner / convergence); EvidenceTag flags HOW WELL it has
+ * been checked. Three closed-union states:
+ *
+ *   verified         Confirmed against a primary source / first-hand check.
+ *   inference        Reasoned conclusion, not directly verified.
+ *   audit-corrected  A prior claim that an audit pass overturned/repaired.
+ *
+ * Colors are token-only so they recolor with [data-theme] automatically:
+ * verified → --warm-green, inference → --warm-blue, audit-corrected →
+ * --warm-rose (tinted background + matching text/border), matching the
+ * scoped-<style> + data-attribute idiom of <Tag>.
+ *
+ * Usage:
+ *   The kernel is diagonal-plus-low-rank <EvidenceTag kind="verified" />.
+ *   This generalizes to higher orders <EvidenceTag kind="inference" />.
+ */
+import { assertEnumProp } from '../src/lib/assert-prop';
+
+const KINDS = ['verified', 'inference', 'audit-corrected'] as const;
+type Kind = (typeof KINDS)[number];
+
+interface Props {
+  kind: Kind;
+  /**
+   * Provenance pointer for the claim (citekey, URL, audit-file path). RESERVED
+   * (#section-map plan NQ3): rendered as a `data-source` attribute today with
+   * no behavior. A future fail-loud upgrade — additive, designed-for here — is
+   * a `validate.mjs` check requiring `source` on kind="verified" (an unverified
+   * "verified" tag is the silent-degradation class assertEnumProp guards). Do
+   * NOT wire that validation now; reserving the prop keeps the upgrade additive.
+   */
+  source?: string;
+}
+
+// #109 sweep: fail loud on an unknown kind rather than rendering a blank pill
+// (LABEL[undefined] -> undefined). A closed union with no valid value is an
+// authoring error that should stop the build.
+const kind = assertEnumProp(Astro.props.kind, KINDS, {
+  component: 'EvidenceTag',
+  prop: 'kind',
+});
+const { source } = Astro.props;
+
+const LABEL: Record<Kind, string> = {
+  verified: '[V] Verified',
+  inference: '[I] Inference',
+  'audit-corrected': 'Audit-corrected',
+};
+
+const TITLE: Record<Kind, string> = {
+  verified: 'Confirmed against a primary source or first-hand check',
+  inference: 'Reasoned conclusion — not directly verified',
+  'audit-corrected': 'A prior claim an audit pass overturned or repaired',
+};
+---
+<span class="evidence-tag" data-kind={kind} data-source={source} title={TITLE[kind]}>
+  {LABEL[kind]}
+</span>
+
+<style>
+  .evidence-tag {
+    display: inline-block;
+    font-family: var(--font-code);
+    font-size: 0.75em;
+    font-weight: 500;
+    padding: 0 0.4em;
+    margin: 0 0.1em;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-subtle);
+    color: var(--color-text-muted);
+    vertical-align: 0.1em;
+    letter-spacing: 0.02em;
+    /* Inline pill: don't let it stretch the line box awkwardly. */
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  /* Tinted background + matching text/border per kind. Tokens only, so each
+   * recolors in the [data-theme="dark"] scope without a dark-block edit. */
+  .evidence-tag[data-kind="verified"] {
+    border-color: var(--warm-green);
+    color: var(--warm-green);
+    background: var(--warm-green-tint);
+  }
+  .evidence-tag[data-kind="inference"] {
+    border-color: var(--warm-blue);
+    color: var(--warm-blue);
+    background: var(--warm-blue-tint);
+  }
+  .evidence-tag[data-kind="audit-corrected"] {
+    border-color: var(--warm-rose);
+    color: var(--warm-rose);
+    background: var(--warm-rose-tint);
+  }
+</style>

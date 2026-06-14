@@ -65,8 +65,11 @@ Supported `type` values: `theorem`, `proposition`, `lemma`, `corollary`, `defini
 | `Cite` | Inline citation linked to `/references` | `<Cite key="gu2024mamba" page="3" />` |
 | `XRef` | Cross-reference to a labeled element | `<XRef id="thm:zoh-stability" />` |
 | `Figure` | Image/SVG + caption + id; local SVGs inline for a11y + dark mode (`alt`, `desc`) | `<Figure src="/figures/week04/eigenvalues.svg" caption="…" alt="…" id="fig-eig" />` |
-| `MarginNote` | Right-margin annotation (Tufte-style) | `<MarginNote>side comment</MarginNote>` |
-| `Sidenote` | Auto-numbered marginalia | `<Sidenote>numbered note</Sidenote>` |
+| `MarginNote` | **Inline** colored callout in the text column (does **not** float to the margin, despite the name) — load-bearing aside the reader must see | `<MarginNote>side comment</MarginNote>` |
+| `Sidenote` | Auto-numbered Tufte marginalia that **floats into the right gutter** on desktop (inline on mobile) | `<Sidenote>numbered note</Sidenote>` |
+| `EvidenceTag` | Inline claim-confidence pill after a claim (`verified`/`inference`/`audit-corrected`) | `<EvidenceTag kind="verified" /> … <EvidenceTag kind="inference" />` |
+| `Newthought` | Tufte run-in small-caps section opener | `<p><Newthought>In practice</Newthought>, …</p>` |
+| `Epigraph` | Chapter-opening italic quotation with right-aligned attribution | `<Epigraph>…<Fragment slot="attribution">Hamming</Fragment></Epigraph>` |
 | `WeekRef` | Jump-link to a week chapter | `<WeekRef week={4} />` |
 | `CodeRef` | GitHub-deep-link to file:line | `<CodeRef path="experiments/jax/foo.py" line={42} />` |
 | `CodeBlock` | Embed code-file range with syntax highlight | `<CodeBlock src="…" lines="10-30" />` |
