@@ -152,7 +152,7 @@ if (!byBook.has(book)) byBook.set(book, []);
 byBook.get(book).push({ ... });
 ```
 
-Then write one file per book key. Multi-book corpus routing is itself out of scope at v4.x ([deferred, see #15](../../PACKAGE_DESIGN.md#15a-deferred-scope-post-v4x)) — if you need it, the same consumer-side pattern applies.
+Then write one file per book key. Multi-book corpus routing is itself out of scope at v4.x ([deferred, see §15a](../../PACKAGE_DESIGN.md#15a-deferred-scope-post-v4x); tracked on #80) — if you need it, the same consumer-side pattern applies.
 
 ## Common gotchas
 

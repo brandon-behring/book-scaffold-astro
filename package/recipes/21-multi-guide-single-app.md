@@ -2,7 +2,7 @@
 
 **Profile**: any (proven on research-portfolio).
 
-**TL;DR**: To host more than one guide/book in a single Astro app, keep ONE `chapters` collection rooted at `src/content/` and namespace every entry id by its guide folder via a `generateId` in the glob loader. The scaffold's existing rest-param route (`/chapters/[...slug]/`) then serves `/chapters/<guide>/<slug>/` for every guide with **no scaffold changes**. This is the blessed interim pattern until multibook (#15) ships first-class support.
+**TL;DR**: To host more than one guide/book in a single Astro app, keep ONE `chapters` collection rooted at `src/content/` and namespace every entry id by its guide folder via a `generateId` in the glob loader. The scaffold's existing rest-param route (`/chapters/[...slug]/`) then serves `/chapters/<guide>/<slug>/` for every guide with **no scaffold changes**. This is the blessed interim pattern until multibook (#80) ships first-class support.
 
 ## The pattern
 
@@ -52,15 +52,15 @@ The scaffold's auto-injected `pages/chapters/[...slug].astro` routes on `params:
 
 ## Gotcha 2 — `validate` counts everything under the base
 
-With `base: './src/content'`, `book-scaffold validate` walks the whole base — shared folders like `frontmatter/` are counted as "chapters" (e.g. `16 chapter(s)` for 13 + 2 real chapters + an authors page). The checks still run correctly per file; only the count is inflated. Excluding non-guide folders from the *loader* pattern does not affect the validator's walk. Guide-aware validation is part of the first-class multibook design (#15).
+With `base: './src/content'`, `book-scaffold validate` walks the whole base — shared folders like `frontmatter/` are counted as "chapters" (e.g. `16 chapter(s)` for 13 + 2 real chapters + an authors page). The checks still run correctly per file; only the count is inflated. Excluding non-guide folders from the *loader* pattern does not affect the validator's walk. Guide-aware validation is part of the first-class multibook design (#80).
 
 ## Gotcha 3 — the `/chapters/` index mixes guides
 
-The auto-injected `/chapters/` index lists every entry in the collection — i.e. all guides interleaved. If you want per-guide landing pages, add consumer-owned pages (e.g. `src/pages/evaluation/index.astro`) that `getCollection('chapters', (e) => e.id.startsWith('evaluation/'))`. A grouped-by-guide index is also on the #15 wishlist.
+The auto-injected `/chapters/` index lists every entry in the collection — i.e. all guides interleaved. If you want per-guide landing pages, add consumer-owned pages (e.g. `src/pages/evaluation/index.astro`) that `getCollection('chapters', (e) => e.id.startsWith('evaluation/'))`. A grouped-by-guide index is also on the #80 wishlist.
 
 ## When to expect first-class support
 
-This recipe is the interim, zero-scaffold-change path. Issue [#15 (multibook)](https://github.com/brandon-behring/book-scaffold-astro/issues/15) tracks a `books`/`guides` registry that would emit per-guide indexes, a guides landing, and guide-scoped `validate`. It was deferred pending 2–3 independent consumers; `guides-ai-engineering` (#132) is the second — file your use case on #15 to add weight.
+This recipe is the interim, zero-scaffold-change path. Issue [#80 (multibook)](https://github.com/brandon-behring/book-scaffold-astro/issues/80) tracks a `books`/`guides` registry that would emit per-guide indexes, a guides landing, and guide-scoped `validate` (the original #15 is closed; #80 is the live v5.x tracker). It was deferred pending 2–3 independent consumers; `guides-ai-engineering` (#132) is the second — file your use case on #80 to add weight.
 
 ## Canonical files
 
