@@ -2,6 +2,29 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.25.0] — 2026-06-14
+
+Minor release. **Section map + margin/template apparatus (Phase 1, #150)** — restores in-chapter reading position and ports the Tufte-LaTeX typographic + evidence vocabulary to the web. Additive and neutral across profiles; existing chapters render byte-identically (the new placement classes + per-page knob are opt-in).
+
+### Added
+
+- **`<SectionMap>` — right-gutter scrollspy "On this page" (#150).** A sticky right-gutter nav that highlights the active h2/h3 as the reader scrolls — filling the empty Tufte gutter and restoring in-chapter position. Auto-injected by `Chapter.astro` for chapters with ≥3 h2/h3 headings; degrades to the collapsed `ChapterTOC` on mobile / no-JS (the two never double-show). House island pattern: a pure node-tested engine (`tocHeadings` + `pickActive`) under a `client:idle` controller-over-SSR island (zero layout shift), fail-loud (`requireRoot`, `CSS.escape`, manifest/DOM-drift throw). No new deps.
+- **`<EvidenceTag>` — inline claim-confidence pill (#150).** `[V] Verified` / `[I] Inference` / `Audit-corrected` (closed `kind` enum, fail-loud via `assertEnumProp`; warm green/blue/rose, token-only), ported from the LaTeX evidence tags. An optional `source` prop is reserved for a future additive `validate.mjs` "verified must cite" check.
+- **`<Newthought>` + `<Epigraph>` — Tufte typographic openers (#150).** True small-caps run-in (`font-feature-settings: "smcp"`) + a chapter-opening italic quotation with right-aligned attribution. CSS in the always-loaded `typography.css`; global headings untouched.
+- **`<MarginFigure>` + `.column-margin` / `.column-page` + per-page `layout: wide` (#150).** A `<Figure>` that floats into the right gutter (reusing the `.sidenote` float technique — *not* a grid), plus additive gutter/full-width placement classes and an optional `layout` frontmatter enum (`default` | `wide`, every profile) that widens the main measure for figure-/table-heavy chapters. Omitting `layout` emits no attribute — byte-identical output.
+
+### Fixed
+
+- **Section map ↔ `<Sidenote>` gutter collision (#151).** The section map and `<Sidenote>` float into the same `--measure-side` column. A CSS `:has(.sidenote)` handshake now suppresses the gutter map and keeps `ChapterTOC` as the nav when a chapter has sidenotes; sidenote-free chapters (the guides) are unchanged. Found by an adversarial review of #150.
+
+### Changed
+
+- `layout.css` / `section-map.css` added to the profile `styles` arrays (always-loaded, like `typography.css` / `chapter.css`); `ChapterTOC` refactored onto the shared `tocHeadings` filter. No new external deps.
+
+### Tests
+
+- Package suite **457 → 501** (+44): `section-map.test.mjs` (pure `pickActive` / `tocHeadings` + the CSS `:has` handshake contract), `schema-layout.test.mjs` (the `layout` enum across all five profiles), `margin-figure.test.mjs` (delegation + a regression guard encoding the no-grid / no-`.sidenote`-touch invariant). Playwright `section-map-interaction.spec.ts` (desktop scrollspy, mobile fallback, sidenote-suppression on `ch02-math`). Regenerated the affected desktop chapter baselines for the gutter map.
+
 ## [4.24.0] — 2026-06-13
 
 Minor release. **Base-unaware navigation links (#140, #141)** — fixes books built with a non-root Astro `base` (a path-proxied multi-guide series, e.g. `guides-ai-engineering` at `base: '/ai-engineering/'`), where scaffold-emitted nav links ignored the base and escaped the prefix onto the host root.
