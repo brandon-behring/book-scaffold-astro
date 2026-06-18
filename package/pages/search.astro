@@ -11,13 +11,17 @@
  * `astro dev`. See README for dev-search workflow.
  */
 import Base from '../layouts/Base.astro';
+
+// #142: Pagefind writes its bundle to dist/pagefind/, served under the deploy
+// base — so the asset URLs must prefix BASE_URL or they 404 under a non-root base.
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 ---
 
 <Base
   title="Search · book-template-astro"
   description="Full-text search across the book. Indexed via Pagefind at build time; all queries run in the browser."
 >
-  <link rel="stylesheet" href="/pagefind/pagefind-ui.css" slot="head" />
+  <link rel="stylesheet" href={`${baseUrl}pagefind/pagefind-ui.css`} slot="head" />
 
   <div class="prose search-page">
     <h1>Search</h1>
@@ -29,7 +33,7 @@ import Base from '../layouts/Base.astro';
     <div id="search"></div>
   </div>
 
-  <script src="/pagefind/pagefind-ui.js" is:inline></script>
+  <script src={`${baseUrl}pagefind/pagefind-ui.js`} is:inline></script>
   <script is:inline>
     // Initialize after the Pagefind bundle has loaded.
     window.addEventListener('DOMContentLoaded', () => {

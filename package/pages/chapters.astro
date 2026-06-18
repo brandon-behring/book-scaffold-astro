@@ -27,6 +27,9 @@ import { PROFILES } from '../src/profiles/index';
 import { fallbackChaptersRenderer } from '../src/profiles/renderers/fallback-chapters';
 import type { ChaptersRenderer, PartKey } from '../src/lib/chapters-renderer';
 
+// #142: prefix BASE_URL so chapter-card links stay inside a non-root deploy base.
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+
 const profileName = (import.meta.env.BOOK_PROFILE ?? 'minimal') as keyof typeof PROFILES;
 const profileDef = PROFILES[profileName];
 const renderer: ChaptersRenderer =
@@ -112,7 +115,7 @@ for (const c of chapters) {
         <ol class="chapter-list">
           {cards.map((card) => (
             <li class="chapter-card" data-tools={card.toolsAttr}>
-              <a href={`/chapters/${card.c.id}/`} class="chapter-card-link">
+              <a href={`${baseUrl}chapters/${card.c.id}/`} class="chapter-card-link">
                 <div class="chapter-card-meta">
                   <span class="chapter-card-number">{card.number}</span>
                   {card.volatility && (

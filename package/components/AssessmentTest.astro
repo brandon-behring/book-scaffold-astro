@@ -80,10 +80,14 @@ for (const e of entries) {
 const scoreable = entries.filter(
   (e) => e.data.type === 'mcq' && (e.data.options?.length ?? 0) > 0,
 );
+// #142: thread the deploy base through the routing map + practice-exam link.
+// deriveDomainRouting takes baseUrl as a param (not import.meta.env) because it
+// ships pre-compiled in dist/ where Vite's env replacement does not reach.
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 const manifest = buildExamManifest(entries);
-const domainRouting = deriveDomainRouting(entries);
+const domainRouting = deriveDomainRouting(entries, baseUrl);
 const practiceExamHref = (bookConfig.enabledRoutes ?? []).includes('practiceExam')
-  ? '/practice-exam'
+  ? `${baseUrl}practice-exam`
   : null;
 
 const rendered = await Promise.all(

@@ -20,7 +20,9 @@ interface Props {
 }
 const { week } = Astro.props;
 const slug = `week${String(week).padStart(2, '0')}`;
-const href = `/chapters/${slug}/`;
+// #142: prefix BASE_URL so the chapter link stays inside a non-root deploy base.
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+const href = `${baseUrl}chapters/${slug}/`;
 ---
 <aside class="week-ref">
   <span class="week-ref-arrow" aria-hidden="true">→</span>

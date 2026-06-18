@@ -49,11 +49,20 @@ export interface RoutingChapter {
  * Derive the weak-domain → chapters routing map for `<AssessmentTest>` (#113):
  * for each domain, the distinct chapters (in book order) that carry ≥1 question
  * in it. String chapters are slugs (the schema's kebab-case branch) and link to
- * `/chapters/<slug>/`; numeric chapters render as plain labels.
+ * `${baseUrl}chapters/<slug>/`; numeric chapters render as plain labels.
+ *
+ * `baseUrl` (default '/') is the deploy base, injected by the .astro caller from
+ * import.meta.env.BASE_URL — NOT read here, because this lib ships pre-compiled
+ * in dist/ where Vite's env replacement does not reach, so a self-read would
+ * silently drop the base under a non-root deploy (#142).
  */
 export function deriveDomainRouting(
   entries: readonly (QuestionLike & { data: Pick<Question, 'id' | 'chapter' | 'domain'> })[],
+  baseUrl = '/',
 ): Record<string, RoutingChapter[]> {
+  // #142: normalize so a no-trailing-slash base ('/foo') still yields '/foo/chapters/'
+  // rather than '/foochapters/' (Astro does NOT guarantee a trailing slash on base).
+  const base = baseUrl.replace(/\/?$/, '/');
   const out: Record<string, RoutingChapter[]> = {};
   const seen = new Set<string>(); // domain\u0000label pairs already routed
   for (const e of sortQuestions(entries)) {
@@ -63,7 +72,7 @@ export function deriveDomainRouting(
     seen.add(key);
     (out[e.data.domain] ??= []).push({
       label,
-      href: typeof e.data.chapter === 'string' ? `/chapters/${e.data.chapter}/` : null,
+      href: typeof e.data.chapter === 'string' ? `${base}chapters/${e.data.chapter}/` : null,
     });
   }
   return out;
