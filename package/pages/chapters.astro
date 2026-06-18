@@ -28,7 +28,7 @@ import { fallbackChaptersRenderer } from '../src/profiles/renderers/fallback-cha
 import type { ChaptersRenderer, PartKey } from '../src/lib/chapters-renderer';
 
 // #142: prefix BASE_URL so chapter-card links stay inside a non-root deploy base.
-const baseUrl = import.meta.env.BASE_URL ?? '/';
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 
 const profileName = (import.meta.env.BOOK_PROFILE ?? 'minimal') as keyof typeof PROFILES;
 const profileDef = PROFILES[profileName];

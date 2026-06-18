@@ -28,7 +28,7 @@ const chapters = Object.keys(byChapter).sort();
 const total = chapters.reduce((sum, c) => sum + byChapter[c].length, 0);
 
 // #142: chapter deep-links must prefix the deploy base.
-const baseUrl = import.meta.env.BASE_URL ?? '/';
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 ---
 <Base title="Exercises" description="All exercises in this book, grouped by chapter with deep links.">
   <article class="prose">

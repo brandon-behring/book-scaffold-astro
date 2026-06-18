@@ -90,6 +90,17 @@ test('deriveDomainRouting dedupes chapters per domain, in book order (numeric be
   assert.deepEqual(routing.d.map((c) => c.label), ['1', '2', 'zeta']);
 });
 
+test('deriveDomainRouting normalizes the base — /foo and /foo/ both yield /foo/chapters/ (#142, adversarial)', () => {
+  // Astro does NOT guarantee a trailing slash on base. Without normalization
+  // baseUrl='/foo' emits '/foochapters/zeta/' — broken. Both forms must agree.
+  assert.deepEqual(deriveDomainRouting([mcq('a1', 'd', 'zeta')], '/foo').d, [
+    { label: 'zeta', href: '/foo/chapters/zeta/' },
+  ]);
+  assert.deepEqual(deriveDomainRouting([mcq('a1', 'd', 'zeta')], '/foo/').d, [
+    { label: 'zeta', href: '/foo/chapters/zeta/' },
+  ]);
+});
+
 test('spreadBlueprint spreads count evenly across pool domains (min 1 each)', () => {
   const pool = buildExamManifest([
     mcq('q1', 'arrays', 1),

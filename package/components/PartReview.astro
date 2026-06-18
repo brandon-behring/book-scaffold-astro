@@ -27,7 +27,7 @@ interface Props {
   title?: string;
 }
 const { part, title } = Astro.props;
-const baseUrl = import.meta.env.BASE_URL ?? '/';
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 
 // Reuse the build-exercises index (keyed by chapter slug). Project-root-relative
 // glob (the tips.astro / exercises.astro lesson) so it resolves across consumers.

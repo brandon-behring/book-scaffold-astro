@@ -20,7 +20,7 @@ const tipsModules = import.meta.glob<{ default: Array<{ n: number; title: string
   { eager: true },
 );
 const tips = tipsModules['/src/data/tips.json']?.default ?? [];
-const baseUrl = import.meta.env.BASE_URL ?? '/';
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 ---
 <aside class="tips-card" role="contentinfo">
   <h2 class="tips-card-title">Tips</h2>

@@ -10,7 +10,7 @@ interface Props {
 }
 const { currentId } = Astro.props;
 const { prev, next } = await getNeighbors(currentId);
-const baseUrl = import.meta.env.BASE_URL ?? '/';
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 ---
 {(prev || next) && (
   <nav class="chapter-nav" aria-label="Chapter navigation">

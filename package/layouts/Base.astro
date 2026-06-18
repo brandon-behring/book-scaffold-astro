@@ -99,7 +99,7 @@ const absoluteOgImage = resolvedOgImage
 const twitterHandle = bookConfig.seo?.twitterHandle ?? null;
 const ogSiteName = bookConfig.title ?? title;
 const ogDescription = description ?? bookConfig.description ?? '';
-const baseUrl = import.meta.env.BASE_URL ?? '/';
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 ---
 
 <!doctype html>

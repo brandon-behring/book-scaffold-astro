@@ -42,7 +42,7 @@ const enabledRoutes = bookConfig.enabledRoutes;
 
 // Astro guarantees BASE_URL carries a trailing slash ('/' or '/foo/'), so
 // `${baseUrl}chapters/` resolves correctly under any deploy base (#142).
-const baseUrl = import.meta.env.BASE_URL ?? '/';
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 
 // Map from internal route name → display label + URL. Only routes that
 // produce a single landing-list entry are listed here (frontmatter is a

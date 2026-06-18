@@ -82,6 +82,30 @@ test('build-labels emits base-less chapter refs into labels.json (#142)', () => 
 test('exam-manifest routes through an injected baseUrl, not a hardcoded root (#142)', () => {
   const src = readFileSync(new URL('../src/lib/exam-manifest.ts', import.meta.url), 'utf8');
   assert.match(src, /baseUrl = '\/'/, 'deriveDomainRouting must take a baseUrl param (default "/")');
-  assert.match(src, /\$\{baseUrl\}chapters\/\$\{e\.data\.chapter\}\//, 'href must be `${baseUrl}chapters/${chapter}/`');
+  assert.match(src, /\$\{base\}chapters\/\$\{e\.data\.chapter\}\//, 'href must be `${base}chapters/${chapter}/`');
   assert.doesNotMatch(src, /\? `\/chapters\//, 'must not hardcode a root-absolute `/chapters/...`');
+});
+
+// #142 (adversarial review, codex-1 confirmed by build): Astro does NOT guarantee
+// a trailing slash on `base`. A consumer setting base:'/foo' (an Astro-documented
+// form) made `${baseUrl}chapters/` render '/foochapters/'. Every baseUrl read must
+// normalize the trailing slash. (Rationale.astro uses its own basePath strip.)
+const NORMALIZED_BASE_FILES = [
+  'pages/index.astro', 'pages/chapters.astro', 'pages/exercises.astro', 'pages/tips.astro',
+  'pages/answers.astro', 'pages/search.astro',
+  'components/XRef.astro', 'components/WeekRef.astro', 'components/AssessmentTest.astro',
+  'components/Cite.astro', 'components/ChapterNav.astro', 'components/Sidebar.astro',
+  'components/Term.astro', 'components/TipsCard.astro', 'components/PartReview.astro',
+  'layouts/Base.astro',
+];
+
+test('every baseUrl read normalizes a no-trailing-slash base (#142, adversarial)', () => {
+  for (const rel of NORMALIZED_BASE_FILES) {
+    const src = readFileSync(new URL(`../${rel}`, import.meta.url), 'utf8');
+    assert.match(
+      src,
+      /const baseUrl = \(import\.meta\.env\.BASE_URL \?\? '\/'\)\.replace\(/,
+      `${rel}: baseUrl must normalize the base trailing slash (else base:'/foo' → '/foochapters/')`,
+    );
+  }
 });

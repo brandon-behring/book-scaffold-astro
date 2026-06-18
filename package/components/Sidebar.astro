@@ -28,7 +28,7 @@ import { academicPartHeading } from '../src/lib/academic-parts';
 const profile = import.meta.env.BOOK_PROFILE ?? 'minimal';
 const siteTitle = bookConfig.title ?? 'Book';
 const siteSubtitle = bookConfig.subtitle ?? 'A scaffold-astro book';
-const baseUrl = import.meta.env.BASE_URL ?? '/';
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 
 // Academic profile: part is a string enum. `academicParts` (schemas.ts) is
 // the canonical order, shared with the renderer and ChapterHeader (#95); the

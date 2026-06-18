@@ -17,7 +17,7 @@ interface Props {
   id: string;
 }
 const { id } = Astro.props;
-const baseUrl = import.meta.env.BASE_URL ?? '/';
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 ---
 <a href={`${baseUrl}glossary#term-${id}`} class="term-link"><slot /></a>
 
