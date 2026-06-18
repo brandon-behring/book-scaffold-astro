@@ -40,17 +40,21 @@ const description = bookConfig.description;
 const portfolio = bookConfig.portfolio;
 const enabledRoutes = bookConfig.enabledRoutes;
 
+// Astro guarantees BASE_URL carries a trailing slash ('/' or '/foo/'), so
+// `${baseUrl}chapters/` resolves correctly under any deploy base (#142).
+const baseUrl = import.meta.env.BASE_URL ?? '/';
+
 // Map from internal route name → display label + URL. Only routes that
 // produce a single landing-list entry are listed here (frontmatter is a
 // slug pattern; chaptersSlug is dynamic; landing IS this page).
 const ROUTE_LABELS: Record<string, { label: string; href: string }> = {
-  chapters:    { label: 'Chapters',     href: '/chapters/' },
-  search:      { label: 'Search',       href: '/search/' },
-  references:  { label: 'References',   href: '/references/' },
-  print:       { label: 'Print view',   href: '/print/' },
-  convergence: { label: 'Convergence',  href: '/convergence/' },
-  tips:        { label: 'Tips',         href: '/tips/' },
-  exercises:   { label: 'Exercises',    href: '/exercises/' },
+  chapters:    { label: 'Chapters',     href: `${baseUrl}chapters/` },
+  search:      { label: 'Search',       href: `${baseUrl}search/` },
+  references:  { label: 'References',   href: `${baseUrl}references/` },
+  print:       { label: 'Print view',   href: `${baseUrl}print/` },
+  convergence: { label: 'Convergence',  href: `${baseUrl}convergence/` },
+  tips:        { label: 'Tips',         href: `${baseUrl}tips/` },
+  exercises:   { label: 'Exercises',    href: `${baseUrl}exercises/` },
 };
 
 const visibleRoutes = enabledRoutes

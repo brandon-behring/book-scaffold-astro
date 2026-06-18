@@ -25,6 +25,9 @@ const tips = tipsEntry?.default ?? [];
 const loadError = tipsEntry
   ? null
   : 'src/data/tips.json not found — run `npx book-scaffold build-tips` to generate.';
+
+// #142: chapter back-links must prefix the deploy base.
+const baseUrl = import.meta.env.BASE_URL ?? '/';
 ---
 <Base title="Tips" description="Numbered tips from this book, drawn from <Tip> instances in chapters.">
   <article class="prose">
@@ -47,7 +50,7 @@ const loadError = tipsEntry
               <p class="tips-index-preview">{tip.preview}</p>
             )}
             <p class="tips-index-meta">
-              From <a href={`/chapters/${tip.chapter}/`}>{tip.chapter}</a>
+              From <a href={`${baseUrl}chapters/${tip.chapter}/`}>{tip.chapter}</a>
             </p>
           </li>
         ))}

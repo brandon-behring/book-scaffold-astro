@@ -64,11 +64,13 @@ test('build-labels: ExampleBox renders as "Example N.M"', () => {
   assert.equal(labels['w4:ex:harmonic'].display, 'Example 4.1');
 });
 
-test('build-labels: href shape is /chapters/<slug>#<id>', () => {
+test('build-labels: href shape is base-less chapters/<slug>#<id> (#142)', () => {
+  // #142: labels.json stores a base-less ref (no leading slash); XRef.astro
+  // prefixes BASE_URL at render so one artifact serves any deploy base.
   const labels = runInTempDir();
   assert.equal(
     labels['w4:thm:stability'].href,
-    '/chapters/valid-academic#w4:thm:stability',
+    'chapters/valid-academic#w4:thm:stability',
   );
 });
 
@@ -78,7 +80,7 @@ test('build-labels: frontmatter slug: overrides the filename in the href (v4.9.0
   const labels = runInTempDir([SLUG_FIXTURE]);
   assert.equal(
     labels['slug:thm:demo'].href,
-    '/chapters/clean-name#slug:thm:demo',
+    'chapters/clean-name#slug:thm:demo',
   );
 });
 

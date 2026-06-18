@@ -259,7 +259,9 @@ async function main() {
         );
       }
       labels[id] = {
-        href: `/chapters/${slug}#${id}`,
+        // #142: base-less ref — XRef.astro prefixes BASE_URL at render so one
+        // labels.json serves any deploy base (root or path-proxied series).
+        href: `chapters/${slug}#${id}`,
         display,
         number: labelOverride ? null : number,
       };

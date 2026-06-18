@@ -50,13 +50,15 @@ const rendered = await Promise.all(
 
 const byChapter = groupByChapter(rendered);
 const total = rendered.length;
+// #142: practice-exam + chapter links must prefix the deploy base.
+const baseUrl = import.meta.env.BASE_URL ?? '/';
 const practiceHref = (bookConfig.enabledRoutes ?? []).includes('practiceExam')
-  ? '/practice-exam'
+  ? `${baseUrl}practice-exam`
   : null;
 
 /** A string chapter ref is a slug (schema kebab-case branch) → linkable. */
 function chapterHref(chapter: number | string): string | null {
-  return typeof chapter === 'string' ? `/chapters/${chapter}/` : null;
+  return typeof chapter === 'string' ? `${baseUrl}chapters/${chapter}/` : null;
 }
 ---
 <Base
