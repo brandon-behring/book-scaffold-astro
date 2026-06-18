@@ -28,6 +28,10 @@ pnpm-debug.log*
 sources/cache/*
 !sources/cache/.gitkeep
 
+# Playwright MCP browser session artifacts (a11y-tree .yml snapshots +
+# console logs). Regenerated on every MCP-driven browse; local-only scratch.
+.playwright-mcp/
+
 # PDF build output
 dist-pdf/
 
