@@ -2,6 +2,23 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.25.1] — 2026-06-18
+
+Patch release. **Base-aware route pages + non-route emitters (#142)** — completes the base-awareness started in v4.24.0: the auto-injected *route pages* and several non-route emitters still emitted root-absolute `/…` hrefs, so a book on a non-root Astro `base` got broken navigation and a dead search page. Plus a trailing-slash hardening across **all** base-aware sites, surfaced by adversarial review of #155.
+
+### Fixed
+
+- **Route pages + remaining emitters derive every href from `BASE_URL` (#142).** The injected `index` (landing list), `chapters` (cards), `exercises` + `tips` (chapter links), `answers` (practice-exam + chapter links), and `search` (the Pagefind CSS/JS bundle — a *dead search page* under a non-root base) route pages, plus `WeekRef`, `XRef`, and `AssessmentTest`, hardcoded root-absolute hrefs that ignored a non-root `base`. All now prefix `import.meta.env.BASE_URL`. `build-labels` writes a **base-less** `chapters/<slug>#<id>` ref into `labels.json` (XRef applies the base at render and tolerates the old form); `deriveDomainRouting` takes `baseUrl` as an injected parameter — it ships pre-compiled in `dist/` where Vite's env replacement can't reach, so a self-read would silently drop the base. **No-op at `base: '/'`.**
+- **All `BASE_URL` reads normalize the trailing slash (#142, adversarial review).** Astro does not guarantee a trailing slash on `base`, so a consumer setting `base: '/foo'` (a documented form) got `/foochapters/` — broken nav + dead search. Every `import.meta.env.BASE_URL` read now normalizes via `.replace(/\/?$/, '/')` (idempotent; no-op at `base: '/'`). This also fixes the **pre-existing v4.24.0 sites** that shared the latent bug — `Sidebar`, `Base` (favicon + sitemap), `Cite`, `Term`, `TipsCard`, `ChapterNav`, `PartReview`. Verified end-to-end with a `base: '/foo'` build: every emitted link resolves under `/foo/`, zero concatenation escapes.
+
+### Changed
+
+- **`labels.json` href format: root-absolute → base-less (migration).** `build-labels` now emits `chapters/<slug>#<id>` (was `/chapters/<slug>#<id>`) so one `labels.json` serves any deploy base. `<XRef>` applies `BASE_URL` at render and strips a leading slash, so a stale (pre-#142) `labels.json` still resolves — but **re-run `book-scaffold build-labels`** to regenerate the committed artifact in the new format.
+
+### Tests
+
+- Package suite **501 → 507** (+6): `base-aware-links.test.mjs` extended to the route pages + non-route emitters + a guard that every `baseUrl` read normalizes; `exam-manifest.test.mjs` gains a behavioral `deriveDomainRouting('/foo')` → `/foo/chapters/` regression (the trailing-slash bug the source-pattern guards alone missed); `build-labels.test.mjs` updated to the base-less contract. The fix (#155) and the trailing-slash hardening were both verified with a `base: '/foo'` demo build.
+
 ## [4.25.0] — 2026-06-14
 
 Minor release. **Section map + margin/template apparatus (Phase 1, #150)** — restores in-chapter reading position and ports the Tufte-LaTeX typographic + evidence vocabulary to the web. Additive and neutral across profiles; existing chapters render byte-identically (the new placement classes + per-page knob are opt-in).
