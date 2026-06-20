@@ -2,7 +2,7 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
-## [4.26.0] — 2026-06-19
+## [4.26.0] — 2026-06-20
 
 Minor release. **Book-aware responsive navigation (#80)** — the nav components (`Sidebar`, prev/next `ChapterNav`) assumed a single-book site with global `/chapters/<id>/` routes, so a **multi-book** consumer (one Astro app serving `/<book>/<slug>/`) got a sidebar that interleaved every book's chapters with dead `/chapters/` links, cross-book prev/next, and **no navigation at all below 1024px**. This release makes the nav book-aware + adds a mobile/tablet drawer. **Single-book consumers render byte-identically by default** (the new config defaults reproduce the old `/chapters/<id>/` shape + global ordering); they additionally gain the mobile drawer (a strict addition, hidden ≥64rem).
 
@@ -13,12 +13,14 @@ Minor release. **Book-aware responsive navigation (#80)** — the nav components
 - **`NavContent.astro`** — the shared book-scoped chapter list (derives the current book from the URL's first path segment, validated against the books that exist), rendered by both the desktop `Sidebar` and the new mobile drawer.
 - **Mobile/tablet nav drawer** — a hamburger in the chrome row (`<a href="#nav-drawer">`, `:target` no-JS fallback) opens a `role="dialog"` drawer reusing `NavContent`, with an inline focus-trap / ESC / backdrop / body-scroll-lock controller. Fills the sub-1024px gap where the sidebar is `display:none`. `NavContent` exported via the package `exports` map.
 - **Apparatus links in nav** — `practice-exam`/`glossary`/`flashcards`/`answers` surfaced in the sidebar + drawer when `apparatusRoutes` is set (book-scoped via `apparatusHref`).
+- **`showChrome` prop on `Base` (#163).** A landing/hub page can pass `showChrome={false}` to skip mounting the tools chrome (ToolFilter + VersionSelector) entirely; the search + theme-toggle cluster always renders. No-op for the academic profile (which never shows them).
 
 ### Fixed
 
 - **Multi-book nav 404s + cross-book bleed (#80).** `Sidebar`, `ChapterNav` (prev/next), and `getNeighbors` now resolve hrefs through `chapterRoute` and scope to the current book (via `bookField`), so a multi-book consumer gets correct `/<book>/<slug>/` links and prev/next that never crosses a book boundary.
 - **No navigation below 1024px** — the new drawer provides the chapter nav that the auto-hidden sidebar left absent on phones/tablets.
 - **Drawer open-state + resolver hardening (post-review).** The drawer controller closes + releases the body scroll-lock when the viewport crosses into the desktop range while open, activates on Space (not just Enter), and a `:target`-opened drawer stays closable via backdrop / dismiss / ESC; the nav resolver collapses empty route tokens so an absent book can never emit a protocol-relative `//` href.
+- **Wide display math scrolls instead of overflowing (#162).** `.katex-display` now scrolls on overflow (`overflow-x: auto` + descender padding) so a wide `$$…$$` equation scrolls within its own block rather than forcing horizontal scroll on the whole page on narrow viewports.
 
 ### Changed
 
