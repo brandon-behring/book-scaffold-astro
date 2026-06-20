@@ -70,6 +70,14 @@ test('apparatusHref: multi-book /:book/:route/ (+ base)', () => {
   assert.equal(apparatusHref('glossary', 'kg', '/:book/:route/', '/guide/'), '/guide/kg/glossary/');
 });
 
+test('apparatusHref / chapterHref: an empty token never yields a protocol-relative // (F2 #80)', () => {
+  // An absent :book must collapse, not emit '//…' — a browser resolves a leading //
+  // as protocol-relative (off-host). A same-origin path is the floor.
+  assert.equal(apparatusHref('practice-exam', null, '/:book/:route/'), '/practice-exam/');
+  assert.equal(apparatusHref('practice-exam', null, '/:book/:route/', '/guide/'), '/guide/practice-exam/');
+  assert.equal(chapterHref(single('01'), '/:book/:id/'), '/01/');
+});
+
 // ===== isCurrentChapter: trailing-slash tolerant =====
 test('isCurrentChapter: matches with and without trailing slash', () => {
   const e = single('01-intro');

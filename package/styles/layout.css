@@ -297,7 +297,7 @@
  * .margin-figure floats) used to size its main+gutter measure against the FULL
  * viewport, ignoring that a left sidebar steals 14–16rem — so the negative-margin
  * float landed PAST the viewport at 1024px AND 1440px. The fix is in tokens.css:
- * the `--measure-main` / `--measure-side` tiers are trimmed (60/20ch → 70/22ch →
+ * the `--measure-main` / `--measure-side` tiers are trimmed (60/20ch → 66/20ch →
  * 78/24ch) and the sidebar to 14/16rem, so `main + gutter ≤ layout-main` (viewport
  * − sidebar) at every desktop width. The gutter scrollspy now FITS beside the
  * sidebar instead of overflowing — no suppression, no breakpoint games. Verified

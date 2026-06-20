@@ -67,7 +67,7 @@ export function chapterHref(
     id: entry.id,
     book: bookOf(entry, bookField) ?? '',
     slug: slugOf(entry, bookField),
-  }).replace(/^\//, '');
+  }).replace(/\/{2,}/g, '/').replace(/^\//, '');   // collapse empties (absent token) — never a protocol-relative //
   return normBase(baseUrl) + path;
 }
 
@@ -81,7 +81,9 @@ export function apparatusHref(
   pattern = '/:route/',
   baseUrl = '/',
 ): string {
-  const path = fillTokens(pattern, { route, book: book ?? '' }).replace(/^\//, '');
+  const path = fillTokens(pattern, { route, book: book ?? '' })
+    .replace(/\/{2,}/g, '/')   // F2 (#80): an absent :book must collapse, never yield a protocol-relative //
+    .replace(/^\//, '');
   return normBase(baseUrl) + path;
 }
 

@@ -101,7 +101,7 @@ const absoluteOgImage = resolvedOgImage
 const twitterHandle = bookConfig.seo?.twitterHandle ?? null;
 const ogSiteName = bookConfig.title ?? title;
 const ogDescription = description ?? bookConfig.description ?? '';
-const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/*$/, '/');
 ---
 
 <!doctype html>
@@ -271,7 +271,10 @@ const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
             .call(panel.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'))
             .filter(function (el) { return el.offsetParent !== null; });
         }
-        function isOpen() { return drawer.classList.contains('is-open'); }
+        // C1 (#80, codex@medium): count the :target no-JS-fallback state too, so a
+        // drawer opened via a '#nav-drawer' hash (with JS active) is still closable by
+        // backdrop / dismiss / ESC (close() clears the hash); else it would be stranded.
+        function isOpen() { return drawer.classList.contains('is-open') || location.hash === '#nav-drawer'; }
         function open(e) {
           if (e) e.preventDefault();
           opener = document.activeElement;
@@ -308,6 +311,18 @@ const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
             else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
           }
         });
+        // F5 (a11y, #80): role="button" must activate on Space; native anchors only
+        // fire click on Enter, so bind Space explicitly (preventDefault stops scroll).
+        toggle.addEventListener('keydown', function (e) {
+          if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); isOpen() ? close(e) : open(e); }
+        });
+        // F1 (#80): if the viewport grows into the desktop range (>=80rem) while the
+        // drawer is open, the drawer + toggle + backdrop go display:none — close() to
+        // clear .is-open and release the body scroll-lock so the page isn't stranded.
+        var mq = window.matchMedia('(min-width: 80rem)');
+        var onDesktop = function (ev) { if (ev.matches) close(); };
+        if (mq.addEventListener) mq.addEventListener('change', onDesktop);
+        else if (mq.addListener) mq.addListener(onDesktop);
       })();
     </script>
   </body>

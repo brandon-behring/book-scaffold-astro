@@ -18,6 +18,7 @@ Minor release. **Book-aware responsive navigation (#80)** — the nav components
 
 - **Multi-book nav 404s + cross-book bleed (#80).** `Sidebar`, `ChapterNav` (prev/next), and `getNeighbors` now resolve hrefs through `chapterRoute` and scope to the current book (via `bookField`), so a multi-book consumer gets correct `/<book>/<slug>/` links and prev/next that never crosses a book boundary.
 - **No navigation below 1024px** — the new drawer provides the chapter nav that the auto-hidden sidebar left absent on phones/tablets.
+- **Drawer open-state + resolver hardening (post-review).** The drawer controller closes + releases the body scroll-lock when the viewport crosses into the desktop range while open, activates on Space (not just Enter), and a `:target`-opened drawer stays closable via backdrop / dismiss / ESC; the nav resolver collapses empty route tokens so an absent book can never emit a protocol-relative `//` href.
 
 ### Changed
 
