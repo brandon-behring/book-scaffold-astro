@@ -2,6 +2,22 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.25.2] — 2026-06-20
+
+Patch release. Two dogfood fixes surfaced by the cross-property visual recon (#165): a WCAG-AA display-math overflow fix and one additive, fully backward-compatible `Base.astro` prop.
+
+### Fixed
+
+- **Display math no longer overflows the viewport (#162).** KaTeX sets no `overflow` on `.katex-display`, so it defaults to `visible`: a wide equation (long derivations, big matrices) forced a horizontal scroll on the **whole page** on mobile — a WCAG 1.4.10 (Reflow) failure across every math book (measured on a deployed chapter at 390px: 637px document scroll width, 16/41 display blocks overflowing). `chapter.css` now gives `.katex-display` `overflow-x: auto` (plus bottom padding so the scrollbar clears descenders). `overflow-y` is deliberately left unset — once `overflow-x` is non-visible the CSS overflow rule computes it to `auto`, so a too-wide equation scrolls **within its own block** and tall constructs are never clipped.
+
+### Added
+
+- **`showChrome` prop on `Base.astro` (#163).** The tools chrome (`ToolFilter` + `VersionSelector` islands) was gated only by `profile !== 'academic'`, so a chapter-less hub/landing page had no chrome-free path except misusing the academic profile (which drags the katex peer deps). `showChrome` (default `true`, fully backward-compatible) lets a landing page opt out — `<Base showSidebar={false} showChrome={false}>` renders the search + theme-toggle cluster only, keeping its own correct profile. `showToolsChrome = (profile !== 'academic') && showChrome`; the search button, theme toggle, and `showSidebar`-gated nav toggle are unaffected.
+
+### Tests
+
+- Package suite **507 → 511** (+4): `katex-display-overflow.test.mjs` guards the `.katex-display` overflow rule and that `overflow-y: hidden` is never reintroduced (it would clip tall equations under a constrained height); `chrome-gating.test.mjs` (×3) guards the `showChrome` wiring + default, and that the search + theme-toggle cluster is never moved behind the chrome gate.
+
 ## [4.25.1] — 2026-06-18
 
 Patch release. **Base-aware route pages + non-route emitters (#142)** — completes the base-awareness started in v4.24.0: the auto-injected *route pages* and several non-route emitters still emitted root-absolute `/…` hrefs, so a book on a non-root Astro `base` got broken navigation and a dead search page. Plus a trailing-slash hardening across **all** base-aware sites, surfaced by adversarial review of #155.
