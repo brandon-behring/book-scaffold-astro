@@ -16,10 +16,14 @@
  *   showSidebar — render the left chapter-navigation sidebar (default: true).
  *                 Set false for the landing page or any full-bleed surface.
  *                 Below 1024px the sidebar is auto-hidden via CSS regardless.
+ *   showChrome  — render the tools chrome (ToolFilter + VersionSelector)
+ *                 (default: true). Set false on a landing/hub page with no
+ *                 chapters/tools/versions; search + theme toggle always render.
  *
  * Tools chrome (ToolFilter, VersionSelector): only mounted when
- * BOOK_PROFILE !== 'academic'. Academic-profile books get no JS islands
- * in the chrome row (search + theme toggle only).
+ * BOOK_PROFILE !== 'academic' AND showChrome !== false. Academic-profile books
+ * (and any page with showChrome={false}) get no JS islands in the chrome row
+ * (search + theme toggle only).
  *
  * Usage:
  *   ---
@@ -63,13 +67,17 @@ import NavContent from '../components/NavContent.astro';
 import bookConfig from 'virtual:book-scaffold/book-config';
 
 const profile = import.meta.env.BOOK_PROFILE ?? 'minimal';
-const showToolsChrome = profile !== 'academic';
 
 interface Props {
   title: string;
   description?: string;
   lang?: string;
   showSidebar?: boolean;
+  /** #163: render the optional "tools chrome" — the ToolFilter +
+   *  VersionSelector islands (default true). Set false on landing/hub pages
+   *  with no chapters/tools/versions; the search + theme-toggle cluster always
+   *  renders. (No-op for the academic profile, which never shows them.) */
+  showChrome?: boolean;
   /** v4.6.0: Open Graph image URL (relative to site root, or absolute). */
   ogImage?: string;
   /** v4.6.0: Open Graph type. Defaults to 'website'; Chapter.astro passes 'article'. */
@@ -81,9 +89,17 @@ const {
   description,
   lang = 'en',
   showSidebar = true,
+  showChrome = true,
   ogImage,
   ogType = 'website',
 } = Astro.props;
+
+// Tools chrome (ToolFilter + VersionSelector) renders only for non-academic
+// profiles AND when the page opts in via showChrome (default true). A
+// landing/hub page (no chapters/tools/versions) passes showChrome={false} to
+// get the search + theme-toggle cluster only — the chrome-free path that
+// previously forced borrowing the academic profile (and its katex deps). #163.
+const showToolsChrome = (profile !== 'academic') && showChrome;
 
 // v4.6.0: canonical + og:url need Astro.site. defineBookConfig throws at
 // config-load if `site` is missing, so Astro.site is guaranteed populated
