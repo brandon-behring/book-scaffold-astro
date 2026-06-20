@@ -235,10 +235,13 @@
    of forcing a horizontal scroll on the whole page. KaTeX sets no `overflow` on
    `.katex-display`, so it defaults to `visible`; a wide equation (long
    derivations, big matrices) then overflows the viewport and the page scrolls
-   sideways on mobile. WCAG 1.4.10 Reflow. See book-scaffold-astro#162. */
+   sideways on mobile. WCAG 1.4.10 Reflow. See book-scaffold-astro#162.
+   overflow-y is deliberately NOT set: once overflow-x is non-visible the CSS
+   overflow rule already computes overflow-y to `auto`, so there is no spurious
+   vertical scrollbar — and an explicit `hidden` would silently clip tall
+   equations if a consumer ever constrains .katex-display's height. */
 .katex-display {
   overflow-x: auto;
-  overflow-y: hidden;
-  /* a little room so the scrollbar doesn't clip the equation's descenders */
+  /* a little room so the horizontal scrollbar doesn't clip the equation's descenders */
   padding-block-end: 0.25rem;
 }

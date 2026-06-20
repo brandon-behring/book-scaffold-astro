@@ -28,8 +28,8 @@ test('Base.astro: showChrome gates the tools-chrome islands (#163)', () => {
   // showToolsChrome must AND-in showChrome, so showChrome={false} suppresses them.
   assert.match(
     base,
-    /showToolsChrome\s*=\s*\(?\s*profile\s*!==\s*'academic'\s*\)?\s*&&\s*showChrome/,
-    "showToolsChrome = (profile !== 'academic') && showChrome",
+    /showToolsChrome\s*=\s*(?:\(?\s*profile\s*!==\s*'academic'\s*\)?\s*&&\s*showChrome|showChrome\s*&&\s*\(?\s*profile\s*!==\s*'academic'\s*\)?)/,
+    "showToolsChrome ANDs (profile !== 'academic') with showChrome (either operand order)",
   );
   // ...and both islands render under showToolsChrome, so the gate actually applies.
   assert.match(base, /\{\s*showToolsChrome\s*&&\s*<ToolFilter/, 'ToolFilter gated by showToolsChrome');

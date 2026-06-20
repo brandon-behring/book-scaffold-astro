@@ -20,5 +20,8 @@ test('chapter.css: .katex-display contains the overflow rule (#162)', () => {
   const block = css.match(/\.katex-display\s*\{([^}]*)\}/s);
   assert.ok(block, '.katex-display block present in chapter.css');
   assert.match(block[1], /overflow-x:\s*auto/, 'overflow-x: auto so wide display math scrolls in-block');
-  assert.match(block[1], /overflow-y:\s*hidden/, 'overflow-y: hidden — no spurious vertical scrollbar');
+  // overflow-y is intentionally left unset (it computes to `auto` once overflow-x
+  // is non-visible); an explicit `hidden` would clip tall equations if a consumer
+  // constrains the height — guard against reintroducing it.
+  assert.doesNotMatch(block[1], /overflow-y:\s*hidden/, 'overflow-y must NOT be hidden (would clip tall equations)');
 });
