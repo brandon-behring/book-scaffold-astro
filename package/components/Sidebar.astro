@@ -1,107 +1,28 @@
 ---
 /**
- * Sidebar — left-pinned chapter navigation.
+ * Sidebar — left-pinned chapter navigation (desktop ≥64rem).
  *
- * Profile-aware: reads BOOK_PROFILE to decide how to group + sort.
- *   academic: groups by part (foundations / ssm-core / ...), sorts by week
- *   tools/minimal: groups by part (numeric 0-10), sorts by chapter
+ * v4.26.0 (#80): the chapter-list logic moved to `NavContent.astro` (shared with
+ * the mobile `NavDrawer`), which is book-aware — it derives the current book from
+ * the URL and scopes the list, resolving hrefs through the configured
+ * `chapterRoute` pattern. Single-book consumers are unaffected (NavContent's
+ * defaults reproduce the old `/chapters/<id>/` list). Sidebar now owns only the
+ * brand header + the pinned/scrollable shell.
  *
- * Rendered by Base.astro when `showSidebar` is true (default).
- * Hidden below 1024px (`@media (max-width: 64rem)` in layout.css) —
- * mobile gets single-column chapter content with no nav (user reaches
- * the chapter index via /chapters/).
+ * Rendered by Base.astro when `showSidebar` is true (default). Hidden below
+ * 1024px via layout.css — sub-1024 navigation is the NavDrawer (v4.26.0).
  *
- * Visual: ~280px wide, sticky to top, scrollable independently of main.
- * Site title at top doubles as a "home" link.
- *
- * Customize (v4.23.0, #135): the brand reads `defineBookConfig({ title,
- * subtitle })` via the book-config virtual module — consumers set both in
- * astro.config.mjs with zero component overrides. The previous hardcoded
- * strings remain the fallbacks, so existing books render unchanged until
- * they configure a title.
+ * Brand (v4.23.0, #135): reads `defineBookConfig({ title, subtitle })` via the
+ * book-config virtual module; the previous hardcoded strings remain fallbacks.
  */
-import { getCollection } from 'astro:content';
 import bookConfig from 'virtual:book-scaffold/book-config';
-import { academicParts } from '../src/schemas';
-import { academicPartHeading } from '../src/lib/academic-parts';
+import NavContent from './NavContent.astro';
 
-const profile = import.meta.env.BOOK_PROFILE ?? 'minimal';
 const siteTitle = bookConfig.title ?? 'Book';
 const siteSubtitle = bookConfig.subtitle ?? 'A scaffold-astro book';
-const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
-
-// Academic profile: part is a string enum. `academicParts` (schemas.ts) is
-// the canonical order, shared with the renderer and ChapterHeader (#95); the
-// "Part {roman} · {name}" labels come from the same academic-parts module.
-const ACADEMIC_PART_ORDER = academicParts;
-
-const rawChapters = await getCollection('chapters', (entry) => !entry.data.draft);
-
-// Pre-shape chapters into render-ready rows. All TS casts happen here in
-// the frontmatter so the template stays free of type annotations (Astro's
-// JSX parser mis-tokenizes `as Type<X, Y>` inside expression containers).
-interface ChapterRow {
-  id: string;
-  partKey: string;
-  prefix: string;
-  title: string;
-  sortPart: number;
-  sortRank: number;
-}
-
-function rowOf(entry: typeof rawChapters[number]): ChapterRow {
-  const d = entry.data as Record<string, unknown>;
-  if (profile === 'academic') {
-    const week = (d.week as number) ?? 0;
-    return {
-      id: entry.id,
-      partKey: (d.part as string) ?? '',
-      prefix: `W${String(week).padStart(2, '0')}`,
-      title: (d.title as string) ?? entry.id,
-      sortPart: ACADEMIC_PART_ORDER.indexOf((d.part as typeof ACADEMIC_PART_ORDER[number]) ?? 'foundations'),
-      sortRank: week,
-    };
-  }
-  const partNum = (d.part as number) ?? 0;
-  const chapter = (d.chapter as number) ?? 0;
-  return {
-    id: entry.id,
-    partKey: String(partNum),
-    prefix: `Ch${chapter}`,
-    title: (d.title as string) ?? entry.id,
-    sortPart: partNum,
-    sortRank: chapter,
-  };
-}
-
-const rows: ChapterRow[] = rawChapters.map(rowOf).sort((a, b) => {
-  if (a.sortPart !== b.sortPart) return a.sortPart - b.sortPart;
-  return a.sortRank - b.sortRank;
-});
-
-// Group rows by part. Academic profile uses the ACADEMIC_PART_ORDER as
-// the canonical key sequence so empty parts still appear (in part headers
-// rather than gaps).
-const byPart = new Map<string, ChapterRow[]>();
-if (profile === 'academic') {
-  for (const part of ACADEMIC_PART_ORDER) byPart.set(part, []);
-}
-for (const r of rows) {
-  if (!byPart.has(r.partKey)) byPart.set(r.partKey, []);
-  byPart.get(r.partKey)!.push(r);
-}
-
-const currentPath = Astro.url.pathname;
-const chaptersIndexHref = `${baseUrl}chapters/`;
-const referencesHref = `${baseUrl}references/`;
-function isCurrent(id: string): boolean {
-  return currentPath === `${baseUrl}chapters/${id}/` || currentPath === `${baseUrl}chapters/${id}`;
-}
-
-function partLabel(key: string): string {
-  if (profile === 'academic') return academicPartHeading(key);
-  return `Part ${key}`;
-}
+// #142: Astro does not guarantee a trailing slash on `base` — normalize so the
+// home link is `${base}/`, not a slash-less `/foo`.
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/*$/, '/');
 ---
 
 <aside class="sidebar" aria-label="Chapter navigation">
@@ -111,41 +32,7 @@ function partLabel(key: string): string {
       <span class="sidebar-subtitle">{siteSubtitle}</span>
     </a>
 
-    <nav class="sidebar-nav">
-      <a
-        href={chaptersIndexHref}
-        class={`sidebar-link sidebar-link-index ${currentPath === chaptersIndexHref ? 'is-current' : ''}`}
-      >
-        All chapters
-      </a>
-      {profile === 'academic' && (
-        <a
-          href={referencesHref}
-          class={`sidebar-link sidebar-link-index ${currentPath === referencesHref ? 'is-current' : ''}`}
-        >
-          References
-        </a>
-      )}
-
-      {Array.from(byPart.entries()).map(([part, list]) => list.length === 0 ? null : (
-        <section class="sidebar-part">
-          <h3 class="sidebar-part-heading">{partLabel(part)}</h3>
-          <ol class="sidebar-list">
-            {list.map((r) => (
-              <li>
-                <a
-                  href={`${baseUrl}chapters/${r.id}/`}
-                  class={`sidebar-link ${isCurrent(r.id) ? 'is-current' : ''}`}
-                >
-                  <span class="sidebar-week">{r.prefix}</span>
-                  <span class="sidebar-chapter-title">{r.title}</span>
-                </a>
-              </li>
-            ))}
-          </ol>
-        </section>
-      ))}
-    </nav>
+    <NavContent />
   </div>
 </aside>
 
@@ -181,86 +68,5 @@ function partLabel(key: string): string {
     font-size: var(--text-xs);
     color: var(--color-text-muted);
     margin-top: 0.15em;
-  }
-
-  .sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-  }
-
-  .sidebar-link-index {
-    display: block;
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-sm);
-    text-decoration: none;
-    color: var(--color-text);
-    font-weight: 500;
-    margin-bottom: 1px;
-    border-left: 2px solid transparent;
-  }
-  .sidebar-link-index:hover {
-    background: var(--color-bg);
-  }
-  .sidebar-link-index.is-current {
-    background: var(--warm-blue-tint);
-    border-left-color: var(--callout-info);
-  }
-
-  .sidebar-part {
-    border-top: 1px solid var(--color-border);
-    padding-top: var(--space-3);
-  }
-  .sidebar-part:first-of-type {
-    border-top: 0;
-    padding-top: 0;
-  }
-  .sidebar-part-heading {
-    font-family: var(--font-code);
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--color-text-muted);
-    margin: 0 0 var(--space-2) 0;
-    padding: 0 var(--space-3);
-  }
-
-  .sidebar-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  .sidebar-list li {
-    margin: 0;
-  }
-  .sidebar-link {
-    display: grid;
-    grid-template-columns: 2.4em 1fr;
-    gap: var(--space-2);
-    align-items: baseline;
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-sm);
-    text-decoration: none;
-    color: var(--color-text);
-    line-height: var(--leading-normal);
-    border-left: 2px solid transparent;
-  }
-  .sidebar-link:hover {
-    background: var(--color-bg);
-    text-decoration: none;
-  }
-  .sidebar-link.is-current {
-    background: var(--warm-blue-tint);
-    border-left-color: var(--callout-info);
-    font-weight: 500;
-  }
-  .sidebar-week {
-    font-family: var(--font-code);
-    font-size: var(--text-xs);
-    color: var(--color-text-muted);
-    text-transform: uppercase;
-  }
-  .sidebar-chapter-title {
-    color: inherit;
   }
 </style>

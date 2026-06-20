@@ -60,3 +60,7 @@ package/src/data/tips.json
 package/src/data/exercises.json
 demo/src/data/tips.json
 demo/src/data/exercises.json
+
+# npm pack output (local release-candidate tarballs; published via `npm publish`,
+# never committed). e.g. brandon_m_behring-book-scaffold-astro-*.tgz
+*.tgz

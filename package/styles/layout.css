@@ -31,10 +31,15 @@
 }
 
 /* At 1024px+: pin sidebar to left, main content fills remainder. */
-@media (min-width: 64rem) {
+/* v4.26.0 (#80): the full 3-column (sidebar + Tufte gutter) needs room the
+ * sidebar steals, so it activates at 80rem (1280px) — below that the drawer is
+ * the chapter nav and content runs full-width (the gutter/section-map then fits
+ * in the whole viewport). This is where the gutter genuinely fits beside the
+ * sidebar with the trimmed measures. */
+@media (min-width: 80rem) {
   .layout-with-sidebar {
     display: grid;
-    grid-template-columns: 16rem 1fr;
+    grid-template-columns: 14rem 1fr;   /* trimmed so main+gutter fits beside it */
     grid-template-areas: 'sidebar main';
     min-height: 100vh;
   }
@@ -51,7 +56,7 @@
  * titles. */
 @media (min-width: 90rem) {
   .layout-with-sidebar {
-    grid-template-columns: 18rem 1fr;
+    grid-template-columns: 16rem 1fr;
   }
 }
 
@@ -217,4 +222,90 @@
  * unaffected. 80ch matches the wide-desktop tier's main measure (tokens.css). */
 .prose[data-layout="wide"] {
   --measure-main: 80ch;
+}
+
+/* ===== Mobile/tablet nav drawer (v4.26.0, #80) =====
+ * Below the sidebar breakpoint (64rem) the left Sidebar is display:none — this
+ * is the navigation in that range: a hamburger in the chrome row toggles a
+ * slide-in drawer reusing NavContent (the same book-scoped nav source as the
+ * sidebar). No-JS baseline: `:target` opens it (the toggle is <a href="#nav-drawer">);
+ * the inline controller in Base.astro enhances it with focus-trap + ESC + body
+ * scroll-lock. Hidden at ≥64rem, where the persistent sidebar is the nav. The
+ * ≥64rem gutter-fit (sidenote/section-map overflow) is a separate fix. */
+@media (min-width: 80rem) {
+  .nav-toggle,
+  .nav-drawer {
+    display: none;
+  }
+}
+
+@media (max-width: 79.98rem) {
+  .nav-drawer {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-drawer, 30);
+    visibility: hidden;
+  }
+  .nav-drawer.is-open,
+  .nav-drawer:target {
+    visibility: visible;
+  }
+  .nav-drawer-backdrop {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+  .nav-drawer-panel {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: min(20rem, 85vw);
+    max-height: 100vh;
+    overflow-y: auto;
+    background: var(--color-bg-subtle);
+    border-right: 1px solid var(--color-border);
+    padding: var(--space-6) var(--space-5);
+    transform: translateX(-100%);
+    transition: transform 220ms ease;
+  }
+  .nav-drawer.is-open .nav-drawer-panel,
+  .nav-drawer:target .nav-drawer-panel {
+    transform: translateX(0);
+  }
+  .nav-drawer.is-open .nav-drawer-backdrop,
+  .nav-drawer:target .nav-drawer-backdrop {
+    opacity: 1;
+  }
+  .nav-drawer-dismiss {
+    position: absolute;
+    top: var(--space-3);
+    inset-inline-end: var(--space-3);
+    z-index: 1;
+  }
+}
+
+/* Body scroll-lock while the drawer is open (class toggled by the controller). */
+.nav-drawer-locked {
+  overflow: hidden;
+}
+
+/* ===== Gutter-fit (v4.26.0, #80) =====
+ * The Tufte right-gutter (.section-map scrollspy + .sidenote / .column-margin /
+ * .margin-figure floats) used to size its main+gutter measure against the FULL
+ * viewport, ignoring that a left sidebar steals 14–16rem — so the negative-margin
+ * float landed PAST the viewport at 1024px AND 1440px. The fix is in tokens.css:
+ * the `--measure-main` / `--measure-side` tiers are trimmed (60/20ch → 70/22ch →
+ * 78/24ch) and the sidebar to 14/16rem, so `main + gutter ≤ layout-main` (viewport
+ * − sidebar) at every desktop width. The gutter scrollspy now FITS beside the
+ * sidebar instead of overflowing — no suppression, no breakpoint games. Verified
+ * scrollWidth == clientWidth across the responsive audit harness. */
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-drawer-panel,
+  .nav-drawer-backdrop {
+    transition: none;
+  }
 }

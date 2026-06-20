@@ -2,6 +2,29 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.26.0] — 2026-06-19
+
+Minor release. **Book-aware responsive navigation (#80)** — the nav components (`Sidebar`, prev/next `ChapterNav`) assumed a single-book site with global `/chapters/<id>/` routes, so a **multi-book** consumer (one Astro app serving `/<book>/<slug>/`) got a sidebar that interleaved every book's chapters with dead `/chapters/` links, cross-book prev/next, and **no navigation at all below 1024px**. This release makes the nav book-aware + adds a mobile/tablet drawer. **Single-book consumers render byte-identically by default** (the new config defaults reproduce the old `/chapters/<id>/` shape + global ordering); they additionally gain the mobile drawer (a strict addition, hidden ≥64rem).
+
+### Added
+
+- **Declarative nav-route config on `defineBookConfig` (#80).** Four optional token-string fields drive the book-aware nav: `chapterRoute` (default `'/chapters/:id/'`; tokens `:id`/`:book`/`:slug`), `bookField` (default `'book'` — the frontmatter field naming a chapter's book), `apparatusRoute` (default `'/:route/'`), and `apparatusRoutes` (default `[]` — the apparatus slugs to surface in nav). A multi-book consumer sets e.g. `chapterRoute: '/:id/'`, `apparatusRoute: '/:book/:route/'`. Token strings (not a resolver function) so the config survives the book-config virtual module's `JSON.stringify`.
+- **`nav-href` resolver lib** (`chapterHref` / `apparatusHref` / `bookOf` / `slugOf` / `isCurrentChapter`) — pure, `astro:content`-free (DTS-safe), exported from the main entry. Unit-tested (`tests/nav-href.test.mjs`).
+- **`NavContent.astro`** — the shared book-scoped chapter list (derives the current book from the URL's first path segment, validated against the books that exist), rendered by both the desktop `Sidebar` and the new mobile drawer.
+- **Mobile/tablet nav drawer** — a hamburger in the chrome row (`<a href="#nav-drawer">`, `:target` no-JS fallback) opens a `role="dialog"` drawer reusing `NavContent`, with an inline focus-trap / ESC / backdrop / body-scroll-lock controller. Fills the sub-1024px gap where the sidebar is `display:none`. `NavContent` exported via the package `exports` map.
+- **Apparatus links in nav** — `practice-exam`/`glossary`/`flashcards`/`answers` surfaced in the sidebar + drawer when `apparatusRoutes` is set (book-scoped via `apparatusHref`).
+
+### Fixed
+
+- **Multi-book nav 404s + cross-book bleed (#80).** `Sidebar`, `ChapterNav` (prev/next), and `getNeighbors` now resolve hrefs through `chapterRoute` and scope to the current book (via `bookField`), so a multi-book consumer gets correct `/<book>/<slug>/` links and prev/next that never crosses a book boundary.
+- **No navigation below 1024px** — the new drawer provides the chapter nav that the auto-hidden sidebar left absent on phones/tablets.
+
+### Changed
+
+- **`Sidebar` slimmed to a brand + `<NavContent/>` shell; `ChapterNav` routes through `nav-href`.** No-op for single-book consumers (resolver defaults reproduce the old hrefs + the old chapter list; `getNeighbors` is unscoped when no `book` field exists). The `#141` ChapterNav test now asserts the resolver contract.
+- **Right-gutter now FITS beside the sidebar (BC-affecting layout change).** The Tufte right-gutter (`.section-map` scrollspy + sidenote / margin-figure floats) sized its main+gutter measure against the FULL viewport, ignoring that a left sidebar steals 14–16rem — so the negative-margin float overflowed the viewport at 1024px AND 1440px. Fixed properly (the gutter still shows — no suppression): (a) the shared text measure is trimmed to a more typographic width — `--measure-main` 65→60ch / 80→66ch / 90→78ch and `--measure-side` 28→20ch / 24→20ch / 26→24ch; (b) the sidebar grid is trimmed to 14rem / 16rem; and (c) the **full 3-column (sidebar + floated gutter scrollspy) now activates at ≥80rem (1280px)** instead of 64rem — below 1280px the new mobile drawer is the chapter nav, content runs full-width, and the collapsed in-flow ChapterTOC is the "on this page". **BC impact for single-book sidebar consumers (academic/tools): the sidebar + gutter scrollspy now appear at ≥1280px (was ≥1024px; the 1024–1280px band uses the drawer), and the body text measure is narrower. Verified `scrollWidth == clientWidth` at every viewport (390–1440px, light + dark) via the responsive audit harness.**
+- **Defensive narrow-viewport overflow guards** (`:not(pre) > code { overflow-wrap: anywhere }`, `.prose > table` scroll) — prevent a long inline-code identifier or wide table from forcing horizontal page scroll on a phone.
+
 ## [4.25.1] — 2026-06-18
 
 Patch release. **Base-aware route pages + non-route emitters (#142)** — completes the base-awareness started in v4.24.0: the auto-injected *route pages* and several non-route emitters still emitted root-absolute `/…` hrefs, so a book on a non-root Astro `base` got broken navigation and a dead search page. Plus a trailing-slash hardening across **all** base-aware sites, surfaced by adversarial review of #155.

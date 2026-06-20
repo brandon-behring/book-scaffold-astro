@@ -122,6 +122,21 @@ export { assertEnumProp } from './lib/assert-prop.js';
 // on an unknown book instead of emitting a dead cross-origin link.
 export { resolveBookHref } from './lib/book-link.js';
 
+// v4.26.0 (#80): pure route-href resolver for the book-aware navigation.
+// chapterHref/apparatusHref turn declarative token patterns (chapterRoute /
+// apparatusRoute from defineBookConfig) into base-prefixed links, so the
+// Sidebar / ChapterNav / NavContent serve both single-book (default pattern)
+// and multi-book consumers. No astro:content import → safe for the DTS bundle.
+// Unit-tested in tests/nav-href.test.mjs.
+export {
+  chapterHref,
+  apparatusHref,
+  bookOf,
+  slugOf,
+  isCurrentChapter,
+  type ChapterLike,
+} from './lib/nav-href.js';
+
 // v4.17.0 (Tier 3, #112): exam-domain membership check. assertKnownDomain
 // throws when a question's `domain` is not in the consumer's examDomains
 // registry — the per-book analogue of resolveBookHref's unknown-book throw.

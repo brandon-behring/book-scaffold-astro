@@ -122,6 +122,16 @@ Until v3.0 triggers, accept that bug fixes don't auto-flow to existing books. Bo
 **Reasoning**: #82 itself was a coverage gap — don't trade coverage for speed.
 **Deviate when**: Never delete a visual gate without equivalent-or-better coverage in the replacement.
 
+### D21 — Book-aware nav config is declarative token strings, not resolver functions (#80, v4.26.0)
+**Decision**: `defineBookConfig`'s nav-route fields (`chapterRoute` / `bookField` / `apparatusRoute` / `apparatusRoutes`) are declarative TOKEN STRINGS (`'/:id/'`, `':book'`, `':slug'`, `':route'`) resolved by a pure `nav-href` lib — NOT a `chapterHref(entry) => string` callback.
+**Reasoning**: the book-config virtual module serializes via `JSON.stringify` (`integration.ts`); a function serializes to `undefined`. Token strings cross the boundary intact and cover every known multi-book route shape. A consumer needing real logic already owns its route components (recipe 18) and can import `chapterHref` directly.
+**Deviate when**: a consumer's URL scheme can't be expressed with `:id`/`:book`/`:slug` token substitution — then they own the route components, no worse than pre-4.26.
+
+### D22 — Mobile nav is an inline controller + the 3-column gutter FITS (not suppressed) (#80, v4.26.0)
+**Decision**: (a) the sub-1280px nav drawer is an inline vanilla `<script>` controller over a `:target` no-JS baseline, NOT a Preact island. (b) The right-gutter overflow (the Tufte `.section-map`/sidenote float overflowing beside the sidebar at 1024/1440px) is fixed by making it FIT — trim the shared measures (`--measure-main` 60/66/78ch, `--measure-side` 20/20/24ch) + the sidebar (14/16rem), and activate the full 3-column (sidebar + floated gutter) at **≥80rem (1280px)** instead of 64rem (below that: drawer + full-width content + ChapterTOC). NOT suppressing/hiding the scrollspy.
+**Reasoning**: the drawer is event-wiring (open/close/focus-trap), not Preact rendering — the inline script is instant (no hydration flash), zero `.tsx` compile risk, and matches the existing theme-toggle precedent. The fit-not-suppress gutter keeps the Tufte scrollspy at true-desktop widths (it's the design's point); narrower measures are also closer to the ideal reading column. Verified `scrollWidth == clientWidth` across the consumer's responsive audit harness (390–1440px).
+**Deviate when**: a consumer wants the gutter scrollspy at 1024–1280px — they'd need an even narrower measure or a different sidebar treatment at that band; document the trade-off.
+
 ## How to use this ledger
 
 When a future change in the scaffold contradicts a decision above, update this ledger first. Don't change behavior silently — the ledger is the durable record of "why this is shaped like it is."
