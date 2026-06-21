@@ -2,6 +2,28 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.25.3] — 2026-06-21
+
+Patch release. The responsive code/equation/table treatment from the responsive-reading design (`docs/responsive-reading.md`, #170): code fits ~80-column lines on tablet+ without scrolling, wide code + display math get an edge scroll-shadow, and wide tables scroll on mobile instead of overflowing the page.
+
+### Added
+
+- **Code blocks break out of the prose measure** to a new `--measure-code` token (≈48rem). Code authored to ~80 columns fits at the full 14px font from tablet-landscape up — centered on the prose axis and viewport-bounded (`min(100vw − 2·--space-4, --measure-code)`), so the page never scrolls sideways. `.wide`/`.column-page` code keeps its full-bleed behavior (excluded).
+- **Edge scroll-shadow** on horizontally-scrollable code (`pre`) and display math (`.katex-display`) — the Lea Verou layered-gradient technique: bg-colored cover layers move with content (`background-attachment: local`), shadow layers are fixed, so a shadow shows only when there is hidden content to that side.
+
+### Changed
+
+- **Phone code font** shrinks to `0.75rem` (≤40rem) so more fits before scrolling.
+- **Wide tables scroll within their own block on mobile** (≤48rem: `.prose table { display: block; max-width: 100%; overflow-x: auto }`) instead of overflowing the page. A sticky `thead` is deliberately not used — it cannot stick inside a horizontal-scroll wrapper.
+
+### Docs
+
+- **`docs/responsive-reading.md`** — the family's responsive-reading + content-authoring standards (prose · equations · code · tables · figures · sidenotes · nav), including the equation authoring standard (multiline via `aligned`/`split` to fit tablet-portrait; KaTeX can't auto-break) and code line-length = 80. Lands via #170.
+
+### Notes
+
+- The `visual` snapshot check will flag the (expected) code/table render changes; refresh baselines via CI `--update-snapshots`.
+
 ## [4.25.2] — 2026-06-20
 
 Patch release. Two dogfood fixes surfaced by the cross-property visual recon (#165): a WCAG-AA display-math overflow fix and one additive, fully backward-compatible `Base.astro` prop.

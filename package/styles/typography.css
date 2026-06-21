@@ -89,6 +89,39 @@ pre code {
   font-size: var(--text-sm);
 }
 
+/* ===== Responsive reading (v4.25.3) — docs/responsive-reading.md =====
+ * Code blocks break out of the prose measure to fit ~80-char lines (centered on
+ * the prose axis; viewport-bounded via min(100vw-…) so the page never scrolls
+ * sideways), with an edge scroll-shadow. `.wide`/`.column-page` code keeps its
+ * full-bleed behavior (excluded here). */
+.prose > pre:not(.wide):not(.column-page) {
+  max-width: none;
+  width: min(calc(100vw - 2 * var(--space-4)), var(--measure-code));
+  margin-left: 50%;
+  transform: translateX(-50%);
+  /* Lea Verou layered scroll-shadow: bg-colored covers move with content
+   * (attachment:local); shadow layers are fixed → shown only when scrollable. */
+  background-image:
+    linear-gradient(to right, var(--color-code-bg) 30%, rgba(0, 0, 0, 0)),
+    linear-gradient(to right, rgba(0, 0, 0, 0), var(--color-code-bg) 70%),
+    radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0)),
+    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0));
+  background-position: 0 0, 100% 0, 0 0, 100% 0;
+  background-repeat: no-repeat;
+  background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+/* Phone: shrink code a touch so more fits before scrolling. */
+@media (max-width: 40rem) {
+  pre code { font-size: 0.75rem; }
+}
+/* Mobile: scroll a wide table within its own block instead of overflowing the
+ * page. Sticky thead intentionally NOT used — it can't stick inside a
+ * horizontal-scroll wrapper (CSS limitation; see docs/responsive-reading.md). */
+@media (max-width: 48rem) {
+  .prose table { display: block; max-width: 100%; overflow-x: auto; }
+}
+
 /* ===== Links ===== */
 a {
   color: var(--color-link);
