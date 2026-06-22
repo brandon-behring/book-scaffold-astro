@@ -75,11 +75,11 @@ Peers surveyed: Jupyter Book/MyST, Quarto, Bookdown, Distill, arXiv-HTML/ar5iv, 
 mathigon, scientific-Python docs.
 
 ## Status & backlog (all PLANNED unless ✅)
-- 🔲 **Code readability:** `--measure-code` break-out + scroll-shadow + responsive code font;
-  default `line-length = 80`.
-- 🔲 **Equation support:** `.katex-display` `overflow-x:auto` fallback + scroll-shadow; the authoring
-  standards above; the planned equation-overflow CI check.
-- 🔲 **Tables:** scroll wrapper (+ height-constrained sticky thead where wanted).
+- ✅ **Code readability:** `--measure-code` break-out + scroll-shadow + responsive code font;
+  default `line-length = 80`. (v4.25.3)
+- ✅ **Equation support:** `.katex-display` `overflow-x:auto` fallback + scroll-shadow; the authoring
+  standards above; the equation-overflow CI check (warning-level). (v4.25.2–v4.25.3)
+- ✅ **Tables:** mobile scroll wrapper (≤48rem). (v4.25.3)
 - 🔲 **Nav:** pin sidebar at 1024 (in `feat/v4.26`).
 - 🔲 **Prose:** cap ≤75ch + explicit line-height *(parked)*.
 
