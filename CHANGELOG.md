@@ -23,6 +23,7 @@ Patch release. The responsive code/equation/table treatment from the responsive-
 ### Tests
 
 - **`gallery/tests/fixtures/layout-overflow.spec.ts`** — gating guard: renders a wide-code chapter under the left sidebar at 1024 / 1280 / 1440px and asserts no horizontal **page** scroll (the break-out must stay container-bounded — a `100vw`-based width overflowed ~8px at the 1024px sidebar boundary). Backed by a new non-snapshotted `wide-code` fixture chapter.
+- **`gallery/tests/fixtures/equation-overflow.spec.ts`** — warning-level (non-gating) check: renders the math fixtures and reports any `.katex-display` wider than its box as a GitHub `::warning::` PR annotation (#172). Auto-runs in the same `test:fixtures` job; the `mobile` (768px) project is the tablet-portrait target.
 
 ### Notes
 
