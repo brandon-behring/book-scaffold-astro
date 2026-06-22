@@ -8,7 +8,7 @@ Patch release. The responsive code/equation/table treatment from the responsive-
 
 ### Added
 
-- **Code blocks break out of the prose measure** to a new `--measure-code` token (≈48rem). Code authored to ~80 columns fits at the full 14px font from tablet-landscape up — centered on the prose axis and viewport-bounded (`min(100vw − 2·--space-4, --measure-code)`), so the page never scrolls sideways. `.wide`/`.column-page` code keeps its full-bleed behavior (excluded).
+- **Code blocks break out of the prose measure** to a new `--measure-code` token (≈48rem). Code authored to ~80 columns fits at the full 14px font from tablet-landscape up — centered within the prose column and **container-bounded** (`max-width: --measure-code; margin-inline: auto`), so it never pushes the page into horizontal scroll, including under the docs-style left sidebar. `.wide`/`.column-page` code keeps its full-bleed behavior (excluded).
 - **Edge scroll-shadow** on horizontally-scrollable code (`pre`) and display math (`.katex-display`) — the Lea Verou layered-gradient technique: bg-colored cover layers move with content (`background-attachment: local`), shadow layers are fixed, so a shadow shows only when there is hidden content to that side.
 
 ### Changed
@@ -19,6 +19,10 @@ Patch release. The responsive code/equation/table treatment from the responsive-
 ### Docs
 
 - **`docs/responsive-reading.md`** — the family's responsive-reading + content-authoring standards (prose · equations · code · tables · figures · sidenotes · nav), including the equation authoring standard (multiline via `aligned`/`split` to fit tablet-portrait; KaTeX can't auto-break) and code line-length = 80. Lands via #170.
+
+### Tests
+
+- **`gallery/tests/fixtures/layout-overflow.spec.ts`** — gating guard: renders a wide-code chapter under the left sidebar at 1024 / 1280 / 1440px and asserts no horizontal **page** scroll (the break-out must stay container-bounded — a `100vw`-based width overflowed ~8px at the 1024px sidebar boundary). Backed by a new non-snapshotted `wide-code` fixture chapter.
 
 ### Notes
 

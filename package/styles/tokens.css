@@ -108,7 +108,7 @@
    */
   --measure-main: 65ch;        /* default: laptop-friendly typographic measure */
   --measure-side: 28ch;        /* right-margin sidenote column (desktop) */
-  --measure-code: 48rem;       /* code-block break-out: fits ~80 mono chars @14px (docs/responsive-reading.md) */
+  --measure-code: 48rem;       /* code-block break-out width: fits 80-char lines comfortably (≈88 mono chars @14px before padding); docs/responsive-reading.md */
   --breakpoint-narrow: 48rem;  /* ~768px — mobile fold (sidenotes inline) */
   --breakpoint-wide: 90rem;    /* ~1440px — wide-desktop tier */
   --breakpoint-ultrawide: 120rem; /* ~1920px — ultrawide tier */
