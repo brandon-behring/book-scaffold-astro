@@ -244,4 +244,15 @@
   overflow-x: auto;
   /* a little room so the horizontal scrollbar doesn't clip the equation's descenders */
   padding-block-end: 0.25rem;
+  /* Edge scroll-shadow when a wide equation scrolls (v4.25.3; docs/responsive-reading.md).
+   * Same Lea Verou layered technique as code blocks, page-bg covers. */
+  background-image:
+    linear-gradient(to right, var(--color-bg) 30%, rgba(0, 0, 0, 0)),
+    linear-gradient(to right, rgba(0, 0, 0, 0), var(--color-bg) 70%),
+    radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0)),
+    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0));
+  background-position: 0 0, 100% 0, 0 0, 100% 0;
+  background-repeat: no-repeat;
+  background-size: 30px 100%, 30px 100%, 12px 100%, 12px 100%;
+  background-attachment: local, local, scroll, scroll;
 }

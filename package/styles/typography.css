@@ -89,6 +89,43 @@ pre code {
   font-size: var(--text-sm);
 }
 
+/* ===== Responsive reading (v4.25.3) — docs/responsive-reading.md =====
+ * Code blocks break out past the prose text measure to fit ~80-char lines,
+ * capped at --measure-code and centered within .prose. CONTAINER-bounded, not
+ * viewport-bounded: the width comes from the .prose column itself, so a left
+ * sidebar offset + the scrollbar gutter can never push the block into horizontal
+ * PAGE scroll. (The earlier `width: min(100vw - …)` overflowed ~8px at the
+ * 1024px sidebar boundary — #171 review finding A1, guarded by
+ * gallery/tests/fixtures/layout-overflow.spec.ts.) `.wide`/`.column-page` keep
+ * their full-bleed behavior (excluded here). */
+.prose > pre:not(.wide):not(.column-page) {
+  max-width: var(--measure-code);
+  margin-inline: auto;
+  /* Lea Verou layered scroll-shadow: bg-colored covers move with content
+   * (attachment:local); shadow layers are fixed → shown only when scrollable. */
+  background-image:
+    linear-gradient(to right, var(--color-code-bg) 30%, rgba(0, 0, 0, 0)),
+    linear-gradient(to right, rgba(0, 0, 0, 0), var(--color-code-bg) 70%),
+    radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0)),
+    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0));
+  background-position: 0 0, 100% 0, 0 0, 100% 0;
+  background-repeat: no-repeat;
+  background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+/* Phone (≤40rem): shrink code a touch so more fits before scrolling. Tighter
+ * than the 48rem mobile/table breakpoint below — phones benefit from the smaller
+ * glyphs; tablets (40–48rem) keep the full size. */
+@media (max-width: 40rem) {
+  pre code { font-size: 0.75rem; }
+}
+/* Mobile: scroll a wide table within its own block instead of overflowing the
+ * page. Sticky thead intentionally NOT used — it can't stick inside a
+ * horizontal-scroll wrapper (CSS limitation; see docs/responsive-reading.md). */
+@media (max-width: 48rem) {
+  .prose table { display: block; max-width: 100%; overflow-x: auto; }
+}
+
 /* ===== Links ===== */
 a {
   color: var(--color-link);

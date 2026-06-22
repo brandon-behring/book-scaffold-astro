@@ -1,0 +1,47 @@
+---
+title: "Wide-code fixture — break-out + sidebar overflow guard"
+slug: wide-code
+chapter: 3
+part: 1
+status: prose_only
+freshness: theoretical
+volatility: stable-principle
+tags:
+  - fixture
+  - code
+  - layout-overflow
+sources: []
+last_verified: 2026-06-21
+draft: false
+---
+
+# Wide-code fixture
+
+Exercises the v4.25.3 `.prose > pre` break-out (to `--measure-code`, 48rem)
+under the docs-style left sidebar. The guard (`layout-overflow.spec.ts`) renders
+this chapter at 1024 / 1280 / 1440px and asserts the **page** never scrolls
+sideways — a wide code block must break out and scroll *within its own box*, not
+push the document into horizontal overflow (WCAG 1.4.10 reflow).
+
+## Code wider than the prose measure
+
+The lines below run past the 65ch main measure (so the block breaks out) and the
+last line runs past the 48rem block too (so it scrolls inside the block, with the
+edge scroll-shadow — never the page).
+
+```python
+def fit_hierarchical_model(observations, priors, *, max_iter=1000, tol=1e-8):
+    """Two-level hierarchical Bayesian model via coordinate-ascent VI."""
+    posterior = initialise_from_prior(priors, jitter=1e-6, seed=20260621)
+    for iteration in range(max_iter):
+        expected_stats = compute_expectations(observations, posterior, normalize=True)
+        posterior = update_variational_parameters(expected_stats, priors, damping=0.5)
+        if has_converged(posterior, tol=tol) and iteration > 10:  # warmup before early exit
+            return posterior, {"iterations": iteration, "converged": True, "final_tolerance": tol}
+    return posterior, {"iterations": max_iter, "converged": False, "note": "hit max_iter without meeting the convergence tolerance — inspect priors"}
+```
+
+## After the block
+
+A trailing paragraph confirms normal prose flow resumes at the main measure after
+the broken-out code block.
