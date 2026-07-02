@@ -123,6 +123,8 @@ export interface Style {
    *  - `'pages'`: Cloudflare Pages (default for research-portfolio/course-notes)
    *  Closes #50. */
   readonly deploy?: 'pages' | 'workers';
+  /** v4.27.0 (#149): release-state banner; shallow override (last wins). */
+  readonly releaseStatus?: { state: 'alpha' | 'beta' | 'rc' | 'locked'; dismissAt?: string; message?: string };
 
   /**
    * Scoped consumer-side metadata. Ignored by the toolkit; survives composition

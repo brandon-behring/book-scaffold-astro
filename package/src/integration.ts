@@ -59,6 +59,8 @@ function makeBookConfigVitePlugin(config: {
   title: string | null;
   // v4.23.0 (#135): sidebar brand subtitle.
   subtitle: string | null;
+  // v4.27.0 (#149): release-state banner; Base.astro renders <PreReleaseBanner> when non-null.
+  releaseStatus: { state: 'alpha' | 'beta' | 'rc' | 'locked'; dismissAt?: string; message?: string } | null;
   description: string | null;
   portfolio: { url: string; label: string } | false;
   enabledRoutes: readonly string[];
@@ -209,6 +211,7 @@ export function bookScaffoldIntegration(
     // v4.5.0: landing-page data, propagated via virtual module to /index.astro.
     title,
     subtitle,
+    releaseStatus,
     description,
     portfolio,
     // v4.6.0: book-level author + SEO config, propagated through the
@@ -320,6 +323,7 @@ export function bookScaffoldIntegration(
               makeBookConfigVitePlugin({
                 title: title ?? null,
                 subtitle: subtitle ?? null,
+                releaseStatus: releaseStatus ?? null,
                 description: description ?? null,
                 portfolio: portfolio ?? false,
                 enabledRoutes: enabledRouteNames,

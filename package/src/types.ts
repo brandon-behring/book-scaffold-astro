@@ -152,6 +152,13 @@ export interface BookConfigOptions {
    */
   subtitle?: string;
   /**
+   * v4.27.0 (#149): book-level release state. When set, Base.astro renders
+   * the existing <PreReleaseBanner> site-wide (top of <body>) with these
+   * props — previously the banner was author-import-only, so auto-layout
+   * consumers (ssm-foundations) had no way to wire it. Omit for no banner.
+   */
+  releaseStatus?: { state: 'alpha' | 'beta' | 'rc' | 'locked'; dismissAt?: string; message?: string };
+  /**
    * v4.5.0: Book description. Read by the auto-injected `/` landing page (lead paragraph + <meta description>).
    * Optional; landing renders no description paragraph if unset.
    */
@@ -302,6 +309,9 @@ export interface BookScaffoldIntegrationOptions {
   /** v4.23.0 (#135): sidebar brand subtitle, propagated via the book-config
    *  virtual module to Sidebar.astro. */
   subtitle?: string;
+  /** v4.27.0 (#149): release-state banner, propagated via the book-config
+   *  virtual module; Base.astro renders <PreReleaseBanner> when set. */
+  releaseStatus?: { state: 'alpha' | 'beta' | 'rc' | 'locked'; dismissAt?: string; message?: string };
   /** v4.5.0: book description, propagated to `/` landing via vite.define. */
   description?: string;
   /**
