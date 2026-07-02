@@ -175,6 +175,30 @@ test('#38: --preset=invalid-name fails with non-zero exit', async () => {
   assert.match(r.stderr, /invalid profile|invalid preset/i);
 });
 
+test('#181: help text and invalid-preset error both list all five presets', async () => {
+  const help = runCli(['--help'], workRoot);
+  assert.equal(help.status, 0);
+  const err = runCli(['demo-bad-preset-181', '--preset=bogus'], workRoot);
+  assert.notEqual(err.status, 0);
+  for (const preset of ['academic', 'tools', 'minimal', 'course-notes', 'research-portfolio']) {
+    assert.ok(help.stdout.includes(preset), `help must list ${preset}`);
+    assert.ok(err.stderr.includes(preset), `invalid-preset error must list ${preset}`);
+  }
+});
+
+test('#181: scaffolded self-docs link blob/main, never the frozen v3.0 branch', async () => {
+  const r = runCli(['demo-doclinks-181', '--preset=course-notes'], workRoot);
+  assert.equal(r.status, 0);
+  const dir = join(workRoot, 'demo-doclinks-181');
+  for (const rel of ['CLAUDE.md', 'README.md', 'sources/manifest.yaml']) {
+    const text = await readFile(join(dir, rel), 'utf8');
+    assert.ok(!text.includes('blob/v3.0'), `${rel} must not pin docs to the frozen v3.0 branch`);
+    if (text.includes('PACKAGE_DESIGN.md')) {
+      assert.ok(text.includes('blob/main/PACKAGE_DESIGN.md'), `${rel} PACKAGE_DESIGN link must target main`);
+    }
+  }
+});
+
 test('#38: help text mentions --preset before --profile', async () => {
   const r = runCli(['--help'], workRoot);
   assert.equal(r.status, 0);
