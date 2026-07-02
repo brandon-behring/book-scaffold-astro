@@ -3,20 +3,23 @@ import { test, expect } from '@playwright/test';
 /* Gating layout-overflow guard — docs/responsive-reading.md (#171 review, A1).
  *
  * The v4.25.3 code break-out widens `.prose > pre` to `--measure-code` and
- * centers it within `.prose`. With the docs-style LEFT SIDEBAR (all fixtures,
- * ≥1024px) the prose column is offset from viewport centre, so the break-out
- * must stay CONTAINER-bounded and never push the whole PAGE into horizontal
- * scroll (WCAG 1.4.10 reflow). A viewport-bounded (`100vw`) width overflowed the
- * page ~8px at the 1024px sidebar boundary — this renders a wide-code chapter
- * under the sidebar at three desktop widths and asserts the document never
- * scrolls sideways.
+ * centers it within `.prose`. With the docs-style LEFT SIDEBAR the prose column
+ * is offset from viewport centre, so the break-out must stay CONTAINER-bounded
+ * and never push the whole PAGE into horizontal scroll (WCAG 1.4.10 reflow). A
+ * viewport-bounded (`100vw`) width overflowed the page ~8px at the (then-64rem)
+ * sidebar boundary.
+ *
+ * v4.26.0 moved the sidebar breakpoint to 80rem (1280px): the 1024px leg now
+ * exercises the DRAWER regime (no sidebar; gutter tier only), and 1280/1440
+ * exercise the sidebar regime — the invariant (no horizontal page scroll) must
+ * hold in both, so all three widths stay.
  *
  * GATING (unlike the warning-level equation-overflow check): a horizontal page
  * scroll is a layout bug, not an authoring choice. Viewports are set in-test, so
  * it runs once per width under the `desktop` project. */
 
 const ROUTE = { port: 4175, path: '/chapters/wide-code/' }; // research-portfolio
-const WIDTHS = [1024, 1280, 1440]; // sidebar regime (≥64rem): 16rem then 18rem track
+const WIDTHS = [1024, 1280, 1440]; // 1024 = drawer regime; 1280/1440 = sidebar regime (≥80rem)
 
 test.describe('layout-overflow (sidebar + wide code)', () => {
   for (const width of WIDTHS) {

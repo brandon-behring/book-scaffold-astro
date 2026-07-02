@@ -4,10 +4,10 @@
  *
  * 1. Page chrome at very top: theme toggle (top-right, position: fixed).
  *
- * 2. Optional left sidebar (Sidebar.astro). At ≥64rem (1024px), grid
- *    pins it to the left edge; below 1024px it's hidden (mobile pages
- *    don't carry the nav). Toggle per-page via Base.astro's `showSidebar`
- *    prop — default true; the landing page sets false.
+ * 2. Optional left sidebar (Sidebar.astro). At ≥80rem (1280px), grid
+ *    pins it to the left edge; below 1280px it's hidden and the mobile
+ *    nav drawer is the chapter nav (v4.26.0, #80). Toggle per-page via
+ *    Base.astro's `showSidebar` prop — default true; landing sets false.
  *
  * 3. Main content (.prose) — Tufte 2-column with sidenotes in right
  *    margin on desktop (≥48rem), inline on mobile (<48rem). See
@@ -225,15 +225,21 @@
 }
 
 /* ===== Mobile/tablet nav drawer (v4.26.0, #80) =====
- * Below the sidebar breakpoint (64rem) the left Sidebar is display:none — this
+ * Below the sidebar breakpoint (80rem — matching .layout-with-sidebar above and
+ * the controller's desktop auto-close) the left Sidebar is display:none — this
  * is the navigation in that range: a hamburger in the chrome row toggles a
  * slide-in drawer reusing NavContent (the same book-scoped nav source as the
  * sidebar). No-JS baseline: `:target` opens it (the toggle is <a href="#nav-drawer">);
  * the inline controller in Base.astro enhances it with focus-trap + ESC + body
- * scroll-lock. Hidden at ≥64rem, where the persistent sidebar is the nav. The
- * ≥64rem gutter-fit (sidenote/section-map overflow) is a separate fix. */
+ * scroll-lock. Hidden at ≥80rem, where the persistent sidebar is the nav. The
+ * ≥64rem gutter tier (sidenote/section-map floats) is a separate, lower breakpoint. */
 @media (min-width: 80rem) {
-  .nav-toggle,
+  /* #183: `.chrome-buttons .nav-toggle` (0,2,0), not bare `.nav-toggle` —
+   * Base.astro's global `.chrome-button { display: inline-flex }` ties a
+   * (0,1,0) selector and wins on cascade order, leaving the hamburger
+   * visible at desktop where it opens an invisible drawer and strands the
+   * body scroll-lock. Caught by drawer-interaction.spec.ts. */
+  .chrome-buttons .nav-toggle,
   .nav-drawer {
     display: none;
   }

@@ -15,7 +15,8 @@
  *   lang        — html lang attribute (default: en)
  *   showSidebar — render the left chapter-navigation sidebar (default: true).
  *                 Set false for the landing page or any full-bleed surface.
- *                 Below 1024px the sidebar is auto-hidden via CSS regardless.
+ *                 Below 80rem (1280px) the sidebar is auto-hidden via CSS and
+ *                 the mobile nav drawer is the chapter nav (v4.26.0, #80).
  *   showChrome  — render the tools chrome (ToolFilter + VersionSelector)
  *                 (default: true). Set false on a landing/hub page with no
  *                 chapters/tools/versions; search + theme toggle always render.
@@ -217,7 +218,8 @@ const baseUrl = normalizeBase(import.meta.env.BASE_URL);
       </button>
     </div>
     {/* v4.26.0 (#80): mobile/tablet nav drawer (sibling of <main>, NOT a <main>).
-        CSS-hidden ≥64rem where the Sidebar is the nav. role=dialog + the inline
+        CSS-hidden ≥80rem where the Sidebar is the nav (layout.css and the
+        controller's desktop auto-close agree on 80rem). role=dialog + the inline
         controller below provide focus-trap/ESC; `:target` is the no-JS fallback. */}
     {showSidebar && (
       <div id="nav-drawer" class="nav-drawer" data-nav-drawer>
