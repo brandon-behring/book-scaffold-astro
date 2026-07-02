@@ -30,8 +30,8 @@ Arguments:
   <name>           Book repo name. Becomes the new directory + package name.
 
 Options:
-  --preset=NAME    academic | tools | minimal   (default: minimal)
-                   Canonical vocabulary as of v3.4.0; alias of --profile.
+  --preset=NAME    academic | tools | minimal | course-notes | research-portfolio
+                   (default: minimal). Canonical vocabulary as of v3.4.0; alias of --profile.
   --profile=NAME   Backward-compatible alias of --preset.
   --version, -v    Print the CLI version.
   --help, -h       This message.
@@ -236,7 +236,7 @@ npm run dev    # http://localhost:4321
 
 Chapters live under \`src/content/chapters/*.mdx\`. The starter \`week01-hello-world.mdx\` shows the frontmatter shape and basic component usage.
 
-Available components are documented in the toolkit's [PACKAGE_DESIGN.md §10](https://github.com/brandon-behring/book-scaffold-astro/blob/v3.0/PACKAGE_DESIGN.md#10-mdx-import-patterns).
+Available components are documented in the toolkit's [PACKAGE_DESIGN.md §10](https://github.com/brandon-behring/book-scaffold-astro/blob/main/PACKAGE_DESIGN.md#10-mdx-import-patterns).
 
 ## Decision log
 
@@ -266,7 +266,7 @@ This book is built with \`@brandon_m_behring/book-scaffold-astro\` (${profile} p
 - Cross-references: ids on \`<Theorem>\` / \`<Figure>\` → \`src/data/labels.json\` via \`npm run build:labels\`
 - Decision log: \`decisions/\` — numbered ADRs (see \`decisions/README.md\`); record significant choices here
 
-**Toolkit reference:** [PACKAGE_DESIGN.md](https://github.com/brandon-behring/book-scaffold-astro/blob/v3.0/PACKAGE_DESIGN.md) — single source of truth for the API. File issues at https://github.com/brandon-behring/book-scaffold-astro/issues with label \`consumer:${name}\`.
+**Toolkit reference:** [PACKAGE_DESIGN.md](https://github.com/brandon-behring/book-scaffold-astro/blob/main/PACKAGE_DESIGN.md) — single source of truth for the API. File issues at https://github.com/brandon-behring/book-scaffold-astro/issues with label \`consumer:${name}\`.
 `,
 
     // v4.0.0 (#50): per-preset wrangler.toml shape. Academic / tools / minimal
@@ -478,7 +478,7 @@ None (initial decision).
 #     tier: T1-official          # T1-official | T2-release-notes | T3-practitioner | T4-conjecture
 #     tool: claude-code           # claude-code | gemini-cli | codex-cli | cross-tool
 #
-# See https://github.com/brandon-behring/book-scaffold-astro/blob/v3.0/PACKAGE_DESIGN.md
+# See https://github.com/brandon-behring/book-scaffold-astro/blob/main/PACKAGE_DESIGN.md
 []
 `;
   }
@@ -629,7 +629,7 @@ async function main() {
   if (!VALID_PROFILES.has(args.profile)) {
     process.stderr.write(
       `create-book: invalid profile ${JSON.stringify(args.profile)}; ` +
-        `must be one of academic | tools | minimal.\n`,
+        `must be one of academic | tools | minimal | course-notes | research-portfolio.\n`,
     );
     process.exit(2);
   }
