@@ -14,7 +14,10 @@
  *   5. <CodeRef path="..." line={N} /> — when BOOK_REPO_ROOT set,
  *      path exists + line in bounds.
  *   6. <Theorem> — has a resolvable kind= (or legacy type=); else it would
- *      render an empty label and throw at build (#121).
+ *      render an empty label and throw at build (#121). An id'd theorem must
+ *      resolve in labels.json (#126), and an explicit n= that disagrees with
+ *      labels.json fails (#176 — render precedence gives labels the heading
+ *      number, so a stale n= would contradict every XRef).
  *   7. <BookLink book="…" to="…"> (#96) — both props present, and book= is a
  *      key in the consumer's siblingBooks registry (best-effort).
  *   8. Questions collection (#112) — each question's frontmatter `domain` is a
@@ -365,6 +368,22 @@ for (const rel of chapterFiles) {
         lineOf(content, m.index),
         `<Theorem id="${thmId[1]}"> — not in labels.json; heading silently renders unnumbered. Run build:labels, or fix the id.`,
       );
+    }
+    // #176: an explicit n= that contradicts labels.json. Render precedence
+    // (resolveTheoremNumber, v4.18.0) gives labels.json the heading number,
+    // so a stale hand-passed n= means the author BELIEVES a number the site
+    // never shows — and every <XRef> agrees with the index, not the author.
+    const nAttr = attrs.match(/\bn=(?:["']([^"']+)["']|\{\s*['"]?([^}'"]+)['"]?\s*\})/);
+    if (thmId && nAttr && labels[thmId[1]] && labels[thmId[1]].number != null) {
+      const explicit = (nAttr[1] ?? nAttr[2] ?? '').trim();
+      const indexed = String(labels[thmId[1]].number);
+      if (explicit && explicit !== indexed) {
+        fail(
+          rel,
+          lineOf(content, m.index),
+          `<Theorem id="${thmId[1]}" n="${explicit}"> — labels.json numbers it ${indexed}, and the rendered heading + every XRef use the index. Drop the stale n= (auto-numbering wins) or re-run build:labels.`,
+        );
+      }
     }
   }
 

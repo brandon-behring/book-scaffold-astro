@@ -298,6 +298,71 @@ status: implemented
   }
 });
 
+// ---- validate check #6 extension (#176): explicit n= must agree with labels.json ----
+
+test('validate (#176): <Theorem id n=> disagreeing with labels.json fails with the indexed number', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    writeFileSync(
+      join(tmp, 'src', 'data', 'labels.json'),
+      JSON.stringify({
+        'w3:thm:num': { href: 'chapters/week03#w3:thm:num', display: 'Theorem 3.1', number: '3.1' },
+      }),
+    );
+    writeFileSync(
+      join(tmp, 'src', 'content', 'chapters', 'week03.mdx'),
+      `---
+week: 3
+part: foundations
+title: "Stale hand-number"
+status: implemented
+---
+
+<Theorem id="w3:thm:num" kind="theorem" n="9.9">The index says 3.1 — this n= is stale.</Theorem>
+`,
+    );
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.ok(result.status > 0, `a stale n= must fail validate (#176); stderr: ${result.stderr}`);
+    assert.match(result.stderr, /labels\.json numbers it 3\.1/, 'error should name the indexed number');
+    assert.match(result.stderr, /n="9\.9"/, 'error should quote the stale n=');
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#176): a matching n= (quoted or braced) passes — belt-and-suspenders authors are fine', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    writeFileSync(
+      join(tmp, 'src', 'data', 'labels.json'),
+      JSON.stringify({
+        'w3:thm:a': { href: 'chapters/week03#w3:thm:a', display: 'Theorem 3.1', number: '3.1' },
+        'w3:thm:b': { href: 'chapters/week03#w3:thm:b', display: 'Proposition 3.2', number: '3.2' },
+      }),
+    );
+    writeFileSync(
+      join(tmp, 'src', 'content', 'chapters', 'week03.mdx'),
+      `---
+week: 3
+part: foundations
+title: "Matching hand-numbers"
+status: implemented
+---
+
+<Theorem id="w3:thm:a" kind="theorem" n="3.1">Quoted, agrees with the index.</Theorem>
+
+<Theorem id="w3:thm:b" kind="proposition" n={'3.2'}>Braced, agrees with the index.</Theorem>
+`,
+    );
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(result.status, 0, `matching n= must pass (#176)\nstderr: ${result.stderr}`);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
 // ---- validate (#114, v4.21.0): <Rationale appendix> pre-flight ----
 
 test('validate #114: <Rationale appendix> without for= fails; matching for= passes; prose "appendix" is inert', () => {
