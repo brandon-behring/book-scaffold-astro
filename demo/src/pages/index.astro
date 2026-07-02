@@ -11,6 +11,10 @@ import Convergence from '@brandon_m_behring/book-scaffold-astro/components/Conve
 import Divergence from '@brandon_m_behring/book-scaffold-astro/components/Divergence.astro';
 import Sidenote from '@brandon_m_behring/book-scaffold-astro/components/Sidenote.astro';
 import Citation from '@brandon_m_behring/book-scaffold-astro/components/Citation.astro';
+
+// #154: the demo ships at base '/', but as the copy-paste reference it must
+// model base-aware links like every scaffold page (#140/#142 lineage).
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 ---
 
 <Base
@@ -213,14 +217,10 @@ greet("reader");  // → "Hello, reader"`}</code></pre>
       Koller-Friedman pedagogy on real content.
     </p>
     <p>
-      Browse <a href="/chapters/">all chapters</a> grouped by Part, with
-      volatility and freshness metadata on every card. The
-      <a href="/convergence/">convergence dashboard</a> tracks which
-      agentic-coding patterns have landed in which tools. Or visit
-      <a href="/00-design/">the design chapter</a> to see every component
-      through the routing pipeline. Open <a href="/search/">/search/</a>
-      to try full-text search. Toggle dark mode (top-right ☀/☾) or the
-      version dropdown (top-right v). Resize to phone width to watch
+      Browse <a href={`${baseUrl}chapters/`}>all chapters</a> grouped by
+      Part, with status metadata on every card. Open
+      <a href={`${baseUrl}search/`}>/search/</a> to try full-text search.
+      Toggle dark mode (top-right ☀/☾). Resize to phone width to watch
       sidenotes reflow as inline asides.
     </p>
   </article>
