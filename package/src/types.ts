@@ -401,7 +401,10 @@ function readEnvFile(path = '.env'): Record<string, string> {
  *   4. process.env.BOOK_PROFILE
  *   5. .env BOOK_PRESET
  *   6. .env BOOK_PROFILE
- *   7. 'minimal' (with console.warn)
+ *   7. otherwise: THROWS BookConfigError (v4.27.0, #179 — pre-4.27 silently
+ *      fell back to 'minimal' with only a console.warn, so a book whose .env
+ *      never reached CI built the wrong profile with no signal; same
+ *      silent→loud conversion as the Theorem kind change, v4.14.3 #121)
  */
 export function resolvePreset(
   explicitPreset?: BookPreset,
@@ -409,29 +412,26 @@ export function resolvePreset(
 ): BookPreset {
   let candidate: string | undefined =
     explicitPreset ?? explicitProfile ?? process.env.BOOK_PRESET ?? process.env.BOOK_PROFILE;
-  let source: 'param' | 'env' | 'dotenv' | 'default' = 'default';
-  if (explicitPreset || explicitProfile) source = 'param';
-  else if (process.env.BOOK_PRESET || process.env.BOOK_PROFILE) source = 'env';
 
   if (!candidate) {
     const env = readEnvFile();
-    const fromFile = env.BOOK_PRESET ?? env.BOOK_PROFILE;
-    if (fromFile) {
-      candidate = fromFile;
-      source = 'dotenv';
-    }
+    candidate = env.BOOK_PRESET ?? env.BOOK_PROFILE;
   }
 
-  candidate = candidate ?? 'minimal';
+  if (!candidate) {
+    throw new BookConfigError(
+      'BOOK_PRESET is not set (#179) — no preset/profile param, no BOOK_PRESET/BOOK_PROFILE ' +
+        'environment variable, and no .env entry. Set BOOK_PRESET in .env (create-book ' +
+        'scaffolds it), export it in the environment, or pass defineBookSchemas({ preset }). ' +
+        `Valid presets: ${BOOK_PRESETS.join(' | ')}. ` +
+        "Pre-4.27 versions silently fell back to 'minimal'.",
+    );
+  }
 
   if (!BOOK_PRESETS.includes(candidate as BookPreset)) {
     throw new BookConfigError(
       `preset must be one of ${BOOK_PRESETS.join(' | ')} (got ${JSON.stringify(candidate)})`,
     );
-  }
-  if (source === 'default') {
-    // eslint-disable-next-line no-console
-    console.warn("book-scaffold-astro: BOOK_PRESET not set; falling back to 'minimal'.");
   }
   return candidate as BookPreset;
 }

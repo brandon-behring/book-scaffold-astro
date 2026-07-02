@@ -95,7 +95,7 @@ test('validate-root: resolves chapters from CWD (closes #8 — was 0 from packag
   const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
   try {
     setupCleanFixture(tmp);
-    const result = spawnSync('node', [VALIDATE_SCRIPT], {
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], {
       cwd: tmp,
       encoding: 'utf8',
       timeout: 10_000,
@@ -128,7 +128,7 @@ status: implemented
 See <XRef id="nonexistent-id" /> for details.
 `,
     );
-    const result = spawnSync('node', [VALIDATE_SCRIPT], {
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], {
       cwd: tmp,
       encoding: 'utf8',
       timeout: 10_000,
@@ -157,6 +157,30 @@ test('validate-root: --preset CLI flag overrides env (closes #9 single-source re
     });
     assert.equal(result.status, 0, `validate should exit 0 with --preset flag override`);
     assert.match(result.stdout, /profile=academic/, `validate should report academic from --preset flag, not tools from env`);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate-root: #179 — unresolvable preset fails loudly with remediation (was silent minimal)', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    // No flag, no env, no .env, no content.config — the pre-4.27 silent-
+    // minimal case. Must now exit non-zero and name every remediation.
+    const env = { ...process.env };
+    delete env.BOOK_PRESET;
+    delete env.BOOK_PROFILE;
+    const result = spawnSync('node', [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 10_000,
+      env,
+    });
+    assert.notEqual(result.status, 0, 'validate must fail when no preset resolves (#179)');
+    assert.match(result.stderr, /#179/, 'error should cite the issue');
+    assert.match(result.stderr, /--preset|BOOK_PRESET/, 'error should name the remediations');
+    assert.match(result.stderr, /silently assumed 'minimal'/, 'error should explain the old behavior');
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
@@ -222,7 +246,7 @@ test('validate #8: a clean questions fixture passes + reports the question count
       '01.mdx': questionFile('q-arrays-1', 'arrays'),
       '02.mdx': questionFile('q-strings-1', 'strings'),
     });
-    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
     assert.equal(result.status, 0, `clean questions fixture should pass\nstderr: ${result.stderr}`);
     assert.match(result.stdout, /2 question\(s\) checked/, `got: ${result.stdout}`);
   } finally {
@@ -238,7 +262,7 @@ test('validate #8: a duplicate question id fails loud (#112)', () => {
       '01.mdx': questionFile('q-dup', 'arrays'),
       '02.mdx': questionFile('q-dup', 'strings'),
     });
-    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
     assert.ok(result.status > 0, `duplicate id should fail (status=${result.status})`);
     assert.match(result.stderr, /Duplicate question id "q-dup"/, `got stderr: ${result.stderr}`);
   } finally {
@@ -251,7 +275,7 @@ test('validate #8: a question domain not in examDomains fails loud (#112)', () =
   try {
     setupCleanFixture(tmp);
     setupQuestionsFixture(tmp, { '01.mdx': questionFile('q-1', 'phantom') });
-    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
     assert.ok(result.status > 0, `unknown domain should fail (status=${result.status})`);
     assert.match(
       result.stderr,
@@ -291,7 +315,7 @@ status: implemented
 <Theorem id="w3:thm:custom" kind="theorem" label="Custom">Override — id absent from labels.json, but exempt.</Theorem>
 `,
     );
-    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
     assert.equal(result.status, 0, `id-in-labels + label-override theorems should pass\nstderr: ${result.stderr}`);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
@@ -337,7 +361,7 @@ Stem.
 <Rationale title="See the appendix">Inline, no for= needed.</Rationale>
 `,
     });
-    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
     assert.equal(result.status, 1, `exactly the one missing-for failure expected (status=${result.status})\nstderr: ${result.stderr}`);
     assert.match(result.stderr, /<Rationale appendix> without for=/, `got stderr: ${result.stderr}`);
     assert.doesNotMatch(result.stderr, /q-good/, `the matching + prose cases must not fire; got: ${result.stderr}`);
@@ -365,7 +389,7 @@ Stem.
 <Rationale appendix for="q-typo">Copy-paste drift.</Rationale>
 `,
     });
-    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
     assert.ok(result.status > 0, `mismatched for= should fail (status=${result.status})`);
     assert.match(
       result.stderr,
@@ -402,7 +426,7 @@ test('validate #9: matching los anchors and prose markers pass (#130)', () => {
       join(tmp, 'src', 'content', 'chapters', 'week04.mdx'),
       losChapter(['eval-metrics', 'eval-harness'], ['eval-metrics', 'eval-harness']),
     );
-    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
     assert.equal(result.status, 0, `matched los/marker sets should pass\nstderr: ${result.stderr}`);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
@@ -417,7 +441,7 @@ test('validate #9: a declared los anchor with no prose marker fails loud (dangli
       join(tmp, 'src', 'content', 'chapters', 'week04.mdx'),
       losChapter(['eval-metrics', 'eval-harness'], ['eval-metrics']),
     );
-    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
     assert.ok(result.status > 0, `dangling los anchor should fail (status=${result.status})`);
     assert.match(
       result.stderr,
@@ -437,7 +461,7 @@ test('validate #9: a prose marker with no los declaration fails loud (orphan anc
       join(tmp, 'src', 'content', 'chapters', 'week04.mdx'),
       losChapter(['eval-metrics'], ['eval-metrics', 'eval-rogue']),
     );
-    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
     assert.ok(result.status > 0, `orphan prose marker should fail (status=${result.status})`);
     assert.match(
       result.stderr,
@@ -477,7 +501,7 @@ Section one.
 Section two.
 `,
     );
-    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
     assert.equal(result.status, 0, `flow-style los anchors should pass\nstderr: ${result.stderr}`);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
@@ -504,7 +528,7 @@ status: implemented
 Prose using an anchor comment for an unrelated purpose.
 `,
     );
-    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
     assert.equal(result.status, 0, `marker without los: must not fire\nstderr: ${result.stderr}`);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
@@ -519,7 +543,7 @@ test('validate (#129): consumer index.astro without landing:false warns about th
     setupCleanFixture(tmp);
     mkdirSync(join(tmp, 'src', 'pages'), { recursive: true });
     writeFileSync(join(tmp, 'src', 'pages', 'index.astro'), `---\n---\n<h1>Custom landing</h1>\n`);
-    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
     assert.equal(result.status, 0, `warning is non-blocking — exit stays 0\nstderr: ${result.stderr}`);
     assert.match(
       result.stderr,
@@ -541,7 +565,7 @@ test('validate (#129): landing:false declares the override — no warning', () =
       join(tmp, 'astro.config.mjs'),
       `export default { routes: { landing: false } };\n`,
     );
-    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
     assert.equal(result.status, 0, `clean fixture should pass\nstderr: ${result.stderr}`);
     assert.doesNotMatch(
       result.stderr,
@@ -569,7 +593,7 @@ status: implemented
 <Theorem id="w3:thm:missing" kind="theorem">Id not in labels.json — heading would silently de-number.</Theorem>
 `,
     );
-    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
     assert.ok(result.status > 0, `absent-id theorem should fail (status=${result.status})`);
     assert.match(
       result.stderr,

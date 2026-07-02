@@ -90,15 +90,25 @@ export async function defineBookConfig(
     throw v3MigrationError(opts as Record<string, unknown>);
   }
 
-  // 1. Compose the style chain. Empty chain returns an empty Style; defaults
-  //    fall back to 'minimal' preset below (matches v3 behavior when no
-  //    BOOK_PROFILE was set anywhere).
+  // 1. Compose the style chain.
   const composed = composeStyles((opts.styles as readonly Style[] | undefined) ?? []);
 
-  // 2. Apply top-level opts on top of composed (top-level wins for shared fields).
-  const profile = (opts.styles === undefined && composed.preset === undefined
-    ? 'minimal'
-    : composed.preset ?? 'minimal') as (typeof BOOK_PRESETS)[number];
+  // 2. Resolve the preset from the composed chain. v4.27.0 (#179): an
+  //    unresolved preset now THROWS instead of silently assuming 'minimal' —
+  //    the wrong routes/schemas/KaTeX wiring with no signal. Same silent→loud
+  //    conversion as the Theorem kind change (v4.14.3, #121).
+  if (composed.preset === undefined) {
+    throw new BookConfigError(
+      opts.styles === undefined
+        ? 'no `styles` given, so no preset resolves (#179). Add a built-in style — e.g. ' +
+          '`styles: [minimalStyle]` (or academicStyle / toolsStyle / courseNotesStyle / ' +
+          "researchPortfolioStyle). Pre-4.27 versions silently assumed 'minimal'."
+        : 'the composed `styles` chain never sets `preset` (#179). Give one style in the ' +
+          'chain a `preset` field — usually by composing a built-in style first, e.g. ' +
+          "`styles: [academicStyle, myStyle]`. Pre-4.27 versions silently assumed 'minimal'.",
+    );
+  }
+  const profile = composed.preset as (typeof BOOK_PRESETS)[number];
 
   const site = opts.site ?? composed.site;
   if (!site) {

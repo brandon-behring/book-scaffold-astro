@@ -82,7 +82,7 @@ import {
  *
  *   export const { collections } = {
  *     collections: {
- *       ...defineBookSchemas().collections,
+ *       ...defineBookSchemas({ preset: 'academic' }).collections,
  *       frontmatter: frontmatterCollection(z.object({
  *         slug: z.string(),
  *         title: z.string(),

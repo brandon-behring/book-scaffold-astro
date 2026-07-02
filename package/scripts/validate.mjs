@@ -134,8 +134,20 @@ const PRESET =
   process.env.BOOK_PROFILE ??
   dotenv.BOOK_PRESET ??
   dotenv.BOOK_PROFILE ??
-  schemaConfig.preset ??
-  'minimal';
+  schemaConfig.preset;
+// v4.27.0 (#179): an exhausted resolution chain now fails loudly instead of
+// silently assuming 'minimal' — under the wrong profile, profile-gated checks
+// (cite keys, question domains) silently don't run at all.
+if (!PRESET) {
+  console.error(
+    'validate: BOOK_PRESET is not set (#179) — no --preset flag, no BOOK_PRESET/BOOK_PROFILE ' +
+      'environment variable, no .env entry, and no defineBookSchemas({ preset }) in ' +
+      'content.config. Set one (create-book scaffolds .env). Valid presets: ' +
+      "academic | tools | minimal | course-notes | research-portfolio. Pre-4.27 versions " +
+      "silently assumed 'minimal'.",
+  );
+  process.exit(1);
+}
 // Alias kept for downstream message text only; the resolution above is canonical.
 const PROFILE = PRESET;
 const REPO_ROOT = process.env.BOOK_REPO_ROOT ?? null;
