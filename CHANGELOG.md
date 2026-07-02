@@ -2,6 +2,26 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.26.1] — 2026-07-02
+
+Patch release — **the #178 release reconciliation.** v4.26.0 was tagged and published from a feature branch that was never merged to `main`, while `main` carried two release commits that were never published (v4.25.2, v4.25.3). This release is cut from the reconciled `main` and is the **first published artifact carrying the v4.25.3 responsive work** (#170–#173); v4.25.2's code (#162/#163) had already shipped inside the 4.26.0 tarball. No new features.
+
+### Fixed
+
+- **npm now carries the v4.25.3 responsive code/equation/table treatment (#171)** — the `--measure-code` break-out, edge scroll-shadows on scrollable code + display math, the phone code font, and mobile table scroll — previously stranded on `main`, unpublished (consumer signal: `double_ml_time_series#46`).
+
+### Changed
+
+- **Release-integrity guards (#178):** `publish.yml` now refuses a tag that is not an ancestor of `main` (hard-fail on tag push; `force=true` dispatch escape for pre-v4 tags), gains a `concurrency` group (two tag pushes queue instead of racing) and a `dry_run` dispatch input (all guards + smoke, no publish). The stale root `package.json` version field and the v3-era `publish:alpha` script are removed.
+
+### Tests
+
+- **67 visual baselines regenerated** for the merged layout union — the v4.26.0 measure/sidebar changes were published without re-baselining (also closes #169). Both Playwright suites pass without `--update-snapshots` afterward.
+
+### Docs
+
+- The responsive-reading standards (#170, #173) and `docs/audits/audit_2026-07-01.md` (the audit that found the split) now live on the published line.
+
 ## [4.26.0] — 2026-06-23
 
 Minor release. **Book-aware responsive navigation (#80)** — the nav components (`Sidebar`, prev/next `ChapterNav`) assumed a single-book site with global `/chapters/<id>/` routes, so a **multi-book** consumer (one Astro app serving `/<book>/<slug>/`) got a sidebar that interleaved every book's chapters with dead `/chapters/` links, cross-book prev/next, and **no navigation at all below 1024px**. This release makes the nav book-aware + adds a mobile/tablet drawer. **Single-book consumers render byte-identically by default** (the new config defaults reproduce the old `/chapters/<id>/` shape + global ordering); they additionally gain the mobile drawer (a strict addition, hidden ≥64rem).
