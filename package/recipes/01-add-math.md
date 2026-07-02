@@ -1,27 +1,26 @@
 # Recipe 01 — Add math to your book (KaTeX)
 
-**Profile**: academic (gated by `BOOK_PROFILE=academic`)
+**Profiles**: academic + research-portfolio (the presets that flag `katex: true`)
 
-**TL;DR**: Math is wired but disabled by default. Set `BOOK_PROFILE=academic` and the build adds `remark-math` + `rehype-katex` (strict mode) with the SSM macro library at `src/lib/katex-macros.ts`.
+**TL;DR**: Math is wired but profile-gated. Compose your book from `academicStyle` (or `researchPortfolioStyle`) and `defineBookConfig` adds `remark-math` + `rehype-katex` (strict mode) with the scaffold's 37-macro `ssmMacros` library. Extend per-book with `defineBookConfig({ katexMacros })` — never by editing package source.
 
 ## How it works
 
-The conditional integration lives at the top of `astro.config.mjs`:
-- Reads `process.env.BOOK_PROFILE ?? 'minimal'`
-- For `academic`: dynamically imports `remark-math`, `rehype-katex`, and `ssmMacros`; adds them to the markdown pipeline
-- KaTeX CSS (`katex/dist/katex.min.css`) is always loaded by `Base.astro` — academic books need it; minimal/tools books carry the cost (~60 KB) without rendering math (the CSS is inert without matching DOM)
+All the wiring lives inside the package (`defineBookConfig`), not in your config file:
+
+- `defineBookConfig` resolves the composed preset from your `styles` chain (falling back to `BOOK_PRESET`/`BOOK_PROFILE` from the environment or `.env`).
+- For katex-flagged presets it dynamically imports `remark-math` + `rehype-katex` and registers them with `strict: 'error'` and the merged macro set (`ssmMacros` + your `katexMacros`).
+- The integration injects `katex/dist/katex.min.css` **only** for katex presets (`package/src/integration.ts`) — tools/minimal books don't carry the ~60 KB.
+- `katex`, `remark-math`, `rehype-katex` are **optional peerDependencies**: math books install them (`npm i katex remark-math rehype-katex`); other profiles skip them entirely.
 
 ## Enable math in your book
 
-1. Set `BOOK_PROFILE=academic` at run time:
-   ```bash
-   BOOK_PROFILE=academic npm run dev      # local hot-reload
-   BOOK_PROFILE=academic npm run build    # production build
+1. Use a katex preset in `astro.config.mjs` (a fresh `create-book --preset=academic` scaffold already does):
+   ```js
+   import { defineBookConfig, academicStyle } from '@brandon_m_behring/book-scaffold-astro';
+   export default await defineBookConfig({ styles: [academicStyle], site: 'https://…' });
    ```
-   Or persist it in `.env`:
-   ```
-   BOOK_PROFILE=academic
-   ```
+   Keep `.env`'s `BOOK_PRESET`/`BOOK_PROFILE` in sync — the content-collection schemas resolve the preset from it.
 
 2. Author math in MDX with `$...$` (inline) and `$$...$$` (display):
    ```mdx
@@ -33,39 +32,52 @@ The conditional integration lives at the top of `astro.config.mjs`:
    $$
    ```
 
-3. Strict mode is on by default (`strict: 'error'` in `rehypeKatex` options). Unknown macros, malformed expressions, and unsupported AMS environments fail the build with a precise error. This is intentional — catch typos at write-time, not in production.
+3. Strict mode is on by default (`strict: 'error'`). Unknown macros, malformed expressions, and unsupported AMS environments fail the build with a precise error. This is intentional — catch typos at write-time, not in production.
 
 ## Macro library
 
-`src/lib/katex-macros.ts` defines 36 macros:
+The package ships `ssmMacros` — **37 macros** (`package/src/lib/katex-macros.ts`):
+
 - 20 SSM-specific from the post-transformers academic reference: `\statevec`, `\statemat`, `\inputmat`, `\outputmat`, `\feedmat`, `\stepsize`, `\discA`, `\discB`, `\seqlen`, `\statedim`, `\inputdim`, `\scanop`, `\elemwise`, `\monodromy`, `\floquet`, `\lyapexp`, `\jacobian`, `\ddt`, `\pderiv`, `\spectralradius`
 - 16 general math: `\R`, `\C`, `\N`, `\Z`, `\E`, `\Prob`, `\norm`, `\ip`, `\abs`, `\argmax`, `\argmin`, `\diag`, `\tr`, `\spec`, `\rank`, `\bigO`
 - 1 compatibility alias: `\bm` → `\boldsymbol` (KaTeX doesn't ship `\bm`)
 
-To extend for your book, edit `src/lib/katex-macros.ts` and add new entries to the `ssmMacros` object:
+**Read or spread it** (v4.27.0+, #177) — from the main entry, or the `./lib` subpath:
+
 ```ts
-export const ssmMacros = {
-  // existing macros...
-  '\\mybook': '\\mathbb{B}',           // 0-arg macro
-  '\\myfunc': '\\mathrm{my}(#1)',      // 1-arg macro
-};
+import { ssmMacros } from '@brandon_m_behring/book-scaffold-astro';
 ```
+
+**Extend for your book — the supported path** (#22). `katexMacros` is shallow-merged **on top of** `ssmMacros`, so your entries win on collision:
+
+```js
+export default await defineBookConfig({
+  styles: [academicStyle],
+  site: 'https://…',
+  katexMacros: {
+    '\\ate': '\\tau',                 // 0-arg macro
+    '\\propensity': 'e(#1)',          // 1-arg macro
+  },
+});
+```
+
+Do **not** edit `katex-macros.ts` — it lives inside `node_modules` and your changes vanish on the next install. If a macro is general enough for every book, file an issue instead.
 
 ## Common gotchas
 
 - **`\bm{x}` doesn't ship with KaTeX.** The macro library aliases it to `\boldsymbol{x}` (visually identical in stix-two / Computer Modern fonts).
 - **`\psmallmatrix` not supported by KaTeX.** Convert to `\begin{pmatrix} ... \end{pmatrix}` in your MDX source.
-- **Equation auto-numbering across a document is not supported by KaTeX.** Each `$$...$$` block is independent. Use `\tag{N}` for explicit numbering, or a per-chapter remark plugin (deferred; see PROFILES_DESIGN.md §6).
+- **Equation auto-numbering across a document is not supported by KaTeX.** Each `$$...$$` block is independent. Use `\tag{N}` for explicit numbering; a per-chapter remark plugin is tracked as #146.
 - **`{,}` (LaTeX thousands separator) breaks MDX** — MDX parses `{...}` as a JSX expression. Use `1,000` not `1{,}000`.
 - **Math inside JSX components needs care.** `<Theorem>$x^2$</Theorem>` works because remark-math runs after MDX parses JSX, but escape any `{` or `}` in arguments.
 
 ## Canonical files
 
-- `astro.config.mjs:14-32` — profile branch + plugin wiring
-- `src/lib/katex-macros.ts` — full macro library (36 entries)
-- `src/layouts/Base.astro:24-30` — KaTeX CSS import
-- `package.json` — `katex ^0.16`, `remark-math ^6`, `rehype-katex ^7` deps
+- `package/src/lib/katex-macros.ts` — the 37-entry `ssmMacros` library
+- `package/src/config.ts` — profile-gated remark/rehype wiring + the `katexMacros` merge
+- `package/src/integration.ts` — KaTeX CSS injection for katex presets
+- your `astro.config.mjs` — `styles: [academicStyle]` + optional `katexMacros`
 
 ## Reference implementation
 
-[`~/Claude/post_transformers/guides/web/`](../) at commit `111ba26` (math first wired) through `2eaef5d` (current). The reference book has 6 academic chapters using these macros and exercises every edge case the scaffold supports.
+[`~/Claude/post_transformers/guides/web/`](../) — the academic reference book has 6 chapters using these macros and exercises every edge case the scaffold supports.
