@@ -104,3 +104,18 @@ test('katex-macros: tools profile does NOT register rehype-katex (no leak)', asy
     'rehype-katex should not be registered on tools profile, even when katexMacros is supplied',
   );
 });
+
+test('katex-macros: ssmMacros is re-exported from the main entry (#177)', async () => {
+  const mainEntry = await import('../dist/index.mjs');
+  assert.ok(mainEntry.ssmMacros, 'main entry must export ssmMacros');
+  assert.deepEqual(
+    mainEntry.ssmMacros,
+    ssmMacros,
+    'main-entry ssmMacros must be the same macro set as the ./lib subpath',
+  );
+  assert.equal(
+    Object.keys(mainEntry.ssmMacros).length,
+    37,
+    'macro-count contract: 37 macros (update this + recipe 01 + README together when it changes)',
+  );
+});

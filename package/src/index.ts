@@ -117,6 +117,13 @@ export {
 // silent broken render. Unit-tested in tests/assert-prop.test.mjs.
 export { assertEnumProp } from './lib/assert-prop.js';
 
+// v4.27.0 (#177): the scaffold's KaTeX macro library (37 macros — SSM notation,
+// general math, the \bm→\boldsymbol alias), re-exported from the main entry so
+// consumers can read or spread it without knowing the ./lib subpath. Per-book
+// EXTENSION still goes through defineBookConfig({ katexMacros }) (#22), which
+// shallow-merges on top of this set.
+export { ssmMacros } from './lib/katex-macros.js';
+
 // v4.16.0 (#96): cross-book link resolution. resolveBookHref maps a sibling
 // book key → its base URL from the consumer's siblingBooks registry, throwing
 // on an unknown book instead of emitting a dead cross-origin link.
