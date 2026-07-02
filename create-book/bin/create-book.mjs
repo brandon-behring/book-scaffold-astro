@@ -123,19 +123,14 @@ function makeTemplates(name, profile, toolkitVersion) {
   "private": true,
   "scripts": {
     "predev": "npm run build:bib --if-present && npm run build:labels --if-present",${
-      // v4.6.0: academic + research-portfolio scaffolds add a `prevalidate`
-      // npm lifecycle hook so `npm run validate` auto-runs build:bib +
-      // build:labels first (fixes the gitignored-references.json gap that
-      // surfaced during DML + ssm Phase 1c first-deploys — see recipe
-      // 19-prevalidate-hook). prebuild simplifies to just `npm run validate`;
-      // npm's lifecycle does the rest. Other profiles keep the explicit
-      // prebuild chain (they don't run cite-key validation).
-      (profile === 'academic' || profile === 'research-portfolio')
-        ? `
+      // v4.6.0: prevalidate pregenerates the gitignored data artifacts before
+      // `npm run validate` (recipe 19-prevalidate-hook). #186 made the hook
+      // UNIFORM across profiles — build:labels applies to every profile
+      // (XRef/Theorem ids), and validate itself now self-heals when invoked
+      // via `npx book-scaffold validate` (which bypasses npm pre-hooks).
+      `
     "prevalidate": "npm run build:bib --if-present && npm run build:labels --if-present",
     "prebuild": "npm run validate --if-present",`
-        : `
-    "prebuild": "npm run build:bib --if-present && npm run build:labels --if-present && npm run validate --if-present",`
     }
     "build:bib": "book-scaffold build-bib",
     "build:labels": "book-scaffold build-labels",

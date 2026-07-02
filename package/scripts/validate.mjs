@@ -38,6 +38,8 @@
 import { readFile, access } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 import { walkMdx, readChaptersBase, readBookSchemaConfig } from './walk-mdx.mjs';
 
 /**
@@ -212,6 +214,31 @@ const errors = [];
 const warnings = [];
 const fail = (file, line, msg) => errors.push({ file, line, msg });
 const warn = (file, line, msg) => warnings.push({ file, line, msg });
+
+// ===== Self-heal missing generated artifacts (#186) =====
+// Every consumer gitignores src/data/{labels,references}.json (build
+// artifacts), so a fresh checkout running `npx book-scaffold validate`
+// directly — which bypasses npm pre-hooks, the path no consumer-side hook
+// can cover — previously hit a wall of downstream "unknown id" errors.
+// Both files regenerate deterministically from source, so regenerate them
+// with a one-line notice instead. Behavior is unchanged when they exist;
+// a failed regeneration fails validate loudly (it is the sibling script's
+// own diagnostic that matters then).
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+function regenerate(scriptName, why) {
+  process.stdout.write(`validate: ${why} — regenerating via ${scriptName} (#186)\n`);
+  const r = spawnSync(process.execPath, [join(scriptDir, scriptName)], { cwd: ROOT, stdio: 'inherit' });
+  if (r.status !== 0) {
+    process.stderr.write(`validate: ${scriptName} failed (exit ${r.status}) — cannot self-heal.\n`);
+    process.exit(r.status ?? 1);
+  }
+}
+if (!existsSync(join(DATA_DIR, 'labels.json'))) {
+  regenerate('build-labels.mjs', 'src/data/labels.json is missing');
+}
+if (!existsSync(join(DATA_DIR, 'references.json')) && existsSync(resolve(ROOT, 'bibliography.bib'))) {
+  regenerate('build-bib.mjs', 'src/data/references.json is missing (bibliography.bib present)');
+}
 
 // ===== Load reference data (graceful when missing) =====
 async function loadJson(path) {

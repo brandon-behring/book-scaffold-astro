@@ -124,20 +124,23 @@ test('v4.6.0 Layer D: research-portfolio preset adds prevalidate hook', async ()
   );
 });
 
-test('v4.6.0 Layer D: tools preset does NOT add prevalidate (no cite-key validation)', async () => {
+test('#186: every preset ships the uniform prevalidate hook (was academic/rp-only)', async () => {
+  // build:labels applies to every profile (XRef/Theorem ids), and validate
+  // itself now self-heals for direct `npx book-scaffold validate` calls —
+  // the hook keeps the npm-script path pregenerated too.
   const r = runCli(['demo-tools-46-d', '--preset=tools'], workRoot);
   assert.equal(r.status, 0, `expected exit 0; stderr: ${r.stderr}`);
   const pkgPath = join(workRoot, 'demo-tools-46-d', 'package.json');
   const pkg = JSON.parse(await readFile(pkgPath, 'utf8'));
-  assert.equal(
+  assert.match(
     pkg.scripts.prevalidate,
-    undefined,
-    'tools profile has no bib pipeline — prevalidate would be a no-op',
+    /build:bib.*build:labels/,
+    'tools scaffold carries the uniform prevalidate hook (#186)',
   );
   assert.match(
     pkg.scripts.prebuild,
-    /build:bib/,
-    'non-academic profiles keep the explicit prebuild chain',
+    /npm run validate/,
+    'prebuild delegates to validate; the lifecycle hook pregenerates',
   );
 });
 

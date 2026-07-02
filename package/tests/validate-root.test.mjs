@@ -16,7 +16,7 @@
  */
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
@@ -207,6 +207,51 @@ test('validate-root: BOOK_PROFILE env still wins over .env (closes #20)', () => 
       /profile=academic/,
       `process.env.BOOK_PROFILE should win over .env BOOK_PROFILE; got: ${result.stdout}`,
     );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+// ---- validate self-heal (#186): missing generated artifacts regenerate ----
+
+test('validate (#186): missing labels.json self-heals via build-labels — fresh-checkout case', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    // A fresh checkout: chapters exist, src/data does NOT (gitignored).
+    const chaptersDir = join(tmp, 'src', 'content', 'chapters');
+    mkdirSync(chaptersDir, { recursive: true });
+    writeFileSync(
+      join(chaptersDir, 'week03.mdx'),
+      `---
+week: 3
+part: foundations
+title: "Self-heal fixture"
+status: implemented
+---
+
+<Theorem id="w3:thm:heal" kind="theorem">Indexed by the healed labels.json.</Theorem>
+
+See <XRef id="w3:thm:heal" /> for the loop.
+`,
+    );
+    const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 15_000, env: { ...process.env, BOOK_PRESET: 'minimal' } });
+    assert.equal(result.status, 0, `validate must self-heal and pass\nstdout: ${result.stdout}\nstderr: ${result.stderr}`);
+    assert.match(result.stdout, /regenerating via build-labels\.mjs \(#186\)/, 'must print the regeneration notice');
+    assert.doesNotMatch(result.stdout, /build-bib/, 'no bibliography.bib → references.json must NOT be regenerated');
+    const healed = JSON.parse(readFileSync(join(tmp, 'src', 'data', 'labels.json'), 'utf8'));
+    assert.ok(healed['w3:thm:heal'], 'healed labels.json must carry the chapter id');
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#186): present artifacts are untouched — no regeneration notice', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    const result = spawnSync('node', [VALIDATE_SCRIPT, '--preset', 'minimal'], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(result.status, 0);
+    assert.doesNotMatch(result.stdout, /regenerating/, 'existing artifacts must not be regenerated (#186)');
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
