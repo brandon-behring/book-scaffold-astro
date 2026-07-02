@@ -17,6 +17,7 @@
  * inside src/content/questions/**.mdx. Slot freely: prose, math, <Cite>, code.
  */
 import bookConfig from 'virtual:book-scaffold/book-config';
+import { baseNoSlash } from '../src/lib/nav-href';
 
 interface Props {
   /** Summary label for the reveal. Defaults to "Answer & rationale". */
@@ -48,8 +49,8 @@ if (appendix && !(bookConfig.enabledRoutes ?? []).includes('answers')) {
 // full rationale must render (the appendix re-renders question bodies via
 // render()). BASE_URL-prefixed + trailing-slash tolerant; an endsWith()
 // heuristic would also fire on e.g. a chapter whose slug is "answers".
-const basePath = (import.meta.env.BASE_URL ?? '/').replace(/\/+$/, '');
-const onAnswersRoute = Astro.url.pathname.replace(/\/+$/, '') === `${basePath}/answers`;
+const basePath = baseNoSlash(import.meta.env.BASE_URL);
+const onAnswersRoute = baseNoSlash(Astro.url.pathname) === `${basePath}/answers`;
 const asLink = appendix && !onAnswersRoute;
 ---
 {asLink ? (

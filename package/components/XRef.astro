@@ -1,4 +1,5 @@
 ---
+import { normalizeBase } from '../src/lib/nav-href';
 // XRef — resolves a `\cref{label}` LaTeX reference to a hyperlink.
 //
 // Reads src/data/labels.json built by scripts/build-labels.mjs
@@ -47,7 +48,7 @@ const entry = map[id];
 // #142: labels.json stores a base-less `chapters/<slug>#<id>` ref; prefix
 // BASE_URL at render. The leading-slash strip tolerates a labels.json built
 // by an older (pre-#142) build-labels that still emits a root-absolute href.
-const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 ---
 {entry ? (
   <a href={`${baseUrl}${entry.href.replace(/^\//, '')}`} class="xref">{entry.display}</a>

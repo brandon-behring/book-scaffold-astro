@@ -8,7 +8,7 @@
  * Single-book consumers are byte-identical (defaults → global order + `/chapters/<id>/`).
  */
 import { getNeighbors } from '../src/lib/chapters';
-import { chapterHref } from '../src/lib/nav-href';
+import { chapterHref, normalizeBase } from '../src/lib/nav-href';
 import bookConfig from 'virtual:book-scaffold/book-config';
 
 interface Props {
@@ -18,7 +18,7 @@ const { currentId } = Astro.props;
 
 const chapterRoute = (bookConfig as { chapterRoute?: string }).chapterRoute ?? '/chapters/:id/';
 const bookField = (bookConfig as { bookField?: string }).bookField ?? 'book';
-const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 
 const { prev, next } = await getNeighbors(currentId, { bookField });
 // Resolve hrefs in frontmatter (casts here, never in the JSX expression container).

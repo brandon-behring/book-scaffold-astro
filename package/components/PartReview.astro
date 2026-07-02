@@ -19,6 +19,7 @@
  */
 import { getCollection } from 'astro:content';
 import { selectPartExercises } from '../src/lib/part-review';
+import { normalizeBase } from '../src/lib/nav-href';
 
 interface Props {
   /** The part to aggregate. Number (tools/minimal/…) or string (academic enum). */
@@ -27,7 +28,7 @@ interface Props {
   title?: string;
 }
 const { part, title } = Astro.props;
-const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 
 // Reuse the build-exercises index (keyed by chapter slug). Project-root-relative
 // glob (the tips.astro / exercises.astro lesson) so it resolves across consumers.

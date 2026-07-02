@@ -29,10 +29,32 @@ export interface ChapterLike {
   data: Record<string, unknown>;
 }
 
-/** Normalize a base URL to exactly one trailing slash (`''` → `'/'`). */
-function normBase(baseUrl: string): string {
+/**
+ * Normalize a base URL to exactly one trailing slash (`''`/`undefined` → `'/'`).
+ *
+ * v4.27.0 (#182): promoted from this module's private helper to THE shared
+ * normalizer — 18 `.astro` files previously inlined the same normalization in
+ * three regex idioms. Astro does not guarantee a trailing slash on `base`
+ * (`'/foo'` is a documented form), so every `import.meta.env.BASE_URL` read
+ * must pass through here before href composition: `${normalizeBase(...)}chapters/`.
+ * Takes the base as a PARAMETER because src/lib ships pre-compiled in dist/,
+ * where Vite's import.meta.env replacement cannot reach (see exam-manifest.ts).
+ */
+export function normalizeBase(baseUrl: string | undefined): string {
   return (baseUrl || '/').replace(/\/*$/, '/');
 }
+
+/**
+ * The composing variant (#182): strip ALL trailing slashes (`'/'` → `''`,
+ * `'/foo/'` → `'/foo'`) for `${baseNoSlash(...)}/answers`-style templates
+ * where the literal supplies the slash (Rationale.astro's route detection).
+ */
+export function baseNoSlash(baseUrl: string | undefined): string {
+  return (baseUrl || '/').replace(/\/+$/, '');
+}
+
+/** Internal alias for the pre-#182 name. */
+const normBase = normalizeBase;
 
 /** Replace `:book` / `:slug` / `:route` / `:id` tokens; `\b` keeps each token
  *  whole, so order is irrelevant and `:id` never matches inside `:identifier`. */

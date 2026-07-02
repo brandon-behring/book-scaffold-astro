@@ -11,10 +11,11 @@
  * `astro dev`. See README for dev-search workflow.
  */
 import Base from '../layouts/Base.astro';
+import { normalizeBase } from '../src/lib/nav-href';
 
 // #142: Pagefind writes its bundle to dist/pagefind/, served under the deploy
 // base — so the asset URLs must prefix BASE_URL or they 404 under a non-root base.
-const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 ---
 
 <Base

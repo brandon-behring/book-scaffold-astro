@@ -10,6 +10,7 @@
  * page (doesn't fail the build).
  */
 import Base from '../layouts/Base.astro';
+import { normalizeBase } from '../src/lib/nav-href';
 
 // v4.4.0 fix: use Vite's import.meta.glob with a project-root-relative
 // path. The previous `../../../src/data/tips.json` resolution failed when
@@ -27,7 +28,7 @@ const loadError = tipsEntry
   : 'src/data/tips.json not found — run `npx book-scaffold build-tips` to generate.';
 
 // #142: chapter back-links must prefix the deploy base.
-const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 ---
 <Base title="Tips" description="Numbered tips from this book, drawn from <Tip> instances in chapters.">
   <article class="prose">

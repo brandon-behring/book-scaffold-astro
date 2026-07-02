@@ -1,4 +1,5 @@
 ---
+import { normalizeBase } from '../src/lib/nav-href';
 /**
  * Cite — renders a `\cite{bibkey}` LaTeX citation as a clickable
  * inline reference to the bibliography page.
@@ -45,7 +46,7 @@ interface Props {
 }
 
 const { key, page } = Astro.props;
-const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 const entry = map[key];
 if (!entry) {
   throw new Error(
