@@ -26,7 +26,7 @@ const NO_KIND_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'bad-theorem-
 const NO_CHAPTER_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'theorem-no-chapter.mdx');
 
 /** Run build-labels.mjs in a temp dir containing one fixture chapter. Returns parsed labels.json. */
-function runInTempDir(fixturePaths = [FIXTURE_CHAPTER]) {
+function runInTempDir(fixturePaths = [FIXTURE_CHAPTER], extraArgs = '') {
   const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-test-'));
   try {
     const chaptersDir = join(tmp, 'src', 'content', 'chapters');
@@ -34,7 +34,7 @@ function runInTempDir(fixturePaths = [FIXTURE_CHAPTER]) {
     for (const fp of fixturePaths) {
       copyFileSync(fp, join(chaptersDir, fp.split('/').pop()));
     }
-    execSync(`node ${SCRIPT}`, { cwd: tmp, stdio: 'pipe' });
+    execSync(`node ${SCRIPT} ${extraArgs}`.trim(), { cwd: tmp, stdio: 'pipe' });
     const labelsRaw = readFileSync(join(tmp, 'src', 'data', 'labels.json'), 'utf8');
     return JSON.parse(labelsRaw);
   } finally {
@@ -143,6 +143,34 @@ test('build-labels: <Theorem kind> is kind-aware and shares one counter (#126)',
   assert.equal(labels['w9:thm:main'].display, 'Theorem 9.1');
   assert.equal(labels['w9:prop:dual'].display, 'Proposition 9.2');
   assert.equal(labels['w9:lem:helper'].display, 'Lemma 9.3'); // legacy type=
+});
+
+test('build-labels (#175): --number-style per-kind gives each theorem kind its own sequence', () => {
+  const labels = runInTempDir([KINDS_FIXTURE], '--number-style per-kind');
+  // Independent per-kind sequences — each kind starts at 9.1.
+  assert.equal(labels['w9:thm:main'].number, '9.1');
+  assert.equal(labels['w9:prop:dual'].number, '9.1');
+  assert.equal(labels['w9:lem:helper'].number, '9.1');
+  assert.equal(labels['w9:thm:main'].display, 'Theorem 9.1');
+  assert.equal(labels['w9:prop:dual'].display, 'Proposition 9.1');
+  assert.equal(labels['w9:lem:helper'].display, 'Lemma 9.1');
+});
+
+test('build-labels (#175): explicit --number-style shared is byte-identical to the default (#126 contract)', () => {
+  const byDefault = runInTempDir([KINDS_FIXTURE]);
+  const explicit = runInTempDir([KINDS_FIXTURE], '--number-style shared');
+  assert.deepEqual(explicit, byDefault, 'shared must be the default, unchanged');
+});
+
+test('build-labels (#175): an invalid --number-style fails loudly', () => {
+  let threw = false;
+  try {
+    runInTempDir([KINDS_FIXTURE], '--number-style bogus');
+  } catch (err) {
+    threw = true;
+    assert.match(String(err.stderr ?? err.message), /must be shared \| per-kind/);
+  }
+  assert.ok(threw, 'invalid --number-style must exit non-zero');
 });
 
 test('build-labels: an unknown <Theorem> kind FAILS the build (#126, #121 contract)', () => {

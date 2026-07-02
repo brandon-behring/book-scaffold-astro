@@ -65,12 +65,30 @@ Env:
   BOOK_LABELS_OUT     Override output path (default: src/data/labels.json).
 
 Options:
+  --number-style <s>  shared (default) | per-kind (#175). shared = one amsthm
+                      sequence per component (Theorem 9.1 / Prop 9.2 / Lemma 9.3);
+                      per-kind = independent sequences per theorem kind
+                      (Theorem 9.1 / Prop 9.1 / Lemma 9.1). Wire the flag into
+                      your build:labels script; XRefs stay consistent either
+                      way because headings and refs both read labels.json.
   --help, -h          Print this message and exit (non-mutating).
 `;
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
   process.stdout.write(USAGE);
   process.exit(0);
+}
+
+// #175: opt-in per-kind theorem sequences. Default 'shared' preserves the
+// amsthm shared-counter contract (#126) byte-for-byte — existing books'
+// numbers never shift unless they opt in.
+const nsIdx = process.argv.indexOf('--number-style');
+const NUMBER_STYLE = nsIdx >= 0 ? process.argv[nsIdx + 1] : 'shared';
+if (!['shared', 'per-kind'].includes(NUMBER_STYLE ?? '')) {
+  process.stderr.write(
+    `build-labels: invalid --number-style ${JSON.stringify(NUMBER_STYLE)}; must be shared | per-kind (#175).\n`,
+  );
+  process.exit(2);
 }
 
 // v4.1.1 (closes #63): readChaptersBase honors BOOK_CHAPTERS_DIR env (when set)
@@ -207,13 +225,6 @@ async function main() {
       const id = extractAttr(attrs, 'id');
       if (!id) continue;
 
-      // One shared counter per component (keyed by the JSX name, NOT the
-      // amsthm kind) — so theorem/proposition/lemma share a sequence exactly
-      // as they do under amsthm, and existing numbers never shift (#126).
-      counters[componentName] = (counters[componentName] ?? 0) + 1;
-      foundInChapter += 1;
-      totalIds += 1;
-
       // Resolve the display word only when it will actually be used. A `label=`
       // override supplies its own display, so we neither compute nor (for
       // <Theorem>) kind-validate it — computing would throw on a kindless
@@ -241,13 +252,28 @@ async function main() {
         }
       }
 
+      // Default: one shared counter per component (keyed by the JSX name, NOT
+      // the amsthm kind) — theorem/proposition/lemma share a sequence exactly
+      // as they do under amsthm, and existing numbers never shift (#126).
+      // Opt-in --number-style per-kind (#175): <Theorem> keys by the resolved
+      // kind word instead, so Definitions/Theorems/Propositions number
+      // independently (Theorem 9.1 / Proposition 9.1). label= overrides carry
+      // no kind, so they stay on the component key (their number is null).
+      const counterKey =
+        NUMBER_STYLE === 'per-kind' && componentName === 'Theorem' && word
+          ? `Theorem/${word}`
+          : componentName;
+      counters[counterKey] = (counters[counterKey] ?? 0) + 1;
+      foundInChapter += 1;
+      totalIds += 1;
+
       // The bare counter string the heading reuses: Theorem.astro reads
       // `number` by id and renders it, so heading == xref by construction.
       // A `label=` override opts out of auto-numbering → number is null.
       const number =
         chapterNum != null
-          ? `${chapterNum}.${counters[componentName]}`
-          : String(counters[componentName]);
+          ? `${chapterNum}.${counters[counterKey]}`
+          : String(counters[counterKey]);
       const display = labelOverride ?? `${word} ${number}`;
 
       if (labels[id]) {
@@ -281,7 +307,7 @@ async function main() {
   process.stdout.write(
     `build-labels: ${totalIds} id${totalIds === 1 ? '' : 's'} across ` +
       `${chaptersWithIds} chapter${chaptersWithIds === 1 ? '' : 's'} → ` +
-      `${OUTPUT_PATH}\n`,
+      `${OUTPUT_PATH} (number-style=${NUMBER_STYLE})\n`,
   );
 }
 
