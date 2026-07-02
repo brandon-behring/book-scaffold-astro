@@ -15,6 +15,8 @@ import {
   bookOf,
   slugOf,
   isCurrentChapter,
+  normalizeBase,
+  baseNoSlash,
 } from '../dist/index.mjs';
 
 const single = (id) => ({ id, data: {} }); // academic/tools/minimal: no `book` field
@@ -90,4 +92,33 @@ test('isCurrentChapter: multi-book pattern', () => {
   const e = multi('kg', '01-intro');
   assert.equal(isCurrentChapter(e, '/kg/01-intro/', '/:id/'), true);
   assert.equal(isCurrentChapter(e, '/eval/01-intro/', '/:id/'), false);
+});
+
+// ===== #182: shared BASE_URL normalizers — equivalence with the three retired inline idioms =====
+
+test('normalizeBase (#182): equivalent to both retired inline idioms over the base input space', () => {
+  const cases = [undefined, '', '/', '/foo', '/foo/', '/foo//', '/a/b', '/a/b/'];
+  for (const raw of cases) {
+    const legacyQ = (raw ?? '/').replace(/\/?$/, '/');   // 14-site idiom
+    const legacyStar = (raw ?? '/').replace(/\/*$/, '/'); // 3-site idiom
+    const helper = normalizeBase(raw);
+    assert.equal(helper, legacyStar, `normalizeBase(${JSON.stringify(raw)}) must match the /\\/*$/ idiom`);
+    // the /? idiom differs from /* only on multi-slash tails ('/foo//'), where
+    // it left '/foo//' — the helper collapses to one slash, which is the
+    // CORRECT normalization (the /? form was the weaker of the two).
+    if (!/\/\/$/.test(raw ?? '')) {
+      assert.equal(helper, legacyQ, `normalizeBase(${JSON.stringify(raw)}) must match the /\\/?$/ idiom on single-slash tails`);
+    }
+    assert.match(helper, /\/$/, 'result always ends in exactly one slash');
+    assert.doesNotMatch(helper, /\/\/$/, 'never a double slash');
+  }
+});
+
+test('baseNoSlash (#182): equivalent to the retired Rationale idiom', () => {
+  const cases = [undefined, '', '/', '/foo', '/foo/', '/foo//'];
+  for (const raw of cases) {
+    assert.equal(baseNoSlash(raw), (raw || '/').replace(/\/+$/, ''), `baseNoSlash(${JSON.stringify(raw)})`);
+  }
+  assert.equal(baseNoSlash('/') , '', "'/' composes to '' so `${base}/answers` → '/answers'");
+  assert.equal(baseNoSlash('/foo/'), '/foo');
 });

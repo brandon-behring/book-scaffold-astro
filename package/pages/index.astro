@@ -34,6 +34,7 @@
  */
 import Base from '../layouts/Base.astro';
 import bookConfig from 'virtual:book-scaffold/book-config';
+import { normalizeBase } from '../src/lib/nav-href';
 
 const title = bookConfig.title ?? 'book-scaffold-astro';
 const description = bookConfig.description;
@@ -42,7 +43,7 @@ const enabledRoutes = bookConfig.enabledRoutes;
 
 // Astro guarantees BASE_URL carries a trailing slash ('/' or '/foo/'), so
 // `${baseUrl}chapters/` resolves correctly under any deploy base (#142).
-const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 
 // Map from internal route name → display label + URL. Only routes that
 // produce a single landing-list entry are listed here (frontmatter is a

@@ -107,13 +107,28 @@ const NORMALIZED_BASE_FILES = [
   'layouts/Base.astro',
 ];
 
-test('every baseUrl read normalizes a no-trailing-slash base (#142, adversarial)', () => {
+test('every baseUrl read normalizes a no-trailing-slash base (#142; #182 shared helper)', () => {
+  // v4.27.0 (#182): the inline `.replace(/\/?$/, '/')` idiom (3 variants across
+  // 18 files) was consolidated onto normalizeBase() in src/lib/nav-href — the
+  // contract is unchanged (exactly one trailing slash), enforced by the
+  // equivalence cases in tests/nav-href.test.mjs.
   for (const rel of NORMALIZED_BASE_FILES) {
     const src = readFileSync(new URL(`../${rel}`, import.meta.url), 'utf8');
     assert.match(
       src,
-      /const baseUrl = \(import\.meta\.env\.BASE_URL \?\? '\/'\)\.replace\(/,
-      `${rel}: baseUrl must normalize the base trailing slash (else base:'/foo' → '/foochapters/')`,
+      /const baseUrl = normalizeBase\(import\.meta\.env\.BASE_URL\)/,
+      `${rel}: baseUrl must route through normalizeBase (else base:'/foo' → '/foochapters/')`,
+    );
+    assert.doesNotMatch(
+      src,
+      /BASE_URL \?\? '\/'\)\.replace\(/,
+      `${rel}: no inline base normalization — use the shared helper (#182)`,
     );
   }
+});
+
+test('Rationale routes its base + pathname strips through baseNoSlash (#182)', () => {
+  const src = readFileSync(new URL('../components/Rationale.astro', import.meta.url), 'utf8');
+  assert.match(src, /baseNoSlash\(import\.meta\.env\.BASE_URL\)/);
+  assert.match(src, /baseNoSlash\(Astro\.url\.pathname\)/);
 });

@@ -1,4 +1,5 @@
 ---
+import { normalizeBase } from '../src/lib/nav-href';
 /**
  * WeekRef — inline pointer to another chapter, mapping LaTeX `\weekref{N}{body}`.
  *
@@ -21,7 +22,7 @@ interface Props {
 const { week } = Astro.props;
 const slug = `week${String(week).padStart(2, '0')}`;
 // #142: prefix BASE_URL so the chapter link stays inside a non-root deploy base.
-const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 const href = `${baseUrl}chapters/${slug}/`;
 ---
 <aside class="week-ref">

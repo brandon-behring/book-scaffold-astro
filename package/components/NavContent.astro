@@ -22,11 +22,11 @@ import { getCollection } from 'astro:content';
 import bookConfig from 'virtual:book-scaffold/book-config';
 import { academicParts } from '../src/schemas';
 import { academicPartHeading } from '../src/lib/academic-parts';
-import { chapterHref, apparatusHref, bookOf, isCurrentChapter, type ChapterLike } from '../src/lib/nav-href';
+import { chapterHref, apparatusHref, bookOf, isCurrentChapter, type ChapterLike, normalizeBase } from '../src/lib/nav-href';
 
 const profile = import.meta.env.BOOK_PROFILE ?? 'minimal';
 // #142: normalize the base trailing slash (Astro allows base:'/foo' with none).
-const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/*$/, '/');
+const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 
 // v4.26.0 (#80): nav route config (defaults reproduce single-book behavior).
 const chapterRoute = (bookConfig as { chapterRoute?: string }).chapterRoute ?? '/chapters/:id/';

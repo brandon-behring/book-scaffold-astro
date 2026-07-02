@@ -137,6 +137,13 @@ export {
   type ChapterLike,
 } from './lib/nav-href.js';
 
+// v4.27.0 (#182): the shared BASE_URL trailing-slash normalizers — previously
+// inlined in three regex idioms across 18 .astro files. normalizeBase for
+// `${base}route/` composition; baseNoSlash for `${base}/route` composition.
+// Param-taking by design: src/lib ships pre-compiled where Vite's
+// import.meta.env replacement cannot reach.
+export { normalizeBase, baseNoSlash } from './lib/nav-href.js';
+
 // v4.17.0 (Tier 3, #112): exam-domain membership check. assertKnownDomain
 // throws when a question's `domain` is not in the consumer's examDomains
 // registry — the per-book analogue of resolveBookHref's unknown-book throw.
