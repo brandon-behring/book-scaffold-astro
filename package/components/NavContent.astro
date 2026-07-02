@@ -1,0 +1,286 @@
+---
+/**
+ * NavContent — the shared chapter-navigation list (v4.26.0, #80).
+ *
+ * Self-contained nav model + markup, rendered by BOTH the desktop `Sidebar`
+ * and the mobile `NavDrawer` so there is ONE nav source. It:
+ *   - reads the chapters collection,
+ *   - derives the CURRENT BOOK from the URL's first path segment (validated
+ *     against the set of books that actually exist), so multi-book consumers
+ *     get a book-SCOPED list on every page type (chapter / book-index /
+ *     apparatus) with no prop threading,
+ *   - resolves every href through the `chapterRoute` token pattern (nav-href),
+ *   - groups by `part` exactly as the old Sidebar did (academic part-enum order
+ *     preserved).
+ *
+ * Backward compatibility: single-book schemas (academic/tools/minimal) have no
+ * `book` field → `knownBooks` is empty → `currentBook` is null → ALL chapters
+ * are shown and `chapterRoute` defaults to `/chapters/:id/` → byte-identical to
+ * the pre-4.26 nav.
+ */
+import { getCollection } from 'astro:content';
+import bookConfig from 'virtual:book-scaffold/book-config';
+import { academicParts } from '../src/schemas';
+import { academicPartHeading } from '../src/lib/academic-parts';
+import { chapterHref, apparatusHref, bookOf, isCurrentChapter, type ChapterLike } from '../src/lib/nav-href';
+
+const profile = import.meta.env.BOOK_PROFILE ?? 'minimal';
+// #142: normalize the base trailing slash (Astro allows base:'/foo' with none).
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/*$/, '/');
+
+// v4.26.0 (#80): nav route config (defaults reproduce single-book behavior).
+const chapterRoute = (bookConfig as { chapterRoute?: string }).chapterRoute ?? '/chapters/:id/';
+const bookField = (bookConfig as { bookField?: string }).bookField ?? 'book';
+const apparatusRoute = (bookConfig as { apparatusRoute?: string }).apparatusRoute ?? '/:route/';
+const apparatusRoutes = (bookConfig as { apparatusRoutes?: readonly string[] }).apparatusRoutes ?? [];
+
+const ACADEMIC_PART_ORDER = academicParts;
+const currentPath = Astro.url.pathname;
+
+const rawChapters = await getCollection('chapters', (entry) => !entry.data.draft);
+
+// Derive the current book from the URL (first path segment after BASE_URL),
+// validated against the books that actually exist. Empty set (single-book) →
+// null → no filtering.
+function entryOf(e: (typeof rawChapters)[number]): ChapterLike {
+  return { id: e.id, data: e.data as Record<string, unknown> };
+}
+const knownBooks = new Set(
+  rawChapters.map((e) => bookOf(entryOf(e), bookField)).filter((b): b is string => b !== null),
+);
+const relPath = currentPath.startsWith(baseUrl) ? currentPath.slice(baseUrl.length) : currentPath.replace(/^\//, '');
+const urlBook = relPath.split('/')[0] ?? '';
+const currentBook = knownBooks.has(urlBook) ? urlBook : null;
+
+const scopedChapters = currentBook
+  ? rawChapters.filter((e) => bookOf(entryOf(e), bookField) === currentBook)
+  : rawChapters;
+
+// Pre-shape into render-ready rows (all TS casts in frontmatter — Astro's JSX
+// parser mis-tokenizes casts inside expression containers).
+interface ChapterRow {
+  id: string;
+  partKey: string;
+  prefix: string;
+  title: string;
+  href: string;
+  isCurrent: boolean;
+  sortPart: number;
+  sortRank: number;
+}
+
+function rowOf(entry: (typeof rawChapters)[number]): ChapterRow {
+  const d = entry.data as Record<string, unknown>;
+  const e = entryOf(entry);
+  const href = chapterHref(e, chapterRoute, baseUrl, bookField);
+  const isCurrent = isCurrentChapter(e, currentPath, chapterRoute, baseUrl, bookField);
+  if (profile === 'academic') {
+    const week = (d.week as number) ?? 0;
+    return {
+      id: entry.id,
+      partKey: (d.part as string) ?? '',
+      prefix: `W${String(week).padStart(2, '0')}`,
+      title: (d.title as string) ?? entry.id,
+      href,
+      isCurrent,
+      sortPart: ACADEMIC_PART_ORDER.indexOf((d.part as (typeof ACADEMIC_PART_ORDER)[number]) ?? 'foundations'),
+      sortRank: week,
+    };
+  }
+  const partNum = (d.part as number) ?? 0;
+  const chapter = (d.chapter as number) ?? 0;
+  return {
+    id: entry.id,
+    partKey: String(partNum),
+    prefix: `Ch${chapter}`,
+    title: (d.title as string) ?? entry.id,
+    href,
+    isCurrent,
+    sortPart: partNum,
+    sortRank: chapter,
+  };
+}
+
+const rows: ChapterRow[] = scopedChapters.map(rowOf).sort((a, b) => {
+  if (a.sortPart !== b.sortPart) return a.sortPart - b.sortPart;
+  return a.sortRank - b.sortRank;
+});
+
+const byPart = new Map<string, ChapterRow[]>();
+if (profile === 'academic') {
+  for (const part of ACADEMIC_PART_ORDER) byPart.set(part, []);
+}
+for (const r of rows) {
+  if (!byPart.has(r.partKey)) byPart.set(r.partKey, []);
+  byPart.get(r.partKey)!.push(r);
+}
+
+// Index link: multi-book → the book's TOC at /<book>/; single-book → /chapters/.
+const chaptersIndexHref = currentBook ? `${baseUrl}${currentBook}/` : `${baseUrl}chapters/`;
+const referencesHref = `${baseUrl}references/`;
+
+// Apparatus links (study-guide routes) — surfaced only when the consumer opts in
+// via `apparatusRoutes`. Book-scoped via the same resolver as chapters.
+const APPARATUS_LABELS: Record<string, string> = {
+  'practice-exam': 'Practice exam',
+  glossary: 'Glossary',
+  flashcards: 'Flashcards',
+  answers: 'Answers',
+};
+const apparatusLinks = apparatusRoutes.map((route) => {
+  const href = apparatusHref(route, currentBook, apparatusRoute, baseUrl);
+  return {
+    href,
+    label: APPARATUS_LABELS[route] ?? route.replace(/-/g, ' '),
+    isCurrent: currentPath === href || currentPath === href.replace(/\/$/, ''),
+  };
+});
+
+function partLabel(key: string): string {
+  if (profile === 'academic') return academicPartHeading(key);
+  return `Part ${key}`;
+}
+---
+
+<nav class="sidebar-nav" aria-label="Chapters">
+  <a
+    href={chaptersIndexHref}
+    class={`sidebar-link sidebar-link-index ${currentPath === chaptersIndexHref ? 'is-current' : ''}`}
+  >
+    All chapters
+  </a>
+  {profile === 'academic' && (
+    <a
+      href={referencesHref}
+      class={`sidebar-link sidebar-link-index ${currentPath === referencesHref ? 'is-current' : ''}`}
+    >
+      References
+    </a>
+  )}
+
+  {Array.from(byPart.entries()).map(([part, list]) => list.length === 0 ? null : (
+    <section class="sidebar-part">
+      <h3 class="sidebar-part-heading">{partLabel(part)}</h3>
+      <ol class="sidebar-list">
+        {list.map((r) => (
+          <li>
+            <a
+              href={r.href}
+              aria-current={r.isCurrent ? 'page' : undefined}
+              class={`sidebar-link ${r.isCurrent ? 'is-current' : ''}`}
+            >
+              <span class="sidebar-week">{r.prefix}</span>
+              <span class="sidebar-chapter-title">{r.title}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </section>
+  ))}
+
+  {apparatusLinks.length > 0 && (
+    <section class="sidebar-part sidebar-apparatus">
+      <h3 class="sidebar-part-heading">Study</h3>
+      <ol class="sidebar-list">
+        {apparatusLinks.map((a) => (
+          <li>
+            <a
+              href={a.href}
+              aria-current={a.isCurrent ? 'page' : undefined}
+              class={`sidebar-link sidebar-link-apparatus ${a.isCurrent ? 'is-current' : ''}`}
+            >
+              <span class="sidebar-chapter-title">{a.label}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )}
+</nav>
+
+<style>
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .sidebar-link-index {
+    display: block;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--color-text);
+    font-weight: 500;
+    margin-bottom: 1px;
+    border-left: 2px solid transparent;
+  }
+  .sidebar-link-index:hover {
+    background: var(--color-bg);
+  }
+  .sidebar-link-index.is-current {
+    background: var(--warm-blue-tint);
+    border-left-color: var(--callout-info);
+  }
+
+  .sidebar-part {
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-3);
+  }
+  .sidebar-part:first-of-type {
+    border-top: 0;
+    padding-top: 0;
+  }
+  .sidebar-part-heading {
+    font-family: var(--font-code);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    margin: 0 0 var(--space-2) 0;
+    padding: 0 var(--space-3);
+  }
+
+  .sidebar-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .sidebar-list li {
+    margin: 0;
+  }
+  .sidebar-link {
+    display: grid;
+    grid-template-columns: 2.4em 1fr;
+    gap: var(--space-2);
+    align-items: baseline;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--color-text);
+    line-height: var(--leading-normal);
+    border-left: 2px solid transparent;
+  }
+  .sidebar-link:hover {
+    background: var(--color-bg);
+    text-decoration: none;
+  }
+  .sidebar-link.is-current {
+    background: var(--warm-blue-tint);
+    border-left-color: var(--callout-info);
+    font-weight: 500;
+  }
+  .sidebar-week {
+    font-family: var(--font-code);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+  }
+  .sidebar-chapter-title {
+    color: inherit;
+  }
+  /* Apparatus links carry no chapter-number column → single-column grid. */
+  .sidebar-link-apparatus {
+    grid-template-columns: 1fr;
+  }
+</style>

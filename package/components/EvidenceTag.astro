@@ -84,19 +84,22 @@ const TITLE: Record<Kind, string> = {
   }
   /* Tinted background + matching text/border per kind. Tokens only, so each
    * recolors in the [data-theme="dark"] scope without a dark-block edit. */
+  /* a11y (v4.26.0, #80): the hue is carried by the border + tinted background;
+   * the TEXT uses the high-contrast body color (the accent as small text failed
+   * WCAG-AA 4.5:1 — verified green was 4.35/3.47). */
   .evidence-tag[data-kind="verified"] {
     border-color: var(--warm-green);
-    color: var(--warm-green);
+    color: var(--color-text);
     background: var(--warm-green-tint);
   }
   .evidence-tag[data-kind="inference"] {
     border-color: var(--warm-blue);
-    color: var(--warm-blue);
+    color: var(--color-text);
     background: var(--warm-blue-tint);
   }
   .evidence-tag[data-kind="audit-corrected"] {
     border-color: var(--warm-rose);
-    color: var(--warm-rose);
+    color: var(--color-text);
     background: var(--warm-rose-tint);
   }
 </style>

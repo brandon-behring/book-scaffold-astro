@@ -233,3 +233,19 @@ th {
   color: var(--warm-blue);
   font-style: italic;
 }
+
+/* ===== Narrow-viewport overflow guards (v4.26.0, #80) =====
+ * Defensive: stop a long INLINE-code identifier (e.g. a dotted module path) or a
+ * wide table from forcing horizontal PAGE scroll on a phone. `overflow-wrap:
+ * anywhere` only breaks when a token would otherwise overflow, so normal prose is
+ * untouched; fenced blocks are excluded (`:not(pre) > code`) so they keep their
+ * own `pre { overflow-x: auto }` inner scroll. Wide tables scroll within their own
+ * box (`display:block; overflow-x:auto`) instead of stretching the page. */
+:not(pre) > code {
+  overflow-wrap: anywhere;
+}
+.prose > table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}

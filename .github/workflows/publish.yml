@@ -53,6 +53,18 @@ jobs:
         with:
           ref: ${{ inputs.tag || github.ref }}
 
+      # Guard: a `file:*.tgz` ref in the committed lockfile (dogfood self-pack
+      # pollution) points at a gitignored tarball, so CI `npm install` ENOENTs
+      # mid-resolve. Fail fast with a clear remedy instead. (Caught the v4.26.0
+      # publish failure; see fix(ci) prune-orphan commit.)
+      - name: Guard against file-tarball refs in lockfile
+        run: |
+          if grep -nE 'file:[^"]*\.tgz' package-lock.json; then
+            echo "::error::package-lock.json contains a file: tarball ref (dogfood pollution). On a clean checkout run 'rm -rf node_modules && npm install' to prune it, commit, then re-tag."
+            exit 1
+          fi
+          echo "lockfile clean: no file: tarball refs"
+
       - name: Setup Node 22
         uses: actions/setup-node@v6
         with:

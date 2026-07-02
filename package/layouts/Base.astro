@@ -59,6 +59,8 @@ import '../styles/print.css';
 import VersionSelector from '@brandon_m_behring/book-scaffold-astro/components/VersionSelector';
 import ToolFilter from '@brandon_m_behring/book-scaffold-astro/components/ToolFilter';
 import Sidebar from '../components/Sidebar.astro';
+// v4.26.0 (#80): the mobile/tablet drawer reuses the same book-scoped nav source.
+import NavContent from '../components/NavContent.astro';
 // v4.6.0: SEO meta tags read book-level identity (title fallback,
 // description fallback, ogImage default, twitterHandle) from the
 // book-config virtual module (was landing-config in v4.5.1).
@@ -115,7 +117,7 @@ const absoluteOgImage = resolvedOgImage
 const twitterHandle = bookConfig.seo?.twitterHandle ?? null;
 const ogSiteName = bookConfig.title ?? title;
 const ogDescription = description ?? bookConfig.description ?? '';
-const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/*$/, '/');
 ---
 
 <!doctype html>
@@ -164,6 +166,22 @@ const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
   </head>
   <body>
     <div class="chrome-buttons">
+      {/* v4.26.0 (#80): hamburger → mobile/tablet nav drawer. <a href="#nav-drawer">
+          so it opens via :target with no JS; the controller below enhances it. */}
+      {showSidebar && (
+        <a
+          id="nav-toggle"
+          class="chrome-button nav-toggle"
+          href="#nav-drawer"
+          role="button"
+          aria-controls="nav-drawer"
+          aria-expanded="false"
+          aria-haspopup="dialog"
+          aria-label="Open chapter navigation"
+        >
+          <span aria-hidden="true">☰</span>
+        </a>
+      )}
       {showToolsChrome && <ToolFilter client:idle />}
       {showToolsChrome && <VersionSelector client:idle />}
       <a
@@ -185,6 +203,20 @@ const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
         <span class="theme-toggle-icon dark-icon" aria-hidden="true">☾</span>
       </button>
     </div>
+    {/* v4.26.0 (#80): mobile/tablet nav drawer (sibling of <main>, NOT a <main>).
+        CSS-hidden ≥64rem where the Sidebar is the nav. role=dialog + the inline
+        controller below provide focus-trap/ESC; `:target` is the no-JS fallback. */}
+    {showSidebar && (
+      <div id="nav-drawer" class="nav-drawer" data-nav-drawer>
+        <a class="nav-drawer-backdrop" href="#" data-nav-close tabindex="-1" aria-hidden="true"></a>
+        <div class="nav-drawer-panel" role="dialog" aria-modal="true" aria-label="Chapter navigation" tabindex="-1">
+          <a class="nav-drawer-dismiss chrome-button" href="#" data-nav-close aria-label="Close navigation">
+            <span aria-hidden="true">✕</span>
+          </a>
+          <NavContent />
+        </div>
+      </div>
+    )}
     {showSidebar ? (
       <div class="layout-with-sidebar">
         <Sidebar />
@@ -234,6 +266,79 @@ const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
             if (!root.getAttribute('data-theme')) emitThemeChange();
           });
         } catch (e) { /* older browsers: no media-query change events */ }
+      })();
+    </script>
+    {/*
+      Nav-drawer controller (v4.26.0, #80). Progressive enhancement over the
+      `:target` no-JS baseline: intercepts the hamburger to toggle `.is-open`
+      (so no history hash is pushed), traps focus inside the dialog, closes on
+      ESC / backdrop / dismiss, restores focus to the opener, and locks body
+      scroll. No-op on pages without the drawer (landing: showSidebar=false).
+    */}
+    <script is:inline>
+      (function () {
+        var drawer = document.getElementById('nav-drawer');
+        var toggle = document.getElementById('nav-toggle');
+        if (!drawer || !toggle) return;
+        var panel = drawer.querySelector('.nav-drawer-panel');
+        var opener = null;
+        function focusables() {
+          return Array.prototype.slice
+            .call(panel.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+            .filter(function (el) { return el.offsetParent !== null; });
+        }
+        // C1 (#80, codex@medium): count the :target no-JS-fallback state too, so a
+        // drawer opened via a '#nav-drawer' hash (with JS active) is still closable by
+        // backdrop / dismiss / ESC (close() clears the hash); else it would be stranded.
+        function isOpen() { return drawer.classList.contains('is-open') || location.hash === '#nav-drawer'; }
+        function open(e) {
+          if (e) e.preventDefault();
+          opener = document.activeElement;
+          drawer.classList.add('is-open');
+          toggle.setAttribute('aria-expanded', 'true');
+          document.documentElement.classList.add('nav-drawer-locked');
+          var f = focusables();
+          (f[0] || panel).focus();
+        }
+        function close(e) {
+          if (e) e.preventDefault();
+          if (!isOpen()) return;
+          drawer.classList.remove('is-open');
+          toggle.setAttribute('aria-expanded', 'false');
+          document.documentElement.classList.remove('nav-drawer-locked');
+          if (location.hash === '#nav-drawer') {
+            history.replaceState(null, '', location.pathname + location.search);
+          }
+          if (opener && typeof opener.focus === 'function') opener.focus();
+        }
+        toggle.addEventListener('click', function (e) { isOpen() ? close(e) : open(e); });
+        drawer.addEventListener('click', function (e) {
+          var t = e.target;
+          if (t && t.closest && t.closest('[data-nav-close]')) close(e);
+        });
+        document.addEventListener('keydown', function (e) {
+          if (!isOpen()) return;
+          if (e.key === 'Escape') { close(e); return; }
+          if (e.key === 'Tab') {
+            var f = focusables();
+            if (!f.length) return;
+            var first = f[0], last = f[f.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+          }
+        });
+        // F5 (a11y, #80): role="button" must activate on Space; native anchors only
+        // fire click on Enter, so bind Space explicitly (preventDefault stops scroll).
+        toggle.addEventListener('keydown', function (e) {
+          if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); isOpen() ? close(e) : open(e); }
+        });
+        // F1 (#80): if the viewport grows into the desktop range (>=80rem) while the
+        // drawer is open, the drawer + toggle + backdrop go display:none — close() to
+        // clear .is-open and release the body scroll-lock so the page isn't stranded.
+        var mq = window.matchMedia('(min-width: 80rem)');
+        var onDesktop = function (ev) { if (ev.matches) close(); };
+        if (mq.addEventListener) mq.addEventListener('change', onDesktop);
+        else if (mq.addListener) mq.addListener(onDesktop);
       })();
     </script>
   </body>

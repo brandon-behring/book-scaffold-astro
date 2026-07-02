@@ -76,6 +76,12 @@ function makeBookConfigVitePlugin(config: {
   siblingBooks: Record<string, string>;
   // v4.17.0 (#112): per-book exam-domain taxonomy for the questions collection.
   examDomains: readonly string[];
+  // v4.26.0 (#80): book-aware nav route patterns (token strings). Defaults
+  // reproduce single-book behavior; multi-book consumers opt in via defineBookConfig.
+  chapterRoute: string;
+  bookField: string;
+  apparatusRoute: string;
+  apparatusRoutes: readonly string[];
 }) {
   // Serialize once at plugin-creation time so subsequent load() calls are O(1).
   const serialized = `export default ${JSON.stringify(config)};`;
@@ -216,6 +222,11 @@ export function bookScaffoldIntegration(
     siblingBooks,
     // v4.17.0 (#112): exam-domain taxonomy for the questions collection.
     examDomains,
+    // v4.26.0 (#80): book-aware nav route patterns.
+    chapterRoute,
+    bookField,
+    apparatusRoute,
+    apparatusRoutes,
   } = opts;
   const def = PROFILES[profile];
 
@@ -321,6 +332,12 @@ export function bookScaffoldIntegration(
                 githubBranch: resolvedGithubBranch,
                 siblingBooks: siblingBooks ?? {},
                 examDomains: examDomains ?? [],
+                // v4.26.0 (#80): book-aware nav route patterns; defaults
+                // reproduce the single-book `/chapters/<id>/` behavior exactly.
+                chapterRoute: chapterRoute ?? '/chapters/:id/',
+                bookField: bookField ?? 'book',
+                apparatusRoute: apparatusRoute ?? '/:route/',
+                apparatusRoutes: apparatusRoutes ?? [],
               }),
             ],
             define: {

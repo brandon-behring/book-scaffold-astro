@@ -28,10 +28,17 @@ test('nav/anchor components derive hrefs from BASE_URL (#140, #141)', () => {
   }
 });
 
-test('ChapterNav prev/next route through /chapters/ with the base (#141)', () => {
+// v4.26.0 (#80): ChapterNav now routes prev/next through the book-aware nav-href
+// resolver (chapterHref) instead of the hardcoded single-book `/chapters/<id>/`
+// shape — so a multi-book consumer gets `/<book>/<slug>/` links. This SUPERSEDES
+// the #141 hardcoded-pattern guard (the resolver default reproduces it for single-book).
+test('ChapterNav prev/next route through the nav-href resolver, book-aware (#80)', () => {
   const src = readFileSync(new URL('../components/ChapterNav.astro', import.meta.url), 'utf8');
-  assert.match(src, /\$\{baseUrl\}chapters\/\$\{prev\.id\}/, 'prev link must be `${baseUrl}chapters/${prev.id}/`');
-  assert.match(src, /\$\{baseUrl\}chapters\/\$\{next\.id\}/, 'next link must be `${baseUrl}chapters/${next.id}/`');
+  assert.match(src, /from '\.\.\/src\/lib\/nav-href'/, 'must import the chapterHref resolver');
+  assert.match(src, /chapterHref\(\{ id: prev\.id/, 'prev href must resolve via chapterHref');
+  assert.match(src, /chapterHref\(\{ id: next\.id/, 'next href must resolve via chapterHref');
+  assert.doesNotMatch(src, /\$\{baseUrl\}chapters\//, 'must NOT hardcode the single-book /chapters/ pattern');
+  assert.match(src, /getNeighbors\(currentId, \{ bookField \}\)/, 'neighbors must be book-scoped');
 });
 
 // #142: v4.24.0 made nav *components* base-aware but left the injected *route
@@ -95,6 +102,7 @@ const NORMALIZED_BASE_FILES = [
   'pages/answers.astro', 'pages/search.astro',
   'components/XRef.astro', 'components/WeekRef.astro', 'components/AssessmentTest.astro',
   'components/Cite.astro', 'components/ChapterNav.astro', 'components/Sidebar.astro',
+  'components/NavContent.astro',
   'components/Term.astro', 'components/TipsCard.astro', 'components/PartReview.astro',
   'layouts/Base.astro',
 ];

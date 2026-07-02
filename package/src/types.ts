@@ -232,6 +232,39 @@ export interface BookConfigOptions {
    * @example examDomains: ['secure-network-architecture', 'identity-and-access']
    */
   examDomains?: readonly string[];
+  /**
+   * v4.26.0 (#80): URL pattern for a chapter entry, consumed by the book-aware
+   * Sidebar / ChapterNav / NavContent so they emit correct links on a multi-book
+   * consumer. Base-relative token string — `:id` (entry.id), `:book` (the
+   * entry's book, see `bookField`), `:slug` (id minus the leading `<book>/`).
+   * Default `'/chapters/:id/'` reproduces the single-book behavior byte-for-byte;
+   * a multi-book consumer whose chapters render at `/<book>/<slug>/` (entry.id =
+   * `'<book>/<slug>'`) sets `'/:id/'`. Resolved by the pure `chapterHref` helper.
+   */
+  chapterRoute?: string;
+  /**
+   * v4.26.0 (#80): frontmatter field naming a chapter's book (multi-book book
+   * scoping). Default `'book'`. Absent on single-book schemas → the sidebar shows
+   * every chapter (today's behavior); present → the sidebar filters to the
+   * current book and the `:book` / `:slug` route tokens resolve.
+   */
+  bookField?: string;
+  /**
+   * v4.26.0 (#80): URL pattern for a per-book apparatus route (practice-exam /
+   * glossary / flashcards / answers) surfaced in the nav. Tokens `:book` +
+   * `:route`. Default `'/:route/'` (single-book, flat); a multi-book consumer
+   * sets `'/:book/:route/'`. Resolved by the pure `apparatusHref` helper.
+   */
+  apparatusRoute?: string;
+  /**
+   * v4.26.0 (#80): the apparatus route slugs to surface in the nav (sidebar +
+   * drawer) — a subset of `practice-exam | glossary | flashcards | answers`.
+   * Default `[]` (no apparatus links in nav — existing single-book books render
+   * unchanged). A multi-book consumer that owns per-book apparatus routes sets
+   * e.g. `['practice-exam','glossary','flashcards','answers']`; each is rendered
+   * via `apparatusHref(slug, currentBook, apparatusRoute, base)`.
+   */
+  apparatusRoutes?: readonly string[];
   /** Escape hatch for any other AstroUserConfig field. */
   [key: string]: unknown;
 }
@@ -303,6 +336,15 @@ export interface BookScaffoldIntegrationOptions {
   siblingBooks?: Record<string, string>;
   /** v4.17.0 (#112): closed exam-domain taxonomy for the questions collection. */
   examDomains?: readonly string[];
+  /** v4.26.0 (#80): chapter-route token pattern, propagated via the book-config
+   *  virtual module to the book-aware nav. Default '/chapters/:id/'. */
+  chapterRoute?: string;
+  /** v4.26.0 (#80): frontmatter field naming a chapter's book. Default 'book'. */
+  bookField?: string;
+  /** v4.26.0 (#80): apparatus-route token pattern. Default '/:route/'. */
+  apparatusRoute?: string;
+  /** v4.26.0 (#80): apparatus route slugs to surface in the nav. Default []. */
+  apparatusRoutes?: readonly string[];
 }
 
 /** Raised when the resolved profile is not one of `BOOK_PROFILES`. */
