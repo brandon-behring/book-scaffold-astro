@@ -106,8 +106,8 @@
    * the breakpoints are encoded as literal rem values in the media queries
    * (90rem ≈ 1440px, 120rem ≈ 1920px).
    */
-  --measure-main: 65ch;        /* default: laptop-friendly typographic measure */
-  --measure-side: 28ch;        /* right-margin sidenote column (desktop) */
+  --measure-main: 60ch;        /* default: main+gutter fits beside the sidebar at ≥64rem (v4.26.0, #80) */
+  --measure-side: 20ch;        /* right-margin sidenote / section-map column */
   --measure-code: 48rem;       /* code-block break-out width: fits 80-char lines comfortably (≈88 mono chars @14px before padding); docs/responsive-reading.md */
   --breakpoint-narrow: 48rem;  /* ~768px — mobile fold (sidenotes inline) */
   --breakpoint-wide: 90rem;    /* ~1440px — wide-desktop tier */
@@ -135,30 +135,34 @@
    * same visual language as prose callouts. Dark mode overrides below. */
   --astro-code-foreground:              var(--color-text);
   --astro-code-background:              var(--color-code-bg);
-  --astro-code-token-constant:          var(--warm-rose);
-  --astro-code-token-string:            var(--warm-green);
-  --astro-code-token-string-expression: var(--warm-green);
+  /* a11y (v4.26.0, #80): saturated accents fail 4.5:1 on the light code bg →
+   * darken (the dark-theme overrides below keep their lighter variants). */
+  --astro-code-token-constant:          color-mix(in srgb, var(--warm-rose) 60%, black);
+  --astro-code-token-string:            color-mix(in srgb, var(--warm-green) 55%, black);
+  --astro-code-token-string-expression: color-mix(in srgb, var(--warm-green) 55%, black);
   --astro-code-token-comment:           var(--color-text-muted);
-  --astro-code-token-keyword:           var(--warm-plum);
+  --astro-code-token-keyword:           color-mix(in srgb, var(--warm-plum) 60%, black);
   --astro-code-token-parameter:         var(--warm-blue);
-  --astro-code-token-function:          var(--warm-gold);
+  --astro-code-token-function:          color-mix(in srgb, var(--warm-gold) 55%, black);  /* a11y: warm-gold alone is 2.46:1 on the code bg (dark-mode override below) */
   --astro-code-token-punctuation:       var(--color-text-muted);
   --astro-code-token-link:              var(--color-link);
 }
 
-/* Tier 2: wide desktop (1440px+). Main 80ch, sidenote 24ch. */
+/* Tier 2: wide desktop (1440px+). v4.26.0 (#80): main 70ch + gutter 22ch keeps
+ * the main+gutter measure inside `layout-main` (viewport − 16rem sidebar) so the
+ * Tufte gutter/section-map fits beside the sidebar instead of overflowing. */
 @media (min-width: 90rem) {
   :root {
-    --measure-main: 80ch;
-    --measure-side: 24ch;
+    --measure-main: 66ch;
+    --measure-side: 20ch;
   }
 }
 
-/* Tier 3: ultrawide (1920px+). Main 90ch, sidenote 26ch. */
+/* Tier 3: ultrawide (1920px+). Room to widen both again and still fit. */
 @media (min-width: 120rem) {
   :root {
-    --measure-main: 90ch;
-    --measure-side: 26ch;
+    --measure-main: 78ch;
+    --measure-side: 24ch;
   }
 }
 

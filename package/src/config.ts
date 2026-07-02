@@ -212,6 +212,11 @@ export async function defineBookConfig(
       siblingBooks: opts.siblingBooks as Record<string, string> | undefined,
       // v4.17.0 (#112): per-book exam-domain taxonomy for the questions collection.
       examDomains: opts.examDomains as readonly string[] | undefined,
+      // v4.26.0 (#80): book-aware nav route patterns (undefined → single-book defaults).
+      chapterRoute: opts.chapterRoute as string | undefined,
+      bookField: opts.bookField as string | undefined,
+      apparatusRoute: opts.apparatusRoute as string | undefined,
+      apparatusRoutes: opts.apparatusRoutes as readonly string[] | undefined,
     }),
     ...mergedExtraIntegrations,
   ];
@@ -268,6 +273,11 @@ export async function defineBookConfig(
     siblingBooks: _siblingBooks,
     // v4.17.0: strip exam-domain taxonomy.
     examDomains: _examDomains,
+    // v4.26.0 (#80): strip book-aware nav route patterns.
+    chapterRoute: _chapterRoute,
+    bookField: _bookField,
+    apparatusRoute: _apparatusRoute,
+    apparatusRoutes: _apparatusRoutes,
     ...rest
   } = opts;
   void _styles;
@@ -289,6 +299,10 @@ export async function defineBookConfig(
   void _githubBranch;
   void _siblingBooks;
   void _examDomains;
+  void _chapterRoute;
+  void _bookField;
+  void _apparatusRoute;
+  void _apparatusRoutes;
 
   // KaTeX externals — same v3.7.1 pattern, now gated on the composed preset.
   const katexExternals = wantsKatex ? [] : ['remark-math', 'rehype-katex', 'katex'];

@@ -1,7 +1,6 @@
 {
   "name": "book-scaffold-astro-monorepo",
   "description": "Monorepo root for @brandon_m_behring/book-scaffold-astro and @brandon_m_behring/create-book. See package/ for the published toolkit, create-book/ for the bootstrap CLI, demo/ for the in-repo Astro reference implementation.",
-  "version": "4.8.0",
   "type": "module",
   "private": true,
   "engines": {
@@ -21,7 +20,6 @@
   ],
   "scripts": {
     "build": "npm run build --workspace package && npm run build --workspace demo",
-    "dev": "npm run dev --workspace demo",
-    "publish:alpha": "npm publish --tag alpha --access public --workspace package"
+    "dev": "npm run dev --workspace demo"
   }
 }

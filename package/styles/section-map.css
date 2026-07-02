@@ -30,7 +30,11 @@
   display: none !important;
 }
 
-@media (min-width: 64rem) {
+/* v4.26.0 (#80): the gutter scrollspy floats only alongside the sidebar (≥80rem,
+ * matching layout.css) — below that the drawer is the chapter nav and the in-flow
+ * collapsed ChapterTOC is the "on this page". This keeps the negative-margin gutter
+ * from overflowing the viewport in the cramped 64–80rem band (iPad-landscape). */
+@media (min-width: 80rem) {
   /* Sidenote-aware handshake (#151). The gutter map and <Sidenote>s float into
    * the SAME ~28ch right column (layout.css), so they cannot coexist there:
    *   - A chapter WITH sidenotes → the gutter belongs to the sidenotes; suppress

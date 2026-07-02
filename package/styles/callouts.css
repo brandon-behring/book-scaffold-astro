@@ -192,7 +192,9 @@
   padding: 0 var(--space-2);
   border: 1px solid var(--callout-worked);
   border-radius: var(--radius-sm);
-  color: var(--callout-worked);
+  /* v4.26.0 (#80, a11y): chip TEXT uses the high-contrast heading color (the
+   * accent stays as the border) — the accent as small text failed WCAG-AA 4.5:1. */
+  color: var(--color-heading);
 }
 
 /* Gold — YouWillLearn (v4.1.0, #59). Reuses callout-insight (gold) hue;
@@ -233,7 +235,7 @@
   padding: 0 var(--space-2);
   border: 1px solid var(--callout-diagnostic);
   border-radius: var(--radius-sm);
-  color: var(--callout-diagnostic);
+  color: var(--color-heading);   /* a11y: accent as small text failed 4.5:1 (border keeps the hue) */
 }
 .callout-diagnostic .callout-routing {
   font-size: var(--text-sm);
@@ -247,7 +249,7 @@
   cursor: pointer;
   font-weight: 600;
   font-size: var(--text-sm);
-  color: var(--callout-diagnostic);
+  color: var(--color-text);   /* a11y: teal accent as text failed 4.5:1 */
 }
 
 /* PartReview (#111) — Part-level interleaved exercise-review aggregation.
@@ -575,6 +577,8 @@ figure.figure figcaption {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.practice-tag[data-kind="official"]     { border-color: var(--callout-official); color: var(--callout-official); }
-.practice-tag[data-kind="convergence"]  { border-color: var(--callout-insight); color: var(--callout-insight); }
-.practice-tag[data-kind="practitioner"] { border-color: var(--callout-tip); color: var(--callout-tip); }
+/* a11y (v4.26.0, #80): hue via the border; text uses the body color (accent as
+ * small text fails WCAG-AA 4.5:1). */
+.practice-tag[data-kind="official"]     { border-color: var(--callout-official); color: var(--color-text); }
+.practice-tag[data-kind="convergence"]  { border-color: var(--callout-insight);  color: var(--color-text); }
+.practice-tag[data-kind="practitioner"] { border-color: var(--callout-tip);      color: var(--color-text); }

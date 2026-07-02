@@ -131,7 +131,7 @@ const teaser = teaserParts.length ? `How this was made Â· ${teaserParts.join(' Â
   .provenance-details > summary {
     cursor: pointer;
     font-weight: 500;
-    color: var(--warm-plum);
+    color: var(--color-heading);   /* a11y: plum accent as text failed 4.5:1 */
     letter-spacing: 0.02em;
     list-style: none;
   }
@@ -158,7 +158,7 @@ const teaser = teaserParts.length ? `How this was made Â· ${teaserParts.join(' Â
     font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--warm-plum);
+    color: var(--color-heading);   /* a11y: plum accent as text failed 4.5:1 */
     vertical-align: top;
   }
   .provenance-chip,

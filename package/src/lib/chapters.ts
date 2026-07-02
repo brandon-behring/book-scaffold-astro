@@ -11,6 +11,7 @@
  */
 import { getCollection, type CollectionEntry } from 'astro:content';
 import { chapterSortKey } from './chapter-sort.js';
+import { bookOf } from './nav-href.js';
 
 export type Chapter = CollectionEntry<'chapters'>;
 
@@ -27,18 +28,30 @@ export async function getAllChapters(): Promise<Chapter[]> {
 }
 
 /**
- * Given a chapter id, return its ordered neighbors.
- * Either may be null at the edges of the book.
+ * Given a chapter id, return its ordered neighbors. Either may be null at the
+ * edges of the book.
+ *
+ * v4.26.0 (#80): book-aware. When the entry carries a book (multi-book consumer,
+ * `data[bookField]`), neighbors are scoped to the SAME book so prev/next never
+ * bleed across books. Single-book schemas have no book field → no scoping → the
+ * pre-4.26 global ordering (byte-identical BC).
  */
-export async function getNeighbors(id: string): Promise<{
-  prev: Chapter | null;
-  next: Chapter | null;
-}> {
+export async function getNeighbors(
+  id: string,
+  opts: { bookField?: string } = {},
+): Promise<{ prev: Chapter | null; next: Chapter | null }> {
+  const { bookField = 'book' } = opts;
   const all = await getAllChapters();
-  const idx = all.findIndex((c) => c.id === id);
+  const self = all.find((c) => c.id === id);
+  if (!self) return { prev: null, next: null };
+  const selfBook = bookOf({ id: self.id, data: self.data as Record<string, unknown> }, bookField);
+  const scoped = selfBook
+    ? all.filter((c) => bookOf({ id: c.id, data: c.data as Record<string, unknown> }, bookField) === selfBook)
+    : all;
+  const idx = scoped.findIndex((c) => c.id === id);
   if (idx === -1) return { prev: null, next: null };
   return {
-    prev: idx > 0 ? all[idx - 1] : null,
-    next: idx < all.length - 1 ? all[idx + 1] : null,
+    prev: idx > 0 ? scoped[idx - 1]! : null,
+    next: idx < scoped.length - 1 ? scoped[idx + 1]! : null,
   };
 }

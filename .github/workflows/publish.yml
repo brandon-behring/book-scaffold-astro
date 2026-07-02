@@ -7,7 +7,10 @@ name: publish
 # Trigger paths:
 # - push:tag v*.*.* — normal release (developer tags + pushes, workflow fires)
 # - workflow_dispatch — manual fire against an existing tag (e.g., v3.5.1 which
-#   was tagged before this workflow existed)
+#   was tagged before this workflow existed). Optional inputs: dry_run=true
+#   exercises every guard + the smoke build but skips the publishes (the
+#   guard-testing instrument); force=true bypasses the tag-ancestry guard for
+#   legitimate off-main re-publishes (pre-v4 tags).
 #
 # Lock-step contract: both @brandon_m_behring/book-scaffold-astro AND
 # @brandon_m_behring/create-book must be at the same version as the tag. If
@@ -39,10 +42,27 @@ on:
         description: 'Existing tag to publish (e.g., v3.5.1)'
         required: true
         type: string
+      dry_run:
+        description: 'Run all guards + smoke but skip the npm publishes and registry verify'
+        required: false
+        type: boolean
+        default: false
+      force:
+        description: 'Bypass the tag-ancestry guard (pre-v4 tags predate it and are not on main)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   id-token: write   # required for OIDC token generation
   contents: read
+
+# One publish at a time per ref; a second tag push queues instead of racing.
+# Never cancel a publish mid-flight — a half-published lock-step pair is the
+# manual-reconciliation case the header warns about.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   publish:
@@ -52,6 +72,37 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0   # ancestry guard needs origin/main, not just the tag
+
+      # Guard (#178): a release tag must be an ancestor of main. v4.26.0 was
+      # tagged + published from an unmerged feature branch while main carried
+      # unpublished release commits (v4.25.2/v4.25.3) — this guard makes that
+      # split unrepeatable. Hard-fails on tag push; workflow_dispatch may
+      # bypass with force=true (pre-v4 tags predate the guard).
+      - name: Guard tag is an ancestor of main
+        run: |
+          tag_ref="${{ inputs.tag || github.ref_name }}"
+          git fetch origin main --quiet
+          if git merge-base --is-ancestor "$tag_ref" origin/main; then
+            echo "Ancestry OK: $tag_ref is reachable from origin/main"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force }}" = "true" ]; then
+            echo "::warning::$tag_ref is NOT an ancestor of origin/main — proceeding because force=true (dispatch)."
+          else
+            echo "::error::$tag_ref is not an ancestor of origin/main. Merge to main before tagging (see #178). For a legitimate off-main re-publish, dispatch with force=true."
+            exit 1
+          fi
+
+      # Guard: a `file:*.tgz` ref in the committed lockfile (dogfood self-pack
+      # pollution) points at a gitignored tarball, so CI `npm install` ENOENTs
+      # mid-resolve. Fail fast with a clear remedy instead. (Caught the v4.26.0
+      # publish failure; see fix(ci) prune-orphan commit.)
+      - name: Guard against file-tarball refs in lockfile
+        run: |
+          if grep -nE 'file:[^"]*\.tgz' package-lock.json; then
+            echo "::error::package-lock.json contains a file: tarball ref (dogfood pollution). On a clean checkout run 'rm -rf node_modules && npm install' to prune it, commit, then re-tag."
+            exit 1
+          fi
+          echo "lockfile clean: no file: tarball refs"
 
       - name: Setup Node 22
         uses: actions/setup-node@v6
@@ -125,14 +176,17 @@ jobs:
           echo "Pre-publish smoke OK: scaffolded academic book built end-to-end against $TARBALL"
 
       - name: Publish @brandon_m_behring/book-scaffold-astro
+        if: ${{ inputs.dry_run != true }}
         working-directory: package
         run: npm publish --access public
 
       - name: Publish @brandon_m_behring/create-book
+        if: ${{ inputs.dry_run != true }}
         working-directory: create-book
         run: npm publish --access public
 
       - name: Smoke verify registry (incremental-backoff retry)
+        if: ${{ inputs.dry_run != true }}
         # v3.6.5 (closes #37 part 2): replaces the flat-sleep + single npm view
         # with a retry loop. v3.5.2 / v3.6.2 / v3.6.4 all observed false
         # failures when npm view ran before the registry index caught up.
