@@ -78,10 +78,11 @@ export interface BookConfigOptions {
    */
   routes?: PartialRouteToggles;
   /**
-   * v4.0.0 (NEW): deploy target — drives `create-book`'s wrangler.toml shape.
-   * Defaults from the composed style chain (academic/tools/minimal →
-   * 'workers'; course-notes/research-portfolio → 'pages'); per-book override
-   * here beats any style. Closes #50.
+   * v4.0.0 (#50): RESERVED — accepted and style-chain-merged, but currently
+   * has NO runtime effect (#180). The wrangler.toml shape is decided once, at
+   * scaffold time, by `create-book` from the profile name (academic/tools/
+   * minimal → Workers; course-notes/research-portfolio → Pages); setting this
+   * field changes nothing afterward. Wire-or-remove is a v5 decision.
    */
   deploy?: 'pages' | 'workers';
   /**

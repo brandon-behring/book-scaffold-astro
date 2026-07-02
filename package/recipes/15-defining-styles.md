@@ -46,7 +46,7 @@ defineStyle({
   extraIntegrations?: readonly AstroIntegration[];
   mdxComponentsModule?: string;
   markdown?: AstroUserConfig['markdown'];
-  deploy?: 'pages' | 'workers';      // v4.0.0 NEW (#50)
+  deploy?: 'pages' | 'workers';      // RESERVED (#50, #180) — no runtime effect; wrangler shape is set at scaffold time by profile
   extra?: Record<string, unknown>;   // scoped consumer-side metadata
 });
 ```

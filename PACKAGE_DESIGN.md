@@ -256,8 +256,9 @@ export interface BookConfigOptions extends Omit<AstroUserConfig, 'integrations' 
   /** Optional. Spread-merged into package-provided markdown config (plugin arrays concat). */
   markdown?: AstroUserConfig['markdown'];
 
-  /** Optional. Deploy target — informs create-book's wrangler.toml shape (#50).
-   *  Inherited from the chosen style; override per-book if needed. */
+  /** Optional. RESERVED (#50, #180) — accepted and style-chain-merged, but has no
+   *  runtime effect. The wrangler.toml shape is set at scaffold time by create-book
+   *  from the profile name; this field does not change it. Wire-or-remove: v5. */
   deploy?: 'pages' | 'workers';
 }
 
