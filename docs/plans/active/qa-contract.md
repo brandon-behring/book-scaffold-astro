@@ -1,6 +1,6 @@
 # Scaffold QA contract
 
-**Date:** 2026-07-13 · **Issue:** #158 · **Status:** accepted design; implement after #80
+**Date:** 2026-07-13 · **Issue:** #158 · **Status:** implemented in v5.1.0
 
 `book-scaffold qa` is the standard content-health adapter for scaffold books.
 It composes existing validation with stable MDX metrics and emits a CI-safe
