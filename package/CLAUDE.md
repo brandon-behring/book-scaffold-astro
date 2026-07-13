@@ -230,6 +230,25 @@ A consumer `public/_headers` wins unchanged. Use
 or `securityHeaders: false` when another layer owns all headers. Recipe 05 has
 the full precedence and customization contract.
 
+## Build-time Open Graph cards (v5.2, opt-in)
+
+Set `seo: { ogCards: true }` in `defineBookConfig` to generate deterministic
+1200×630 PNG social cards for eligible static HTML that has no authored image.
+The object form accepts `{ enabled?: boolean, exclude?: string[] }`; exclusions
+are base-relative exact routes or whole-segment globs (`*` crosses one segment,
+`**` crosses zero or more). Invalid patterns fail configuration.
+
+Rendered image precedence is page/layout `ogImage` (including chapter
+frontmatter `image`) → current corpus book manifest `image` → static
+`seo.ogImage` → generated card. Generation runs after every consumer
+integration and patches only missing OG/Twitter image tags. It writes
+content-addressed `_og/<hash>.png` assets using package-owned local fonts and
+no network request. Corpus pages retain their resolved book identity; corpus
+surfaces use corpus identity; metadata combines `site` and Astro `base`
+exactly once. A requested card that cannot render, write, or patch fails the
+build. See Recipe 26 before changing card metadata, exclusion matching,
+post-render ordering, or output paths.
+
 ## QA and content readiness
 
 Run `npm exec -- book-scaffold qa` after substantive content changes. It calls

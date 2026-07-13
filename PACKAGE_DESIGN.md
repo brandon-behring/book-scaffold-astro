@@ -1,6 +1,6 @@
-# Package Design — `@brandon_m_behring/book-scaffold-astro` v4
+# Package Design — `@brandon_m_behring/book-scaffold-astro` v5
 
-> **Status**: living v4 API contract, updated through v4.31.0.
+> **Status**: living API contract, updated through v5.2.0.
 > **Origin**: the v3.0 npm-package pivot designed on 2026-05-18; historical
 > branch `v3.0` forked `main`@`529205b` (`v2.0.0`).
 > **Master plan**: `~/.claude/plans/i-want-to-investigate-recursive-yao.md` (12 D-decisions).
@@ -240,7 +240,11 @@ inert `deploy` configuration field is removed. See
 
 ```ts
 import type { AstroUserConfig, AstroIntegration } from 'astro';
-import type { Style, PartialRouteToggles } from '@brandon_m_behring/book-scaffold-astro';
+import type {
+  OgCardsConfig,
+  PartialRouteToggles,
+  Style,
+} from '@brandon_m_behring/book-scaffold-astro';
 
 export type BookPreset = 'academic' | 'tools' | 'minimal' | 'course-notes' | 'research-portfolio';
 
@@ -252,6 +256,13 @@ export interface SiblingBookDescriptor {
 }
 
 export type SiblingBooks = Record<string, string | SiblingBookDescriptor>;
+
+export interface OgCardsConfig {
+  /** Omitted or true enables the object form; false disables it. */
+  enabled?: boolean;
+  /** Base-relative exact, whole-segment `*`, or whole-segment `**` patterns. */
+  exclude?: readonly string[];
+}
 
 export interface BookConfigOptions extends Omit<AstroUserConfig, 'integrations' | 'markdown'> {
   /** v4.0.0 NEW: array of Style objects composed left-to-right.
@@ -287,6 +298,18 @@ export interface BookConfigOptions extends Omit<AstroUserConfig, 'integrations' 
     contentSecurityPolicy?: string;
   };
 
+  /** Optional SEO, sitemap, and generated-card policy. Build-time OG cards
+   *  are opt-in; true uses defaults, while the object adds route exclusions. */
+  seo?: {
+    ogImage?: string;
+    twitterHandle?: string;
+    ogCards?: boolean | OgCardsConfig;
+    sitemap?: {
+      filter?: (page: string) => boolean;
+      customPages?: string[];
+    };
+  };
+
   /** Cross-book registry (#96/#147). URL strings are runtime-compatible;
    *  descriptors let validate check literal path/fragment targets against a
    *  vendored sibling labels index. */
@@ -310,12 +333,15 @@ export function defineBookConfig(opts: BookConfigOptions): Promise<AstroUserConf
 4. Resolve a required `preset` from the composed Style, corpus manifest,
    environment, or `.env`; throw `BookConfigError` if absent or unknown.
 5. Require `site` to be set after composition; throw otherwise.
-6. Build the package's integration list: `[mdx(), preact(), bookScaffoldIntegration({ preset, routes, extraStyles, mdxComponentsModule, securityHeaders })]`.
+6. Build the package's standard integration list: `[mdx(), preact(), sitemap(), bookScaffoldIntegration({ preset, routes, extraStyles, mdxComponentsModule, securityHeaders })]`.
 7. Thread `securityHeaders`, `siblingBooks`, `chapterRoute`, and `bookField` to the integration without forwarding them to Astro's own config. Security-header omission means defaults, `false` means no scaffold emission, and `{ contentSecurityPolicy }` replaces only the default CSP. Non-enumerable resolved metadata exposes the evaluated sibling registry and chapter-route contract to CLI tooling, avoiding source-text parsing of computed/spread config.
 8. If `PROFILES[preset]?.katex === true` (academic + research-portfolio), dynamically import `remark-math`, `rehype-katex`, and `ssmMacros`; merge `katexMacros` on top; append to `markdown.remarkPlugins` / `markdown.rehypePlugins`.
 9. Concatenate `extraIntegrations` after the package list.
-10. Spread-merge `opts.markdown` over package markdown config (plugin arrays concat).
-11. Return final `AstroUserConfig` via Astro's `defineConfig`.
+10. Normalize `seo.ogCards`; when enabled, append its post-render integration
+    after every scaffold, Style, and consumer integration so its
+    `astro:build:done` hook observes final HTML.
+11. Spread-merge `opts.markdown` over package markdown config (plugin arrays concat).
+12. Return final `AstroUserConfig` via Astro's `defineConfig`.
 
 ### Errors / common mistakes
 
@@ -328,6 +354,10 @@ export function defineBookConfig(opts: BookConfigOptions): Promise<AstroUserConf
   MIGRATION-v4-to-v5.md.
 - **`BookConfigError: site is required`** — neither top-level `site` nor any composed Style provided one. Add `site: 'https://...'` to the call or to a shared Style.
 - **`BookConfigError: unknown preset "X"`** — composed Style's `preset` field is invalid. Use one of the 5 built-in styles or `defineStyle({ preset: 'academic', ... })`.
+- **Invalid `seo.ogCards.exclude` pattern** — use a normalized base-relative
+  route with only literal segments, a complete `*` segment, or a complete
+  `**` segment. A trailing slash is significant. Invalid or duplicate patterns
+  fail during configuration; they are never ignored at build time.
 - **Consumer adds remark/rehype plugin via `markdown.remarkPlugins`**: package list ordering matters; consumer plugins run **after** package's KaTeX plugins. If you need a different order, choose a non-katex preset (e.g., `toolsStyle`) and wire math manually.
 
 ### Consumer examples
@@ -1497,9 +1527,94 @@ for configuration, route/apparatus/search behavior, CLI examples, and the
 six-step migration. The design gate and release tests are recorded in
 [`docs/plans/active/v5-corpus-contract.md`](docs/plans/active/v5-corpus-contract.md).
 
-## 15b. Deferred scope
+## 15b. Build-time Open Graph card contract (v5.2)
 
-### AnkiCard component + extract-cards CLI (closed #16, deferred)
+Issue #157 adds a deliberately opt-in post-render generator. It applies to all
+static HTML in the Astro output—including consumer-owned pages—without a
+runtime image service or a second source-level route registry:
+
+```ts
+await defineBookConfig({
+  styles: [academicStyle],
+  site: 'https://book.example/',
+  seo: {
+    ogCards: {
+      enabled: true,
+      exclude: ['/print/', '/private/*/', '/archive/**'],
+    },
+  },
+});
+```
+
+Omission, `false`, and `{ enabled: false }` disable generation. `true` and an
+object whose `enabled` is omitted or true enable it. Exclusions are normalized
+base-relative routes: a literal pattern is exact, a complete `*` segment
+matches one path segment, and a complete `**` segment crosses zero or more. A
+trailing slash is significant. Embedded wildcards, hosts, query/hash syntax,
+backslashes/control characters, empty internal or dot segments, unsupported
+`?`/`[]`/`{}` glob tokens, duplicates, and other malformed patterns fail
+configuration. Consumer patterns augment built-in skips for emitted 404/500
+files, meta-refresh redirects, `robots`/`googlebot` `noindex`, and non-HTML
+output.
+
+The rendered-document precedence is strict: page/layout `ogImage` (including
+chapter frontmatter `image`) wins over the current corpus book's manifest
+`image`, which wins over application-wide `seo.ogImage`, which wins over a
+generated image. A valid rendered `og:image` is authoritative and is never
+overwritten. When no image exists, the final integration adds an absolute
+`og:image`, its `1200`/`630` dimensions, `image/png` type, and a matching
+`twitter:image`; existing title, description, canonical, and Twitter text
+metadata remain untouched.
+
+The integration is installed after all consumer and Style integrations and
+runs at `astro:build:done`. It walks static HTML in stable pathname order,
+reads the final metadata and scaffold book-identity marker, renders one fixed
+Satori layout, converts it with `@resvg/resvg-js`, writes the PNG, then splices
+only missing image tags into the original HTML. It does not round-trip the
+whole document through a serializer.
+
+Each card contains the page title, optional description, resolved book or
+corpus title, canonical hostname, and a small profile/scaffold mark. All five
+presets share a contrast-checked structure with preset-derived colors. The
+package-owned Inter v4.1 Regular/Bold TTF files are passed directly to Satori
+under the OFL 1.1; builds do not fetch a web font or consult machine-installed
+fonts.
+
+The immutable output is 1200×630 and content-addressed as
+`<outDir>/_og/<first-16-hex-of-content-sha256>.png`. The digest covers template
+version 1, dimensions, preset, exact corpus book id (or null), the clamped
+book/page/description strings, and canonical hostname. Values are
+whitespace-normalized and clamped by Unicode code point: page title 96,
+description 180, book/corpus title 72, and hostname 80, using a word-boundary
+ellipsis where possible. Equal visual payloads deduplicate; a digest collision
+with different bytes fails. Only current-build images remain: when Astro uses
+`emptyOutDir: false`, stale scaffold-owned `_og` filenames matching exactly 16
+hex characters plus `.png` are pruned and every other file is preserved. There
+is no user-managed cache contract.
+
+Corpus book pages use their resolved manifest identity; corpus-level landing
+and search surfaces use corpus identity rather than the first book. The
+physical `_og` directory is relative to Astro's output directory. Metadata
+combines the `site` origin, normalized Astro `base`, and the image path exactly
+once, while exclusion matching removes `base` first. A subpath deployment
+therefore still uses `/print/` as its pattern and emits a URL such as
+`https://book.example/manual/_og/<hash>.png`.
+
+Generation is fail-loud. Missing required metadata, unreadable output, local
+font/renderer failure, hash collision, PNG-write failure, or HTML-patch failure
+fails the Astro build. The integration never publishes an image URL without
+its PNG and never silently skips a requested card. Server/SSR routes, runtime
+generation, remote templates/fonts, arbitrary consumer JSX templates, and
+animation remain out of scope.
+
+See [`package/recipes/26-generated-og-cards.md`](package/recipes/26-generated-og-cards.md)
+for consumer configuration, precedence examples, verification, and gotchas.
+The accepted design and release gates remain recorded in
+[`docs/plans/active/og-card-contract.md`](docs/plans/active/og-card-contract.md).
+
+## 15c. Deferred scope
+
+### AnkiCard component + extract-cards CLI (parked #210)
 
 **Requested shape**: ship `<AnkiCard>` MDX component + `book-scaffold extract-cards` CLI from the DLAI pilot to the scaffold.
 

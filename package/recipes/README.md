@@ -31,6 +31,7 @@ Terse pointers into canonical code for the most common book-authoring workflows.
 | 23 | [Interactive demo substrate](23-interactive-demo-substrate.md) | any | Opt-in Preact shell, slider, stat cards, theme colors, a11y, and reduced motion |
 | 24 | [Figure authoring standard](24-figure-authoring-standard.md) | any | Warm–Tol semantics, Okabe–Ito series, dual-theme exports, contrast, and accessible descriptions |
 | 25 | [QA and content readiness](25-qa-readiness.md) | any | Stable human/JSON readiness verdicts, corpus selection, CI, and `guide_qa.yaml` |
+| 26 | [Build-time Open Graph cards](26-generated-og-cards.md) | any | Opt-in deterministic 1200×630 cards, precedence, exclusions, corpus identity, and base-safe URLs |
 
 ## How to read recipes
 

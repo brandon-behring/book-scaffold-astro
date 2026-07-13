@@ -26,13 +26,13 @@ Contiguous `min-width` breakpoints (matching `tokens.css`): `phone <768` · `tab
 
 | Content | Treatment |
 |---|---|
-| **Prose** | Reading measure `--measure-main`: **65ch (<1440) → 80ch (≥1440) → 90ch (≥1920)** *(current `tokens.css`)*; body ~18px; line-height 1.5–1.6. *Proposed tweak (parked): cap at ≤75ch — 80/90ch exceed the ~66ch readability optimum.* |
+| **Prose** | Reading measure `--measure-main`: **60ch (<1440) → 66ch (≥1440) → 78ch (≥1920)** *(current `tokens.css`, trimmed in v4.26 so the text + gutter fit beside navigation)*; body ~18px; explicit body line-height **1.6**. *A final ultrawide cap from 78ch to ≤75ch remains parked.* |
 | **Code** | **Author line-length = 80** (see standards). Block breaks out of the prose measure to `--measure-code` so 80-char code fits at 14px from tablet-landscape up (tablet-portrait is near the limit). Phone: 12px + horizontal scroll for the rare straggler, with an edge **scroll-shadow** hint. `overflow-x:auto`, never wrap, never two device-specific versions. (Sizing: 80 chars × ~8.4px @14px ≈ 672px + ~32px padding + ~16px scrollbar ≈ **`--measure-code: 48rem`** for headroom.) |
 | **Equations** | Display math **authored multiline** (`aligned`/`split`/`gather`) to fit ~tablet-portrait width (see standards). KaTeX static. Overflow fallback = **`overflow-x:auto`** (keep KaTeX's `white-space:nowrap`) + scroll-shadow — **never `white-space:normal`** (it destroys KaTeX's span layout). Phone may scroll the widest. |
 | **Tables** | Wrap in `overflow-x:auto`; font-shrink on mobile. ⚠️ A `position:sticky` `thead` does **not** stick vertically inside a horizontal-scroll wrapper (CSS limitation — the wrapper isn't the scrollport) unless the wrapper is also height-constrained. Keep columns minimal — a table that needs desktop scrolling is a smell. |
 | **Figures** | `max-width:100%; height:auto`; optional desktop breakout into the gutter (`.wide`/`.column-page`). |
-| **Sidenotes / margin notes** | Float into the right gutter ≥768px; reflow inline below (Gwern "no effort" principle); ≤~200 words. *(At 768–1023 the gutter is tight against a 65ch measure — acceptable; the `.prose` collapses to measure-only below 768.)* |
-| **Navigation** | Sidebar pinned ≥**1024px**; drawer below — modal overlay; ≥44px toggle; focus-trap, `aria-expanded`, Escape-to-close, body scroll-lock, return-focus-on-close. Section-map / full gutter ≥1280. |
+| **Sidenotes / margin notes** | Float into the right gutter ≥768px; reflow inline below (Gwern "no effort" principle); ≤~200 words. *(At 768–1023 the gutter is tight against a 60ch measure — acceptable; the `.prose` collapses to measure-only below 768.)* |
+| **Navigation** | Sidebar pinned ≥**1280px**; drawer below — modal overlay; ≥44px toggle; focus-trap, `aria-expanded`, Escape-to-close, body scroll-lock, return-focus-on-close. Section-map / full sidebar + gutter layout ≥1280. *(Shipped in v4.26.)* |
 
 ## Authoring standards (for authors + the independent-review checklist)
 
@@ -68,8 +68,8 @@ KaTeX (build-time) **cannot auto-break** display equations, so breaking is an *a
   ≤79 (dml p95 = 72), so reflow churn is modest.
 - **No two device-specific code versions** — splits source-of-truth, reflows differently per device; no
   major docs platform does it (all use scroll).
-- **Nav: pin the sidebar at 1024** (not 1280) so tablet-landscape keeps a persistent sidebar.
-- **Prose-measure cap (80/90→≤75ch) + explicit line-height** — parked, low priority.
+- **Nav: use the drawer below 1280 and pin the sidebar at 1280.** The full sidebar + Tufte gutter does not fit safely in the 1024–1279 band; v4.26 moved that band to the same accessible drawer used on narrower screens.
+- **Prose measure + line height:** v4.26 shipped 60/66/78ch with an explicit 1.6 body line-height. A final 78→≤75ch ultrawide cap remains parked, low priority.
 
 Peers surveyed: Jupyter Book/MyST, Quarto, Bookdown, Distill, arXiv-HTML/ar5iv, Tufte CSS, Gwern,
 mathigon, scientific-Python docs.
@@ -80,8 +80,9 @@ mathigon, scientific-Python docs.
 - ✅ **Equation support:** `.katex-display` `overflow-x:auto` fallback + scroll-shadow; the authoring
   standards above; the equation-overflow CI check (warning-level). (v4.25.2–v4.25.3)
 - ✅ **Tables:** mobile scroll wrapper (≤48rem). (v4.25.3)
-- 🔲 **Nav:** pin sidebar at 1024 (in `feat/v4.26`).
-- 🔲 **Prose:** cap ≤75ch + explicit line-height *(parked)*.
+- ✅ **Navigation:** book-aware sidebar at ≥1280px plus the mobile/tablet drawer below it. (v4.26)
+- ✅ **Prose:** 60/66/78ch responsive measure + explicit 1.6 body line-height. (v4.26)
+- 🔲 **Prose follow-up:** cap the 78ch ultrawide tier at ≤75ch *(parked)*.
 
 ## References
 - Line length / prose: Butterick *Practical Typography* (line-length); Bringhurst (66 CPL); web.dev
