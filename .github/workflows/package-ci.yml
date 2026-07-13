@@ -126,7 +126,9 @@ jobs:
         env:
           BOOK_PRESET: academic
           DEMO_BASE: /foo/
-        run: npx astro build --outDir dist-nonroot
+        run: |
+          npm run validate
+          npx astro build --outDir dist-nonroot
 
       - name: Verify non-root demo links and assets stay under the base
         working-directory: demo
