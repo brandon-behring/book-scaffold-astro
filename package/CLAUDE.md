@@ -110,7 +110,7 @@ Two callout families coexist. Authors import what they need.
 
 **Utility components** (`src/components/`, any profile): `Cite`, `XRef`, `Figure`, `MarginFigure`, `MarginNote`, `Sidenote`, `EvidenceTag`, `Newthought`, `Epigraph`, `WeekRef`, `CodeRef`, `CodeBlock`, `Tag`, `StatusBadge`, `BookLink` (v4.16.0+; cross-book link — `<BookLink book="design" to="…"/>` resolves `book` against `defineBookConfig({ siblingBooks })` and throws on an unknown book; `<XRef>` is in-book only — #96), `PocLayout` (v4.1.0+; wraps slot in a per-`kind` layout shell — 5 closed-union kinds; see `recipes/15-defining-styles.md`).
 
-**Interactive demo substrate (#143; opt-in):** `DemoFrame`, `Slider`, `StatCards`, and `useThemeColors` are named exports from `@brandon_m_behring/book-scaffold-astro/demo`. Import `@brandon_m_behring/book-scaffold-astro/styles/demo.css` on the page that mounts the consumer-owned Preact island; it is never included by a profile and nothing auto-mounts. The substrate owns figure/label/metric semantics, focus/reduced-motion styling, SVG token helpers, and theme-token resolution. Consumers own all data, kernels, charts, and domain interaction policy. See Recipe 22.
+**Interactive demo substrate (#143; opt-in):** `DemoFrame`, `Slider`, `StatCards`, and `useThemeColors` are named exports from `@brandon_m_behring/book-scaffold-astro/demo`. Import `@brandon_m_behring/book-scaffold-astro/styles/demo.css` on the page that mounts the consumer-owned Preact island; it is never included by a profile and nothing auto-mounts. The substrate owns figure/label/metric semantics, focus/reduced-motion styling, SVG token helpers, and theme-token resolution. Consumers own all data, kernels, charts, and domain interaction policy. See Recipe 23.
 
 **`MarginNote` vs `Sidenote` (don't let the names mislead).** `MarginNote` renders **inline** — a colored callout in the running text column; despite the name it does **not** go in the margin. It's for a load-bearing aside the reader must see. `Sidenote` is the one that **floats into the right gutter** (auto-numbered Tufte marginalia, reflowing inline on mobile). Reach for `Sidenote` for footnote-like asides; `MarginNote` for an inline colored callout.
 
@@ -142,7 +142,7 @@ const { colors, theme, reducedMotion } = useThemeColors(TOKENS);
 // redraw canvas/JS geometry from colors; skip animation when reducedMotion
 ```
 
-The hook is SSR-safe (`theme` is `null` before its client effect), resolves the explicit token map with fallbacks, refreshes on `book:theme:change`, system color-scheme changes, and reduced-motion changes, and removes all listeners on cleanup. `detail.theme` on the underlying event remains `'light' | 'dark'` for non-Preact consumers. Prefer CSS variables or `demo.css`'s `data-demo-fill` / `data-demo-stroke` helpers for inline SVG; those recolor automatically and do not need the hook. See Recipe 22 for the complete composition.
+The hook is SSR-safe (`theme` is `null` before its client effect), resolves the explicit token map with fallbacks, refreshes on `book:theme:change`, system color-scheme changes, and reduced-motion changes, and removes all listeners on cleanup. `detail.theme` on the underlying event remains `'light' | 'dark'` for non-Preact consumers. Prefer CSS variables or `demo.css`'s `data-demo-fill` / `data-demo-stroke` helpers for inline SVG; those recolor automatically and do not need the hook. See Recipe 23 for the complete composition.
 
 ## Citation patterns
 

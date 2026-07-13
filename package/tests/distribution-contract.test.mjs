@@ -37,7 +37,7 @@ test('toolkit tarball ships both agent-guide names and both scoped licenses', ()
     'dist/demo.mjs',
     'dist/demo.d.ts',
     'styles/demo.css',
-    'recipes/22-interactive-demo-substrate.md',
+    'recipes/23-interactive-demo-substrate.md',
   ]) {
     assert.ok(files.has(path), `toolkit tarball must contain ${path}`);
   }

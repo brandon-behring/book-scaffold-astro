@@ -27,7 +27,8 @@ Terse pointers into canonical code for the most common book-authoring workflows.
 | 19 | [Prevalidate hook](19-prevalidate-hook.md) | any | Wire `prevalidate` to run `build:bib` + `build:labels` before `validate` |
 | 20 | [Anki deck export (consumer-side)](20-anki-export.md) | any (esp. course-notes, research-portfolio) | Roll-your-own `<AnkiCard>` + extractor; scaffold deliberately doesn't ship this |
 | 21 | [Multiple guides in one app](21-multi-guide-single-app.md) | any | `generateId` namespacing over one collection; flat-slug footgun; interim until multibook (#80) |
-| 22 | [Interactive demo substrate](22-interactive-demo-substrate.md) | any | Opt-in Preact shell, slider, stat cards, theme colors, a11y, and reduced motion |
+| 22 | [Responsive navigation and multi-book routing](22-responsive-nav-and-multibook-routing.md) | any | Mobile/desktop nav, base-aware route ownership, and the interim multi-book routing contract |
+| 23 | [Interactive demo substrate](23-interactive-demo-substrate.md) | any | Opt-in Preact shell, slider, stat cards, theme colors, a11y, and reduced motion |
 
 ## How to read recipes
 

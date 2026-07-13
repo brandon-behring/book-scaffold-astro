@@ -32,7 +32,7 @@ The opt-in `@brandon_m_behring/book-scaffold-astro/demo` entry exports
 `DemoFrame`, `Slider`, `StatCards`, and `useThemeColors` for consumer-owned
 Preact islands. Import `styles/demo.css` explicitly; no demo is mounted and no
 domain kernel or data loader is bundled automatically. See
-[Recipe 22](./recipes/22-interactive-demo-substrate.md).
+[Recipe 23](./recipes/23-interactive-demo-substrate.md).
 
 ## Licensing
 

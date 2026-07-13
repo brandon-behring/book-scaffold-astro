@@ -1,4 +1,4 @@
-# Interactive demo substrate
+# Recipe 23 — Interactive demo substrate
 
 **Profile:** any
 

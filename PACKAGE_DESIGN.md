@@ -1026,7 +1026,7 @@ Mixing across categories is allowed — see `defineBookConfig({ extraStyles: ['c
 Interactive demos are authored as consumer-owned Preact islands, then hydrated
 from Astro with `client:visible` or another appropriate directive. Import
 `styles/demo.css` on that page. The public substrate deliberately excludes
-domain kernels, chart primitives, and demo-data loaders; Recipe 22 is the
+domain kernels, chart primitives, and demo-data loaders; Recipe 23 is the
 canonical composition and accessibility reference.
 
 ### Component prop reference (v3.5.0+)
