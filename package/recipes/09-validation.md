@@ -2,7 +2,7 @@
 
 **Profile**: any (Cite checks skip under non-academic).
 
-**TL;DR**: `npm run validate` runs `scripts/validate.mjs` against all chapter MDX files. Catches typo'd bibkeys / XRef ids / Figure paths / internal links that `astro build` would either miss or surface with poor context. Auto-runs as `prebuild`; recommend wiring into pre-commit too.
+**TL;DR**: `npm run validate` runs `scripts/validate.mjs` against all chapter MDX files. It first regenerates missing `labels.json` and `references.json`, then catches typo'd bibkeys / XRef ids / Figure paths / internal links that `astro build` would either miss or surface with poor context. Auto-runs as `prebuild`; recommend wiring into pre-commit too.
 
 ## What gets checked
 
@@ -13,12 +13,18 @@
 | `<Figure src="/...">` file exists under `public/` | all | Figure.astro emits a broken-image icon for missing files; build doesn't fail. |
 | `[text](/internal-link)` resolves to known chapter slug or top-level route | all | Astro won't fail on dead internal links. Warning, not error (regex misses dynamic routes). |
 | `<CodeRef path="..." line={N} />` path exists + line in bounds | all, if `BOOK_REPO_ROOT` set | Catches stale line numbers after code refactors in the paired experiments/ repo. |
-| `<Theorem>` has a resolvable `kind=` (or legacy `type=`); an id'd theorem resolves in `labels.json` (#121, #126) | all | An absent kind throws at build with less context; an unindexed id silently renders the heading unnumbered. |
+| `<Theorem>` has a resolvable `kind=` (or legacy `type=`); an id'd theorem resolves in `labels.json`; a literal `n=` agrees with the index (#121, #126, #176) | all | An absent kind throws at build with less context; an unindexed id silently renders the heading unnumbered; a stale literal `n=` contradicts the heading/XRefs. Dynamic expressions and `label=` overrides are skipped. |
 | `<BookLink book= to=>` both present; `book=` registered in `siblingBooks` (#96) | all | Pre-flights the component's build-time throw across all files at once. |
 | Questions collection: unique `id`s + `domain` in `examDomains` (#112); `<Rationale appendix>` carries `for=` (#114, v4.21.0) | all, when `src/content/questions/` exists | Duplicate ids break the appendix/flashcards cross-ref key; an unregistered domain throws one-at-a-time at build; an appendix rationale without its anchor target throws at build. |
 | `los[].anchor` ↔ `{/* anchor: <slug> */}` prose markers agree both ways (#130, v4.20.0) | all, when frontmatter has `los:` | A declared objective whose prose marker is missing/misspelled (or an orphan marker) builds green otherwise — frontmatter↔prose drift only a hand audit would catch. |
 
 Validate also emits two **non-blocking shadow-route warnings** (exit code unaffected): a consumer-owned `src/pages/chapters/[...slug].astro` without `routes: { chapters: false }` (v4.6.0, #76), and a consumer-owned `src/pages/index.astro` without `routes: { landing: false }` (v4.20.0, #129 — Astro has announced this collision becomes a hard error). See [recipe 18](./18-chapter-route-ownership.md).
+
+## Missing generated artifacts
+
+`src/data/labels.json` and `src/data/references.json` are derived and normally gitignored. v4.27+ `validate` self-heals either missing file unconditionally by invoking the package's own `build-labels` or `build-bib` command before loading data. Existing files are untouched. A failed child command stops validation with the child's original diagnostic and exit status.
+
+`build-bib` resolves `BOOK_BIB_PATH` from the process environment first, then the project-root `.env`, then `./bibliography.bib`. A project with no bibliography still gets a deterministic empty `references.json`.
 
 ## What is NOT checked (already covered elsewhere)
 
@@ -34,8 +40,9 @@ The validator's job is to fill the gaps `astro build` leaves, not duplicate it.
 // package.json
 {
   "scripts": {
-    "validate": "node scripts/validate.mjs",
-    "prebuild": "npm run build:assets && npm run validate"
+    "prevalidate": "npm run build:bib --if-present && npm run build:labels --if-present",
+    "validate": "book-scaffold validate",
+    "prebuild": "npm run validate --if-present"
   }
 }
 ```
@@ -61,7 +68,9 @@ For pre-commit: add to `.pre-commit-config.yaml`:
 
 ## Preset / chaptersBase resolution (v4.7.0+, #75)
 
-The validator resolves both `preset` and `chaptersBase` by consulting multiple sources in a documented order. Notable v4.7.0 addition: the v4.5+ canonical form
+The validator evaluates `astro.config.*` through Vite first. A resolved scaffold integration supplies the composed preset and `numberStyle`, so CLI tooling sees the same Style chain as the Astro build. Without such an integration, the legacy preset chain remains: `--preset` → process `BOOK_PRESET`/`BOOK_PROFILE` → root `.env` → the literal value in `defineBookSchemas` → a warned `minimal` v4 compatibility fallback. Every selected value is checked against the five-preset enum; config-evaluation failures stop validation instead of silently using defaults.
+
+`chaptersBase` resolution still consults `BOOK_CHAPTERS_DIR`, content configuration, then `src/content/chapters`. The v4.5+ canonical form is:
 
 ```ts
 // src/content.config.ts
@@ -80,13 +89,13 @@ Full precedence chain documented in [`PACKAGE_DESIGN.md §8 — Preset + chapter
 Exit code = total error count. On success:
 
 ```
-validate: ✓ 6 chapter(s) checked (profile=academic); no errors.
+validate: ✓ 6 chapter(s) checked (profile=academic, number-style=shared); no errors.
 ```
 
 On failure, all issues listed at once with `file:line msg`:
 
 ```
-validate: ✗ 17 error(s) in 6 chapter(s) (profile=academic):
+validate: ✗ 17 error(s) in 6 chapter(s) (profile=academic, number-style=shared):
   week05.mdx:102  Unknown XRef id "w4:prop:zoh-stability" — not in labels.json
   week11.mdx:37  Unknown XRef id "ch:week13" — not in labels.json
   ...
@@ -115,13 +124,13 @@ Keep the script regex-based; resist the urge to pull in MDX AST parsing. The scr
 
 - **Regex false negatives**: multi-line `<Cite\n  key="...">` won't match. Authors should keep component attributes on one line; the build catches the residual cases.
 - **`<Figure src>` with `BOOK_FIGURES_PATH` override**: the validator checks `public/figures/<...>` (post-build location), not the source `figures/` directory. Run `npm run build:figures` before `npm run validate` if assets are stale.
-- **`labels.json` empty**: every XRef fires an error. Until you have a labels-building step (Phase 2.6 in post-transformers, deferred at scaffold v2.0), avoid `<XRef>` in chapter content — use direct markdown links instead.
+- **`labels.json` exists but is stale**: self-healing only regenerates missing artifacts. Run `npm run build:labels` after changing IDs, kinds, slugs, or `numberStyle`.
 
 ## Canonical files
 
 - `scripts/validate.mjs` — the validator
 - `src/data/references.json` — emitted by `scripts/build-bib.mjs` (recipe 02)
-- `src/data/labels.json` — placeholder; populated by future labels-building step
+- `src/data/labels.json` — emitted by `scripts/build-labels.mjs`
 - `src/components/{Cite,XRef,Figure,CodeRef}.astro` — components whose contracts validate.mjs enforces
 
 ## Reference implementation

@@ -96,7 +96,7 @@ Two callout families coexist. Authors import what they need.
 
 **Tools family** (`src/components/callouts/`, 8 components): `SkillBox`, `CaseStudy`, `ConceptBox`, `KeyIdea`, `TryThis`, `Recovery`, `Convergence`, `Divergence`.
 
-**Academic family** (`src/components/callouts/`, 10 components): `NoteBox`, `ExampleBox`, `DynConnect`, `InsightBox`, `WarnBox`, `CounterBox`, `TipBox`, `OpenQuestion`, `PaperBox`, `ResultBox`. Plus `Theorem` (unified for theorem/proposition/lemma/corollary/definition/example/exercise/remark/proof). **Props (v4.14.3, #121):** `kind=` is canonical; `type=` is accepted as a legacy alias (likewise `title=`/`label=` alias `name=`). An absent or unknown kind **throws at build** (via `src/lib/theorem-label`) rather than rendering an empty label; `book-scaffold validate` flags a `<Theorem>` with neither `kind=` nor `type=` even earlier. **Numbering (v4.18.0, #126):** a theorem with an `id` auto-numbers from `labels.json` — the same index `<XRef>` reads — so the heading number equals every cross-reference to it by construction; explicit `n=` is a fallback for un-id'd theorems. `build-labels` indexes the kind-accurate word (`Proposition 8.1`, not a kind-blind `Theorem 8.1`) and throws on an unknown kind.
+**Academic family** (`src/components/callouts/`, 10 components): `NoteBox`, `ExampleBox`, `DynConnect`, `InsightBox`, `WarnBox`, `CounterBox`, `TipBox`, `OpenQuestion`, `PaperBox`, `ResultBox`. Plus `Theorem` (unified for theorem/proposition/lemma/corollary/definition/example/exercise/remark/proof). **Props (v4.14.3, #121):** `kind=` is canonical; `type=` is accepted as a legacy alias (likewise `title=`/`label=` alias `name=`). An absent or unknown kind **throws at build** (via `src/lib/theorem-label`) rather than rendering an empty label; `book-scaffold validate` flags a `<Theorem>` with neither `kind=` nor `type=` even earlier. **Numbering (v4.18.0+, #126/#175):** a theorem with an `id` auto-numbers from `labels.json` — the same index `<XRef>` reads — so the heading number equals every cross-reference to it by construction; explicit `n=` is a fallback for un-id'd theorems. `build-labels` indexes the kind-accurate word (`Proposition 8.1`, not a kind-blind `Theorem 8.1`) and throws on an unknown kind. The theorem family shares one counter by default; set `numberStyle: 'per-kind'` in `defineBookConfig` or a composed `defineStyle` for independent theorem/proposition/lemma/etc. sequences. A `label=` override stays unnumbered and consumes no counter.
 
 **Pedagogy family** (v4.1.0+, any profile, 4 components): `Pitfall` (rose; "common mistake" — distinct from `WarnBox`'s preemptive warning), `WorkedExample` (plum; collapsible `<details>` block with `#worked-example-{id}` anchor for deep links), `YouWillLearn` (gold; chapter-opener with optional `prerequisites` prop), `Diagnostic` (v4.19.0, #110; teal; pre-reading "Do I Know This Already?" DIKTA self-check — a slotted question list + a skip/skim/read routing rubric via `skimTo`, plus an optional collapsible answer key via `slot="answers"`). Slot bullets/code freely; render at any preset.
 
@@ -176,9 +176,12 @@ For monorepo Astro projects (Astro project in subdir), prefix build + deploy com
 
 - Unknown `<Cite key>` (academic) — bibkey not in `references.json`
 - Unknown `<XRef id>` — id not in `labels.json` (XRef silently renders `[?label]` otherwise)
+- Literal `<Theorem n>` values that disagree with `labels.json` (dynamic expressions and `label=` overrides are skipped)
 - Missing `<Figure src>` files under `public/`
 - Internal markdown links that don't resolve
 - Study-guide questions (v4.17.0, #112) — a question whose frontmatter `domain` isn't in `examDomains`, and duplicate question `id`s
+
+Missing `src/data/labels.json` or `references.json` self-heals before checks by running the corresponding package build script; an existing artifact is never rewritten implicitly.
 
 See `recipes/09-validation.md` to extend.
 
