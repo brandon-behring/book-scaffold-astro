@@ -58,7 +58,8 @@ import '../styles/print.css';
 // must route through the exports map, not the raw source.
 import ToolFilter from '@brandon_m_behring/book-scaffold-astro/components/ToolFilter';
 import Sidebar from '../components/Sidebar.astro';
-// v4.27.0 (#149): site-wide release-state banner, driven by defineBookConfig.
+// v4.26.2 (#149; style inheritance fixed in v4.26.3): site-wide
+// release-state banner, driven by defineBookConfig.
 import PreReleaseBanner from '../components/PreReleaseBanner.astro';
 // v4.26.0 (#80): the mobile/tablet drawer reuses the same book-scoped nav source.
 import NavContent from '../components/NavContent.astro';
@@ -167,7 +168,7 @@ const baseUrl = normalizeBase(import.meta.env.BASE_URL);
     <slot name="head" />
   </head>
   <body>
-    {/* v4.27.0 (#149): book-level release banner — first element in <body> so
+    {/* v4.26.2 (#149; style inheritance fixed in v4.26.3): book-level release banner — first element in <body> so
         every page (chapters, apparatus, landing) declares its state. Renders
         only when defineBookConfig({ releaseStatus }) is set. */}
     {bookConfig.releaseStatus && (

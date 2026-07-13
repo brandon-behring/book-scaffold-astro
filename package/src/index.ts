@@ -27,6 +27,7 @@ export type {
   BookProfile,
   BookPreset,         // v3.4.0 — canonical name (alias of BookProfile, closes #9)
   BookConfigOptions,
+  ReleaseStatusConfig,
   BookSchemasOptions,
   BookScaffoldIntegrationOptions,
   RouteToggles,

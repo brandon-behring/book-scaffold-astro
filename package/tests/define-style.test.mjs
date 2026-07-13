@@ -53,6 +53,7 @@ test('defineStyle: preserves all known optional fields', () => {
     mdxComponentsModule: 'src/x.ts',
     markdown: { remarkPlugins: [], rehypePlugins: [] },
     deploy: 'pages',
+    releaseStatus: { state: 'beta', message: 'Preview' },
     extra: { foo: 'bar' },
   });
   assert.equal(s.name, 'full');
@@ -63,6 +64,7 @@ test('defineStyle: preserves all known optional fields', () => {
   assert.deepEqual(s.extraStyles, ['a.css']);
   assert.equal(s.mdxComponentsModule, 'src/x.ts');
   assert.equal(s.deploy, 'pages');
+  assert.deepEqual(s.releaseStatus, { state: 'beta', message: 'Preview' });
   assert.deepEqual(s.extra, { foo: 'bar' });
 });
 
@@ -130,6 +132,39 @@ test('composeStyles: mdxComponentsModule shallow-override (last wins)', () => {
     defineStyle({ mdxComponentsModule: 'src/b.ts' }),
   ]);
   assert.equal(merged.mdxComponentsModule, 'src/b.ts');
+});
+
+test('composeStyles: releaseStatus is inherited when later styles omit it', () => {
+  const merged = composeStyles([
+    defineStyle({ releaseStatus: { state: 'alpha', message: 'Family preview' } }),
+    defineStyle({ name: 'project' }),
+  ]);
+  assert.deepEqual(merged.releaseStatus, {
+    state: 'alpha',
+    message: 'Family preview',
+  });
+});
+
+test('composeStyles: releaseStatus shallow-override replaces the whole object', () => {
+  const merged = composeStyles([
+    defineStyle({
+      releaseStatus: {
+        state: 'alpha',
+        dismissAt: 'v1.0.0',
+        message: 'Family preview',
+      },
+    }),
+    defineStyle({ releaseStatus: { state: 'rc' } }),
+  ]);
+  assert.deepEqual(merged.releaseStatus, { state: 'rc' });
+});
+
+test('composeStyles: releaseStatus=false suppresses an inherited status', () => {
+  const merged = composeStyles([
+    defineStyle({ releaseStatus: { state: 'beta' } }),
+    defineStyle({ releaseStatus: false }),
+  ]);
+  assert.equal(merged.releaseStatus, false);
 });
 
 // ===== composeStyles: per-route spread =====

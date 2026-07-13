@@ -27,7 +27,7 @@
  * for migration from the v3 `preset:` shorthand.
  */
 import type { AstroIntegration, AstroUserConfig } from 'astro';
-import type { BookPreset, RouteToggles } from '../types.js';
+import type { BookPreset, ReleaseStatusConfig, RouteToggles } from '../types.js';
 
 // ===== Branded nominal type =====
 
@@ -123,8 +123,12 @@ export interface Style {
    *  preset before a consumer Style exists (#180).
    *  @deprecated Inert in v4; scheduled for removal in v5. */
   readonly deploy?: 'pages' | 'workers';
-  /** v4.27.0 (#149): release-state banner; shallow override (last wins). */
-  readonly releaseStatus?: { state: 'alpha' | 'beta' | 'rc' | 'locked'; dismissAt?: string; message?: string };
+  /**
+   * v4.26.2 (#149; style inheritance fixed in v4.26.3): release-state
+   * banner. Shallow override (last defined wins); `false` suppresses a
+   * banner inherited from an earlier style.
+   */
+  readonly releaseStatus?: ReleaseStatusConfig | false;
 
   /**
    * Scoped consumer-side metadata. Ignored by the toolkit; survives composition
@@ -195,7 +199,8 @@ export function defineStyle(opts: StyleInput): Style {
  *   - Top-level `defineBookConfig` fields beat any style (handled in config.ts)
  *
  * Per-key merge strategy:
- *   - `preset`, `site`, `deploy`, `mdxComponentsModule`, `name` → shallow override (last wins)
+ *   - `preset`, `site`, `deploy`, `mdxComponentsModule`, `name`, `releaseStatus`
+ *     → shallow override (last defined wins; `releaseStatus: false` suppresses)
  *   - `routes` → per-route spread (each route key independently overridable)
  *   - `katexMacros` → per-macro spread (each macro key independently overridable)
  *   - `extra` → per-key spread (consumer metadata accumulates across the chain)
@@ -218,6 +223,9 @@ export function composeStyles(styles: readonly Style[]): Style {
     if (style.preset !== undefined) merged.preset = style.preset;
     if (style.site !== undefined) merged.site = style.site;
     if (style.deploy !== undefined) merged.deploy = style.deploy;
+    if (style.releaseStatus !== undefined) {
+      merged.releaseStatus = style.releaseStatus;
+    }
     if (style.mdxComponentsModule !== undefined) {
       merged.mdxComponentsModule = style.mdxComponentsModule;
     }

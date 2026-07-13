@@ -151,6 +151,12 @@ export async function defineBookConfig(
   const composedMarkdown = composed.markdown ?? {};
   const userMarkdown = (opts.markdown as AstroUserConfig['markdown'] | undefined) ?? {};
 
+  // v4.26.2 (#149; style inheritance + opt-out fixed in v4.26.3): omission
+  // inherits from the composed chain; an explicit top-level value (including
+  // false) wins. The integration receives only the renderable object shape.
+  const resolvedReleaseStatus =
+    opts.releaseStatus !== undefined ? opts.releaseStatus : composed.releaseStatus;
+
   // 3. Profile-conditional KaTeX wiring. v3.7.1 (#51) gate: PROFILES[profile]?.katex.
   const wantsKatex = PROFILES[profile]?.katex === true;
   const remarkPlugins: NonNullable<NonNullable<AstroUserConfig['markdown']>['remarkPlugins']> = [];
@@ -208,8 +214,9 @@ export async function defineBookConfig(
       title: opts.title,
       // v4.23.0 (#135): sidebar brand subtitle.
       subtitle: opts.subtitle,
-      // v4.27.0 (#149): release-state banner (top-level beats the style chain).
-      releaseStatus: opts.releaseStatus ?? composed.releaseStatus,
+      // v4.26.2 (#149; style inheritance + opt-out fixed in v4.26.3).
+      releaseStatus:
+        resolvedReleaseStatus === false ? undefined : resolvedReleaseStatus,
       description: opts.description,
       portfolio: resolvedPortfolio,
       // v4.6.0: book-level author + SEO config (ogImage, twitterHandle),
@@ -276,7 +283,7 @@ export async function defineBookConfig(
     // v4.5.0: strip new landing-related opts so they don't leak into AstroUserConfig.
     title: _title,
     subtitle: _subtitle,
-    // v4.27.0 (#149): strip the release-state banner config.
+    // v4.26.2 (#149): strip the release-state banner config.
     releaseStatus: _releaseStatus,
     description: _description,
     portfolio: _portfolio,
