@@ -45,6 +45,7 @@ test('defineStyle: preserves all known optional fields', () => {
   const s = defineStyle({
     name: 'full',
     preset: 'tools',
+    numberStyle: 'per-kind',
     site: 'https://example.com/',
     routes: { chapters: false },
     katexMacros: { '\\E': '\\mathbb{E}' },
@@ -58,6 +59,7 @@ test('defineStyle: preserves all known optional fields', () => {
   });
   assert.equal(s.name, 'full');
   assert.equal(s.preset, 'tools');
+  assert.equal(s.numberStyle, 'per-kind');
   assert.equal(s.site, 'https://example.com/');
   assert.deepEqual(s.routes, { chapters: false });
   assert.deepEqual(s.katexMacros, { '\\E': '\\mathbb{E}' });
@@ -100,6 +102,14 @@ test('composeStyles: preset shallow-override (last wins)', () => {
     defineStyle({ preset: 'research-portfolio' }),
   ]);
   assert.equal(merged.preset, 'research-portfolio');
+});
+
+test('composeStyles: numberStyle shallow-override (last wins)', () => {
+  const merged = composeStyles([
+    defineStyle({ numberStyle: 'per-kind' }),
+    defineStyle({ numberStyle: 'shared' }),
+  ]);
+  assert.equal(merged.numberStyle, 'shared');
 });
 
 test('composeStyles: deploy shallow-override (last wins)', () => {

@@ -39,6 +39,7 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readEnvFile } from './read-env.mjs';
 
 // --help / -h: non-mutating (closes #14).
 const USAGE = `Usage: book-scaffold build-bib
@@ -49,7 +50,8 @@ AND sources/manifest.yaml -> src/data/sources.json (tools-profile sources for
 the /references page). Either input may be absent.
 
 Env:
-  BOOK_BIB_PATH      Override path to .bib file (default: ./bibliography.bib).
+  BOOK_BIB_PATH      Override path to .bib file (process env wins, then root
+                     .env; default: ./bibliography.bib).
 
 Options:
   --help, -h         Print this message and exit (non-mutating).
@@ -64,11 +66,13 @@ import '@citation-js/plugin-bibtex';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = process.cwd();
+const dotenv = readEnvFile(PROJECT_ROOT);
 
 // Default: bibliography.bib at scaffold root.
 // Override via BOOK_BIB_PATH=path/to/your.bib (absolute or relative to cwd).
-const BIB_PATH = process.env.BOOK_BIB_PATH
-  ? resolve(process.cwd(), process.env.BOOK_BIB_PATH)
+const configuredBibPath = process.env.BOOK_BIB_PATH ?? dotenv.BOOK_BIB_PATH;
+const BIB_PATH = configuredBibPath
+  ? resolve(PROJECT_ROOT, configuredBibPath)
   : resolve(PROJECT_ROOT, 'bibliography.bib');
 const OUT_PATH = resolve(PROJECT_ROOT, 'src/data/references.json');
 const SOURCES_PATH = resolve(PROJECT_ROOT, 'sources/manifest.yaml');

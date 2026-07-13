@@ -27,7 +27,12 @@
  * for migration from the v3 `preset:` shorthand.
  */
 import type { AstroIntegration, AstroUserConfig } from 'astro';
-import type { BookPreset, ReleaseStatusConfig, RouteToggles } from '../types.js';
+import type {
+  BookPreset,
+  NumberStyle,
+  ReleaseStatusConfig,
+  RouteToggles,
+} from '../types.js';
 
 // ===== Branded nominal type =====
 
@@ -89,6 +94,9 @@ export interface Style {
 
   /** Profile that backs this style — determines schema + default routes + styles + KaTeX wiring. */
   readonly preset?: BookPreset;
+
+  /** Theorem-family numbering strategy; shallow override (last wins). */
+  readonly numberStyle?: NumberStyle;
 
   /** Book's deployed origin (sitemap, canonical, Pagefind). Required at composition end;
    *  optional inside a Style (so styles can omit it and consumers can provide per-book). */
@@ -199,7 +207,7 @@ export function defineStyle(opts: StyleInput): Style {
  *   - Top-level `defineBookConfig` fields beat any style (handled in config.ts)
  *
  * Per-key merge strategy:
- *   - `preset`, `site`, `deploy`, `mdxComponentsModule`, `name`, `releaseStatus`
+ *   - `preset`, `numberStyle`, `site`, `deploy`, `mdxComponentsModule`, `name`, `releaseStatus`
  *     → shallow override (last defined wins; `releaseStatus: false` suppresses)
  *   - `routes` → per-route spread (each route key independently overridable)
  *   - `katexMacros` → per-macro spread (each macro key independently overridable)
@@ -221,6 +229,7 @@ export function composeStyles(styles: readonly Style[]): Style {
     // Shallow override for primitives + readonly-scalar fields.
     if (style.name !== undefined) merged.name = style.name;
     if (style.preset !== undefined) merged.preset = style.preset;
+    if (style.numberStyle !== undefined) merged.numberStyle = style.numberStyle;
     if (style.site !== undefined) merged.site = style.site;
     if (style.deploy !== undefined) merged.deploy = style.deploy;
     if (style.releaseStatus !== undefined) {

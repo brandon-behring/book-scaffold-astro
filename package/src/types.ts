@@ -26,6 +26,10 @@ export { BOOK_PROFILES };
 export type BookPreset = BookProfile;
 export const BOOK_PRESETS = BOOK_PROFILES;
 
+/** Theorem-family numbering strategy used by build-labels and validate. */
+export type NumberStyle = 'shared' | 'per-kind';
+export const NUMBER_STYLES = ['shared', 'per-kind'] as const satisfies readonly NumberStyle[];
+
 /**
  * v4.26.2 (#149): book-level release state rendered by
  * `<PreReleaseBanner>` across every page.
@@ -76,6 +80,13 @@ export interface BookConfigOptions {
    *   });
    */
   styles?: readonly Style[];
+  /**
+   * v4.27.0 (#175): theorem-family counter strategy. `shared` preserves the
+   * amsthm-style sequence used through v4.26; `per-kind` gives theorem,
+   * proposition, lemma, and each other theorem kind an independent sequence.
+   * May also be supplied by a Style; top-level config wins.
+   */
+  numberStyle?: NumberStyle;
   /**
    * Optional per-route override of the composed profile's defaults. Use to
    * disable an auto-injected route (e.g. multi-book consumer that ships
@@ -301,6 +312,8 @@ export interface BookSchemasOptions {
 /** Options for the internal `bookScaffoldIntegration`. See PACKAGE_DESIGN.md §6. */
 export interface BookScaffoldIntegrationOptions {
   profile: BookProfile;
+  /** Resolved theorem-family counter strategy exposed to package CLI tooling. */
+  numberStyle?: NumberStyle;
   /**
    * Per-route override; merged into the profile's defaults.
    * v4.0.0: `routes.frontmatter` widened to `boolean | { enabled, prefix? }`
@@ -410,7 +423,8 @@ function readEnvFile(path = '.env'): Record<string, string> {
 }
 
 /**
- * Resolve preset from explicit args → env → .env → default. Throws on invalid.
+ * Resolve preset from explicit args → env → .env → the v4 compatibility
+ * default. Throws on invalid values.
  *
  * v3.4.0 (closes #9): canonical resolver. Accepts both `preset` and `profile`
  * (back-compat) explicit args; reads both `BOOK_PRESET` (preferred) and
@@ -423,8 +437,10 @@ function readEnvFile(path = '.env'): Record<string, string> {
  *   4. process.env.BOOK_PROFILE
  *   5. .env BOOK_PRESET
  *   6. .env BOOK_PROFILE
- *   7. 'minimal' (with console.warn)
+ *   7. 'minimal' (v4 compatibility bridge; warns once per process)
  */
+const PRESET_FALLBACK_WARNING = Symbol.for('book-scaffold-astro:preset-fallback-warning');
+
 export function resolvePreset(
   explicitPreset?: BookPreset,
   explicitProfile?: BookProfile,
@@ -452,8 +468,16 @@ export function resolvePreset(
     );
   }
   if (source === 'default') {
-    // eslint-disable-next-line no-console
-    console.warn("book-scaffold-astro: BOOK_PRESET not set; falling back to 'minimal'.");
+    const warningState = globalThis as unknown as Record<symbol, boolean | undefined>;
+    if (!warningState[PRESET_FALLBACK_WARNING]) {
+      warningState[PRESET_FALLBACK_WARNING] = true;
+      // eslint-disable-next-line no-console
+      console.warn(
+        "book-scaffold-astro: no preset resolved; falling back to 'minimal' for v4 " +
+          'compatibility. This fallback will be removed in v5. Add a built-in style to ' +
+          'defineBookConfig and pass the same preset to defineBookSchemas, or set BOOK_PRESET.',
+      );
+    }
   }
   return candidate as BookPreset;
 }

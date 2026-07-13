@@ -25,6 +25,7 @@
 import type {
   GlossaryTerm,
   BookConfigOptions,
+  NumberStyle,
   PartialRouteToggles,
   Question,
   ReleaseStatusConfig,
@@ -32,6 +33,7 @@ import type {
   StyleInput,
 } from '@brandon_m_behring/book-scaffold-astro';
 import {
+  defineStyle,
   glossarySchema,
   questionSchema,
 } from '@brandon_m_behring/book-scaffold-astro';
@@ -42,6 +44,7 @@ declare const routeToggles: RouteToggles;
 declare const partialRouteToggles: PartialRouteToggles;
 declare const question: Question;
 declare const releaseStatus: ReleaseStatusConfig;
+declare const numberStyle: NumberStyle;
 
 // Public opt-out must be accepted both on a Style and at book level.
 export const suppressedStyleStatus: StyleInput = { releaseStatus: false };
@@ -61,9 +64,15 @@ export const guardPartialRouteToggles: number = partialRouteToggles;
 export const guardQuestion: number = question;
 // @ts-expect-error ReleaseStatusConfig is a real object type, never a number
 export const guardReleaseStatus: number = releaseStatus;
+// @ts-expect-error NumberStyle is a closed string union, never a number
+export const guardNumberStyle: number = numberStyle;
 // @ts-expect-error glossarySchema is a real zod schema, never a number
 export const guardGlossarySchema: number = glossarySchema;
 // @ts-expect-error questionSchema is a real zod schema, never a number
 export const guardQuestionSchema: number = questionSchema;
 // @ts-expect-error defineBookSchemas is a real function, never a number
 export const guardDefineBookSchemas: number = defineBookSchemas;
+
+defineStyle({ numberStyle: 'per-kind' });
+// @ts-expect-error numberStyle rejects values outside shared | per-kind
+defineStyle({ numberStyle: 'separate' });

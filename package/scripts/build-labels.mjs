@@ -12,14 +12,15 @@
  *
  * Kind-aware (#126): a `<Theorem kind="proposition">` resolves its display
  * WORD through the shared theorem-label vocabulary (`Proposition 8.1`), not a
- * kind-blind `Theorem 8.1`. The theorem family shares one counter (keyed by
- * the JSX component, as amsthm shares its counter), so numbers are unchanged.
+ * kind-blind `Theorem 8.1`. v4.27.0 (#175) lets defineBookConfig / defineStyle
+ * select shared (the historical default) or independent per-kind counters.
  *
  * The resulting map is consumed by XRef.astro via
  * `import.meta.glob('/src/data/labels.json', { eager: true })`.
  *
- * Per-chapter, per-type counter: each chapter resets the counter, so two
- * chapters can both have `Theorem 1` without colliding. The chapter
+ * Per-chapter counters: each chapter resets the sequence, so two chapters can
+ * both have `Theorem 1` without colliding. Labelable component families always
+ * have independent counters; theorem kinds share or split per numberStyle. The chapter
  * number comes from frontmatter:
  *   - tools profile: `chapter` field (number).
  *   - academic profile: `week` field (number).
@@ -46,6 +47,7 @@
 import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
 import { resolve, relative, join, basename, dirname } from 'node:path';
 import { readChaptersBase } from './walk-mdx.mjs';
+import { loadResolvedBookConfig } from './resolve-book-config.mjs';
 // #126: reuse the ONE kind vocabulary (theorem-label.ts → its own lean tsup
 // entry) so a <Theorem kind="proposition"> xref reads "Proposition N.M", not a
 // kind-blind "Theorem N.M" — and so an unknown/absent kind FAILS HERE (same
@@ -66,6 +68,9 @@ Env:
 
 Options:
   --help, -h          Print this message and exit (non-mutating).
+
+Numbering is read from defineBookConfig / defineStyle numberStyle. It defaults
+to shared when no scaffold integration can be resolved.
 `;
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
@@ -182,6 +187,7 @@ async function walkChapters(dir) {
 
 async function main() {
   const cwd = process.cwd();
+  const { numberStyle } = await loadResolvedBookConfig(cwd);
   const chaptersDir = resolve(cwd, CHAPTERS_DIR);
   const files = await walkChapters(chaptersDir);
 
@@ -207,10 +213,6 @@ async function main() {
       const id = extractAttr(attrs, 'id');
       if (!id) continue;
 
-      // One shared counter per component (keyed by the JSX name, NOT the
-      // amsthm kind) — so theorem/proposition/lemma share a sequence exactly
-      // as they do under amsthm, and existing numbers never shift (#126).
-      counters[componentName] = (counters[componentName] ?? 0) + 1;
       foundInChapter += 1;
       totalIds += 1;
 
@@ -224,13 +226,16 @@ async function main() {
       // "no kind=" rather than the misleading kind="null".
       const labelOverride = extractAttr(attrs, 'label');
       let word;
+      let theoremKind;
       if (labelOverride == null) {
         if (componentName === 'Theorem') {
           try {
-            word = theoremLabel({
+            const resolvedLabel = theoremLabel({
               kind: extractAttr(attrs, 'kind') ?? undefined,
               type: extractAttr(attrs, 'type') ?? undefined,
-            }).fullLabel;
+            });
+            word = resolvedLabel.fullLabel;
+            theoremKind = resolvedLabel.kind;
           } catch (err) {
             throw new Error(
               `<Theorem id="${id}"> in ${relative(cwd, file)}: ${err.message}`,
@@ -241,13 +246,25 @@ async function main() {
         }
       }
 
+      // label= is a custom, unnumbered display and therefore does not consume
+      // either the historical shared sequence or a per-kind sequence. This
+      // keeps later auto-numbered entries stable when prose-only labels move.
+      const counterKey =
+        numberStyle === 'per-kind' && componentName === 'Theorem'
+          ? `Theorem/${theoremKind}`
+          : componentName;
+      if (labelOverride == null) {
+        counters[counterKey] = (counters[counterKey] ?? 0) + 1;
+      }
+
       // The bare counter string the heading reuses: Theorem.astro reads
       // `number` by id and renders it, so heading == xref by construction.
       // A `label=` override opts out of auto-numbering → number is null.
-      const number =
-        chapterNum != null
-          ? `${chapterNum}.${counters[componentName]}`
-          : String(counters[componentName]);
+      const number = labelOverride != null
+        ? null
+        : chapterNum != null
+          ? `${chapterNum}.${counters[counterKey]}`
+          : String(counters[counterKey]);
       const display = labelOverride ?? `${word} ${number}`;
 
       if (labels[id]) {
@@ -263,7 +280,7 @@ async function main() {
         // labels.json serves any deploy base (root or path-proxied series).
         href: `chapters/${slug}#${id}`,
         display,
-        number: labelOverride ? null : number,
+        number,
       };
     }
 
@@ -281,7 +298,7 @@ async function main() {
   process.stdout.write(
     `build-labels: ${totalIds} id${totalIds === 1 ? '' : 's'} across ` +
       `${chaptersWithIds} chapter${chaptersWithIds === 1 ? '' : 's'} → ` +
-      `${OUTPUT_PATH}\n`,
+      `${OUTPUT_PATH} (number-style=${numberStyle})\n`,
   );
 }
 

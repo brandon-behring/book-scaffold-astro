@@ -9,11 +9,12 @@
  */
 import { test, before } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { mkdtempSync, mkdirSync, copyFileSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = resolve(__dirname, '..', 'scripts', 'build-labels.mjs');
@@ -24,15 +25,24 @@ const BAD_KIND_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'bad-theorem
 const OVERRIDE_NOKIND_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'theorem-override-nokind.mdx');
 const NO_KIND_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'bad-theorem-nokind.mdx');
 const NO_CHAPTER_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'theorem-no-chapter.mdx');
+const NUMBER_STYLES_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'theorem-number-styles.mdx');
+const DIST_INDEX_URL = pathToFileURL(resolve(__dirname, '..', 'dist', 'index.mjs')).href;
 
 /** Run build-labels.mjs in a temp dir containing one fixture chapter. Returns parsed labels.json. */
-function runInTempDir(fixturePaths = [FIXTURE_CHAPTER]) {
+function runInTempDir(fixturePaths = [FIXTURE_CHAPTER], numberStyle = null) {
   const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-test-'));
   try {
     const chaptersDir = join(tmp, 'src', 'content', 'chapters');
     mkdirSync(chaptersDir, { recursive: true });
     for (const fp of fixturePaths) {
       copyFileSync(fp, join(chaptersDir, fp.split('/').pop()));
+    }
+    if (numberStyle) {
+      writeFileSync(
+        join(tmp, 'astro.config.mjs'),
+        `import { defineBookConfig, minimalStyle } from ${JSON.stringify(DIST_INDEX_URL)};\n` +
+          `export default await defineBookConfig({ styles: [minimalStyle], numberStyle: ${JSON.stringify(numberStyle)}, site: 'https://test.invalid' });\n`,
+      );
     }
     execSync(`node ${SCRIPT}`, { cwd: tmp, stdio: 'pipe' });
     const labelsRaw = readFileSync(join(tmp, 'src', 'data', 'labels.json'), 'utf8');
@@ -143,6 +153,25 @@ test('build-labels: <Theorem kind> is kind-aware and shares one counter (#126)',
   assert.equal(labels['w9:thm:main'].display, 'Theorem 9.1');
   assert.equal(labels['w9:prop:dual'].display, 'Proposition 9.2');
   assert.equal(labels['w9:lem:helper'].display, 'Lemma 9.3'); // legacy type=
+});
+
+test('build-labels (#175): per-kind sequences repeat and interleave independently', () => {
+  const labels = runInTempDir([NUMBER_STYLES_FIXTURE], 'per-kind');
+  assert.equal(labels['w9:thm:a'].number, '9.1');
+  assert.equal(labels['w9:prop:a'].number, '9.1');
+  assert.equal(labels['w9:lem:a'].number, '9.1');
+  assert.equal(labels['w9:thm:b'].number, '9.2');
+  assert.equal(labels['w9:prop:b'].number, '9.2');
+});
+
+test('build-labels (#175): shared remains the default and label overrides consume no number', () => {
+  const labels = runInTempDir([NUMBER_STYLES_FIXTURE]);
+  assert.equal(labels['w9:thm:a'].number, '9.1');
+  assert.equal(labels['w9:prop:a'].number, '9.2');
+  assert.equal(labels['w9:custom'].number, null);
+  assert.equal(labels['w9:lem:a'].number, '9.3');
+  assert.equal(labels['w9:thm:b'].number, '9.4');
+  assert.equal(labels['w9:prop:b'].number, '9.5');
 });
 
 test('build-labels: an unknown <Theorem> kind FAILS the build (#126, #121 contract)', () => {

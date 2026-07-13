@@ -17,11 +17,12 @@ import {
   mkdtempSync,
   mkdirSync,
   copyFileSync,
+  writeFileSync,
   readFileSync,
   existsSync,
   rmSync,
 } from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -80,4 +81,32 @@ test('build-bib: manifest present → sources.json with ids + fields preserved',
 test('build-bib: manifest present, no .bib → references.json still empty (independent pipelines)', () => {
   const { refs } = runInTempDir({ withManifest: true });
   assert.deepEqual(refs, {});
+});
+
+test('#186: BOOK_BIB_PATH process env wins over the project-root .env value', () => {
+  const root = mkdtempSync(join(tmpdir(), 'book-scaffold-bib-'));
+  try {
+    mkdirSync(join(root, 'bib'), { recursive: true });
+    writeFileSync(join(root, '.env'), 'BOOK_BIB_PATH=bib/dotenv.bib\n');
+    writeFileSync(
+      join(root, 'bib', 'dotenv.bib'),
+      '@article{fromDotenv, title={Dotenv}, year={2026}}\n',
+    );
+    writeFileSync(
+      join(root, 'bib', 'process.bib'),
+      '@article{fromProcess, title={Process}, year={2026}}\n',
+    );
+    const result = spawnSync(process.execPath, [SCRIPT], {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, BOOK_BIB_PATH: 'bib/process.bib' },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const references = JSON.parse(
+      readFileSync(join(root, 'src', 'data', 'references.json'), 'utf8'),
+    );
+    assert.deepEqual(Object.keys(references), ['fromProcess']);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

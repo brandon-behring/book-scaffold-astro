@@ -24,10 +24,11 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const VALIDATE_SCRIPT = resolve(__dirname, '..', 'scripts', 'validate.mjs');
+const DIST_INDEX_URL = pathToFileURL(resolve(__dirname, '..', 'dist', 'index.mjs')).href;
 
 /** Build a minimal valid book fixture; returns the root. Caller cleans up. */
 function setupFixture({ withReferences = true, withLabels = true, profile = 'academic' } = {}) {
@@ -67,7 +68,7 @@ A test chapter with a <Cite key="example2026" /> citation.
   // chapters: false directive.
   writeFileSync(
     join(root, 'astro.config.mjs'),
-    `import { defineBookConfig, academicStyle } from '@brandon_m_behring/book-scaffold-astro';
+    `import { defineBookConfig, academicStyle } from ${JSON.stringify(DIST_INDEX_URL)};
 export default await defineBookConfig({ styles: [academicStyle], site: 'https://example.invalid' });
 `,
   );
@@ -116,7 +117,7 @@ test('3b: file present + chapters: false → SILENT (intentional override)', () 
     // Override the astro.config.mjs to set chapters: false
     writeFileSync(
       join(root, 'astro.config.mjs'),
-      `import { defineBookConfig, academicStyle } from '@brandon_m_behring/book-scaffold-astro';
+      `import { defineBookConfig, academicStyle } from ${JSON.stringify(DIST_INDEX_URL)};
 export default await defineBookConfig({
   styles: [academicStyle],
   site: 'https://example.invalid',
@@ -154,7 +155,7 @@ test('3b: no file + chapters: false → SILENT (consumer opted out)', () => {
   try {
     writeFileSync(
       join(root, 'astro.config.mjs'),
-      `import { defineBookConfig, academicStyle } from '@brandon_m_behring/book-scaffold-astro';
+      `import { defineBookConfig, academicStyle } from ${JSON.stringify(DIST_INDEX_URL)};
 export default await defineBookConfig({
   styles: [academicStyle],
   site: 'https://example.invalid',
@@ -174,33 +175,24 @@ export default await defineBookConfig({
 });
 
 // =====================================================================
-// Layer E (issue #77) — missing-prereq abort with leading re-framed error
+// Layer E (#77 superseded by #186) — missing artifacts self-heal
 // =====================================================================
 
-test('E: missing references.json + Cite tags → exit 1 with re-framed error', () => {
-  // No references.json + academic profile + chapter has <Cite> → expect the
-  // re-framed error pointing at build:bib, NOT 25 unknown-bibkey symptoms.
+test('E/#186: missing references.json + bibliography + Cite tags self-heals', () => {
   const { root } = setupFixture({ withReferences: false, withLabels: true });
   try {
+    writeFileSync(
+      join(root, 'bibliography.bib'),
+      '@article{example2026, title={Self-healed reference}, year={2026}}\n',
+    );
     const r = runValidate(root);
-    assert.equal(r.status, 1, `expected exit 1; got ${r.status}; stderr: ${r.stderr}`);
+    assert.equal(r.status, 0, `expected exit 0; got ${r.status}; stderr: ${r.stderr}`);
     assert.match(
-      r.stderr,
-      /Validate cannot run.*references\.json is missing/s,
-      'expected re-framed leading error pointing at the missing prereq',
+      r.stdout,
+      /references\.json is missing.*regenerating via build-bib\.mjs/s,
+      'expected deterministic regeneration before checks',
     );
-    assert.match(
-      r.stderr,
-      /npm run build:bib/,
-      'expected the error to point at the prereq command',
-    );
-    assert.match(r.stderr, /prevalidate/, 'expected the error to mention the prevalidate convention');
-    // Critically: the noisy symptom list ("Unknown bibkey ...") should NOT appear.
-    assert.doesNotMatch(
-      r.stderr,
-      /Unknown bibkey/,
-      'D12: re-framed error should ABORT — no symptom list (otherwise we re-introduce the issue #77 noise the fix targets)',
-    );
+    assert.doesNotMatch(r.stderr, /Unknown bibkey/);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -222,10 +214,7 @@ test('E: present references.json + valid Cite → clean exit 0', () => {
   }
 });
 
-test('E: missing references.json + NO Cite tags → does NOT abort (no symptoms)', () => {
-  // Edge case: missing references.json but the chapters don't actually use
-  // <Cite>. Validator should NOT abort with the re-framed error since
-  // there's nothing to validate (no bibkey symptoms).
+test('E/#186: missing references.json + NO Cite tags emits empty artifact and passes', () => {
   const root = mkdtempSync(join(tmpdir(), 'bs-v46-'));
   try {
     const chaptersDir = join(root, 'src', 'content', 'chapters');
@@ -249,17 +238,13 @@ Just prose. No citations.
     // references.json intentionally missing
     writeFileSync(
       join(root, 'astro.config.mjs'),
-      `import { defineBookConfig, academicStyle } from '@brandon_m_behring/book-scaffold-astro';
+      `import { defineBookConfig, academicStyle } from ${JSON.stringify(DIST_INDEX_URL)};
 export default await defineBookConfig({ styles: [academicStyle], site: 'https://example.invalid' });
 `,
     );
     const r = runValidate(root);
     assert.equal(r.status, 0, 'no cite tags + no references.json: validator should pass cleanly');
-    assert.doesNotMatch(
-      r.stderr,
-      /Validate cannot run/,
-      'no symptoms → no re-framed abort (validator only fires the abort when there are bibkey errors to re-frame)',
-    );
+    assert.match(r.stdout, /regenerating via build-bib\.mjs/);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
