@@ -18,12 +18,30 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const src = readFileSync(resolve(__dirname, '..', 'components', 'Sidebar.astro'), 'utf8');
 
-test('Sidebar brand title reads defineBookConfig title with the legacy fallback (#135)', () => {
-  assert.match(src, /const siteTitle = bookConfig\.title \?\? 'Book';/);
+test('Sidebar brand title prefers corpus book, then single-book config, then legacy fallback', () => {
+  assert.match(
+    src,
+    /const siteTitle = currentBook\?\.title \?\? bookConfig\.title \?\? 'Book';/,
+  );
 });
 
-test('Sidebar brand subtitle reads the new subtitle field with the legacy fallback (#135)', () => {
-  assert.match(src, /const siteSubtitle = bookConfig\.subtitle \?\? 'A scaffold-astro book';/);
+test('Sidebar brand subtitle prefers corpus book, then single-book config, then legacy fallback', () => {
+  assert.match(
+    src,
+    /const siteSubtitle = currentBook\?\.subtitle \?\? bookConfig\.subtitle \?\? 'A scaffold-astro book';/,
+  );
+});
+
+test('Sidebar home is book-local in corpus and preserves the single-book base link', () => {
+  assert.match(
+    src,
+    /const homeHref = currentBook \? `\$\{baseUrl\}\$\{currentBook\.id\}\/` : baseUrl;/,
+  );
+  assert.match(src, /<a href=\{homeHref\} class="sidebar-home">/);
+  assert.match(
+    src,
+    /const currentBookId = bookConfig\.corpus[\s\S]*?corpusBookIdFromPath\([\s\S]*?: null;/,
+  );
 });
 
 test('Sidebar imports the book-config virtual module (the only consumer-config channel)', () => {
