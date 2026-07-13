@@ -16,6 +16,111 @@ import { readFile, readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
+/**
+ * Mask JS/TS comments and string/template contents with spaces while
+ * preserving offsets and newlines. Collection detection runs against this
+ * mask so prose such as "default chapters" and code examples in comments
+ * cannot bind to a later, unrelated collection's `base:` property.
+ */
+function codeMask(source) {
+  // split('') preserves UTF-16 code-unit offsets used by RegExp#index even
+  // when a preceding comment contains an emoji/non-BMP character.
+  const out = source.split('');
+  let state = 'code';
+  for (let i = 0; i < source.length; i += 1) {
+    const char = source[i];
+    const next = source[i + 1];
+
+    if (state === 'line-comment') {
+      if (char === '\n') state = 'code';
+      else out[i] = ' ';
+      continue;
+    }
+    if (state === 'block-comment') {
+      if (char === '*' && next === '/') {
+        out[i] = ' ';
+        out[i + 1] = ' ';
+        i += 1;
+        state = 'code';
+      } else if (char !== '\n') {
+        out[i] = ' ';
+      }
+      continue;
+    }
+    if (state === 'single' || state === 'double' || state === 'template') {
+      const closing = state === 'single' ? "'" : state === 'double' ? '"' : '`';
+      if (char === '\\') {
+        out[i] = ' ';
+        if (i + 1 < source.length) {
+          if (source[i + 1] !== '\n') out[i + 1] = ' ';
+          i += 1;
+        }
+      } else {
+        if (char === closing) state = 'code';
+        if (char !== '\n') out[i] = ' ';
+      }
+      continue;
+    }
+
+    if (char === '/' && next === '/') {
+      out[i] = ' ';
+      out[i + 1] = ' ';
+      i += 1;
+      state = 'line-comment';
+    } else if (char === '/' && next === '*') {
+      out[i] = ' ';
+      out[i + 1] = ' ';
+      i += 1;
+      state = 'block-comment';
+    } else if (char === "'") {
+      out[i] = ' ';
+      state = 'single';
+    } else if (char === '"') {
+      out[i] = ' ';
+      state = 'double';
+    } else if (char === '`') {
+      out[i] = ' ';
+      state = 'template';
+    }
+  }
+  return out.join('');
+}
+
+/** Find an actual `chapters = defineCollection(...)` call and return its body
+ * plus an offset-preserving code mask. Supports declaration and object-property
+ * forms without relying on a distance from any arbitrary `chapters` word. */
+function findChaptersCollectionCall(source) {
+  const mask = codeMask(source);
+  const starts = [
+    /\b(?:const|let|var)\s+chapters\s*=\s*defineCollection\s*\(/g,
+    /(?:^|[,{])\s*chapters\s*:\s*defineCollection\s*\(/gm,
+  ];
+  const matches = [];
+  for (const pattern of starts) {
+    for (const match of mask.matchAll(pattern)) {
+      matches.push({ index: match.index, open: match.index + match[0].lastIndexOf('(') });
+    }
+  }
+  matches.sort((a, b) => a.index - b.index);
+
+  for (const match of matches) {
+    let depth = 0;
+    for (let i = match.open; i < mask.length; i += 1) {
+      if (mask[i] === '(') depth += 1;
+      else if (mask[i] === ')') {
+        depth -= 1;
+        if (depth === 0) {
+          return {
+            body: source.slice(match.open + 1, i),
+            mask: mask.slice(match.open + 1, i),
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
 export async function* walkMdx(dir, baseDir = dir) {
   let entries;
   try {
@@ -152,19 +257,28 @@ export async function readChaptersBase(projectRoot) {
     } catch {
       return DEFAULT_BASE;
     }
-    // Look for a `chapters` collection's `loader.base` string. Permissive
-    // form: match the `chapters` identifier, then within the next 500
-    // chars find `base: 'string'` or `base: "string"`. NOT template
-    // literals (which use backticks and may contain ${} interpolation —
-    // those fall back to the default since the value is dynamic).
+    // Look for an actual `chapters` collection's `loader.base` string. The
+    // older "chapters word, then any base within 500 chars" regex could start
+    // in a comment or `...scaffold.collections` and steal the following
+    // supplements collection's base (#147 handbook dogfood).
     //
     // Forms matched:
     //   - `const chapters = defineCollection({ loader: glob({ base: './foo' }) })`
     //   - `export const collections = { chapters: defineCollection({ loader: glob({ base: './foo' }) }) }`
     //   - any indentation / line break style
-    const re = /\bchapters\b[\s\S]{0,500}?\bbase\s*:\s*'([^']+)'|\bchapters\b[\s\S]{0,500}?\bbase\s*:\s*"([^"]+)"/;
-    const m = source.match(re);
-    const captured = m && (m[1] || m[2]);
+    const collectionCall = findChaptersCollectionCall(source);
+    let captured = null;
+    if (collectionCall) {
+      const loader = /\bloader\s*:/.exec(collectionCall.mask);
+      const base = loader
+        ? /\bbase\s*:/.exec(collectionCall.mask.slice(loader.index + loader[0].length))
+        : null;
+      if (base) {
+        const valueOffset = loader.index + loader[0].length + base.index + base[0].length;
+        const literal = collectionCall.body.slice(valueOffset).match(/^\s*(?:'([^']+)'|"([^"]+)")/);
+        captured = literal && (literal[1] || literal[2]);
+      }
+    }
     if (captured) {
       return resolve(projectRoot, captured);
     }

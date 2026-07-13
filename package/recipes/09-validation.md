@@ -14,11 +14,39 @@
 | `[text](/internal-link)` resolves to known chapter slug or top-level route | all | Astro won't fail on dead internal links. Warning, not error (regex misses dynamic routes). |
 | `<CodeRef path="..." line={N} />` path exists + line in bounds | all, if `BOOK_REPO_ROOT` set | Catches stale line numbers after code refactors in the paired experiments/ repo. |
 | `<Theorem>` has a resolvable `kind=` (or legacy `type=`); an id'd theorem resolves in `labels.json`; a literal `n=` agrees with the index (#121, #126, #176) | all | An absent kind throws at build with less context; an unindexed id silently renders the heading unnumbered; a stale literal `n=` contradicts the heading/XRefs. Dynamic expressions and `label=` overrides are skipped. |
-| `<BookLink book= to=>` both present; `book=` registered in `siblingBooks` (#96) | all | Pre-flights the component's build-time throw across all files at once. |
+| `<BookLink book= to=>` both present; `book=` registered; literal fragment target resolves in a declared sibling labels index (#96, #147) | all | Pre-flights the component's build-time throw and dead cross-book anchors across all files at once. |
 | Questions collection: unique `id`s + `domain` in `examDomains` (#112); `<Rationale appendix>` carries `for=` (#114, v4.21.0) | all, when `src/content/questions/` exists | Duplicate ids break the appendix/flashcards cross-ref key; an unregistered domain throws one-at-a-time at build; an appendix rationale without its anchor target throws at build. |
 | `los[].anchor` ↔ `{/* anchor: <slug> */}` prose markers agree both ways (#130, v4.20.0) | all, when frontmatter has `los:` | A declared objective whose prose marker is missing/misspelled (or an orphan marker) builds green otherwise — frontmatter↔prose drift only a hand audit would catch. |
 
 Validate also emits two **non-blocking shadow-route warnings** (exit code unaffected): a consumer-owned `src/pages/chapters/[...slug].astro` without `routes: { chapters: false }` (v4.6.0, #76), and a consumer-owned `src/pages/index.astro` without `routes: { landing: false }` (v4.20.0, #129 — Astro has announced this collision becomes a hard error). See [recipe 18](./18-chapter-route-ownership.md).
+
+### Cross-book labels indexes (#147)
+
+The original URL-string registry remains compatible. Use the descriptor form to opt a sibling into literal path/fragment validation:
+
+```ts
+export default await defineBookConfig({
+  styles: [minimalStyle],
+  site: 'https://docs.example/current/',
+  siblingBooks: {
+    legacy: 'https://legacy.example/',
+    design: {
+      // Deployment bases may be path-proxied; BookLink preserves this prefix.
+      url: 'https://hub.example/library/design/',
+      // Relative paths resolve from this consumer project's root.
+      labels: './vendor/design-labels.json',
+    },
+  },
+});
+```
+
+For a literal `<BookLink book="design" to="/chapters/patterns/#layered">`, validation looks up `layered` and verifies that its indexed `href` matches the authored sibling path. Leading route slashes and the optional slash immediately before `#` are normalized; the sibling deployment base is deliberately not part of the vendored index.
+
+Generate the sibling artifact in that sibling's project with `book-scaffold build-labels`, then vendor or sync the resulting `src/data/labels.json`. The builder indexes Markdown/MDX h2–h6 headings in addition to component IDs. Heading text and anchors come from Astro's Markdown processor, so inline formatting, smartypants, and GitHub-style duplicate suffixes (`repeat`, `repeat-1`, …) match the rendered page. Its base-less hrefs also use the sibling's evaluated `chapterRoute` and `bookField`; a root-routed book configured with `chapterRoute: '/:id/'` therefore emits `chapter-id#anchor`, not `chapters/chapter-id#anchor`.
+
+Heading-entry keys are intentionally opaque and path-qualified: `#summary` can legitimately occur in every chapter. Validation matches the normalized `href` values, so every repeated fragment remains addressable. Component-ID keys keep their historical shape for `<XRef>`; do not use a heading's internal JSON key as an XRef ID or derive it in consumer code.
+
+A declared `labels` file that is missing, unreadable, malformed, or not a JSON object is an error. An unknown book, unknown fragment, wrong path, or malformed label entry is also an error with the source file and target. Dynamic `book=`/`to=` expressions and prop spreads cannot be evaluated safely, so they emit explicit skip warnings. URL strings and `{ url }` descriptors likewise warn for literal fragment links because no index was declared. Non-fragment route links warn and skip: labels indexes describe anchors, not every sibling route.
 
 ## Missing generated artifacts
 
@@ -101,7 +129,7 @@ validate: ✗ 17 error(s) in 6 chapter(s) (profile=academic, number-style=shared
   ...
 ```
 
-Warnings (currently: internal-link unresolved) are printed to stderr but don't affect exit code.
+Warnings (internal-link uncertainty plus explicit BookLink skip cases) are printed to stderr but don't affect exit code.
 
 ## Extending the validator
 

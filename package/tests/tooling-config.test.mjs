@@ -102,7 +102,13 @@ test('#175: resolved integration metadata carries top-level-over-style numberSty
     numberStyle: 'shared',
     site: 'https://test.invalid',
   });
-  assert.deepEqual(integrationMetadata(config), { preset: 'academic', numberStyle: 'shared' });
+  assert.deepEqual(integrationMetadata(config), {
+    preset: 'academic',
+    numberStyle: 'shared',
+    siblingBooks: {},
+    chapterRoute: '/chapters/:id/',
+    bookField: 'book',
+  });
   assert.equal(
     Object.prototype.propertyIsEnumerable.call(
       config.integrations.find((item) => item.name === 'book-scaffold-astro'),
@@ -130,6 +136,25 @@ test('#175: invalid numberStyle values fail at config and tooling boundaries', a
         `__bookScaffoldResolvedConfig: { preset: 'minimal', numberStyle: 'separate' } }] };\n`,
     );
     await assert.rejects(loadResolvedBookConfig(root), /invalid numberStyle.*separate/);
+
+    writeFileSync(
+      join(root, 'astro.config.mjs'),
+      `export default { integrations: [{ name: 'book-scaffold-astro', ` +
+        `__bookScaffoldResolvedConfig: { preset: 'minimal', numberStyle: 'shared', ` +
+        `siblingBooks: { design: { labels: './vendor/design-labels.json' } } } }] };\n`,
+    );
+    await assert.rejects(
+      loadResolvedBookConfig(root),
+      /invalid siblingBooks\.design.*\{ url: string, labels\?: string \}/,
+    );
+
+    writeFileSync(
+      join(root, 'astro.config.mjs'),
+      `export default { integrations: [{ name: 'book-scaffold-astro', ` +
+        `__bookScaffoldResolvedConfig: { preset: 'minimal', numberStyle: 'shared', ` +
+        `chapterRoute: '', bookField: 'book' } }] };\n`,
+    );
+    await assert.rejects(loadResolvedBookConfig(root), /invalid chapterRoute.*non-empty string/);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -141,11 +166,40 @@ test('#175: Vite loader reads composed style metadata and defaults without integ
     writeFileSync(
       join(root, 'astro.config.mjs'),
       `import { defineBookConfig, minimalStyle, defineStyle } from ${JSON.stringify(DIST_INDEX_URL)};\n` +
-        `export default await defineBookConfig({ styles: [minimalStyle, defineStyle({ numberStyle: 'per-kind' })], site: 'https://test.invalid' });\n`,
+        `const key = ['de', 'sign'].join('');\n` +
+        `const labels = ['./vendor', 'design-labels.json'].join('/');\n` +
+        `const chapterRoute = ['/', ':id', '/'].join('');\n` +
+        `export default await defineBookConfig({ styles: [minimalStyle, defineStyle({ numberStyle: 'per-kind' })], ` +
+        `site: 'https://test.invalid', chapterRoute, bookField: 'volume', ` +
+        `siblingBooks: { [key]: { url: 'https://hub.example/library/design/', labels } } });\n`,
     );
     assert.deepEqual(await loadResolvedBookConfig(root), {
       preset: 'minimal',
       numberStyle: 'per-kind',
+      siblingBooks: {
+        design: {
+          url: 'https://hub.example/library/design/',
+          labels: './vendor/design-labels.json',
+        },
+      },
+      chapterRoute: '/:id/',
+      bookField: 'volume',
+      integrationFound: true,
+    });
+
+    // Metadata emitted by pre-#147 integrations has no route fields. Tooling
+    // must retain the historical single-book route during rolling upgrades.
+    writeFileSync(
+      join(root, 'astro.config.mjs'),
+      `export default { integrations: [{ name: 'book-scaffold-astro', ` +
+        `__bookScaffoldResolvedConfig: { preset: 'minimal', numberStyle: 'shared' } }] };\n`,
+    );
+    assert.deepEqual(await loadResolvedBookConfig(root), {
+      preset: 'minimal',
+      numberStyle: 'shared',
+      siblingBooks: {},
+      chapterRoute: '/chapters/:id/',
+      bookField: 'book',
       integrationFound: true,
     });
 
@@ -153,6 +207,9 @@ test('#175: Vite loader reads composed style metadata and defaults without integ
     assert.deepEqual(await loadResolvedBookConfig(root), {
       preset: null,
       numberStyle: 'shared',
+      siblingBooks: {},
+      chapterRoute: '/chapters/:id/',
+      bookField: 'book',
       integrationFound: false,
     });
   } finally {

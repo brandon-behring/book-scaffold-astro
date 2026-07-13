@@ -30,6 +30,8 @@ import type {
   Question,
   ReleaseStatusConfig,
   SecurityHeadersConfig,
+  SiblingBookDescriptor,
+  SiblingBooks,
   RouteToggles,
   StyleInput,
 } from '@brandon_m_behring/book-scaffold-astro';
@@ -63,6 +65,7 @@ declare const question: Question;
 declare const releaseStatus: ReleaseStatusConfig;
 declare const numberStyle: NumberStyle;
 declare const securityHeaders: SecurityHeadersConfig;
+declare const siblingBook: SiblingBookDescriptor;
 
 // Public opt-out must be accepted both on a Style and at book level.
 export const suppressedStyleStatus: StyleInput = { releaseStatus: false };
@@ -81,6 +84,17 @@ export const customSecurityHeaders: BookConfigOptions = {
 export const suppressedSecurityHeaders: BookConfigOptions = {
   site: 'https://example.invalid',
   securityHeaders: false,
+};
+export const siblingBooks: SiblingBooks = {
+  legacy: 'https://legacy.example',
+  design: {
+    url: 'https://hub.example/library/design/',
+    labels: './vendor/design-labels.json',
+  },
+};
+export const crossBookConfig: BookConfigOptions = {
+  site: 'https://example.invalid',
+  siblingBooks,
 };
 
 const version: VersionEntry = {
@@ -148,6 +162,10 @@ export const guardReleaseStatus: number = releaseStatus;
 export const guardNumberStyle: number = numberStyle;
 // @ts-expect-error SecurityHeadersConfig is a real object type, never a number
 export const guardSecurityHeaders: number = securityHeaders;
+// @ts-expect-error SiblingBookDescriptor is a real object type, never a number
+export const guardSiblingBook: number = siblingBook;
+// @ts-expect-error descriptor entries require a url
+export const invalidSiblingBook: SiblingBooks = { design: { labels: './labels.json' } };
 // @ts-expect-error contentSecurityPolicy must be a string
 export const invalidSecurityHeaders: BookConfigOptions = { site: 'https://example.invalid', securityHeaders: { contentSecurityPolicy: 42 } };
 // @ts-expect-error glossarySchema is a real zod schema, never a number

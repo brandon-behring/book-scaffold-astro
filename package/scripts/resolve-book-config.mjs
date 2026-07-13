@@ -5,6 +5,9 @@ import { loadConfigFromFile } from 'vite';
 export const DEFAULT_TOOLING_CONFIG = Object.freeze({
   preset: null,
   numberStyle: 'shared',
+  siblingBooks: Object.freeze({}),
+  chapterRoute: '/chapters/:id/',
+  bookField: 'book',
   integrationFound: false,
 });
 
@@ -40,6 +43,64 @@ function assertPreset(value, configPath) {
         `${JSON.stringify(value)}; expected ${PRESETS.join(' | ')}.`,
     );
   }
+}
+
+function resolveNonEmptyString(value, fallback, field, configPath) {
+  if (value == null) return fallback;
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new Error(
+      `book-scaffold tooling: ${configPath} resolved invalid ${field} ` +
+        `${JSON.stringify(value)}; expected a non-empty string.`,
+    );
+  }
+  return value;
+}
+
+function resolveSiblingBooks(value, configPath) {
+  if (value == null) return {};
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(
+      `book-scaffold tooling: ${configPath} resolved invalid siblingBooks ` +
+        `${JSON.stringify(value)}; expected an object registry.`,
+    );
+  }
+
+  const resolved = [];
+  for (const [book, entry] of Object.entries(value)) {
+    if (typeof entry === 'string') {
+      if (entry.length === 0) {
+        throw new Error(
+          `book-scaffold tooling: ${configPath} resolved invalid siblingBooks.${book}; ` +
+            'URL strings must not be empty.',
+        );
+      }
+      resolved.push([book, entry]);
+      continue;
+    }
+
+    if (
+      entry === null ||
+      typeof entry !== 'object' ||
+      Array.isArray(entry) ||
+      typeof entry.url !== 'string' ||
+      entry.url.length === 0 ||
+      (entry.labels !== undefined &&
+        (typeof entry.labels !== 'string' || entry.labels.length === 0))
+    ) {
+      throw new Error(
+        `book-scaffold tooling: ${configPath} resolved invalid siblingBooks.${book}; ` +
+          'expected a URL string or { url: string, labels?: string }.',
+      );
+    }
+    resolved.push([
+      book,
+      {
+        url: entry.url,
+        ...(entry.labels === undefined ? {} : { labels: entry.labels }),
+      },
+    ]);
+  }
+  return Object.fromEntries(resolved);
 }
 
 /**
@@ -91,6 +152,19 @@ export async function loadResolvedBookConfig(projectRoot = process.cwd()) {
   return {
     preset: metadata.preset ?? null,
     numberStyle,
+    siblingBooks: resolveSiblingBooks(metadata.siblingBooks, configPath),
+    chapterRoute: resolveNonEmptyString(
+      metadata.chapterRoute,
+      DEFAULT_TOOLING_CONFIG.chapterRoute,
+      'chapterRoute',
+      configPath,
+    ),
+    bookField: resolveNonEmptyString(
+      metadata.bookField,
+      DEFAULT_TOOLING_CONFIG.bookField,
+      'bookField',
+      configPath,
+    ),
     integrationFound: true,
   };
 }

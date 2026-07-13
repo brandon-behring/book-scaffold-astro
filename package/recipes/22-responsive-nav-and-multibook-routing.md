@@ -83,6 +83,11 @@ import { chapterHref, apparatusHref, bookOf, isCurrentChapter }
 Pure functions, no `astro:content` — pass a `{ id, data }` and the same
 `chapterRoute` / `bookField` you set in `defineBookConfig`.
 
+`book-scaffold build-labels` evaluates those same two fields and routes every
+component and h2–h6 heading entry through `chapterHref`. A root- or multi-book
+site's vendored cross-book index therefore describes its real routes rather
+than silently falling back to `/chapters/<id>/`.
+
 ## Verify
 
 A consumer should drive a cross-device audit (Playwright is ideal): for each rich

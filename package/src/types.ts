@@ -31,6 +31,25 @@ export type NumberStyle = 'shared' | 'per-kind';
 export const NUMBER_STYLES = ['shared', 'per-kind'] as const satisfies readonly NumberStyle[];
 
 /**
+ * A sibling book with an optional vendored label index for cross-book
+ * `<BookLink>` validation (#147).
+ *
+ * `url` is the deployed book base, including any path prefix. `labels` is a
+ * path to that sibling's vendored `labels.json`, resolved from the consumer
+ * project root by `book-scaffold validate`.
+ */
+export interface SiblingBookDescriptor {
+  url: string;
+  labels?: string;
+}
+
+/** Backward-compatible sibling-book registry entry. */
+export type SiblingBookEntry = string | SiblingBookDescriptor;
+
+/** Registry consumed by `<BookLink>` and the pre-flight validator. */
+export type SiblingBooks = Record<string, SiblingBookEntry>;
+
+/**
  * v4.26.2 (#149): book-level release state rendered by
  * `<PreReleaseBanner>` across every page.
  *
@@ -281,12 +300,20 @@ export interface BookConfigOptions {
   /** v4.15.0 (#109): branch for CodeRef/CodeBlock links. Defaults to `main`. */
   githubBranch?: string;
   /**
-   * v4.16.0 (#96): registry of sibling-book base URLs for cross-book
-   * `<BookLink book="…" to="…" />`. Maps a book key (used as `book=`) to its
-   * deployed origin — the single place to update when a sibling redeploys.
-   * @example siblingBooks: { design: 'https://design.example' }
+   * v4.16.0 (#96), extended in #147: registry for cross-book
+   * `<BookLink book="…" to="…" />`. A string value remains supported. The
+   * descriptor form adds a vendored sibling labels index so literal fragment
+   * targets can be checked by `book-scaffold validate`.
+   *
+   * `url` may include a deployment path prefix. Relative `labels` paths are
+   * resolved from the consumer project root.
+   * @example
+   * siblingBooks: {
+   *   legacy: 'https://legacy.example',
+   *   design: { url: 'https://hub.example/books/design/', labels: './vendor/design-labels.json' },
+   * }
    */
-  siblingBooks?: Record<string, string>;
+  siblingBooks?: SiblingBooks;
   /**
    * v4.17.0 (Tier 3, #112): closed exam-domain taxonomy for the study-guide
    * `questions` collection. A question whose `domain` is not in this list
@@ -403,8 +430,8 @@ export interface BookScaffoldIntegrationOptions {
    */
   githubRepo?: string;
   githubBranch?: string;
-  /** v4.16.0 (#96): sibling-book base-URL registry for <BookLink>. */
-  siblingBooks?: Record<string, string>;
+  /** v4.16.0 (#96), extended in #147: sibling-book registry for <BookLink>. */
+  siblingBooks?: SiblingBooks;
   /** v4.17.0 (#112): closed exam-domain taxonomy for the questions collection. */
   examDomains?: readonly string[];
   /** v4.26.0 (#80): chapter-route token pattern, propagated via the book-config

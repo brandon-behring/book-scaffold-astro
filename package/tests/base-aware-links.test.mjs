@@ -83,7 +83,8 @@ test('search.astro Pagefind assets prefix BASE_URL (#142)', () => {
 test('build-labels emits base-less chapter refs into labels.json (#142)', () => {
   const src = readFileSync(new URL('../scripts/build-labels.mjs', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /href: `\/chapters\//, 'labels.json href must be base-less `chapters/...`, not root-absolute');
-  assert.match(src, /href: `chapters\/\$\{slug\}#\$\{id\}`/, 'href must be `chapters/${slug}#${id}`');
+  assert.match(src, /chapterHref\(/, 'chapter href must use the shared chapterRoute resolver');
+  assert.match(src, /href: `\$\{chapterPath\}#\$\{id\}`/, 'component href must remain base-less');
 });
 
 test('exam-manifest routes through an injected baseUrl, not a hardcoded root (#142)', () => {

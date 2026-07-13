@@ -206,6 +206,50 @@ export const collections = { notes };
   );
 });
 
+test('#147: comments/spread scaffold do not steal a later supplements base', async () => {
+  await withProject(
+    (root) => {
+      writeFileSync(
+        join(root, 'src/content.config.ts'),
+        `/** The scaffold supplies the default chapters collection. */
+const scaffold = defineBookSchemas();
+// Example only: const chapters = defineCollection({ loader: glob({ base: './wrong' }) });
+const supplements = defineCollection({
+  loader: glob({ pattern: '**/*.mdx', base: './src/content/supplements' }),
+});
+export const collections = { ...scaffold.collections, supplements };
+`,
+      );
+    },
+    async (root) => {
+      assert.equal(
+        await readChaptersBase(root),
+        resolve(root, 'src/content/chapters'),
+      );
+    },
+  );
+});
+
+test('readChaptersBase: inline chapters property collection remains supported', async () => {
+  await withProject(
+    (root) => {
+      writeFileSync(
+        join(root, 'src/content.config.ts'),
+        `export const collections = {
+  chapters: defineCollection({ loader: glob({ base: './src/content/inline-chapters' }) }),
+};
+`,
+      );
+    },
+    async (root) => {
+      assert.equal(
+        await readChaptersBase(root),
+        resolve(root, 'src/content/inline-chapters'),
+      );
+    },
+  );
+});
+
 // ===== v4.7.0 (#75): defineBookSchemas({ preset, chaptersBase }) form =====
 
 test('readChaptersBase: v4.5+ defineBookSchemas({ chaptersBase }) form is picked up (#75)', async () => {

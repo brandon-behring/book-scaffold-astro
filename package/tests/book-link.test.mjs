@@ -14,6 +14,12 @@ import { strict as assert } from 'node:assert';
 import { resolveBookHref } from '../dist/index.mjs';
 
 const SIBLINGS = { design: 'https://design.example', handbook: 'https://hb.example/' };
+const DESCRIPTORS = {
+  design: {
+    url: 'https://hub.example/library/design/',
+    labels: './vendor/design-labels.json',
+  },
+};
 
 test('resolveBookHref: joins base + to, normalizing the slash seam', () => {
   assert.equal(
@@ -24,6 +30,13 @@ test('resolveBookHref: joins base + to, normalizing the slash seam', () => {
   assert.equal(
     resolveBookHref(SIBLINGS, 'handbook', '/chapters/bar/'),
     'https://hb.example/chapters/bar/',
+  );
+});
+
+test('resolveBookHref: descriptor URLs preserve a path-proxied sibling base (#147)', () => {
+  assert.equal(
+    resolveBookHref(DESCRIPTORS, 'design', '/chapters/patterns/#layered'),
+    'https://hub.example/library/design/chapters/patterns/#layered',
   );
 });
 
@@ -38,4 +51,12 @@ test('resolveBookHref: THROWS when no registry is configured — no silent dead 
   assert.throws(() => resolveBookHref(undefined, 'design', 'x'), /siblingBooks/);
   assert.throws(() => resolveBookHref(null, 'design', 'x'), /siblingBooks/);
   assert.throws(() => resolveBookHref({}, 'design', 'x'), /unknown sibling book/);
+  assert.throws(() => resolveBookHref({}, 'constructor', 'x'), /unknown sibling book/);
+});
+
+test('resolveBookHref: invalid descriptor entries fail loud', () => {
+  assert.throws(
+    () => resolveBookHref({ design: { labels: './labels.json' } }, 'design', 'x'),
+    /invalid siblingBooks entry.*\{ url:/s,
+  );
 });

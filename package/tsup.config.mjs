@@ -12,6 +12,10 @@ export default defineConfig({
     // script reuses the ONE KIND_LABEL source without pulling the whole
     // barrel (citation-js/yaml) into a plain-node process. (#126)
     'lib/theorem-label': 'src/lib/theorem-label.ts',
+    // Same lean-script contract for build-labels chapterRoute resolution.
+    // Keeping nav-href standalone avoids loading the public barrel merely to
+    // turn an entry ID into the route Astro's nav components already use.
+    'lib/nav-href': 'src/lib/nav-href.ts',
     // Pre-compile the .tsx islands so consumers don't have to depend on
     // Vite's JSX transform reaching into node_modules. Without this,
     // SSR breaks with `ReferenceError: React is not defined`.

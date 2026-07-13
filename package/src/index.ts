@@ -27,6 +27,9 @@ export type {
   BookProfile,
   BookPreset,         // v3.4.0 — canonical name (alias of BookProfile, closes #9)
   NumberStyle,
+  SiblingBookDescriptor,
+  SiblingBookEntry,
+  SiblingBooks,
   BookConfigOptions,
   ReleaseStatusConfig,
   SecurityHeadersConfig,
@@ -129,9 +132,9 @@ export { assertEnumProp } from './lib/assert-prop.js';
 // shallow-merges on top of this set.
 export { ssmMacros } from './lib/katex-macros.js';
 
-// v4.16.0 (#96): cross-book link resolution. resolveBookHref maps a sibling
-// book key → its base URL from the consumer's siblingBooks registry, throwing
-// on an unknown book instead of emitting a dead cross-origin link.
+// v4.16.0 (#96), extended in #147: cross-book link resolution.
+// resolveBookHref accepts both legacy URL strings and { url, labels? }
+// descriptors, throwing on an unknown book instead of emitting a dead link.
 export { resolveBookHref } from './lib/book-link.js';
 
 // v4.26.0 (#80): pure route-href resolver for the book-aware navigation.
