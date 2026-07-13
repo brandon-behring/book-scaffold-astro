@@ -1,4 +1,10 @@
-# Recipe 22 — Responsive navigation & multi-book routing (v4.26.0, #80)
+# Recipe 22 — Responsive navigation & custom routing (v4.26.0, #80)
+
+> **v5 corpus applications:** use
+> [Recipe 21](./21-multi-guide-single-app.md) and `defineBookCorpus`. Corpus
+> mode owns `chapterRoute`, `bookField`, `apparatusRoute`, and
+> `apparatusRoutes`; the custom fields below remain for single-book applications
+> and consumer-owned v4-style routes.
 
 The scaffold's navigation (left `Sidebar`, prev/next `ChapterNav`) is **book-aware**
 and **responsive**: it serves a single-book site unchanged, a multi-book consumer

@@ -31,9 +31,38 @@ the consuming book knows which versions are actually deployed. Import it from
 navigation belongs. It renders nothing for an omitted or empty manifest;
 `Base.astro` never invents or auto-mounts version links.
 
+## Corpus mode (v5, opt-in)
+
+A corpus is one Astro application and one homogeneous preset/Style chain with
+an ordered `defineBookCorpus` manifest. The same branded manifest must be passed
+to `defineBookConfig({ corpus })` and `defineBookSchemas({ corpus })`; do not
+copy or reconstruct it between entrypoints.
+
+Corpus chapters live at `src/content/<book>/<local-path>.{md,mdx}`. The
+registered first path segment is the book identity and generates an entry id
+`<book>/<local-id>` plus URL `/chapters/<book>/<local-id>/`. Do not add required
+`book:` frontmatter or hand-write a `generateId`; a legacy `book:` value may
+remain only when it matches the path. Questions and glossary entries use
+`src/content/{questions,glossary}/<book>/...` and the same namespacing rule.
+
+Keep every lookup book-scoped: navigation/previous-next, labels, references,
+tips, exercises, questions, and glossary entries must select the current
+manifest book. Corpus JSON is `{ schemaVersion: 1, books: { [id]: payload } }`;
+single-book JSON remains flat. Use `--book <id>` only with the content-derived
+`build-labels`, `build-bib`, `build-tips`, `build-exercises`, and `validate`
+commands. Figures and notebooks remain application-wide.
+
+Canonical corpus routes are `/`, `/chapters/`, `/<book>/`,
+`/chapters/<book>/`, `/chapters/<book>/<slug>/`, `/search/` (optionally
+`?book=<id>`), and `/<book>/<apparatus>/`, all under Astro `base`. Corpus mode
+owns `chapterRoute`, `bookField`, `apparatusRoute`, and `apparatusRoutes`. An
+omitted manifest `apparatus` inherits enabled app routes; `[]` disables all for
+that book. Search uses one Pagefind index with a `book` filter. See Recipe 21
+before changing corpus content, routing, or data scripts.
+
 ## Frontmatter schemas
 
-**Universal field (v4.9.0):** every profile accepts an optional `slug:` string that overrides the URL. A file `99-appendix.mdx` with `slug: appendix` is served at `/chapters/appendix/` — Astro's glob loader maps frontmatter `slug` → `entry.id`, and cross-references (`<XRef>`, via `build-labels`) resolve to the same path. Omit it and the URL falls back to the filename. Use it to keep numbered filenames for ordering while publishing clean URLs.
+**Universal field (v4.9.0):** every profile accepts an optional `slug:` string that overrides the URL. In single-book mode, a file `99-appendix.mdx` with `slug: appendix` is served at `/chapters/appendix/`; in corpus mode, `evaluation/99-appendix.mdx` is served at `/chapters/evaluation/appendix/`. The loader and `build-labels` resolve the same id. Omit `slug` to use the nested filename path.
 
 ### Academic profile (`src/content.config.ts:academicChapterSchema`)
 
@@ -108,7 +137,7 @@ Two callout families coexist. Authors import what they need.
 
 **Pedagogy family** (v4.1.0+, any profile, 4 components): `Pitfall` (rose; "common mistake" — distinct from `WarnBox`'s preemptive warning), `WorkedExample` (plum; collapsible `<details>` block with `#worked-example-{id}` anchor for deep links), `YouWillLearn` (gold; chapter-opener with optional `prerequisites` prop), `Diagnostic` (v4.19.0, #110; teal; pre-reading "Do I Know This Already?" DIKTA self-check — a slotted question list + a skip/skim/read routing rubric via `skimTo`, plus an optional collapsible answer key via `slot="answers"`). Slot bullets/code freely; render at any preset.
 
-**Utility components** (`src/components/`, any profile): `Cite`, `XRef`, `Figure`, `MarginFigure`, `MarginNote`, `Sidenote`, `EvidenceTag`, `Newthought`, `Epigraph`, `WeekRef`, `CodeRef`, `CodeBlock`, `Tag`, `StatusBadge`, `BookLink` (v4.16.0+; cross-book link — `<BookLink book="design" to="…"/>` resolves `book` against `defineBookConfig({ siblingBooks })` and throws on an unknown book; #147 adds `{ url, labels }` entries so `validate` checks literal fragment targets against a vendored sibling `labels.json`, while legacy URL strings warn/skip target validation; `<XRef>` is in-book only — #96), `PocLayout` (v4.1.0+; wraps slot in a per-`kind` layout shell — 5 closed-union kinds; see `recipes/15-defining-styles.md`).
+**Utility components** (`src/components/`, any profile): `Cite`, `XRef`, `Figure`, `MarginFigure`, `MarginNote`, `Sidenote`, `EvidenceTag`, `Newthought`, `Epigraph`, `WeekRef`, `CodeRef`, `CodeBlock`, `Tag`, `StatusBadge`, `BookLink` (cross-book link — a manifest-owned `book` resolves locally in corpus mode; otherwise it resolves through `defineBookConfig({ siblingBooks })`; #147 `{ url, labels }` entries let `validate` check external literal fragments against a vendored `labels.json`; `<XRef>` remains current-book only), `PocLayout` (v4.1.0+; wraps slot in a per-`kind` layout shell — 5 closed-union kinds; see `recipes/15-defining-styles.md`).
 
 **Cross-book heading indexes (#147):** `book-scaffold build-labels` indexes h2–h6 with Astro's heading collector (inline formatting/smartypants plus GitHub duplicate slugs), alongside the historical component IDs. Emitted hrefs are base-less and resolve the evaluated `chapterRoute` / `bookField`; nested content IDs keep their directory. Heading keys are opaque and path-qualified so the same fragment can exist in multiple chapters; `validate` matches exact normalized href values, while component keys stay backward-compatible for XRef. This makes a generated sibling `labels.json` usable for literal `<BookLink ... to="...#anchor">` validation without assuming `/chapters/`. h1 stays excluded as the chapter title.
 

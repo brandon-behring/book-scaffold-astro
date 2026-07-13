@@ -2,7 +2,7 @@
 
 **Profile**: any (most useful for `course-notes` and `research-portfolio`).
 
-**TL;DR**: The scaffold does **not** ship an `<AnkiCard>` component or an `extract-cards` CLI (see [PACKAGE_DESIGN.md §15a](../../PACKAGE_DESIGN.md#15a-deferred-scope-post-v4x) for why). This recipe shows how a consumer can roll their own — a small `<AnkiCard>` component plus a `scripts/extract-anki.mjs` extractor that walks the chapters collection and emits an Anki deck. ~120 lines of consumer-side code; no scaffold changes required.
+**TL;DR**: The scaffold does **not** ship an `<AnkiCard>` component or an `extract-cards` CLI (see [PACKAGE_DESIGN.md §15b](../../PACKAGE_DESIGN.md#15b-deferred-scope) for why). This recipe shows how a consumer can roll their own — a small `<AnkiCard>` component plus a `scripts/extract-anki.mjs` extractor that walks the chapters collection and emits an Anki deck. ~120 lines of consumer-side code; no scaffold changes required.
 
 If your book is the **third** independent consumer to want this, please open an issue at [book-scaffold-astro](https://github.com/brandon-behring/book-scaffold-astro/issues) — that's the signal we need to consider promoting this to scaffold-level surface.
 
@@ -141,34 +141,41 @@ The scaffold deliberately does **not** opine on the choice — the JSON is the c
 
 ## Step 4 — Per-book grouping (if needed)
 
-The example above emits one deck per book. If you have a multi-book corpus (per the DLAI Study Notes pattern), gate emission on a `book` discriminator in chapter frontmatter:
+The extractor above emits one ungrouped `cards.json` file. In first-class
+corpus mode, derive the book from the namespaced chapter path/id rather than
+repeating it in frontmatter:
 
 ```js
 const byBook = new Map();
 // ... inside the loop:
-const fm = parseFrontmatter(src);  // bring your own YAML parser
-const book = fm.book ?? 'main';
+const [book] = slug.split('/'); // <book>/<local-id>
 if (!byBook.has(book)) byBook.set(book, []);
 byBook.get(book).push({ ... });
 ```
 
-Then write one file per book key. Multi-book corpus routing is itself out of scope at v4.x ([deferred, see §15a](../../PACKAGE_DESIGN.md#15a-deferred-scope-post-v4x); tracked on #80) — if you need it, the same consumer-side pattern applies.
+Then write one file per registered book key. Recipe 21 documents the corpus
+manifest and namespaced-id contract; Anki extraction itself remains
+consumer-owned.
 
 ## Common gotchas
 
 - **Stable GUIDs**: if you omit `id`, the script falls back to `${slug}-${index}`. Adding/removing cards above an existing card will shift indices and break review history. **Always set explicit `id` props** for cards you want to survive content edits.
 - **Markdown in slots**: Anki accepts HTML; MDX renders the slot content to HTML before this extractor sees it, so most formatting carries through. KaTeX math is a special case — the extractor sees raw `$...$` LaTeX; either pre-render with KaTeX server-side before extraction, or use Anki's MathJax integration.
-- **Pagefind**: `<AnkiCard>` instances are indexed by Pagefront like any prose. If you don't want flashcard fronts in search results, wrap in `<aside data-pagefind-ignore>`.
+- **Pagefind**: `<AnkiCard>` instances are indexed by Pagefind like any prose. If you don't want flashcard fronts in search results, wrap in `<aside data-pagefind-ignore>`.
 - **Visual regression**: the component adds a styled block to every chapter that has cards. If you maintain visual baselines, regenerate them after first adoption.
 
 ## Why this isn't in the scaffold
 
-Per [PACKAGE_DESIGN.md §15a](../../PACKAGE_DESIGN.md#15a-deferred-scope-post-v4x): single consumer signal so far (DLAI), runtime dep concerns (`.apkg` is a SQLite-backed zip — needs an external builder), and the design space for per-book grouping is entangled with multi-book corpus routing (also deferred). When 2-3 consumers independently want this, it gets promoted.
+Per [PACKAGE_DESIGN.md §15b](../../PACKAGE_DESIGN.md#15b-deferred-scope):
+consumer signal remains limited and `.apkg` generation adds a non-trivial
+SQLite-backed archive dependency. Corpus grouping is now available, but those
+product/dependency questions still keep export outside the scaffold. When 2–3
+consumers independently want it, it can be reconsidered.
 
 ## Canonical files
 
 - This recipe (consumer pattern)
-- [PACKAGE_DESIGN.md §15a](../../PACKAGE_DESIGN.md#15a-deferred-scope-post-v4x) — deferral rationale
+- [PACKAGE_DESIGN.md §15b](../../PACKAGE_DESIGN.md#15b-deferred-scope) — deferral rationale
 
 ## Reference implementation
 
