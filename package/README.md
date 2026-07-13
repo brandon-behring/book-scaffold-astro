@@ -26,6 +26,14 @@ security defaults. A consumer-owned `public/_headers` wins unchanged;
 and `securityHeaders.contentSecurityPolicy` replaces only the default CSP.
 See [Recipe 05](./recipes/05-deploy-cloudflare.md#default-security-headers).
 
+## Interactive demos
+
+The opt-in `@brandon_m_behring/book-scaffold-astro/demo` entry exports
+`DemoFrame`, `Slider`, `StatCards`, and `useThemeColors` for consumer-owned
+Preact islands. Import `styles/demo.css` explicitly; no demo is mounted and no
+domain kernel or data loader is bundled automatically. See
+[Recipe 23](./recipes/23-interactive-demo-substrate.md).
+
 ## Licensing
 
 Code, configuration, and scripts are MIT-licensed. Recipes, pedagogy, examples,

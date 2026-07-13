@@ -20,6 +20,9 @@ export default defineConfig({
     'components/ExamRunner': 'components/ExamRunner.tsx',
     'components/Flashcards': 'components/Flashcards.tsx',
     'components/SectionMap': 'components/SectionMap.tsx',
+    // Opt-in, consumer-agnostic interactive-demo primitives (#143). Keep the
+    // data, simulation kernels, and opinionated visualizations consumer-owned.
+    demo: 'components/demo/index.ts',
   },
   esbuildOptions(options) {
     options.jsx = 'automatic';

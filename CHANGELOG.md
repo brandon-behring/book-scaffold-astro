@@ -2,6 +2,26 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.28.0] — 2026-07-13
+
+### Added
+
+- **Opt-in interactive-demo substrate (#143).** The `/demo` entry exports the
+  consumer-agnostic `DemoFrame`, `Slider`, `StatCards`, and `useThemeColors`
+  primitives. Explicit `styles/demo.css` supplies token-only shell/control/card
+  styling, inline-SVG theme helpers, focus treatment, and a scoped
+  reduced-motion guard. Nothing auto-mounts or joins a profile; consumer books
+  continue to own data, kernels, visualizations, and domain interaction policy.
+  Frame heading depth is explicit, slider values fail on native step mismatch,
+  and motion remains unresolved until the client preference is known.
+
+### Tests
+
+- Node coverage locks figure/control/definition-list semantics, SSR fallbacks,
+  fail-loud validation, listener cleanup, CSS opt-in behavior, public types,
+  and tarball contents. The gallery exercises slider updates, light/dark SVG
+  redraw, reduced motion, and visual snapshots.
+
 ## [4.27.1] — 2026-07-13
 
 Patch release — **eliminate the measured late body-font layout shift.** A

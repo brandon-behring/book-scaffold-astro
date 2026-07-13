@@ -39,8 +39,8 @@ BOOK_PROFILE=academic
 
 ## What ships in the package
 
-- **65 Astro components + 5 Preact islands** at the exported `./components/<Name>` surface — citations, figures, theorem/callout families, study tools, book-aware nav, and the per-chapter `Provenance` audit block
-- **12 exported stylesheets**, loaded where their ownership belongs: preset/profile integration, the base layout, opt-in routes, or their component
+- **65 Astro components + 8 Preact components** — 70 individually exported `./components/<Name>` entries for citations, figures, pedagogy, study tools, and navigation, plus `DemoFrame` / `Slider` / `StatCards` and `useThemeColors` through the opt-in `./demo` barrel
+- **13 exported stylesheets**, loaded where their ownership belongs: preset/profile integration, the base layout, opt-in routes, their component, or an explicit demo import
 - **Default pages** auto-injected: `/references` / `/search` / `/print` / `/chapters` (all five presets); `/convergence` (tools); optional frontmatter and study-guide routes
 - **Profile-aware Zod schemas** — academic 7-state status / tools volatility + T1-T4 source tiers
 - **Tufte three-tier layout** — 60ch (default) / 66ch (≥90rem) / 78ch (≥120rem), with a book-aware desktop sidebar and mobile drawer

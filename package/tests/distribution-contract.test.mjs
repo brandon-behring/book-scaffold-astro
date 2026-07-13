@@ -28,7 +28,17 @@ function dryRunPackFiles(directory) {
 
 test('toolkit tarball ships both agent-guide names and both scoped licenses', () => {
   const files = dryRunPackFiles(join(root, 'package'));
-  for (const path of ['README.md', 'CLAUDE.md', 'AGENTS.md', 'LICENSE', 'LICENSE-CONTENT']) {
+  for (const path of [
+    'README.md',
+    'CLAUDE.md',
+    'AGENTS.md',
+    'LICENSE',
+    'LICENSE-CONTENT',
+    'dist/demo.mjs',
+    'dist/demo.d.ts',
+    'styles/demo.css',
+    'recipes/23-interactive-demo-substrate.md',
+  ]) {
     assert.ok(files.has(path), `toolkit tarball must contain ${path}`);
   }
 });

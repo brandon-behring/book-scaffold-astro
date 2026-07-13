@@ -254,8 +254,7 @@ const baseUrl = normalizeBase(import.meta.env.BASE_URL);
       CSS recolors via the `data-theme` attribute alone; canvas/JS islands can't,
       so they subscribe to this event (and read the attribute / matchMedia on
       mount for the initial value) to redraw. Contract documented in the package
-      CLAUDE.md. Event-only by design — a `useThemeColors` helper graduates later
-      with the demo kit.
+      CLAUDE.md; the opt-in demo entry now wraps it with `useThemeColors` (#143).
     */}
     <script is:inline>
       (function () {

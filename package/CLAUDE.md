@@ -110,6 +110,8 @@ Two callout families coexist. Authors import what they need.
 
 **Utility components** (`src/components/`, any profile): `Cite`, `XRef`, `Figure`, `MarginFigure`, `MarginNote`, `Sidenote`, `EvidenceTag`, `Newthought`, `Epigraph`, `WeekRef`, `CodeRef`, `CodeBlock`, `Tag`, `StatusBadge`, `BookLink` (v4.16.0+; cross-book link — `<BookLink book="design" to="…"/>` resolves `book` against `defineBookConfig({ siblingBooks })` and throws on an unknown book; `<XRef>` is in-book only — #96), `PocLayout` (v4.1.0+; wraps slot in a per-`kind` layout shell — 5 closed-union kinds; see `recipes/15-defining-styles.md`).
 
+**Interactive demo substrate (#143; opt-in):** `DemoFrame`, `Slider`, `StatCards`, and `useThemeColors` are named exports from `@brandon_m_behring/book-scaffold-astro/demo`. Import `@brandon_m_behring/book-scaffold-astro/styles/demo.css` on the page that mounts the consumer-owned Preact island; it is never included by a profile and nothing auto-mounts. The substrate owns figure/label/metric semantics, focus/reduced-motion styling, SVG token helpers, and theme-token resolution. Consumers own all data, kernels, charts, and domain interaction policy. See Recipe 23.
+
 **`MarginNote` vs `Sidenote` (don't let the names mislead).** `MarginNote` renders **inline** — a colored callout in the running text column; despite the name it does **not** go in the margin. It's for a load-bearing aside the reader must see. `Sidenote` is the one that **floats into the right gutter** (auto-numbered Tufte marginalia, reflowing inline on mobile). Reach for `Sidenote` for footnote-like asides; `MarginNote` for an inline colored callout.
 
 **`MarginFigure` + figure/content placement (1d).** `MarginFigure` is a `<Figure>` that **floats into the right gutter** (the same Tufte float + negative-margin technique `Sidenote`/SectionMap use — *not* a grid), shown at ≥64rem and reflowing inline below on mobile. Props mirror `<Figure>` (`src`/`caption`/`alt`/`desc`/`id`/`width`); rendering is delegated to `Figure`, and `width` defaults to `100%` (of the ~28ch gutter column). Two additive placement classes back it: **`.column-margin`** floats any block into the gutter (the un-figure version), and **`.column-page`** is a full-width breakout — an alias of the canonical **`.wide`** escape (max-width override, spans the gutter column too). For a full-bleed figure use `<Figure class="wide" …/>`; for the margin use `<MarginFigure …/>`. **Per-page width knob:** an optional `layout: wide` frontmatter field (closed enum `default`|`wide`, every profile) widens the main text measure for figure-/table-heavy chapters — `Chapter.astro` threads it as `data-layout="wide"` on `<article class="prose">` and `layout.css` maps `.prose[data-layout="wide"] { --measure-main: 80ch }`. Omitting it (or `layout: default`) emits no attribute, so existing chapters are byte-identical. All of these live in the always-loaded `layout.css` (token-only; additive — `.prose`'s block layout and `.sidenote`'s float are unchanged).
@@ -124,27 +126,23 @@ Two callout families coexist. Authors import what they need.
 
 Full reference in `recipes/04-component-library.md`.
 
-### Theme-change event (v4.14.2)
+### Theme colors for JS visuals (v4.14.2 event; #143 hook)
 
 `Base.astro` emits `book:theme:change` on `window` whenever the **effective** theme changes — both the chrome's dark-mode toggle and a system `prefers-color-scheme` flip (the latter only when no explicit theme is pinned). Use it for **canvas / JS islands** that can't recolor via CSS alone; CSS-token elements recolor automatically from the `[data-theme]` attribute.
 
 ```ts
-// inside a Preact island (client:visible / client:idle)
-function currentTheme(): 'light' | 'dark' {
-  const t = document.documentElement.getAttribute('data-theme');
-  return t === 'light' || t === 'dark'
-    ? t
-    : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-useEffect(() => {
-  draw(currentTheme());                                 // initial paint
-  const onChange = (e: Event) => draw((e as CustomEvent).detail.theme);
-  window.addEventListener('book:theme:change', onChange);
-  return () => window.removeEventListener('book:theme:change', onChange);
-}, []);
+import { useThemeColors } from '@brandon_m_behring/book-scaffold-astro/demo';
+
+const TOKENS = {
+  ink: ['--color-text', '#1a1a19'],
+  accent: ['--color-link', '#3b6fa0'],
+} as const;
+
+const { colors, theme, reducedMotion } = useThemeColors(TOKENS);
+// redraw from colors; animate only when reducedMotion === false
 ```
 
-`detail.theme` is `'light' | 'dark'`. Pull design-token colors via `getComputedStyle(document.documentElement).getPropertyValue('--…')` so the canvas matches the page, and respect `prefers-reduced-motion` for any redraw animation. (Event-only by design — a `useThemeColors` helper graduates with the demo kit, #103.)
+The hook is SSR-safe (`theme` and `reducedMotion` are `null` until the first client effect), resolves the explicit token map with fallbacks, refreshes on `book:theme:change`, system color-scheme changes, and reduced-motion changes, and removes all listeners on cleanup. Start animation only when `reducedMotion === false`. `detail.theme` on the underlying event remains `'light' | 'dark'` for non-Preact consumers. Prefer CSS variables or `demo.css`'s `data-demo-fill` / `data-demo-stroke` helpers for inline SVG; those recolor automatically and do not need the hook. See Recipe 23 for the complete composition.
 
 ## Citation patterns
 
