@@ -222,6 +222,11 @@ export async function defineBookConfig(
       // v4.26.2 (#149; style inheritance + opt-out fixed in v4.26.3).
       releaseStatus:
         resolvedReleaseStatus === false ? undefined : resolvedReleaseStatus,
+      // v4.27.0 (#188): undefined enables the audited defaults, false opts
+      // out, and an object can replace only the CSP. The integration owns
+      // the build:done emission because that is where Astro's output dir is
+      // known and a copied consumer public/_headers can be detected.
+      securityHeaders: opts.securityHeaders,
       description: opts.description,
       portfolio: resolvedPortfolio,
       // v4.6.0: book-level author + SEO config (ogImage, twitterHandle),
@@ -291,6 +296,8 @@ export async function defineBookConfig(
     subtitle: _subtitle,
     // v4.26.2 (#149): strip the release-state banner config.
     releaseStatus: _releaseStatus,
+    // v4.27.0 (#188): consumed by the scaffold integration at build:done.
+    securityHeaders: _securityHeaders,
     description: _description,
     portfolio: _portfolio,
     // v4.6.0: strip new book-level SEO opts (author + seo block).
@@ -323,6 +330,7 @@ export async function defineBookConfig(
   void _title;
   void _subtitle;
   void _releaseStatus;
+  void _securityHeaders;
   void _description;
   void _portfolio;
   void _author;

@@ -29,6 +29,7 @@ export type {
   NumberStyle,
   BookConfigOptions,
   ReleaseStatusConfig,
+  SecurityHeadersConfig,
   BookSchemasOptions,
   BookScaffoldIntegrationOptions,
   RouteToggles,

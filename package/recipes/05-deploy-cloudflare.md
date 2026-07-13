@@ -28,6 +28,50 @@
 
 URL: `https://<project-name>.<your-account>.workers.dev`.
 
+## Default security headers
+
+The scaffold integration emits `dist/_headers` at the end of every Astro
+build. Cloudflare Static Assets reads that file for both Workers and Pages
+deployments. The default applies:
+
+- `Strict-Transport-Security`
+- `X-Content-Type-Options`
+- `Referrer-Policy`
+- `Permissions-Policy`
+- `Content-Security-Policy`
+
+The CSP includes the allowances the shipped book UI needs: inline theme and
+drawer scripts, Astro inline component styles, Pagefind WebAssembly,
+Cloudflare Web Analytics, and images from the book itself, data URIs, or any
+HTTPS origin.
+
+Use a consumer file when you need route-specific rules or full ownership:
+
+```text
+# public/_headers
+/private/*
+  Cache-Control: no-store
+```
+
+Astro copies `public/_headers` to `dist/_headers`; the integration detects it
+and leaves it unchanged. To retain the four non-CSP defaults but replace the
+entire CSP, configure the book:
+
+```js
+export default await defineBookConfig({
+  styles: [academicStyle],
+  site: 'https://my-book.example',
+  securityHeaders: {
+    contentSecurityPolicy:
+      "default-src 'self'; img-src 'self' data: https://images.example; object-src 'none'",
+  },
+});
+```
+
+That value is a complete replacement, not an additive fragment. Set
+`securityHeaders: false` if the deployment platform or another integration
+owns the headers and you do not ship `public/_headers`.
+
 ## The `cd` prefix for monorepo Astro projects
 
 When `wrangler.toml` lives in a subdirectory (e.g. `guides/web/wrangler.toml`), Cloudflare runs commands from the repo root by default. Wrangler can't find its config there → deploy fails with "Could not detect a directory containing static files".

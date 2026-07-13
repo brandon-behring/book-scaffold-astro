@@ -256,6 +256,13 @@ export interface BookConfigOptions extends Omit<AstroUserConfig, 'integrations' 
   /** Optional. Spread-merged into package-provided markdown config (plugin arrays concat). */
   markdown?: AstroUserConfig['markdown'];
 
+  /** Optional. Build-time Cloudflare `_headers` policy (#188). Omit to emit
+   *  audited defaults; false emits no scaffold file; an object replaces only
+   *  the CSP. A consumer public/_headers file always wins unchanged. */
+  securityHeaders?: false | {
+    contentSecurityPolicy?: string;
+  };
+
   /** Optional. RESERVED (#50, #180) — accepted and style-chain-merged, but has no
    *  runtime effect. The wrangler.toml shape is set at scaffold time by create-book
    *  from the profile name; this field does not change it.
@@ -273,11 +280,12 @@ export function defineBookConfig(opts: BookConfigOptions): Promise<AstroUserConf
 3. Apply top-level `opts` fields on top of composed style (consumer per-book override wins).
 4. Resolve `preset` from composed style; throw `BookConfigError` if unknown.
 5. Require `site` to be set after composition; throw otherwise.
-6. Build the package's integration list: `[mdx(), preact(), bookScaffoldIntegration({ preset, routes, extraStyles, mdxComponentsModule })]`.
-7. If `PROFILES[preset]?.katex === true` (academic + research-portfolio), dynamically import `remark-math`, `rehype-katex`, and `ssmMacros`; merge `katexMacros` on top; append to `markdown.remarkPlugins` / `markdown.rehypePlugins`.
-8. Concatenate `extraIntegrations` after the package list.
-9. Spread-merge `opts.markdown` over package markdown config (plugin arrays concat).
-10. Return final `AstroUserConfig` via Astro's `defineConfig`.
+6. Build the package's integration list: `[mdx(), preact(), bookScaffoldIntegration({ preset, routes, extraStyles, mdxComponentsModule, securityHeaders })]`.
+7. Thread `securityHeaders` to the integration without forwarding it to Astro's own config. Omission means defaults, `false` means no scaffold emission, and `{ contentSecurityPolicy }` replaces only the default CSP.
+8. If `PROFILES[preset]?.katex === true` (academic + research-portfolio), dynamically import `remark-math`, `rehype-katex`, and `ssmMacros`; merge `katexMacros` on top; append to `markdown.remarkPlugins` / `markdown.rehypePlugins`.
+9. Concatenate `extraIntegrations` after the package list.
+10. Spread-merge `opts.markdown` over package markdown config (plugin arrays concat).
+11. Return final `AstroUserConfig` via Astro's `defineConfig`.
 
 ### Errors / common mistakes
 
@@ -660,6 +668,9 @@ import type { AstroIntegration } from 'astro';
 export interface BookScaffoldIntegrationOptions {
   profile: BookProfile;
   extraStyles?: string[];
+  securityHeaders?: false | {
+    contentSecurityPolicy?: string;
+  };
 }
 
 export function bookScaffoldIntegration(
@@ -708,9 +719,29 @@ for (const [pattern, entrypoint] of defaultRoutes) {
 }
 ```
 
+### Behavior — `astro:build:done` hook
+
+The integration writes a Cloudflare-compatible `dist/_headers` file after
+every successful Astro build. The default policy applies HSTS,
+`X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, and a CSP
+that permits the toolkit's inline theme/drawer code, Astro's inline component
+styles, Pagefind WebAssembly, Cloudflare Web Analytics, and images from
+`'self'`, `data:`, or `https:` sources.
+
+`securityHeaders: false` suppresses scaffold emission. Passing
+`securityHeaders: { contentSecurityPolicy: "..." }` substitutes the complete
+CSP value while retaining the other four defaults. If Astro has already
+copied a consumer-owned `public/_headers` into the output, the integration
+does not write or merge anything; that file wins byte-for-byte.
+
 ### Override semantics
 
 Astro user routes win over `injectRoute`d routes (standard Astro precedence). To override `/chapters`, the consumer just creates `src/pages/chapters.astro`. No package opt-out needed.
+
+Security headers use whole-file precedence rather than route precedence:
+create `public/_headers` to own every rule, use `securityHeaders: false` when
+the deployment platform or another integration owns them, or provide only a
+replacement CSP through `securityHeaders.contentSecurityPolicy`.
 
 ### Errors / common mistakes
 

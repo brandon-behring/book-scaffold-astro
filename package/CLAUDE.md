@@ -184,6 +184,14 @@ research-portfolio. Recipe 05 documents both flows.
 
 For monorepo Astro projects (Astro project in subdir), prefix build + deploy commands with `cd <subdir> &&`.
 
+Every build emits an audited Cloudflare-format `dist/_headers` by default
+(HSTS, XCTO, Referrer-Policy, Permissions-Policy, and a CSP compatible with
+the shipped inline UI, Pagefind WASM, Cloudflare analytics, and HTTPS images).
+A consumer `public/_headers` wins unchanged. Use
+`securityHeaders: { contentSecurityPolicy: "..." }` to replace only the CSP,
+or `securityHeaders: false` when another layer owns all headers. Recipe 05 has
+the full precedence and customization contract.
+
 ## Validation
 
 `npm run validate` (also runs in prebuild) catches:
