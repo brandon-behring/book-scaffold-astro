@@ -2,6 +2,29 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.27.1] — 2026-07-13
+
+Patch release — **eliminate the measured late body-font layout shift.** A
+Cloudflare field sample attributed CLS 0.274 to the sidebar prose layout. A
+cold-browser isolation reproduced the same failure when Roboto arrived late;
+delaying KaTeX or chapter figures did not reproduce it.
+
+### Fixed
+
+- **Roboto no longer swaps after first paint on a slow response (#187).** The
+  package-owned Fontsource CSS uses `font-display: optional`, while the common
+  Latin variable face is preloaded through Vite's asset graph. Normal visits
+  retain the self-hosted typeface; a slow first visit stays on the system
+  fallback instead of reflowing the complete prose column.
+- **The font policy is deliberately narrow.** Source Code Pro remains `swap`,
+  KaTeX remains `block`, and consumer-authored font CSS is untouched.
+
+### Tests
+
+- Package suite **582 → 586** (+4). A real research-portfolio fixture delays
+  Roboto by 2.2 seconds and gates CLS at `≤ 0.1` across 390, 768, 1280, and
+  1440 px; the pre-fix fixture measured 0.229 at the sidebar viewport.
+
 ## [4.27.0] — 2026-07-13
 
 Minor release — **distribution hardening, complete generated books, and self-healing authoring tools.** This stabilization release closes the reviewed v4.27 backlog: deploy artifacts are secure by default, every built-in preset is scaffoldable and documented, fresh generated books can build and render PDF locally, and the validation/label/bibliography commands now share the consumer's real Astro configuration.

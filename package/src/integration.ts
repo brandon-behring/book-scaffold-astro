@@ -55,6 +55,31 @@ import {
 const BOOK_CONFIG_VIRTUAL_ID = 'virtual:book-scaffold/book-config';
 const BOOK_CONFIG_RESOLVED_ID = '\0' + BOOK_CONFIG_VIRTUAL_ID;
 
+/**
+ * #187: Fontsource publishes Roboto with `font-display: swap`. A delayed
+ * body-font response therefore reflows the complete prose column after first
+ * paint (the field report recorded CLS 0.274). Keep Fontsource's generated
+ * unicode ranges and asset graph intact, but make its one package-owned CSS
+ * entry optional so a slow first visit stays on the fallback instead of
+ * swapping late. Consumer-authored font CSS is deliberately untouched.
+ */
+function makeRobotoFontDisplayVitePlugin() {
+  return {
+    name: 'book-scaffold:roboto-font-display',
+    enforce: 'pre' as const,
+    transform(code: string, id: string) {
+      const [path = id] = id.split('?');
+      const normalizedPath = path.replaceAll('\\', '/');
+      if (!normalizedPath.endsWith('/@fontsource-variable/roboto/index.css')) {
+        return null;
+      }
+
+      const transformed = code.replace(/font-display:\s*swap/g, 'font-display: optional');
+      return transformed === code ? null : { code: transformed, map: null };
+    },
+  };
+}
+
 function makeBookConfigVitePlugin(config: {
   title: string | null;
   // v4.23.0 (#135): sidebar brand subtitle.
@@ -358,6 +383,7 @@ export function bookScaffoldIntegration(
         updateConfig({
           vite: {
             plugins: [
+              makeRobotoFontDisplayVitePlugin(),
               makeMdxComponentsVitePlugin(resolvedMdxPath),
               makeBookConfigVitePlugin({
                 title: title ?? null,
