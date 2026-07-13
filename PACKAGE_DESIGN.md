@@ -1275,17 +1275,19 @@ Open at the package-publishing level (handled at Phase B start):
 
 The package is in its v4.x **iteration window** — small additive changes triggered by consumer signal. Anything architecturally invasive ships in v5.x or later, and only after repeated independent demand. Items deferred during the v4.x cycle:
 
-### Multi-book corpus routing + schema (closed #15, deferred to v5.x)
+### Multi-book corpus routing + schema (#80, accepted for v5)
 
-**Requested shape**: `defineBookSchemas({ preset, multiBook: true })` with a `books` metadata collection, a chapter `book` discriminator, and injected routes `/<book>/`, `/<book>/<chapter>/`.
+The second-consumer trigger fired through `guides-ai-engineering`, alongside the
+DLAI Study Notes pilot. The decision-complete public contract now lives in
+[`docs/plans/active/v5-corpus-contract.md`](docs/plans/active/v5-corpus-contract.md).
 
-**Why deferred**:
-- Only one consumer signal so far (DLAI Study Notes pilot, course-notes preset). Need 2nd-3rd independent ask before committing scope.
-- The 5-profile registry is closed at v4.x; `multiBook` would have to either compose orthogonally with every preset (no design exists for this) or become a new profile family (multibook-academic, multibook-tools, …). Doubling the profile count is not a v4.x move.
-- Route injection in v4.x is flat (`/chapters/[...slug]/`). Per-book scoping (`/<book>/chapters/[...slug]/`) requires refactoring the integration's route dispatcher — not just adding routes.
-- Schema discrimination axis would change from "profile" to "profile × book" — a new shape the Zod union doesn't model today.
-
-**Re-evaluate when**: a 2nd-3rd consumer files an issue with the same shape. At that point: spike on route-injection refactor, decide profile-composition pattern, then design.
+The accepted direction is one app / one build / one homogeneous preset, with a
+shared `defineBookCorpus` manifest, path-derived book identity, canonical
+Recipe 21 URLs (`/chapters/<book>/<slug>/`), per-book indexes, book-scoped
+artifacts and diagnostics, and a single Pagefind index with book filters.
+Single-book behavior remains compatible; corpus behavior is opt-in. #158 and
+#157 consume the corpus identity contract after the v5 core rather than
+expanding the v5.0 implementation gate.
 
 ### AnkiCard component + extract-cards CLI (closed #16, deferred)
 
