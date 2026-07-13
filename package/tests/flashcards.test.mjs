@@ -8,7 +8,14 @@
  */
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { buildFlashcardDeck, shuffle } from '../dist/index.mjs';
+
+const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
+const routeSource = readFileSync(join(packageRoot, 'pages', 'flashcards.astro'), 'utf8');
+const islandSource = readFileSync(join(packageRoot, 'components', 'Flashcards.tsx'), 'utf8');
 
 const term = (id, display, draft = false) => ({ id, data: { term: display, draft } });
 
@@ -40,4 +47,15 @@ test('deck ids feed the exam-engine shuffle directly (island contract)', () => {
   const order = shuffle(deck.map((c) => c.id), () => 0.5);
   assert.equal(order.length, 3);
   assert.deepEqual([...order].sort(), ['a', 'b', 'c']);
+});
+
+test('corpus flashcard persistence is namespaced by deployment base and book', () => {
+  assert.match(
+    routeSource,
+    /book:\$\{import\.meta\.env\.BASE_URL\}:flashcards:\$\{bookId\}:known/,
+  );
+  assert.match(routeSource, /storageKey=\{storageKey\}/);
+  assert.match(islandSource, /localStorage\.getItem\(storageKey\)/);
+  assert.match(islandSource, /localStorage\.setItem\(storageKey,/);
+  assert.doesNotMatch(islandSource, /localStorage\.(?:get|set)Item\(DEFAULT_STORAGE_KEY/);
 });

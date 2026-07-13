@@ -94,6 +94,8 @@ test('two-book corpus emits isolated root and /canary/ route graphs with Pagefin
       'llm-app-engineering/references',
       'evaluation/print',
       'llm-app-engineering/print',
+      'evaluation/convergence',
+      'llm-app-engineering/convergence',
       'evaluation/practice-exam',
       'evaluation/glossary',
       'llm-app-engineering/glossary',
@@ -151,6 +153,10 @@ test('two-book corpus emits isolated root and /canary/ route graphs with Pagefin
     assert.match(evaluationGlossary, /id="term-shared"/);
     assert.match(llmGlossary, /id="term-shared"/);
 
+    const llmFlashcards = await html(rootOut, 'llm-app-engineering/flashcards');
+    assert.match(llmFlashcards, /book:\/:flashcards:llm-app-engineering:known/);
+    assert.doesNotMatch(llmFlashcards, /book:\/:flashcards:evaluation:known/);
+
     const bank = await html(rootOut, 'evaluation/practice-exam');
     const answers = await html(rootOut, 'evaluation/answers');
     assert.match(bank, /Evaluation answer/);
@@ -164,6 +170,15 @@ test('two-book corpus emits isolated root and /canary/ route graphs with Pagefin
     assert.doesNotMatch(evaluationPrint, /LLM-only sentinel/);
     assert.match(llmPrint, /LLM-only sentinel/);
     assert.doesNotMatch(llmPrint, /Evaluation-only sentinel/);
+
+    const evaluationConvergence = await html(rootOut, 'evaluation/convergence');
+    const llmConvergence = await html(rootOut, 'llm-app-engineering/convergence');
+    assert.match(evaluationConvergence, /Evaluation-only convergence sentinel/);
+    assert.match(evaluationConvergence, /Evaluation-only convergence event/);
+    assert.doesNotMatch(evaluationConvergence, /LLM-only convergence sentinel|LLM-only convergence event/);
+    assert.match(llmConvergence, /LLM-only convergence sentinel/);
+    assert.match(llmConvergence, /LLM-only convergence event/);
+    assert.doesNotMatch(llmConvergence, /Evaluation-only convergence sentinel|Evaluation-only convergence event/);
 
     const search = await html(rootOut, 'search');
     assert.match(search, /<option value="evaluation">Evaluation Engineering<\/option>/);
@@ -252,6 +267,43 @@ test('corpus question and glossary roots reject orphan and unknown-book entries'
         (error) => {
           const output = `${error.stdout ?? ''}\n${error.stderr ?? ''}`;
           assert.match(output, new RegExp(`${label}.*outside the registered corpus books`));
+          return true;
+        },
+      );
+    } finally {
+      await rm(target, { force: true });
+      if (entry.includes('/unknown/')) {
+        await rm(dirname(target), { recursive: true, force: true });
+      }
+      await cleanupGenerated();
+    }
+  }
+});
+
+test('corpus convergence rejects global and unknown-book collateral', async () => {
+  const cases = [
+    {
+      entry: 'changelog/patterns.yaml',
+      body: '[]\n',
+      diagnostic: /Corpus convergence collateral must be book-owned/,
+    },
+    {
+      entry: 'changelog/unknown/patterns.yaml',
+      body: '[]\n',
+      diagnostic: /convergence collateral owner "unknown" is not a registered book/,
+    },
+  ];
+
+  for (const { entry, body, diagnostic } of cases) {
+    const target = join(fixture, entry);
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, body, 'utf8');
+    try {
+      await assert.rejects(
+        () => run(astro, ['sync']),
+        (error) => {
+          const output = `${error.stdout ?? ''}\n${error.stderr ?? ''}`;
+          assert.match(output, diagnostic);
           return true;
         },
       );

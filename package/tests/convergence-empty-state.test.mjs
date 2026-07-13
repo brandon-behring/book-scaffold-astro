@@ -23,6 +23,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG = join(__dirname, '..');
 const patterns = readFileSync(join(PKG, 'src', 'lib', 'patterns.ts'), 'utf8');
 const route = readFileSync(join(PKG, 'pages', 'convergence.astro'), 'utf8');
+const schemas = readFileSync(join(PKG, 'src', 'schemas-entry.ts'), 'utf8');
+const timeline = readFileSync(join(PKG, 'components', 'PatternTimeline.astro'), 'utf8');
 
 // ===== patterns.ts: the pure all-empty map =====
 
@@ -50,10 +52,10 @@ test('convergence: gates on the changelog/patterns.yaml manifest presence', () =
 });
 
 test('convergence: reads the collection only when present, else the empty map', () => {
-  // ternary: present → await getPatternsByCategory(); absent → emptyPatternsByCategory()
+  // ternary: present → selected collection; absent → pure empty map
   assert.match(
     route,
-    /hasPatterns[\s\S]*?await getPatternsByCategory\(\)[\s\S]*?:\s*emptyPatternsByCategory\(\)/,
+    /hasPatterns[\s\S]*?await getPatternsByCategory\(bookId\)[\s\S]*?:\s*emptyPatternsByCategory\(\)/,
   );
 });
 
@@ -66,5 +68,18 @@ test('convergence: surfaces an actionable hint when the manifest is absent (#86 
   // a missing/misnamed changelog/patterns.yaml must not look identical to a
   // legitimately-empty registry — cf. tips.astro / references.astro.
   assert.match(route, /noManifestHint/);
-  assert.match(route, /changelog\/patterns\.yaml found/);
+  assert.match(route, /No \$\{patternsPath\.slice\(1\)\} found/);
+});
+
+test('corpus convergence registers and selects one collateral collection per book', () => {
+  assert.match(schemas, /changelog\/\$\{book\.id\}\/tools/);
+  assert.match(schemas, /changelog\/\$\{book\.id\}\/patterns\.yaml/);
+  assert.match(schemas, /corpusChangelogCollection\(book\.id\)/);
+  assert.match(schemas, /corpusPatternsCollection\(book\.id\)/);
+  assert.match(schemas, /assertCorpusConvergenceLayout\(corpus\.books\)/);
+  assert.match(schemas, /Corpus convergence collateral must be book-owned/);
+  assert.match(patterns, /bookId \? corpusChangelogCollection\(bookId\) : 'changelog'/);
+  assert.match(patterns, /bookId \? corpusPatternsCollection\(bookId\) : 'patterns'/);
+  assert.match(timeline, /getPatternTimeline\(pattern\.id, bookId\)/);
+  assert.match(route, /<PatternTimeline pattern=\{p\} bookId=\{bookId\} hasChangelog=\{hasChangelog\}/);
 });

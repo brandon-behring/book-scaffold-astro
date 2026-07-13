@@ -20,6 +20,7 @@ export default await defineBookConfig({
     frontmatter: false,
     references: true,
     print: true,
+    convergence: true,
     chapters: true,
     landing: true,
     search: true,
@@ -30,4 +31,5 @@ export default await defineBookConfig({
     flashcards: true,
     answers: true,
   },
+  extraStyles: ['convergence.css'],
 });

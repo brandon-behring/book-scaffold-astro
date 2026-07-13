@@ -1,0 +1,5 @@
+- id: shared-pattern
+  name: LLM-only convergence sentinel
+  description: A pattern owned only by the LLM application engineering book.
+  category: scale
+  convergence_date: null

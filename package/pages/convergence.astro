@@ -7,8 +7,9 @@
  * placeholder so readers see the coverage gaps rather than inferring
  * the registry is exhaustive.
  *
- * Driven entirely from changelog/patterns.yaml + changelog/tools/*.yaml.
- * No code change is needed to grow the dashboard — add manifest rows.
+ * Driven from changelog/patterns.yaml + changelog/tools/*.yaml in a
+ * single-book app, or changelog/<book>/ in corpus mode. No code change is
+ * needed to grow the dashboard — add manifest rows.
  */
 import Base from '../layouts/Base.astro';
 import PatternTimeline from '../components/PatternTimeline.astro';
@@ -30,14 +31,37 @@ const { bookId } = Astro.props;
 // presence-gate references.astro uses for the optional `sources` collection.
 // When absent, render the dashboard's honest empty-state from a pure
 // all-empty map (no content-collection access).
-const patternsManifest = import.meta.glob('/changelog/patterns.yaml', {
+const rootPatternsManifest = import.meta.glob('/changelog/patterns.yaml', {
   query: '?raw',
   import: 'default',
   eager: true,
 });
-const hasPatterns = '/changelog/patterns.yaml' in patternsManifest;
+const corpusPatternManifests = import.meta.glob('/changelog/*/patterns.yaml', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+const rootToolFiles = import.meta.glob('/changelog/tools/*.yaml', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+const corpusToolFiles = import.meta.glob('/changelog/*/tools/*.yaml', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+const patternsPath = bookId
+  ? `/changelog/${bookId}/patterns.yaml`
+  : '/changelog/patterns.yaml';
+const hasPatterns = bookId
+  ? patternsPath in corpusPatternManifests
+  : patternsPath in rootPatternsManifest;
+const hasChangelog = bookId
+  ? Object.keys(corpusToolFiles).some((path) => path.startsWith(`/changelog/${bookId}/tools/`))
+  : Object.keys(rootToolFiles).length > 0;
 const grouped = hasPatterns
-  ? await getPatternsByCategory()
+  ? await getPatternsByCategory(bookId)
   : emptyPatternsByCategory();
 const totalPatterns = Object.values(grouped).reduce(
   (n, arr) => n + arr.length,
@@ -49,7 +73,7 @@ const totalPatterns = Object.values(grouped).reduce(
 // Surface an actionable hint instead — matching tips.astro / references.astro.
 const noManifestHint = hasPatterns
   ? null
-  : 'No changelog/patterns.yaml found — create it to populate this dashboard, or set routes: { convergence: false } to drop this page.';
+  : `No ${patternsPath.slice(1)} found — create it to populate this dashboard, or remove convergence from this book's apparatus.`;
 ---
 <Base
   title="Convergence — Agentic Coding"
@@ -95,7 +119,9 @@ const noManifestHint = hasPatterns
             </p>
           ) : (
             <div class="convergence-card-list">
-              {patterns.map((p) => <PatternTimeline pattern={p} />)}
+              {patterns.map((p) => (
+                <PatternTimeline pattern={p} bookId={bookId} hasChangelog={hasChangelog} />
+              ))}
             </div>
           )}
         </section>
@@ -105,9 +131,9 @@ const noManifestHint = hasPatterns
     <section class="convergence-method">
       <h2>How to read this</h2>
       <p>
-        The registry lives at <code>changelog/patterns.yaml</code>.
-        Each tool's adoption timeline lives at
-        <code>changelog/tools/&lt;tool&gt;.yaml</code>. The dashboard
+        The registry lives at <code>{patternsPath.slice(1)}</code>.
+        Each tool's adoption timeline lives beside it under
+        <code>{bookId ? `changelog/${bookId}/tools/` : 'changelog/tools/'}</code>. The dashboard
         joins them at build time — no code edits needed to add new
         patterns or new adoption events.
       </p>

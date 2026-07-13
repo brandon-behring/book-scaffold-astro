@@ -100,6 +100,24 @@ src/content/
 └── frontmatter/                 # shared; never a chapter
 ```
 
+Convergence collateral is book-owned too. Keep each registry and its tool
+timelines under the matching manifest id; two books may reuse pattern ids and
+tool filenames without sharing a dashboard:
+
+```text
+changelog/
+├── evaluation/
+│   ├── patterns.yaml
+│   └── tools/*.yaml
+└── llm-app-engineering/
+    ├── patterns.yaml
+    └── tools/*.yaml
+```
+
+The legacy root paths `changelog/patterns.yaml` and `changelog/tools/*.yaml`
+remain the single-book convention. Corpus routes do not read those global
+collections.
+
 The loader emits `<book>/<local-id>` collection ids. The local id is the
 relative path below the book folder without `.md`/`.mdx`, unless frontmatter
 sets a string `slug`. For example:
@@ -169,8 +187,11 @@ top-level route toggle remains camel-cased (`practiceExam`). For each book:
 Naming a route that the application has disabled is a configuration error, not
 a dead link. Only books exposing a route receive its static path, and every
 apparatus renderer selects that book's questions, glossary entries, labels,
-references, tips, or exercises. `examDomains` remains one application-wide
-taxonomy in v5 even though question ids and pages are book-scoped.
+references, tips, exercises, or convergence registry. Flashcard progress is
+persisted under a deployment-base and book-specific key, so repeated local
+term ids do not share or erase study state. `examDomains` remains one
+application-wide taxonomy in v5 even though question ids and pages are
+book-scoped.
 
 ## Search and links
 

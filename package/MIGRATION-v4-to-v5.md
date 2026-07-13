@@ -154,6 +154,18 @@ labels, references, tips, and exercise data use the versioned envelope:
 
 Consumers must select the current book before looking up an entry.
 
+If the corpus exposes convergence dashboards, move the v4 root collateral into
+one directory per manifest id:
+
+```text
+changelog/<book>/patterns.yaml
+changelog/<book>/tools/*.yaml
+```
+
+Corpus routes never reuse a root-level pattern/timeline collection across
+books. Flashcard progress is automatically isolated under per-book storage
+keys; no authoring change is required.
+
 ## Single-book compatibility
 
 A single-book application does not need `defineBookCorpus`. Its

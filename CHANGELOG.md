@@ -18,8 +18,10 @@ mode is opt-in and follows the public contract in Recipe 21.
   local `<BookLink>` resolution, book-aware navigation and metadata, and one
   Pagefind index with explicit `book` filters. Scaffold-owned collection roots
   (`questions`, `glossary`, and `frontmatter`) are reserved as book ids.
-- Labels, references, tips, exercises, questions, and glossary data are scoped
-  to the current book. Corpus JSON uses a strict versioned
+- Labels, references, tips, exercises, questions, glossary, convergence
+  collateral, and flashcard progress are scoped to the current book. Corpus
+  convergence uses `changelog/<book>/`; flashcard storage keys include the
+  deployment base and manifest book. Corpus JSON uses a strict versioned
   `{ schemaVersion, books }` envelope; content-derived CLI commands accept
   `--book <id>` while preserving their v4 flat output and invocation behavior
   for single-book projects.

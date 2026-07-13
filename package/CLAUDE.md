@@ -54,6 +54,10 @@ single-book JSON remains flat. Use `--book <id>` only with the content-derived
 `build-labels`, `build-bib`, `build-tips`, `build-exercises`, and `validate`
 commands. Figures and notebooks remain application-wide.
 
+Convergence collateral lives at `changelog/<book>/patterns.yaml` and
+`changelog/<book>/tools/*.yaml`; root-level v4 collateral is single-book only.
+Flashcard persistence is automatically namespaced by deployment base and book.
+
 Canonical corpus routes are `/`, `/chapters/`, `/<book>/`,
 `/chapters/<book>/`, `/chapters/<book>/<slug>/`, `/search/` (optionally
 `?book=<id>`), and `/<book>/<apparatus>/`, all under Astro `base`. Corpus mode

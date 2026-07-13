@@ -1420,6 +1420,11 @@ glossary collections use `<book>/<local-id>` beneath their own book folders.
 The path is authoritative; no required `book` frontmatter is added, and a
 legacy field may only agree with the path-derived owner.
 
+Convergence collateral uses `changelog/<book>/patterns.yaml` and
+`changelog/<book>/tools/*.yaml`. Each book receives distinct internal content
+collections; the legacy root-level paths are single-book only. Flashcard
+localStorage is likewise keyed by deployment base and manifest book.
+
 The canonical route table (before Astro `base`) is:
 
 | Surface | Pattern |
@@ -1442,8 +1447,9 @@ The closed apparatus slugs are `references`, `print`, `convergence`, `tips`,
 `exercises`, `practice-exam`, `glossary`, `flashcards`, and `answers`. Omission
 inherits the application-enabled subset; an empty array exposes none; an
 explicit list narrows the book. Naming an application-disabled route is an
-error. Navigation, previous/next, metadata, questions, glossary, and apparatus
-renderers select the current book and never cross namespaces implicitly.
+error. Navigation, previous/next, metadata, questions, glossary, convergence,
+flashcard state, and apparatus renderers select the current book and never
+cross namespaces implicitly.
 
 `BookLink` resolves a manifest-owned key locally and a `siblingBooks` key to its
 external origin. Local chapter targets insert the book into the shared chapter

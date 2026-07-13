@@ -27,11 +27,15 @@ import {
 
 interface Props {
   pattern: PatternEntry;
+  bookId?: string;
+  hasChangelog?: boolean;
 }
-const { pattern } = Astro.props;
+const { pattern, bookId, hasChangelog = true } = Astro.props;
 const data = pattern.data;
 
-const timeline = await getPatternTimeline(pattern.id);
+const timeline = hasChangelog
+  ? await getPatternTimeline(pattern.id, bookId)
+  : [];
 const adopters = toolsInTimeline(timeline);
 
 function formatDate(d: Date): string {

@@ -16,7 +16,7 @@
  * academic-profile consumers from seeing `File not found` errors for
  * collections they don't use.
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { defineCollection } from 'astro:content';
 import { glob, file } from 'astro/loaders';
 
@@ -54,9 +54,49 @@ function isYamlEmpty(path: string): boolean {
   }
 }
 
+function assertCorpusConvergenceLayout(books: readonly { id: string }[]): void {
+  const registered = new Set(books.map((book) => book.id));
+  const legacy = existsSync('./changelog/patterns.yaml')
+    ? ['./changelog/patterns.yaml']
+    : [];
+  if (
+    existsSync('./changelog/tools') &&
+    readdirSync('./changelog/tools', { withFileTypes: true }).some(
+      (entry) =>
+        entry.isFile() &&
+        entry.name.endsWith('.yaml') &&
+        !(registered.has('tools') && entry.name === 'patterns.yaml'),
+    )
+  ) {
+    legacy.push('./changelog/tools/*.yaml');
+  }
+  if (legacy.length > 0) {
+    throw new Error(
+      `Corpus convergence collateral must be book-owned; move ${legacy.join(' and ')} ` +
+        'to changelog/<book>/patterns.yaml and changelog/<book>/tools/.',
+    );
+  }
+
+  if (!existsSync('./changelog')) return;
+  for (const entry of readdirSync('./changelog', { withFileTypes: true })) {
+    if (!entry.isDirectory() || registered.has(entry.name)) continue;
+    const base = `./changelog/${entry.name}`;
+    if (existsSync(`${base}/patterns.yaml`) || existsSync(`${base}/tools`)) {
+      throw new Error(
+        `Corpus convergence collateral owner ${JSON.stringify(entry.name)} is not a ` +
+          `registered book. Known books: ${books.map((book) => book.id).join(', ')}.`,
+      );
+    }
+  }
+}
+
 import type { BookSchemasOptions } from './types.js';
 import { resolvePreset } from './types.js';
 import { assertBookCorpus, corpusCollectionEntryId } from './lib/corpus.js';
+import {
+  corpusChangelogCollection,
+  corpusPatternsCollection,
+} from './lib/corpus-collateral.js';
 import {
   academicChapterSchema,
   toolsChapterSchema,
@@ -187,18 +227,43 @@ export function defineBookSchemas(opts: BookSchemasOptions = {}) {
     });
   }
 
-  if (existsSync('./changelog/tools')) {
-    collections.changelog = defineCollection({
-      loader: glob({ pattern: '*.yaml', base: './changelog/tools' }),
-      schema: changelogSchema,
-    });
-  }
+  if (corpus) {
+    // Convergence data is book-owned in corpus mode. Separate collection
+    // names let two books reuse the same pattern ids and tool filenames while
+    // making an accidental global read impossible. Single-book consumers keep
+    // the established root-level authoring paths below.
+    assertCorpusConvergenceLayout(corpus.books);
+    for (const book of corpus.books) {
+      const changelogBase = `./changelog/${book.id}/tools`;
+      if (existsSync(changelogBase)) {
+        collections[corpusChangelogCollection(book.id)] = defineCollection({
+          loader: glob({ pattern: '*.yaml', base: changelogBase }),
+          schema: changelogSchema,
+        });
+      }
 
-  if (existsSync('./changelog/patterns.yaml')) {
-    collections.patterns = defineCollection({
-      loader: file('changelog/patterns.yaml'),
-      schema: patternsSchema,
-    });
+      const patternsPath = `changelog/${book.id}/patterns.yaml`;
+      if (existsSync(`./${patternsPath}`)) {
+        collections[corpusPatternsCollection(book.id)] = defineCollection({
+          loader: file(patternsPath),
+          schema: patternsSchema,
+        });
+      }
+    }
+  } else {
+    if (existsSync('./changelog/tools')) {
+      collections.changelog = defineCollection({
+        loader: glob({ pattern: '*.yaml', base: './changelog/tools' }),
+        schema: changelogSchema,
+      });
+    }
+
+    if (existsSync('./changelog/patterns.yaml')) {
+      collections.patterns = defineCollection({
+        loader: file('changelog/patterns.yaml'),
+        schema: patternsSchema,
+      });
+    }
   }
 
   // v4.17.0 (Tier 3, #112): study-guide `questions` collection. Registered only

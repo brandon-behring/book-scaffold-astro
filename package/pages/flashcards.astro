@@ -57,6 +57,9 @@ const rendered = await Promise.all(
     return { ...card, Content: (await render(entry)).Content };
   }),
 );
+const storageKey = bookId
+  ? `book:${import.meta.env.BASE_URL}:flashcards:${bookId}:known`
+  : undefined;
 ---
 <Base
   title="Flashcards"
@@ -79,7 +82,11 @@ const rendered = await Promise.all(
         {/* Without JS the island's deck controls would render dead — hide
             them; the full card list below stays readable. */}
         <noscript><style is:inline>.flashcards-runner { display: none; }</style></noscript>
-        <Flashcards client:idle deck={deck.map(({ id, front }) => ({ id, front }))} />
+        <Flashcards
+          client:idle
+          deck={deck.map(({ id, front }) => ({ id, front }))}
+          storageKey={storageKey}
+        />
         <section class="flashcards-list">
           {rendered.map((card) => {
             const Content = card.Content;

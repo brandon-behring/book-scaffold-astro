@@ -156,6 +156,13 @@ Questions, glossary entries, and other collection-backed apparatus use the
 same `<book>/<local-id>` convention when corpus mode is active. A book without
 that apparatus may omit its directory.
 
+Convergence uses `changelog/<book>/patterns.yaml` and
+`changelog/<book>/tools/*.yaml` in corpus mode. Those paths become separate
+internal collections per manifest book, so repeated pattern ids and tool
+filenames cannot bleed across dashboards. Root-level v4 convergence paths
+remain single-book only. Flashcard persistence is likewise keyed by deployment
+base and manifest book.
+
 ## Route table
 
 All generated links are resolved through Astro's normalized `base`. The paths

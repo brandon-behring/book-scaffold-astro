@@ -1,0 +1,5 @@
+- id: shared-pattern
+  name: Evaluation-only convergence sentinel
+  description: A pattern owned only by the evaluation book.
+  category: safety
+  convergence_date: 2026-01-01
