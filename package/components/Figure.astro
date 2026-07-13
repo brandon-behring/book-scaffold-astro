@@ -8,9 +8,9 @@
  *
  * v4.11.0 (#84): a local pipeline `.svg` is **inlined** (read from public/ +
  * `set:html`) rather than referenced via `<img>`. Inlining puts the SVG in the
- * host DOM, so the page's tokens.css `--diagram-*` cascade in — the figure
- * tracks the in-page dark-mode toggle (an `<img>`-loaded SVG is CSS-isolated
- * and could only follow the OS preference). Inlining also lets a11y
+ * host DOM, so tokens.css `--fig-*`, `--series-*`, and `--diagram-*` cascade
+ * in — the figure tracks the in-page dark-mode toggle (an `<img>`-loaded SVG
+ * is CSS-isolated and could only follow the OS preference). Inlining also lets a11y
  * `<title>`/`<desc>` come from this component's props (assembleSvg). Non-SVG
  * (the pdftoppm `.png` fallback), remote, or unreadable `src` gracefully keep
  * the `<img>` render — a figure must never crash a build.

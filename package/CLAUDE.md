@@ -229,9 +229,11 @@ See `recipes/09-validation.md` to extend.
 2. `npm run build:figures` produces `public/figures/<topic>/<name>.svg`.
 3. Reference: `<Figure src="/figures/<topic>/<name>.svg" caption="..." alt="..." id="..." />`.
 
-**Accessibility + dark mode (v4.11.0, #84).** `build:figures` rewrites every generated SVG so one file serves both themes: it adds `role="img"` and remaps the *neutral* fills/strokes to `var(--diagram-ink|paper|grid, <original>)` (saturated accent colors are left as authored). `<Figure>` **inlines** a local `.svg` (vs `<img>`), so the page's `--diagram-*` tokens cascade in and the figure tracks the in-page dark-mode toggle; `caption`/`alt`/`desc` become the SVG's `<title>`/`<desc>`. Notes:
+**Accessibility + dark mode (v4.11.0, #84; #161/#164).** `build:figures` rewrites every generated SVG so one file serves both themes: it adds `role="img"`, maps exact Warm–Tol authoring colors to semantic `--fig-*`, maps the seven chromatic Okabe–Ito colors to stable `--series-1..7`, and remaps neutral fills/strokes to the backward-compatible `--diagram-ink|paper|grid` aliases. Canonical series-8 black is indistinguishable from structural ink after PDF export; both resolve through `--fig-ink` in either theme. Unknown saturated colors stay authored. `<Figure>` **inlines** a local `.svg` (vs `<img>`), so the page's tokens cascade in and the figure tracks the in-page dark-mode toggle; `caption`/`alt`/`desc` become the SVG's `<title>`/`<desc>`. Notes:
 
 - `alt` is the short accessible name (defaults to `caption`); `desc` is an optional longer description.
+- For pale fills, export the canonical base color with a separate opacity (`fill opacity` / `alpha`), not a pre-blended tint such as `warmblue!13`; see `recipes/24-figure-authoring-standard.md`.
+- Use `--fig-*` for meaning and `--series-*` only for categorical ordinals. Always add a non-color cue (label, marker, dash, shape, or texture).
 - Non-SVG (`.png` fallback), remote, or unreadable `src` keep the `<img>` render.
 - Opt a figure out of theming with a `%! no-theme` line in its source `.tex`.
 - After upgrading, re-run `npm run build:figures` to theme pre-existing figures (the rewrite is idempotent).

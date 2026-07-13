@@ -25,10 +25,10 @@
  *
  * v4.11.0 (closes #84): each generated SVG gets a post-export rewrite
  * (recolorSvg) that injects role="img" + a CSS-variable theming layer so one
- * SVG serves light + dark. Neutral fills/strokes are remapped to
- * var(--diagram-ink|paper|grid, <original>) via injected attribute-selector
- * rules (the original attribute stays as the fallback); saturated accent colors
- * are left untouched. A `%! no-theme` line in the source .tex opts a figure out.
+ * SVG serves light + dark. Known Warm–Tol semantic and Okabe–Ito categorical
+ * colors are mapped to var(--fig-*|--series-*, <original>); neutral paints map
+ * to var(--diagram-ink|paper|grid, <original>). Unknown saturated colors stay
+ * authored. A `%! no-theme` line in the source .tex opts a figure out.
  * <Figure> inlines local SVGs so they track the in-page [data-theme] toggle.
  *
  * Idempotent: skips when the target SVG is newer than the source PDF (and the
@@ -56,8 +56,10 @@ Figure pipeline. PDF -> SVG via pdftocairo (PNG fallback via pdftoppm at
 Graceful-skip if pdftocairo / pdftoppm not on PATH.
 
 Each SVG is rewritten to be accessible + dark-mode-aware: role="img" plus
-var(--diagram-ink|paper|grid, orig) fills (a "%! no-theme" line in the
-source .tex opts out). <Figure> inlines local SVGs so they track the theme.
+exact Warm–Tol/Okabe–Ito palette mappings and neutral
+var(--diagram-ink|paper|grid, orig) mappings. Use base color + separate opacity,
+not a pre-blended tint. A "%! no-theme" line in the source .tex opts out.
+<Figure> inlines local SVGs so they track the theme.
 
 Env:
   BOOK_FIGURES_PATH   Override figures source (default: figures/).
@@ -202,7 +204,7 @@ const NO_THEME_RE = /^\s*%!\s*no-theme\b/m;
 /**
  * v4.11.0 (#84): apply the theming rewrite to a generated SVG in place.
  * No-op (returns false) if the file is absent or recolorSvg leaves it unchanged
- * (already themed / nothing neutral to remap). Idempotent.
+ * (already themed / nothing themeable to remap). Idempotent.
  */
 function themeIfSvg(svgPath, optOut) {
   if (!existsSync(svgPath)) return false;

@@ -1215,6 +1215,32 @@ instead of swapping after paint. The transform matches only Fontsource's
 Roboto entry module; Source Code Pro, KaTeX, and consumer font CSS keep their
 own display policies.
 
+### Figure palette ownership (#161, #164)
+
+`tokens.css` exposes two deliberately separate public token families:
+
+- Warm–Tol `--fig-blue|rose|green|plum|gold|crimson` plus
+  `--fig-ink|paper|grid` carry semantic meaning and may change value between
+  light and dark themes.
+- Okabe–Ito `--series-1..8` are stable categorical ordinals, never semantic
+  good/bad roles. Series 1–7 retain their canonical chromatic values; series 8
+  follows figure ink so canonical export black remains visible on dark paper.
+
+The pure `package/src/lib/figure-palette.mjs` manifest is the sole authored
+palette record. It distinguishes an export color from a rendered theme value
+(notably canonical Warm–Tol gold `#C09840` versus the darker light-theme
+`--fig-gold`) and records the unavoidable series-8/structural-black PDF
+collision. `figure.mjs` derives exact SVG-color mappings and standalone SVG
+theme defaults from that manifest. The manifest also renders the delimited
+figure-token block committed in `tokens.css`; `check:figure-tokens` and the
+package tests fail if that generated CSS drifts. Do not hand-edit that block.
+
+`build-figures` maps canonical authored colors back to these variables while
+leaving the original SVG attributes as fallbacks. Pale semantic fills must use
+the canonical base color plus a separate opacity; pre-blended tints have lost
+their role by the time PDF export produces RGB. The backward-compatible
+`--diagram-ink|paper|grid` aliases remain the neutral mapping surface.
+
 Option β (consumer side-effect imports CSS in `astro.config.mjs`) was the fallback if Option α failed. Not needed.
 
 ---

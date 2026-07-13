@@ -49,7 +49,7 @@ BOOK_PROFILE=academic
 - **Pagefind full-text search** + **Paged.js PDF export**
 - **`book-scaffold` CLI** dispatcher with sub-commands: `validate`, `build-labels`, `build-bib`, `build-figures`, `build-tips`, `build-exercises`, `render-notebooks`
 - **Cloudflare deploy templates**: Workers + Static Assets for academic/tools/minimal; Pages for course-notes/research-portfolio
-- **Warm Tol 5-hue palette** (colorblind-safe; light + dark modes)
+- **Warm–Tol semantic palette + Okabe–Ito 8-series figure palette** (color-vision-deficiency-friendly; light + dark modes)
 
 ### Per-chapter provenance audit trail (v4.8.0)
 
