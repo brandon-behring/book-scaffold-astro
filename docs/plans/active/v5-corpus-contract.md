@@ -1,9 +1,9 @@
 # v5 corpus contract — one app, one build, multiple books
 
-**Date:** 2026-07-13 · **Issue:** #80 · **Status:** accepted for implementation
+**Date:** 2026-07-13 · **Issue:** #80 · **Status:** implemented in v5.0.0
 
-This document is the design gate for the v5 corpus work. It defines the public
-contract before route, schema, or tooling code lands. Later implementation may
+This document was the design gate for the v5 corpus work and remains the public
+contract for the implementation shipped in v5.0.0. Later implementation may
 change internal names, but it must not change the behavior below without an
 explicit design amendment.
 
@@ -308,9 +308,8 @@ needed for the blessed recipe.
   corpus resolver supplies local book identity but does not make #147 complete.
 - #190 owns fail-loud detection of authored root-absolute internal links under
   a non-root base. Corpus routing does not rewrite authored MDX.
-- #158 consumes the manifest, selectors, diagnostics, and artifact envelope to
-  report readiness. Its interface is designed now and implemented after the
-  v5 corpus core.
+- #158 consumed the manifest, selectors, diagnostics, and artifact envelope to
+  report readiness; that independent slice shipped in v5.1.0.
 - #157 consumes resolved book/page identity for generated social cards. It is
   designed now and implemented after the v5 corpus core.
 - #210's Anki authoring/export contract remains parked and out of scope.
