@@ -150,6 +150,7 @@ test('#186: every preset emits the same prevalidate and prebuild lifecycle', asy
       `${preset}: uniform generated-artifact lifecycle`,
     );
     assert.equal(pkg.scripts.prebuild, 'npm run validate --if-present');
+    assert.equal(pkg.scripts.qa, 'book-scaffold qa');
   }
 });
 

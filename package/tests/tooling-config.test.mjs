@@ -158,6 +158,8 @@ test('#175: resolved integration metadata carries top-level-over-style numberSty
     bookField: 'book',
     apparatusRoute: '/:route/',
     apparatusRoutes: [],
+    enabledRoutes: ['references', 'search', 'print', 'chapters', 'landing'],
+    frontmatterRoute: '/frontmatter/[slug]',
   });
   assert.equal(
     Object.prototype.propertyIsEnumerable.call(
@@ -241,6 +243,8 @@ test('#175/#190: Vite loader reads composed metadata, evaluated base, and defaul
       bookField: 'volume',
       apparatusRoute: '/:route/',
       apparatusRoutes: [],
+      enabledRoutes: ['references', 'search', 'print', 'chapters', 'landing'],
+      frontmatterRoute: '/frontmatter/[slug]',
       base: '/library/books',
       integrationFound: true,
     });
@@ -261,6 +265,8 @@ test('#175/#190: Vite loader reads composed metadata, evaluated base, and defaul
       bookField: 'book',
       apparatusRoute: '/:route/',
       apparatusRoutes: [],
+      enabledRoutes: [],
+      frontmatterRoute: '/frontmatter/[slug]',
       base: '/',
       integrationFound: true,
     });
@@ -278,6 +284,8 @@ test('#175/#190: Vite loader reads composed metadata, evaluated base, and defaul
       bookField: 'book',
       apparatusRoute: '/:route/',
       apparatusRoutes: [],
+      enabledRoutes: [],
+      frontmatterRoute: '/frontmatter/[slug]',
       base: 'standalone/',
       integrationFound: false,
     });

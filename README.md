@@ -67,6 +67,24 @@ cross-book links, and search results stay book-scoped. See
 [Recipe 21](package/recipes/21-multi-guide-single-app.md) for the full setup and
 [the v4 → v5 guide](package/MIGRATION-v4-to-v5.md) for migration.
 
+## Content readiness
+
+Run the scaffold-owned readiness adapter locally or as deterministic JSON in
+CI:
+
+```bash
+npm exec -- book-scaffold qa
+npm --offline exec -- book-scaffold qa --format json
+```
+
+It reuses the `validate` content contract and adds chapter, link,
+learning-objective, component, and JSON-fixture facts with explicit traffic-light
+verdicts. Corpus mode checks every manifest book by default; use `--book <id>`
+for one. `book-scaffold init-qa` generates an overwrite-safe, network-free
+`guide_qa.yaml` for portfolio QA engines. See
+[Recipe 25](package/recipes/25-qa-readiness.md) for selectors, exit codes,
+schema-v1 JSON, and CI wiring.
+
 ## What ships in the package
 
 - **65 Astro components + 8 Preact components** — 70 individually exported `./components/<Name>` entries for citations, figures, pedagogy, study tools, and navigation, plus `DemoFrame` / `Slider` / `StatCards` and `useThemeColors` through the opt-in `./demo` barrel
@@ -78,7 +96,7 @@ cross-book links, and search results stay book-scoped. See
 - **KaTeX 37-macro library** (academic + research-portfolio presets)
 - **BibTeX citation pipeline** via citation-js (academic profile)
 - **Pagefind full-text search** + **Paged.js PDF export**
-- **`book-scaffold` CLI** dispatcher with sub-commands: `validate`, `build-labels`, `build-bib`, `build-figures`, `build-tips`, `build-exercises`, `render-notebooks`; content-derived commands accept `--book` in corpus mode
+- **`book-scaffold` CLI** dispatcher with readiness commands (`validate`, `qa`, `init-qa`), content indexes (`build-labels`, `build-bib`, `build-tips`, `build-exercises`), and application-wide asset pipelines (`build-figures`, `render-notebooks`); content-derived commands and `qa` support exact corpus-book selection
 - **Cloudflare deploy templates**: Workers + Static Assets for academic/tools/minimal; Pages for course-notes/research-portfolio
 - **Warm–Tol semantic palette + Okabe–Ito 8-series figure palette** (color-vision-deficiency-friendly; light + dark modes)
 

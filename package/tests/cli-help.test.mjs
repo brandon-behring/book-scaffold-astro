@@ -26,6 +26,8 @@ const SCRIPTS_DIR = resolve(__dirname, '..', 'scripts');
 
 const SUBCOMMANDS = [
   'validate.mjs',
+  'qa.mjs',
+  'init-qa.mjs',
   'build-labels.mjs',
   'build-bib.mjs',
   'build-figures.mjs',

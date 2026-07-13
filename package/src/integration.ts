@@ -358,6 +358,11 @@ export function bookScaffoldIntegration(
     ),
     frontmatter: fmEnabled,
   };
+  const enabledRouteNames = Object.freeze(
+    Object.entries(enabledRoutes)
+      .filter(([, on]) => on)
+      .map(([name]) => name),
+  );
 
   // Corpus manifests speak in public URL slugs while RouteToggles uses the
   // historical camelCase `practiceExam` key. Derive the inherited public set
@@ -471,9 +476,6 @@ export function bookScaffoldIntegration(
         // collision with stale `.env` BOOK_TITLE entries). enabledRouteNames
         // is the post-merge list — consumers like dlai (routes.chapters:
         // false) get a landing with no broken /chapters/ link.
-        const enabledRouteNames = Object.entries(enabledRoutes)
-          .filter(([, on]) => on)
-          .map(([name]) => name);
         updateConfig({
           vite: {
             plugins: [
@@ -561,6 +563,8 @@ export function bookScaffoldIntegration(
       apparatusRoutes: corpus
         ? inheritedCorpusApparatusRoutes
         : apparatusRoutes ?? [],
+      enabledRoutes: enabledRouteNames,
+      frontmatterRoute: frontmatterPatternFromPrefix(fmPrefix),
     }),
     enumerable: false,
     configurable: false,

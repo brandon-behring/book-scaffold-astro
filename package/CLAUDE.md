@@ -50,9 +50,11 @@ those directories belong to scaffold content collections, not chapter owners.
 Keep every lookup book-scoped: navigation/previous-next, labels, references,
 tips, exercises, questions, and glossary entries must select the current
 manifest book. Corpus JSON is `{ schemaVersion: 1, books: { [id]: payload } }`;
-single-book JSON remains flat. Use `--book <id>` only with the content-derived
-`build-labels`, `build-bib`, `build-tips`, `build-exercises`, and `validate`
-commands. Figures and notebooks remain application-wide.
+single-book JSON remains flat. The content-derived `build-labels`, `build-bib`,
+`build-tips`, `build-exercises`, and `validate` commands accept `--book <id>`
+in corpus mode. `qa` defaults to all manifest books, accepts either one exact
+`--book <id>` or `--all`, and rejects `--book` in single-book mode. Figures and
+notebooks remain application-wide.
 
 Convergence collateral lives at `changelog/<book>/patterns.yaml` and
 `changelog/<book>/tools/*.yaml`; root-level v4 collateral is single-book only.
@@ -201,6 +203,7 @@ npm install                  # once after clone
 npm run dev                  # localhost:4321
 npm run build                # astro build + pagefind index → dist/
 npm run validate             # pre-flight check (recipe 09)
+npm exec -- book-scaffold qa # content-readiness verdict (recipe 25)
 npm run build:bib            # rebuild references.json after .bib edit
 npm run pdf                  # render dist-pdf/book.pdf via Paged.js
 ```
@@ -226,6 +229,27 @@ A consumer `public/_headers` wins unchanged. Use
 `securityHeaders: { contentSecurityPolicy: "..." }` to replace only the CSP,
 or `securityHeaders: false` when another layer owns all headers. Recipe 05 has
 the full precedence and customization contract.
+
+## QA and content readiness
+
+Run `npm exec -- book-scaffold qa` after substantive content changes. It calls
+the same content-contract library as `validate`, then reports stable chapter,
+link, learning-objective, component, and JSON-fixture facts. Human output is
+the default. For CI use `npm --offline exec -- book-scaffold qa --format json`;
+JSON stdout contains only the schema-v1 result, while progress/fatal details go
+to stderr. Exit `0` means no blocking failure, `1` means a red selected/shared
+result, and `2` means the invocation or execution failed.
+
+In a corpus, omission checks every manifest book in order; `--book <id>` checks
+one and `--all` states the default explicitly. Schema v1 always includes a
+top-level `shared: { verdict, checks, diagnostics }` aggregate for corpus-wide
+fixture data. Its exact single-book value is
+`{ "verdict": "not_applicable", "checks": {}, "diagnostics": [] }`.
+
+Run `npm exec -- book-scaffold init-qa` only when a portfolio QA engine needs
+`guide_qa.yaml`. It emits one deterministic offline command per manifest book,
+or one implicit `book` entry without `--book`. It preserves an existing file;
+`--force` replaces that whole file and no other path. See Recipe 25.
 
 ## Validation
 

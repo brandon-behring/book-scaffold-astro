@@ -11,6 +11,8 @@ export const DEFAULT_TOOLING_CONFIG = Object.freeze({
   bookField: 'book',
   apparatusRoute: '/:route/',
   apparatusRoutes: Object.freeze([]),
+  enabledRoutes: Object.freeze([]),
+  frontmatterRoute: '/frontmatter/[slug]',
   base: '/',
   integrationFound: false,
 });
@@ -32,6 +34,21 @@ const APPARATUS_ROUTES = [
   'practice-exam',
   'flashcards',
   'answers',
+];
+const ROUTE_TOGGLES = [
+  'references',
+  'search',
+  'print',
+  'chapters',
+  'convergence',
+  'frontmatter',
+  'tips',
+  'exercises',
+  'practiceExam',
+  'glossary',
+  'answers',
+  'flashcards',
+  'landing',
 ];
 
 function findAstroConfig(projectRoot) {
@@ -139,6 +156,21 @@ function resolveApparatusRoutes(value, configPath) {
     throw new Error(
       `book-scaffold tooling: ${configPath} resolved invalid apparatusRoutes; ` +
         `expected unique values from ${APPARATUS_ROUTES.join(' | ')}.`,
+    );
+  }
+  return Object.freeze([...value]);
+}
+
+function resolveEnabledRoutes(value, configPath) {
+  if (value == null) return [];
+  if (
+    !Array.isArray(value) ||
+    value.some((route) => typeof route !== 'string' || !ROUTE_TOGGLES.includes(route)) ||
+    new Set(value).size !== value.length
+  ) {
+    throw new Error(
+      `book-scaffold tooling: ${configPath} resolved invalid enabledRoutes; ` +
+        `expected unique values from ${ROUTE_TOGGLES.join(' | ')}.`,
     );
   }
   return Object.freeze([...value]);
@@ -276,6 +308,13 @@ export async function loadResolvedBookConfig(projectRoot = process.cwd()) {
       configPath,
     ),
     apparatusRoutes: resolveApparatusRoutes(metadata.apparatusRoutes, configPath),
+    enabledRoutes: resolveEnabledRoutes(metadata.enabledRoutes, configPath),
+    frontmatterRoute: resolveNonEmptyString(
+      metadata.frontmatterRoute,
+      DEFAULT_TOOLING_CONFIG.frontmatterRoute,
+      'frontmatterRoute',
+      configPath,
+    ),
     base,
     integrationFound: true,
   };

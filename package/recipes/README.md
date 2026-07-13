@@ -30,6 +30,7 @@ Terse pointers into canonical code for the most common book-authoring workflows.
 | 22 | [Responsive navigation and custom routing](22-responsive-nav-and-multibook-routing.md) | any | Mobile/desktop nav and the v4-compatible consumer-owned route-token API |
 | 23 | [Interactive demo substrate](23-interactive-demo-substrate.md) | any | Opt-in Preact shell, slider, stat cards, theme colors, a11y, and reduced motion |
 | 24 | [Figure authoring standard](24-figure-authoring-standard.md) | any | Warm–Tol semantics, Okabe–Ito series, dual-theme exports, contrast, and accessible descriptions |
+| 25 | [QA and content readiness](25-qa-readiness.md) | any | Stable human/JSON readiness verdicts, corpus selection, CI, and `guide_qa.yaml` |
 
 ## How to read recipes
 

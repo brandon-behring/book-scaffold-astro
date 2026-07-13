@@ -1,7 +1,7 @@
 {
   "name": "@brandon_m_behring/create-book",
   "description": "Bootstrap CLI for @brandon_m_behring/book-scaffold-astro. Scaffold a thin consumer book with one of five built-in presets.",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "type": "module",
   "license": "MIT",
   "author": "Brandon Behring",

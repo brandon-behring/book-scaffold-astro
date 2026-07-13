@@ -2,6 +2,48 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [5.1.0] — 2026-07-13
+
+### Added
+
+- **Deterministic content readiness (`book-scaffold qa`, #158).** One command
+  now composes the existing validator with chapter, authored-link,
+  learning-objective, scaffold-component, and JSON demo-fixture checks. It
+  emits compact human output or stable schema-v1 JSON, keeps command stdout
+  clean even when consumer configuration logs, and uses exit codes 0/1/2 for
+  ready, blocking-content, and invocation/config/internal failures.
+- **First-class corpus QA.** `--book <id>` selects one manifest book while
+  `--all` or no selector preserves manifest order. Results retain independent
+  book verdicts plus an explicit corpus-shared fixture aggregate; repeated
+  slugs, ids, and components never leak across books.
+- **Offline QA registry (`book-scaffold init-qa`).** Generated
+  `guide_qa.yaml` files contain deterministic `npm --offline exec --` commands,
+  refuse accidental overwrite, and support exact forced regeneration. New
+  `create-book` projects also receive an `npm run qa` script.
+- Demo fixtures may reference draft-07, 2019-09, or 2020-12 JSON Schemas with
+  recursive project-local references. Network, mixed-dialect, and symlink
+  escapes fail closed; `format` remains annotation-only in schema v1.
+
+### Changed
+
+- Validation exposes its structured in-process result and resolved tooling
+  configuration to QA while preserving the existing `validate` CLI and
+  self-healing artifact behavior.
+- Authored-link readiness follows exact enabled scaffold routes, configurable
+  frontmatter prefixes, Astro dynamic/Markdown page conventions, public
+  assets, draft publication state, and rendered scaffold anchor transforms.
+  Unverifiable consumer-component/non-chapter fragments are explicit amber
+  advisories rather than guessed passes or blocking false positives.
+
+### Tests
+
+- The package suite now has **732 passing tests**; the create-book suite has
+  **32**, including real QA runs for freshly generated projects across all five
+  presets. Focused coverage locks selector/exit branches, deterministic
+  rendering, clean stdout, corpus attribution, recursive local schemas,
+  route/anchor edge cases, self-healing artifacts, and tarball dependency
+  closure.
+
 ## [5.0.0] — 2026-07-13
 
 Major release — **first-class multi-book corpora plus two deliberate

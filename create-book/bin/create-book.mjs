@@ -148,6 +148,7 @@ function makeTemplates(name, profile, toolkitVersion, author) {
     "build:figures": "book-scaffold build-figures",
     "build:notebooks": "book-scaffold render-notebooks",
     "validate": "book-scaffold validate",
+    "qa": "book-scaffold qa",
     "dev": "astro dev",
     "build": "astro build && pagefind --site dist",
     "preview": "astro preview",
