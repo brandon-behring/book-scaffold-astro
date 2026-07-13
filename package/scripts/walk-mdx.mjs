@@ -131,10 +131,11 @@ export async function* walkMdx(dir, baseDir = dir) {
   }
   entries.sort((a, b) => a.name.localeCompare(b.name));
   for (const entry of entries) {
-    // Astro's content glob excludes every path segment beginning with `_`.
-    // Apply the same convention centrally so all artifact producers and
-    // validate see an identical content set, including nested draft dirs.
-    if (entry.name.startsWith('_')) continue;
+    // Astro's content glob excludes underscore-prefixed paths through the
+    // explicit `!**/_*` pattern and dot-prefixed paths through tinyglobby's
+    // default `dot: false`. Apply both rules centrally so every artifact
+    // producer and validate see the same content set, including nested drafts.
+    if (entry.name.startsWith('_') || entry.name.startsWith('.')) continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       yield* walkMdx(full, baseDir);
