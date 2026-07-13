@@ -5,7 +5,7 @@ The toolkit and bootstrap CLI publish automatically from
 npm trusted publishing uses GitHub OIDC; no long-lived `NPM_TOKEN` is part of
 the release path.
 
-Last verified: 2026-07-13 (`v4.27.0`).
+Last verified: 2026-07-13 (`v4.29.0`).
 
 ## Canonical release state
 

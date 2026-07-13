@@ -2,6 +2,34 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.29.0] — 2026-07-13
+
+### Added
+
+- **Vendored sibling-book target validation (#147).** `siblingBooks` entries
+  may remain URL strings or opt into `{ url, labels }` descriptors. When an
+  index is supplied, `validate` resolves literal `<BookLink>` destinations and
+  fails on missing cross-book paths or fragments; URL-only and route-only
+  destinations retain the v4 behavior with an explicit skip warning.
+- **Route-aware heading indexes.** `build-labels` now records Astro-derived
+  h2–h6 anchors alongside component labels, including inline formatting,
+  smart punctuation, duplicate suffixes, nested chapter IDs, and evaluated
+  `chapterRoute` / `bookField` patterns. Heading keys are opaque and
+  path-qualified, while historical component keys remain compatible.
+
+### Fixed
+
+- Chapter-base discovery now ignores comments, unrelated collections, and
+  spread configuration before selecting the actual `chapters` collection.
+
+### Tests
+
+- Package coverage exercises exact sibling href matching, duplicate fragments,
+  custom routes, config evaluation, legacy URL descriptors, and tarball/type
+  contracts. A disposable four-book consumer matrix indexed 893 headings and
+  17 component labels, resolved all seven authored fragment links, and passed
+  validation for every book.
+
 ## [4.28.0] — 2026-07-13
 
 ### Added
