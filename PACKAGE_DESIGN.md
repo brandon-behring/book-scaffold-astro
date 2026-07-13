@@ -1149,6 +1149,14 @@ Add `package/dist/` (generated artifact; rebuilt on every publish).
 
 Mechanism: `bookScaffoldIntegration` calls `injectScript('page-ssr', "import '@brandon_m_behring/book-scaffold-astro/styles/<name>.css';")` for each resolved CSS basename in the profile's list (plus `extraStyles`). Astro's Vite resolver follows `package.json#exports` for the CSS subpaths; the rules land in the consumer's built `<head>` with zero CSS imports in `astro.config.mjs`.
 
+The always-loaded Roboto body face remains self-hosted through Fontsource, but
+its package-owned `font-display: swap` declarations are transformed to
+`optional` (#187). `Base.astro` preloads the Latin variable face, so normal
+connections retain Roboto while a slow cold load keeps the system fallback
+instead of swapping after paint. The transform matches only Fontsource's
+Roboto entry module; Source Code Pro, KaTeX, and consumer font CSS keep their
+own display policies.
+
 Option β (consumer side-effect imports CSS in `astro.config.mjs`) was the fallback if Option α failed. Not needed.
 
 ---

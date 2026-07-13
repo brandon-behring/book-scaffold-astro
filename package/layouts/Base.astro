@@ -39,6 +39,7 @@
  * — or the page ends up with duplicate `<main>` landmarks (a11y, #91).
  */
 import '@fontsource-variable/roboto';
+import robotoLatinUrl from '@fontsource-variable/roboto/files/roboto-latin-wght-normal.woff2?url';
 import '@fontsource-variable/source-code-pro';
 // KaTeX CSS is injected by bookScaffoldIntegration for academic profile
 // only (since v3.0 alpha.8) — tools/minimal profiles don't install katex
@@ -128,6 +129,15 @@ const baseUrl = normalizeBase(import.meta.env.BASE_URL);
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href={`${baseUrl}favicon.svg`} />
+    {/* #187: start the common Latin body face early. Its Fontsource rules use
+        font-display: optional, so a slow response never swaps after paint. */}
+    <link
+      rel="preload"
+      href={robotoLatinUrl}
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <meta name="generator" content={Astro.generator} />
