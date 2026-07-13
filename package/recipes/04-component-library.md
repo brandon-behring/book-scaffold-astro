@@ -42,19 +42,29 @@ For full theorem-like environments (proof scaffolding, numbering), use `<Theorem
 
 ## Theorem family (academic profile)
 
-`src/components/Theorem.astro` — unified component for nine LaTeX-style environments via the `type` prop:
+`src/components/Theorem.astro` — unified component for nine LaTeX-style environments via the canonical `kind` prop (`type` remains a legacy alias):
 
 ```mdx
-<Theorem type="theorem" id="thm:zoh-stability" label="ZOH stability">
+<Theorem kind="theorem" id="thm:zoh-stability" name="ZOH stability">
 The bilinear discretization preserves stability iff $|\lambda \Delta t| < 1$.
 </Theorem>
 
-<Theorem type="proof">
+<Theorem kind="proof">
 Direct algebra on the bilinear map.
 </Theorem>
 ```
 
-Supported `type` values: `theorem`, `proposition`, `lemma`, `corollary`, `definition`, `example`, `exercise`, `remark`, `proof`. Each gets its own bar color and numbering counter.
+Supported kinds: `theorem`, `proposition`, `lemma`, `corollary`, `definition`, `example`, `exercise`, `remark`, `proof`. Each gets its own bar color. By default all kinds share one amsthm-style sequence, preserving the v4.26-and-earlier contract. To give each kind an independent sequence, set the persistent book/style option:
+
+```js
+export default await defineBookConfig({
+  styles: [academicStyle],
+  numberStyle: 'per-kind', // or declare it in a composed defineStyle(...)
+  site: 'https://example.invalid',
+});
+```
+
+`build-labels` evaluates the real Astro config and records the resolved strategy. An explicit `label=` override is custom and unnumbered, so it consumes no counter in either mode. Omission defaults to `shared`, including legacy projects with no resolvable scaffold integration.
 
 ## Utility components (any profile)
 
