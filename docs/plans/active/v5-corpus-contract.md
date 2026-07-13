@@ -182,7 +182,8 @@ apparatusRoute = /:book/:route/
 ```
 
 Those happen to preserve the Recipe 21 chapter route while making apparatus
-book-specific. Explicit `chapterRoute`, `bookField`, or `apparatusRoute`
+book-specific. Explicit `chapterRoute`, `bookField`, `apparatusRoute`, or
+`apparatusRoutes`
 overrides are rejected in corpus mode because alternate patterns would make
 the injected route table disagree with navigation. They remain supported for
 v5 single-book applications and v4-style consumer-owned routing.

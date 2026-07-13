@@ -122,7 +122,7 @@ export async function defineBookConfig(
           `the composed Style preset ${JSON.stringify(profile)}. One preset applies to the whole corpus.`,
       );
     }
-    const incompatible = ['chapterRoute', 'bookField', 'apparatusRoute'].filter((field) =>
+    const incompatible = ['chapterRoute', 'bookField', 'apparatusRoute', 'apparatusRoutes'].filter((field) =>
       Object.prototype.hasOwnProperty.call(opts, field),
     );
     if (incompatible.length > 0) {
