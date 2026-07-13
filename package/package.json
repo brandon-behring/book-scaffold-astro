@@ -156,6 +156,7 @@
     "src/profiles",
     "src/profile-kit.ts",
     "src/schemas.ts",
+    "src/types.ts",
     "components",
     "styles",
     "layouts",

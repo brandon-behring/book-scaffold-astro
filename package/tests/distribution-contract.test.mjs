@@ -37,11 +37,31 @@ test('toolkit tarball ships both agent-guide names and both scoped licenses', ()
     'MIGRATION-v4-to-v5.md',
     'dist/demo.mjs',
     'dist/demo.d.ts',
+    'src/lib/corpus.ts',
+    'src/types.ts',
     'styles/demo.css',
     'recipes/23-interactive-demo-substrate.md',
   ]) {
     assert.ok(files.has(path), `toolkit tarball must contain ${path}`);
   }
+});
+
+test('toolkit tarball closes the corpus runtime source dependency on types', () => {
+  const packageRoot = join(root, 'package');
+  const files = dryRunPackFiles(packageRoot);
+  const corpusPath = 'src/lib/corpus.ts';
+  const source = readFileSync(join(packageRoot, corpusPath), 'utf8');
+  const runtimeImport = source.match(/from ['"](\.\.\/types\.js)['"]/);
+
+  assert.ok(runtimeImport, `${corpusPath} must retain an explicit runtime types import`);
+  const packedDependency = join(dirname(corpusPath), runtimeImport[1])
+    .replace(/\.js$/, '.ts')
+    .replaceAll('\\', '/');
+  assert.equal(packedDependency, 'src/types.ts');
+  assert.ok(
+    files.has(packedDependency),
+    `${corpusPath} imports ${runtimeImport[1]}, so the tarball must contain ${packedDependency}`,
+  );
 });
 
 test('create-book tarball ships its documentation and both scoped licenses', () => {
