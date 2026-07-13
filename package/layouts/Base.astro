@@ -192,9 +192,15 @@ function resolvePublicAssetUrl(value: string): string {
         `Open Graph image contains invalid percent encoding: ${JSON.stringify(value)}`,
       );
     }
-    if (segment === '.' || segment === '..' || segment.includes('/') || segment.includes('\\')) {
+    if (
+      segment === '.'
+      || segment === '..'
+      || segment.includes('/')
+      || segment.includes('\\')
+      || /[\u0000-\u001F\u007F]/u.test(segment)
+    ) {
       throw new Error(
-        `Open Graph image must not contain decoded ".", "..", or slash path segments: ${JSON.stringify(value)}`,
+        `Open Graph image contains an invalid decoded path segment: ${JSON.stringify(value)}`,
       );
     }
   }
@@ -238,7 +244,7 @@ const pagefindFilter = bookId
 <html
   lang={lang}
   data-book-scaffold-book={corpusBook?.id}
-  data-book-scaffold-surface={pagefindSurface}
+  data-book-scaffold-surface={pagefindSurface === 'corpus' ? 'corpus' : undefined}
 >
   <head>
     <meta charset="utf-8" />

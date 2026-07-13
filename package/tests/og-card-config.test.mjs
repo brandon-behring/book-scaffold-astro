@@ -204,6 +204,10 @@ export default await defineBookConfig({
         title: 'Protocol-relative asset',
         ogImage: '//cdn.example/protocol-relative.png',
       }),
+      'custom-surface.astro': page({
+        title: 'Custom Pagefind surface',
+        pagefindSurface: 'landing',
+      }),
     };
     await Promise.all(
       Object.entries(pages).map(([name, source]) =>
@@ -225,6 +229,7 @@ export default await defineBookConfig({
       absolute,
       trimmed,
       protocolRelative,
+      customSurface,
     ] = await Promise.all([
       readRoute(root, ''),
       readRoute(root, 'book'),
@@ -234,6 +239,7 @@ export default await defineBookConfig({
       readRoute(root, 'absolute'),
       readRoute(root, 'trimmed'),
       readRoute(root, 'protocol-relative'),
+      readRoute(root, 'custom-surface'),
     ]);
 
     assert.match(surface, /<html[^>]*data-book-scaffold-surface="corpus"/);
@@ -255,25 +261,32 @@ export default await defineBookConfig({
       protocolRelative,
       /property="og:image" content="https:\/\/cdn\.example\/protocol-relative\.png"/,
     );
+    assert.match(customSurface, /data-pagefind-filter="surface:landing"/);
+    assert.doesNotMatch(customSurface, /data-book-scaffold-surface=/);
 
-    await writeFile(
-      join(root, 'src', 'pages', 'invalid-image.astro'),
-      page({ title: 'Invalid traversal', ogImage: '/%252e%252e/private.png' }),
-    );
-    await assert.rejects(
-      () => execFileAsync(astro, ['build'], {
-        cwd: root,
-        env: { ...process.env },
-        maxBuffer: 8 * 1024 * 1024,
-      }),
-      (error) => {
-        assert.match(
-          `${error.stdout ?? ''}\n${error.stderr ?? ''}`,
-          /Open Graph image must not contain decoded .* path segments/,
-        );
-        return true;
-      },
-    );
+    for (const [title, ogImage] of [
+      ['Invalid traversal', '/%252e%252e/private.png'],
+      ['Invalid decoded control', '/social/%2500private.png'],
+    ]) {
+      await writeFile(
+        join(root, 'src', 'pages', 'invalid-image.astro'),
+        page({ title, ogImage }),
+      );
+      await assert.rejects(
+        () => execFileAsync(astro, ['build'], {
+          cwd: root,
+          env: { ...process.env },
+          maxBuffer: 8 * 1024 * 1024,
+        }),
+        (error) => {
+          assert.match(
+            `${error.stdout ?? ''}\n${error.stderr ?? ''}`,
+            /Open Graph image contains an invalid decoded path segment/,
+          );
+          return true;
+        },
+      );
+    }
   } finally {
     await rm(sandbox, { recursive: true, force: true });
   }
