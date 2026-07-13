@@ -2,6 +2,19 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.26.3] — 2026-07-13
+
+Patch release — **release-status style inheritance hotfix.** v4.26.2 added the site-wide `releaseStatus` configuration, but `composeStyles()` omitted that field, so a status supplied by a shared or project Style never reached the runtime book-config module. Direct top-level `defineBookConfig({ releaseStatus: { ... } })` usage was unaffected.
+
+### Fixed
+
+- **Style-provided release banners now compose correctly (#149).** `releaseStatus` uses last-defined shallow replacement like the other scalar Style fields: omission inherits, while a later object replaces the complete earlier object.
+- **Inherited banners can be suppressed explicitly.** `releaseStatus: false` is accepted on both a Style and top-level book configuration; a top-level value remains authoritative over the composed Style chain. The shared `ReleaseStatusConfig` type is exported for consumers.
+
+### Tests
+
+- Package suite **531 → 537** (+6): observable virtual-module tests now verify Style inheritance, whole-object replacement, Style and top-level suppression, and top-level precedence. The public type-surface check also locks the new opt-out contract.
+
 ## [4.26.2] — 2026-07-13
 
 Patch release — **registry reconciliation plus research-portfolio Part numbering.** The v4.26.1 source commit and tag exist, but that version was never published to npm. Registry users therefore upgrade directly from v4.26.0 to v4.26.2; this artifact contains the full v4.26.1 reconciliation described below, the site-wide pre-release banner from #201, and the portfolio renderer fix from #203.

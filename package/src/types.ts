@@ -54,6 +54,18 @@ export interface SecurityHeadersConfig {
 }
 
 /**
+ * v4.26.2 (#149): book-level release state rendered by
+ * `<PreReleaseBanner>` across every page.
+ *
+ * Style inheritance and explicit suppression were fixed in v4.26.3.
+ */
+export interface ReleaseStatusConfig {
+  state: 'alpha' | 'beta' | 'rc' | 'locked';
+  dismissAt?: string;
+  message?: string;
+}
+
+/**
  * Options for `defineBookConfig`. See PACKAGE_DESIGN.md §4.
  *
  * Note on the index signature: `AstroUserConfig` carries generic parameters
