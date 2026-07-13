@@ -12,6 +12,8 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
 import { chapterSortKey } from './chapter-sort.js';
 import { bookOf } from './nav-href.js';
+import { corpusBookIdOf } from './corpus.js';
+import type { BookCorpus } from '../types.js';
 
 export type Chapter = CollectionEntry<'chapters'>;
 
@@ -38,15 +40,19 @@ export async function getAllChapters(): Promise<Chapter[]> {
  */
 export async function getNeighbors(
   id: string,
-  opts: { bookField?: string } = {},
+  opts: { bookField?: string; corpus?: BookCorpus | null } = {},
 ): Promise<{ prev: Chapter | null; next: Chapter | null }> {
-  const { bookField = 'book' } = opts;
+  const { bookField = 'book', corpus = null } = opts;
   const all = await getAllChapters();
   const self = all.find((c) => c.id === id);
   if (!self) return { prev: null, next: null };
-  const selfBook = bookOf({ id: self.id, data: self.data as Record<string, unknown> }, bookField);
+  const entryBook = (entry: Chapter) =>
+    corpus
+      ? corpusBookIdOf(corpus, entry.id)
+      : bookOf({ id: entry.id, data: entry.data as Record<string, unknown> }, bookField);
+  const selfBook = entryBook(self);
   const scoped = selfBook
-    ? all.filter((c) => bookOf({ id: c.id, data: c.data as Record<string, unknown> }, bookField) === selfBook)
+    ? all.filter((c) => entryBook(c) === selfBook)
     : all;
   const idx = scoped.findIndex((c) => c.id === id);
   if (idx === -1) return { prev: null, next: null };

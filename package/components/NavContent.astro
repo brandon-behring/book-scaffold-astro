@@ -23,6 +23,7 @@ import bookConfig from 'virtual:book-scaffold/book-config';
 import { academicParts } from '../src/schemas';
 import { academicPartHeading } from '../src/lib/academic-parts';
 import { chapterHref, apparatusHref, bookOf, isCurrentChapter, type ChapterLike, normalizeBase } from '../src/lib/nav-href';
+import { corpusBookIdFromPath, corpusBookIdOf } from '../src/lib/corpus';
 
 const profile = import.meta.env.BOOK_PROFILE ?? 'minimal';
 // #142: normalize the base trailing slash (Astro allows base:'/foo' with none).
@@ -45,15 +46,27 @@ const rawChapters = await getCollection('chapters', (entry) => !entry.data.draft
 function entryOf(e: (typeof rawChapters)[number]): ChapterLike {
   return { id: e.id, data: e.data as Record<string, unknown> };
 }
+const entryBook = (entry: (typeof rawChapters)[number]) =>
+  bookConfig.corpus
+    ? corpusBookIdOf(bookConfig.corpus, entry.id)
+    : bookOf(entryOf(entry), bookField);
 const knownBooks = new Set(
-  rawChapters.map((e) => bookOf(entryOf(e), bookField)).filter((b): b is string => b !== null),
+  bookConfig.corpus
+    ? bookConfig.corpus.books.map((book) => book.id)
+    : rawChapters.map(entryBook).filter((book): book is string => book !== null),
 );
-const relPath = currentPath.startsWith(baseUrl) ? currentPath.slice(baseUrl.length) : currentPath.replace(/^\//, '');
-const urlBook = relPath.split('/')[0] ?? '';
-const currentBook = knownBooks.has(urlBook) ? urlBook : null;
+const currentBook = bookConfig.corpus
+  ? corpusBookIdFromPath(bookConfig.corpus, currentPath, baseUrl)
+  : (() => {
+      const relPath = currentPath.startsWith(baseUrl)
+        ? currentPath.slice(baseUrl.length)
+        : currentPath.replace(/^\//, '');
+      const urlBook = relPath.split('/')[0] ?? '';
+      return knownBooks.has(urlBook) ? urlBook : null;
+    })();
 
 const scopedChapters = currentBook
-  ? rawChapters.filter((e) => bookOf(entryOf(e), bookField) === currentBook)
+  ? rawChapters.filter((entry) => entryBook(entry) === currentBook)
   : rawChapters;
 
 // Pre-shape into render-ready rows (all TS casts in frontmatter — Astro's JSX
@@ -116,8 +129,15 @@ for (const r of rows) {
 }
 
 // Index link: multi-book → the book's TOC at /<book>/; single-book → /chapters/.
-const chaptersIndexHref = currentBook ? `${baseUrl}${currentBook}/` : `${baseUrl}chapters/`;
-const referencesHref = `${baseUrl}references/`;
+const chaptersIndexHref = currentBook
+  ? `${baseUrl}chapters/${currentBook}/`
+  : `${baseUrl}chapters/`;
+const referencesHref = apparatusHref(
+  'references',
+  currentBook,
+  bookConfig.corpus ? '/:book/:route/' : '/:route/',
+  baseUrl,
+);
 
 // Apparatus links (study-guide routes) — surfaced only when the consumer opts in
 // via `apparatusRoutes`. Book-scoped via the same resolver as chapters.
@@ -127,7 +147,11 @@ const APPARATUS_LABELS: Record<string, string> = {
   flashcards: 'Flashcards',
   answers: 'Answers',
 };
-const apparatusLinks = apparatusRoutes.map((route) => {
+const currentBookConfig = currentBook && bookConfig.corpus
+  ? bookConfig.corpus.books.find((book) => book.id === currentBook)
+  : null;
+const visibleApparatusRoutes = currentBookConfig?.apparatus ?? apparatusRoutes;
+const apparatusLinks = visibleApparatusRoutes.map((route) => {
   const href = apparatusHref(route, currentBook, apparatusRoute, baseUrl);
   return {
     href,
@@ -135,6 +159,7 @@ const apparatusLinks = apparatusRoutes.map((route) => {
     isCurrent: currentPath === href || currentPath === href.replace(/\/$/, ''),
   };
 });
+const corpusBooks = bookConfig.corpus?.books ?? [];
 
 function partLabel(key: string): string {
   if (profile === 'academic') return academicPartHeading(key);
@@ -190,6 +215,25 @@ function partLabel(key: string): string {
               class={`sidebar-link sidebar-link-apparatus ${a.isCurrent ? 'is-current' : ''}`}
             >
               <span class="sidebar-chapter-title">{a.label}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )}
+
+  {corpusBooks.length > 1 && (
+    <section class="sidebar-part sidebar-corpus-books">
+      <h3 class="sidebar-part-heading">Books</h3>
+      <ol class="sidebar-list">
+        {corpusBooks.map((book) => (
+          <li>
+            <a
+              href={`${baseUrl}${book.id}/`}
+              aria-current={book.id === currentBook ? 'page' : undefined}
+              class={`sidebar-link sidebar-link-book ${book.id === currentBook ? 'is-current' : ''}`}
+            >
+              <span class="sidebar-chapter-title">{book.title}</span>
             </a>
           </li>
         ))}

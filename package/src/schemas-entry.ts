@@ -56,6 +56,7 @@ function isYamlEmpty(path: string): boolean {
 
 import type { BookSchemasOptions } from './types.js';
 import { resolvePreset } from './types.js';
+import { assertBookCorpus } from './lib/corpus.js';
 import {
   academicChapterSchema,
   toolsChapterSchema,
@@ -118,9 +119,19 @@ export function frontmatterCollection(
  * consumer extends via object spread and Zod `.extend()` (see PACKAGE_DESIGN.md §5).
  */
 export function defineBookSchemas(opts: BookSchemasOptions = {}) {
-  // v3.4.0 (#9): resolvePreset accepts both `preset` and `profile` (alias).
-  const profile = resolvePreset(opts.preset, opts.profile);
-  const chaptersBase = opts.chaptersBase ?? './src/content/chapters';
+  // v5.0.0 (#80): a corpus manifest is the one preset/identity source shared
+  // with Astro config. Single-book callers keep the existing resolver path.
+  const corpus = opts.corpus;
+  if (corpus !== undefined) assertBookCorpus(corpus);
+  const explicitProfile = opts.preset ?? opts.profile;
+  if (corpus && explicitProfile !== undefined && explicitProfile !== corpus.preset) {
+    throw new Error(
+      `defineBookSchemas preset ${JSON.stringify(explicitProfile)} does not match ` +
+        `corpus preset ${JSON.stringify(corpus.preset)}.`,
+    );
+  }
+  const profile = corpus?.preset ?? resolvePreset(opts.preset, opts.profile);
+  const chaptersBase = opts.chaptersBase ?? (corpus ? './src/content' : './src/content/chapters');
 
   // v3.3.0: schemas are owned by per-profile modules under src/profiles/,
   // re-exported via schemas.ts. Schema dispatch lives here (rather than
@@ -138,8 +149,39 @@ export function defineBookSchemas(opts: BookSchemasOptions = {}) {
   const chapters = defineCollection({
     loader: glob({
       // Exclude underscore-prefixed files (standard "hidden" convention).
-      pattern: ['**/*.{md,mdx}', '!**/_*'],
+      pattern: corpus
+        ? [
+            ...corpus.books.map((book) => `${book.id}/**/*.{md,mdx}`),
+            '!**/_*',
+          ]
+        : ['**/*.{md,mdx}', '!**/_*'],
       base: chaptersBase,
+      ...(corpus
+        ? {
+            generateId: ({ entry, data }: { entry: string; data: Record<string, unknown> }) => {
+              const normalized = entry.replaceAll('\\', '/');
+              const [book, ...localParts] = normalized.split('/');
+              if (!corpus.books.some((candidate) => candidate.id === book)) {
+                throw new Error(
+                  `Chapter ${JSON.stringify(entry)} is outside the registered corpus books.`,
+                );
+              }
+              const fileSlug = localParts.join('/').replace(/\.(?:md|mdx)$/i, '');
+              const slug = typeof data.slug === 'string' ? data.slug : fileSlug;
+              if (
+                slug.length === 0 ||
+                slug.startsWith('/') ||
+                slug.endsWith('/') ||
+                slug.split('/').some((part) => part === '.' || part === '..' || part.length === 0)
+              ) {
+                throw new Error(
+                  `Chapter ${JSON.stringify(entry)} resolved invalid corpus slug ${JSON.stringify(slug)}.`,
+                );
+              }
+              return `${book}/${slug}`;
+            },
+          }
+        : {}),
     }),
     schema: schemaForProfile,
   });

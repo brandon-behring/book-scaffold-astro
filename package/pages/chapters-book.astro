@@ -1,0 +1,17 @@
+---
+/** v5.0.0 (#80): one rich chapter index per registered corpus book. */
+import bookConfig from 'virtual:book-scaffold/book-config';
+import ChaptersIndex from './chapters.astro';
+
+export function getStaticPaths() {
+  if (!bookConfig.corpus) return [];
+  return bookConfig.corpus.books.map((book) => ({
+    params: { book: book.id },
+    props: { bookId: book.id },
+  }));
+}
+
+const { bookId } = Astro.props;
+---
+
+<ChaptersIndex bookId={bookId} />

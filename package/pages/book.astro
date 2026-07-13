@@ -1,0 +1,75 @@
+---
+/** v5.0.0 (#80): manifest-backed per-book landing page. */
+import Base from '../layouts/Base.astro';
+import bookConfig from 'virtual:book-scaffold/book-config';
+import { apparatusHref, normalizeBase } from '../src/lib/nav-href';
+
+export function getStaticPaths() {
+  if (!bookConfig.corpus) return [];
+  return bookConfig.corpus.books.map((book) => ({
+    params: { book: book.id },
+    props: { book },
+  }));
+}
+
+const { book } = Astro.props;
+const baseUrl = normalizeBase(import.meta.env.BASE_URL);
+const globalApparatus = bookConfig.apparatusRoutes ?? [];
+const routes = book.apparatus ?? globalApparatus;
+const routeLabels: Record<string, string> = {
+  references: 'References',
+  print: 'Print view',
+  convergence: 'Convergence',
+  tips: 'Tips',
+  exercises: 'Exercises',
+  'practice-exam': 'Practice exam',
+  glossary: 'Glossary',
+  flashcards: 'Flashcards',
+  answers: 'Answers',
+};
+---
+
+<Base
+  title={book.title}
+  description={book.description}
+  ogImage={book.image}
+  bookId={book.id}
+  showChrome={false}
+>
+  <article class="prose book-landing">
+    <h1>{book.title}</h1>
+    {book.subtitle && <p class="book-subtitle">{book.subtitle}</p>}
+    {book.description && <p class="lead">{book.description}</p>}
+
+    <h2>Read</h2>
+    <ul>
+      <li><a href={`${baseUrl}chapters/${book.id}/`}>Chapters</a></li>
+      {routes.map((route: string) => (
+        <li>
+          <a href={apparatusHref(route, book.id, '/:book/:route/', baseUrl)}>
+            {routeLabels[route] ?? route.replaceAll('-', ' ')}
+          </a>
+        </li>
+      ))}
+    </ul>
+
+    {bookConfig.corpus && bookConfig.corpus.books.length > 1 && (
+      <p><a href={baseUrl}>← All books</a></p>
+    )}
+  </article>
+</Base>
+
+<style>
+  .book-landing {
+    max-width: 65ch;
+    margin: 2rem auto;
+  }
+  .book-subtitle {
+    color: var(--color-text-muted);
+    font-family: var(--font-sans);
+    font-size: var(--text-lg);
+  }
+  .lead {
+    font-size: var(--text-lg);
+  }
+</style>

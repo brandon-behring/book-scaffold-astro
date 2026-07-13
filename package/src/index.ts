@@ -30,6 +30,11 @@ export type {
   SiblingBookDescriptor,
   SiblingBookEntry,
   SiblingBooks,
+  BookCorpusInput,
+  BookCorpus,
+  CorpusBookInput,
+  CorpusBook,
+  CorpusApparatusRoute,
   BookConfigOptions,
   ReleaseStatusConfig,
   SecurityHeadersConfig,
@@ -41,10 +46,21 @@ export {
   BOOK_PROFILES,
   BOOK_PRESETS,       // v3.4.0 — alias of BOOK_PROFILES
   NUMBER_STYLES,
+  CORPUS_APPARATUS_ROUTES,
   BookConfigError,
   resolveProfile,
   resolvePreset,      // v3.4.0 — canonical resolver (accepts both preset + profile)
 } from './types.js';
+
+// v5.0.0 (#80): one-app/one-build corpus manifest and pure identity helpers.
+export {
+  defineBookCorpus,
+  assertBookCorpus,
+  resolveCorpusBook,
+  corpusBookIdOf,
+  corpusBookIdFromPath,
+  RESERVED_CORPUS_BOOK_IDS,
+} from './lib/corpus.js';
 
 // Profile-kit: defineProfile helper (v3.3.0) for consumers writing their
 // own profile modules (advanced) or extending toolkit-shipped ones.

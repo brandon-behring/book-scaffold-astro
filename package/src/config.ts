@@ -20,6 +20,7 @@ import { bookScaffoldIntegration } from './integration.js';
 import { PROFILES } from './profiles/index.js';
 import { composeStyles, type Style } from './lib/define-style.js';
 import { BUILTIN_STYLES } from './styles/built-in.js';
+import { assertBookCorpus } from './lib/corpus.js';
 
 /**
  * v4.5.0: Default portfolio backlink baked into the scaffold. Rendered in
@@ -110,6 +111,33 @@ export async function defineBookConfig(
 
   // 2. Apply top-level opts on top of composed (top-level wins for shared fields).
   const profile = resolvePreset(composed.preset) as (typeof BOOK_PRESETS)[number];
+  const corpus = opts.corpus;
+  if (corpus !== undefined) {
+    assertBookCorpus(corpus);
+    if (corpus.preset !== profile) {
+      throw new BookConfigError(
+        `defineBookConfig corpus preset ${JSON.stringify(corpus.preset)} does not match ` +
+          `the composed Style preset ${JSON.stringify(profile)}. One preset applies to the whole corpus.`,
+      );
+    }
+    const incompatible = ['chapterRoute', 'bookField', 'apparatusRoute'].filter((field) =>
+      Object.prototype.hasOwnProperty.call(opts, field),
+    );
+    if (incompatible.length > 0) {
+      throw new BookConfigError(
+        `Corpus mode owns ${incompatible.join(', ')}; remove the explicit ` +
+          `${incompatible.length === 1 ? 'override' : 'overrides'} so injected routes and navigation agree.`,
+      );
+    }
+    const siblingKeys = new Set(Object.keys((opts.siblingBooks as Record<string, unknown> | undefined) ?? {}));
+    const duplicateOwner = corpus.books.find((book) => siblingKeys.has(book.id));
+    if (duplicateOwner) {
+      throw new BookConfigError(
+        `Book id ${JSON.stringify(duplicateOwner.id)} exists in both corpus.books and siblingBooks. ` +
+          'A key must be either local or externally deployed, never both.',
+      );
+    }
+  }
   const numberStyle = opts.numberStyle ?? composed.numberStyle ?? 'shared';
   if (!NUMBER_STYLES.includes(numberStyle)) {
     throw new BookConfigError(
@@ -210,6 +238,7 @@ export async function defineBookConfig(
     sitemap(sitemapOptions),
     bookScaffoldIntegration({
       profile,
+      corpus,
       numberStyle,
       routes: mergedRoutes,
       mdxComponentsModule,
@@ -282,6 +311,7 @@ export async function defineBookConfig(
   // Strip the package-specific options out of the rest before forwarding to Astro.
   const {
     styles: _styles,
+    corpus: _corpus,
     numberStyle: _numberStyle,
     site: _site,
     routes: _routes,
@@ -318,6 +348,7 @@ export async function defineBookConfig(
     ...rest
   } = opts;
   void _styles;
+  void _corpus;
   void _numberStyle;
   void _site;
   void _routes;

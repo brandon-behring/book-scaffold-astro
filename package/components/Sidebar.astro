@@ -18,17 +18,25 @@
 import bookConfig from 'virtual:book-scaffold/book-config';
 import NavContent from './NavContent.astro';
 import { normalizeBase } from '../src/lib/nav-href';
+import { corpusBookIdFromPath, resolveCorpusBook } from '../src/lib/corpus';
 
-const siteTitle = bookConfig.title ?? 'Book';
-const siteSubtitle = bookConfig.subtitle ?? 'A scaffold-astro book';
 // #142: Astro does not guarantee a trailing slash on `base` — normalize so the
 // home link is `${base}/`, not a slash-less `/foo`.
 const baseUrl = normalizeBase(import.meta.env.BASE_URL);
+const currentBookId = bookConfig.corpus
+  ? corpusBookIdFromPath(bookConfig.corpus, Astro.url.pathname, baseUrl)
+  : null;
+const currentBook = currentBookId && bookConfig.corpus
+  ? resolveCorpusBook(bookConfig.corpus, currentBookId)
+  : null;
+const siteTitle = currentBook?.title ?? bookConfig.title ?? 'Book';
+const siteSubtitle = currentBook?.subtitle ?? bookConfig.subtitle ?? 'A scaffold-astro book';
+const homeHref = currentBook ? `${baseUrl}${currentBook.id}/` : baseUrl;
 ---
 
 <aside class="sidebar" aria-label="Chapter navigation">
   <div class="sidebar-inner">
-    <a href={baseUrl} class="sidebar-home">
+    <a href={homeHref} class="sidebar-home">
       <strong>{siteTitle}</strong>
       <span class="sidebar-subtitle">{siteSubtitle}</span>
     </a>

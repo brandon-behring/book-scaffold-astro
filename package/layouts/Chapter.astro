@@ -31,8 +31,10 @@ import ChapterNav from '../components/ChapterNav.astro';
 interface Props {
   entry: CollectionEntry<'chapters'>;
   headings: MarkdownHeading[];
+  /** v5.0.0 (#80): manifest identity derived from the entry id. */
+  bookId?: string;
 }
-const { entry, headings } = Astro.props;
+const { entry, headings, bookId } = Astro.props;
 
 // v4.6.0: article:* meta-tag data. All fields are Zod-optional in the
 // chapter schemas (academic / tools / course-notes / research-portfolio),
@@ -40,7 +42,12 @@ const { entry, headings } = Astro.props;
 // (the top-level defineBookConfig field) so single-author books don't
 // repeat themselves per chapter.
 const articleAuthor =
-  (entry.data as { author?: string }).author ?? bookConfig.author ?? null;
+  (entry.data as { author?: string }).author ??
+  (bookId && bookConfig.corpus
+    ? bookConfig.corpus.books.find((book) => book.id === bookId)?.author
+    : undefined) ??
+  bookConfig.author ??
+  null;
 const articlePublished = (entry.data as { published?: Date }).published;
 const articleUpdated = (entry.data as { updated?: Date }).updated;
 const articleTags = ((entry.data as { tags?: string[] }).tags ?? []) as string[];
@@ -85,6 +92,7 @@ const sectionMapLabel = labelParts.length > 0 ? labelParts.join(' · ') : undefi
   description={entry.data.description}
   ogType="article"
   ogImage={chapterImage}
+  bookId={bookId}
 >
   <Fragment slot="head">
     {articleAuthor && <meta property="article:author" content={articleAuthor} />}

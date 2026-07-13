@@ -30,6 +30,59 @@ export const BOOK_PRESETS = BOOK_PROFILES;
 export type NumberStyle = 'shared' | 'per-kind';
 export const NUMBER_STYLES = ['shared', 'per-kind'] as const satisfies readonly NumberStyle[];
 
+/** Scaffold-owned book routes that may be enabled per corpus book (#80). */
+export const CORPUS_APPARATUS_ROUTES = [
+  'references',
+  'print',
+  'convergence',
+  'tips',
+  'exercises',
+  'practice-exam',
+  'glossary',
+  'flashcards',
+  'answers',
+] as const;
+export type CorpusApparatusRoute = (typeof CORPUS_APPARATUS_ROUTES)[number];
+
+/** Consumer-authored metadata for one book in a corpus manifest. */
+export interface CorpusBookInput {
+  id: string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  author?: string;
+  image?: string;
+  apparatus?: readonly CorpusApparatusRoute[];
+}
+
+/** Frozen, validated book metadata returned by `defineBookCorpus`. */
+export interface CorpusBook extends Omit<CorpusBookInput, 'apparatus'> {
+  readonly id: string;
+  readonly title: string;
+  readonly subtitle?: string;
+  readonly description?: string;
+  readonly author?: string;
+  readonly image?: string;
+  readonly apparatus?: readonly CorpusApparatusRoute[];
+}
+
+/** Input accepted by `defineBookCorpus`. One preset applies to the whole app. */
+export interface BookCorpusInput {
+  preset: BookPreset;
+  books: readonly CorpusBookInput[];
+}
+
+/**
+ * Branded, deeply frozen corpus registry shared by Astro and content config.
+ * The string version marker is intentionally serializable through Vite's
+ * virtual module and inspectable by plain-Node CLI tooling.
+ */
+export interface BookCorpus {
+  readonly __bookCorpusVersion: 1;
+  readonly preset: BookPreset;
+  readonly books: readonly CorpusBook[];
+}
+
 /**
  * A sibling book with an optional vendored label index for cross-book
  * `<BookLink>` validation (#147).
@@ -122,6 +175,12 @@ export interface BookConfigOptions {
    *   });
    */
   styles?: readonly Style[];
+  /**
+   * v5.0.0 (#80): opt into one-app/one-build corpus mode. Define the value
+   * once with `defineBookCorpus` and pass the same object to
+   * `defineBookSchemas({ corpus })`.
+   */
+  corpus?: BookCorpus;
   /**
    * v4.27.0 (#175): theorem-family counter strategy. `shared` preserves the
    * amsthm-style sequence used through v4.26; `per-kind` gives theorem,
@@ -366,13 +425,17 @@ export interface BookSchemasOptions {
   preset?: BookPreset;
   /** Backward-compat alias for `preset`. */
   profile?: BookProfile;
-  /** Defaults to `'./src/content/chapters'`. */
+  /** Defaults to `'./src/content/chapters'`, or `'./src/content'` in corpus mode. */
   chaptersBase?: string;
+  /** v5.0.0 (#80): the same branded manifest passed to `defineBookConfig`. */
+  corpus?: BookCorpus;
 }
 
 /** Options for the internal `bookScaffoldIntegration`. See PACKAGE_DESIGN.md §6. */
 export interface BookScaffoldIntegrationOptions {
   profile: BookProfile;
+  /** v5.0.0 (#80): resolved one-app corpus manifest. */
+  corpus?: BookCorpus;
   /** Resolved theorem-family counter strategy exposed to package CLI tooling. */
   numberStyle?: NumberStyle;
   /**
