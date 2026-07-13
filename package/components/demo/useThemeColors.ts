@@ -20,13 +20,27 @@ export interface ThemeColorsSnapshot<T extends ThemeColorMap> {
   /** Null during SSR; resolved on the first client effect. */
   theme: BookTheme | null;
   colors: ResolvedThemeColors<T>;
-  reducedMotion: boolean;
+  /** Null until the client preference is known; animate only when explicitly false. */
+  reducedMotion: boolean | null;
+}
+
+interface StoredThemeColorsSnapshot<T extends ThemeColorMap> {
+  signature: string;
+  value: ThemeColorsSnapshot<T>;
 }
 
 function fallbackColors<T extends ThemeColorMap>(specs: T): ResolvedThemeColors<T> {
   return Object.fromEntries(
     Object.entries(specs).map(([key, [, fallback]]) => [key, fallback]),
   ) as ResolvedThemeColors<T>;
+}
+
+function unresolvedSnapshot<T extends ThemeColorMap>(specs: T): ThemeColorsSnapshot<T> {
+  return {
+    theme: null,
+    colors: fallbackColors(specs),
+    reducedMotion: null,
+  };
 }
 
 function assertSpecs(specs: ThemeColorMap): void {
@@ -89,14 +103,16 @@ export function useThemeColors<const T extends ThemeColorMap>(
 ): ThemeColorsSnapshot<T> {
   assertSpecs(specs);
   const signature = JSON.stringify(specs);
-  const [current, setCurrent] = useState<ThemeColorsSnapshot<T>>(() => ({
-    theme: null,
-    colors: fallbackColors(specs),
-    reducedMotion: false,
+  const [current, setCurrent] = useState<StoredThemeColorsSnapshot<T>>(() => ({
+    signature,
+    value: unresolvedSnapshot(specs),
   }));
 
   useEffect(() => {
-    const refresh = (themeHint?: BookTheme) => setCurrent(snapshot(specs, themeHint));
+    const refresh = (themeHint?: BookTheme) => setCurrent({
+      signature,
+      value: snapshot(specs, themeHint),
+    });
     const onThemeChange = (event: Event) => {
       const detail = (event as CustomEvent<{ theme?: unknown }>).detail;
       const theme = detail?.theme === 'light' || detail?.theme === 'dark'
@@ -121,5 +137,5 @@ export function useThemeColors<const T extends ThemeColorMap>(
     // identity changes but token/fallback pairs do not.
   }, [signature]);
 
-  return current;
+  return current.signature === signature ? current.value : unresolvedSnapshot(specs);
 }

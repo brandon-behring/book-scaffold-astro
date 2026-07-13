@@ -1,6 +1,10 @@
 ---
 import Gallery from '../layouts/Gallery.astro';
 import DemoSubstrateFixture from '../components/DemoSubstrateFixture.tsx';
+import {
+  GeneratedIdFixture,
+  ThemeSpecFixture,
+} from '../components/DemoSubstrateContractFixtures.tsx';
 import '@brandon_m_behring/book-scaffold-astro/styles/demo.css';
 ---
 
@@ -15,6 +19,12 @@ import '@brandon_m_behring/book-scaffold-astro/styles/demo.css';
     <h2 class="gallery-state">Interactive, themed, reduced-motion aware</h2>
     <DemoSubstrateFixture client:load />
   </section>
+
+  <div hidden data-demo-contract-fixtures>
+    <GeneratedIdFixture instance="one" client:load />
+    <GeneratedIdFixture instance="two" client:load />
+    <ThemeSpecFixture client:load />
+  </div>
 
   <style is:global>
     .demo-gallery-status {

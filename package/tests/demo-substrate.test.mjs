@@ -6,6 +6,7 @@ import render from 'preact-render-to-string';
 import { h } from 'preact';
 import {
   DemoFrame,
+  DEMO_HEADING_LEVELS,
   Slider,
   StatCards,
   useThemeColors,
@@ -17,6 +18,14 @@ const hookSource = readFileSync(
   'utf8',
 );
 const baseSource = readFileSync(new URL('../layouts/Base.astro', import.meta.url), 'utf8');
+const profileAndIntegrationSource = [
+  '../src/integration.ts',
+  '../src/profiles/academic.ts',
+  '../src/profiles/course-notes.ts',
+  '../src/profiles/minimal.ts',
+  '../src/profiles/research-portfolio.ts',
+  '../src/profiles/tools.ts',
+].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8')).join('\n');
 
 test('DemoFrame owns figure naming, description, and caption semantics', () => {
   const html = render(h(DemoFrame, {
@@ -38,6 +47,14 @@ test('DemoFrame owns figure naming, description, and caption semantics', () => {
   const labelledBy = generated.match(/aria-labelledby="([^"]+)"/)?.[1];
   assert.ok(labelledBy, 'a frame without id must generate an aria-labelledby target');
   assert.match(generated, new RegExp(`id="${labelledBy}"`));
+
+  const nested = render(h(DemoFrame, {
+    id: 'nested-demo',
+    title: 'Nested demo',
+    headingLevel: 5,
+  }));
+  assert.match(nested, /<h5 id="nested-demo-title"/);
+  assert.deepEqual(DEMO_HEADING_LEVELS, [2, 3, 4, 5, 6]);
 });
 
 test('DemoFrame fails loudly for invalid accessible text and ids', () => {
@@ -49,6 +66,10 @@ test('DemoFrame fails loudly for invalid accessible text and ids', () => {
   assert.throws(
     () => render(h(DemoFrame, { title: 'Valid title', caption: '' })),
     /caption must be a non-empty string/,
+  );
+  assert.throws(
+    () => render(h(DemoFrame, { title: 'Valid title', headingLevel: 1 })),
+    /headingLevel must be one of 2 \| 3 \| 4 \| 5 \| 6/,
   );
 });
 
@@ -94,6 +115,13 @@ test('Slider validates numeric bounds and formatter output', () => {
   };
   assert.throws(() => render(h(Slider, { ...props, max: 1 })), /max must be greater than min/);
   assert.throws(() => render(h(Slider, { ...props, value: 11 })), /must be within \[1, 10\]/);
+  assert.throws(
+    () => render(h(Slider, { ...props, min: 0, max: 10, step: 3, value: 2 })),
+    /value must align with min \+ \(n × step\)/,
+  );
+  assert.doesNotThrow(
+    () => render(h(Slider, { ...props, min: 0, max: 1, step: 0.1, value: 0.3 })),
+  );
   assert.throws(
     () => render(h(Slider, { ...props, formatValue: () => '' })),
     /formatValue must return a non-empty string/,
@@ -160,7 +188,7 @@ test('useThemeColors is SSR-safe and exposes typed fallback colors before hydrat
   const html = render(h(ThemeProbe, {}));
   assert.equal(
     html,
-    '<output data-theme="unresolved" data-reduced-motion="false">#111111|#225588</output>',
+    '<output data-theme="unresolved" data-reduced-motion="null">#111111|#225588</output>',
   );
 
   function InvalidThemeProbe() {
@@ -187,8 +215,10 @@ test('demo styles are opt-in, token-based, SVG-aware, and reduced-motion safe', 
   assert.match(css, /\.demo-frame \[data-demo-fill='accent'\]/);
   assert.match(css, /\.demo-frame \[data-demo-stroke='ink'\]/);
   assert.match(css, /\.demo-slider__input:focus-visible/);
+  assert.match(css, /margin-inline:\s*0/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(css, /animation-duration: 0\.01ms !important/);
   assert.doesNotMatch(declarations, /#[0-9a-f]{3,8}\b/i);
   assert.doesNotMatch(baseSource, /styles\/demo\.css/);
+  assert.doesNotMatch(profileAndIntegrationSource, /styles\/demo\.css/);
 });

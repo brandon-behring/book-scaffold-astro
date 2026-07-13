@@ -49,6 +49,7 @@ import {
   StatCards,
   useThemeColors,
   type DemoFrameProps,
+  type DemoHeadingLevel,
   type SliderProps,
   type StatCardTone,
   type StatCardsProps,
@@ -95,7 +96,9 @@ export const demoFrameProps: DemoFrameProps = {
   id: 'sampling-demo',
   title: 'Sampling distribution',
   description: 'Adjust the sample size.',
+  headingLevel: 2,
 };
+export const demoHeadingLevel: DemoHeadingLevel = 4;
 export const sliderProps: SliderProps = {
   label: 'Sample size',
   value: 20,
@@ -127,6 +130,8 @@ export const invalidSlider: SliderProps = { label: 'x', value: 1, min: 0, max: 2
 export const invalidThemeToken: ThemeColorToken = 'color-text';
 // @ts-expect-error StatCardTone is a closed semantic union
 export const invalidStatTone: StatCardTone = 'danger';
+// @ts-expect-error Demo headings use the closed h2-h6 range
+export const invalidDemoHeading: DemoHeadingLevel = 1;
 
 // Each line must keep erroring; if one stops, that symbol degraded to `any`.
 // @ts-expect-error GlossaryTerm is a real object type, never a number

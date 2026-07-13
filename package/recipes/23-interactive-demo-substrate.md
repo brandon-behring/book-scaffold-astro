@@ -29,6 +29,7 @@ export default function SamplingDemo() {
 
   return (
     <DemoFrame id="sampling-demo" title="Sampling distribution"
+      headingLevel={2}
       description="Adjust sample size and compare uncertainty."
       caption="Simulation and chart logic remain in this book.">
       <Slider
@@ -73,19 +74,21 @@ import { useThemeColors } from '@brandon_m_behring/book-scaffold-astro/demo';
 const TOKENS = { ink: ['--color-text', '#1a1a19'], accent: ['--color-link', '#3b6fa0'] } as const;
 
 const { colors, theme, reducedMotion } = useThemeColors(TOKENS);
-// Repaint from colors; theme is null during SSR. Skip animation when reducedMotion.
+// Repaint from colors. Theme/motion are null during SSR; animate only when
+// reducedMotion === false.
 ```
 
 ## Contracts and gotchas
 
-- `DemoFrame` owns `<figure>`, heading, description, caption, and generated ID relationships. Give the visualization itself `role="img"` and a useful `<title>`/`<desc>` or `aria-label`; the frame cannot describe chart content.
+- `DemoFrame` owns `<figure>`, heading, description, caption, and generated ID relationships. Set `headingLevel` to match the surrounding outline (h2-h6; default h3). Give the visualization itself `role="img"` and a useful `<title>`/`<desc>` or `aria-label`; the frame cannot describe chart content.
 - `Slider` is controlled. Update its `value` in `onValueChange`. Its label and
   current value are always visible; use `getValueText` when visible shorthand
-  would be unclear when spoken.
+  would be unclear when spoken. The value must align with `min + (n * step)`;
+  this prevents the browser from silently displaying a different range value.
 - `StatCards` renders a semantic definition list. It is not live by default so
   dragging a slider does not create announcement spam. Use `live="polite"`
   only for changes that occur independently of the user's control.
-- `demo.css` scopes its reduced-motion guard to `.demo-frame`; the hook exposes the same preference for canvas or requestAnimationFrame logic.
+- `demo.css` scopes its reduced-motion guard to `.demo-frame`; the hook exposes the same preference for canvas or requestAnimationFrame logic. Its value is `null` until the client preference resolves, so start animation only when it is explicitly `false`.
 - Props fail loudly for empty labels, invalid numeric ranges, non-finite values,
   invalid tones, duplicate metric keys, and malformed token maps.
 

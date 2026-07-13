@@ -139,10 +139,10 @@ const TOKENS = {
 } as const;
 
 const { colors, theme, reducedMotion } = useThemeColors(TOKENS);
-// redraw canvas/JS geometry from colors; skip animation when reducedMotion
+// redraw from colors; animate only when reducedMotion === false
 ```
 
-The hook is SSR-safe (`theme` is `null` before its client effect), resolves the explicit token map with fallbacks, refreshes on `book:theme:change`, system color-scheme changes, and reduced-motion changes, and removes all listeners on cleanup. `detail.theme` on the underlying event remains `'light' | 'dark'` for non-Preact consumers. Prefer CSS variables or `demo.css`'s `data-demo-fill` / `data-demo-stroke` helpers for inline SVG; those recolor automatically and do not need the hook. See Recipe 23 for the complete composition.
+The hook is SSR-safe (`theme` and `reducedMotion` are `null` until the first client effect), resolves the explicit token map with fallbacks, refreshes on `book:theme:change`, system color-scheme changes, and reduced-motion changes, and removes all listeners on cleanup. Start animation only when `reducedMotion === false`. `detail.theme` on the underlying event remains `'light' | 'dark'` for non-Preact consumers. Prefer CSS variables or `demo.css`'s `data-demo-fill` / `data-demo-stroke` helpers for inline SVG; those recolor automatically and do not need the hook. See Recipe 23 for the complete composition.
 
 ## Citation patterns
 

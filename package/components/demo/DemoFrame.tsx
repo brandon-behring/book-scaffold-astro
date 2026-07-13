@@ -9,6 +9,9 @@
 import type { ComponentChildren } from 'preact';
 import { useId } from 'preact/hooks';
 
+export const DEMO_HEADING_LEVELS = [2, 3, 4, 5, 6] as const;
+export type DemoHeadingLevel = (typeof DEMO_HEADING_LEVELS)[number];
+
 export interface DemoFrameProps {
   /** Visible accessible name for the teaching figure. */
   title: string;
@@ -24,6 +27,8 @@ export interface DemoFrameProps {
   className?: string;
   /** Reflect a consumer-owned recomputation/loading state to assistive tech. */
   busy?: boolean;
+  /** Heading depth in the surrounding document outline. Defaults to 3. */
+  headingLevel?: DemoHeadingLevel;
 }
 
 function assertNonEmpty(value: string, prop: string): void {
@@ -51,10 +56,14 @@ export function DemoFrame({
   id,
   className,
   busy = false,
+  headingLevel = 3,
 }: DemoFrameProps) {
   assertNonEmpty(title, 'title');
   if (description !== undefined) assertNonEmpty(description, 'description');
   if (typeof caption === 'string') assertNonEmpty(caption, 'caption');
+  if (!(DEMO_HEADING_LEVELS as readonly number[]).includes(headingLevel)) {
+    throw new Error('DemoFrame: headingLevel must be one of 2 | 3 | 4 | 5 | 6.');
+  }
 
   const baseId = generatedBaseId(id, useId());
   const titleId = `${baseId}-title`;
@@ -62,6 +71,7 @@ export function DemoFrame({
   const captionId = caption != null ? `${baseId}-caption` : null;
   const describedBy = [descriptionId, captionId].filter(Boolean).join(' ') || undefined;
   const classes = ['demo-frame', className].filter(Boolean).join(' ');
+  const Heading = `h${headingLevel}` as 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
 
   return (
     <figure
@@ -72,7 +82,7 @@ export function DemoFrame({
       aria-busy={busy || undefined}
     >
       <header class="demo-frame__header">
-        <h3 id={titleId} class="demo-frame__title">{title}</h3>
+        <Heading id={titleId} class="demo-frame__title">{title}</Heading>
         {description && (
           <p id={descriptionId!} class="demo-frame__description">{description}</p>
         )}

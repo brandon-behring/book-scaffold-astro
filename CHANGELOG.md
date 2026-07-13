@@ -12,6 +12,8 @@ All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](
   styling, inline-SVG theme helpers, focus treatment, and a scoped
   reduced-motion guard. Nothing auto-mounts or joins a profile; consumer books
   continue to own data, kernels, visualizations, and domain interaction policy.
+  Frame heading depth is explicit, slider values fail on native step mismatch,
+  and motion remains unresolved until the client preference is known.
 
 ### Tests
 

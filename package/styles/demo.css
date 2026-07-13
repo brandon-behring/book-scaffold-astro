@@ -16,6 +16,7 @@
   display: grid;
   gap: var(--space-5);
   margin-block: var(--space-6);
+  margin-inline: 0;
   padding: var(--space-5);
   color: var(--demo-ink);
   background: var(--color-bg);

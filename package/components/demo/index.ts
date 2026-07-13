@@ -1,5 +1,10 @@
 /** Stable, consumer-agnostic interactive-demo substrate (#143). */
-export { DemoFrame, type DemoFrameProps } from './DemoFrame.js';
+export {
+  DemoFrame,
+  DEMO_HEADING_LEVELS,
+  type DemoFrameProps,
+  type DemoHeadingLevel,
+} from './DemoFrame.js';
 export { Slider, type SliderProps } from './Slider.js';
 export {
   StatCards,

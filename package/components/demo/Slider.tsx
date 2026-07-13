@@ -30,6 +30,13 @@ function assertFinite(value: number, prop: string): void {
   }
 }
 
+function isStepAligned(value: number, min: number, step: number): boolean {
+  const steps = (value - min) / step;
+  const nearest = Math.round(steps);
+  const tolerance = Number.EPSILON * Math.max(1, Math.abs(steps)) * 16;
+  return Math.abs(steps - nearest) <= tolerance;
+}
+
 function assertSliderProps({
   label,
   value,
@@ -53,6 +60,9 @@ function assertSliderProps({
   if (step <= 0) throw new Error('Slider: step must be greater than 0.');
   if (value < min || value > max) {
     throw new Error(`Slider: value ${value} must be within [${min}, ${max}].`);
+  }
+  if (!isStepAligned(value, min, step)) {
+    throw new Error('Slider: value must align with min + (n × step).');
   }
   if (id !== undefined && (
     typeof id !== 'string' || id.trim() === '' || /\s/.test(id)
