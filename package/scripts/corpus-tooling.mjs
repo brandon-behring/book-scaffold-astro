@@ -6,6 +6,7 @@
  * integration metadata from resolve-book-config.mjs is their source of truth.
  */
 import { readFile } from 'node:fs/promises';
+import { LineCounter, parseDocument } from 'yaml';
 
 /** Parse the common `--book <id>` selector without rejecting legacy flags. */
 export function parseBookOption(argv = process.argv.slice(2), command = 'book-scaffold') {
@@ -100,6 +101,16 @@ export function assertCorpusEnvelope(value, corpus, artifact, validateValue = ()
     );
   }
 
+  const unknownTopLevel = Object.keys(value).filter(
+    (key) => key !== 'schemaVersion' && key !== 'books',
+  );
+  if (unknownTopLevel.length > 0) {
+    throw new Error(
+      `${artifact} corpus artifact envelope has unknown top-level ` +
+        `field${unknownTopLevel.length === 1 ? '' : 's'}: ${unknownTopLevel.join(', ')}.`,
+    );
+  }
+
   const expected = corpus.books.map((book) => book.id);
   const actual = Object.keys(value.books);
   const missing = expected.filter((id) => !Object.prototype.hasOwnProperty.call(value.books, id));
@@ -176,35 +187,78 @@ export async function mergeCorpusArtifact({
   return { schemaVersion: 1, books };
 }
 
-/** Extract a legacy scalar `book:` field and its source line from frontmatter. */
-export function legacyFrontmatterBook(source) {
-  const frontmatter = String(source).match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
-  if (!frontmatter) return null;
-  const lines = frontmatter[1].split(/\r?\n/);
-  for (let index = 0; index < lines.length; index += 1) {
-    const match = lines[index].match(/^\s*book\s*:\s*(.*?)\s*$/);
-    if (!match) continue;
-    const raw = match[1];
-    const value = raw.replace(/^(?:"([\s\S]*)"|'([\s\S]*)')$/, (_all, dq, sq) => dq ?? sq);
-    return { value, line: index + 2 };
+/**
+ * Parse standard MD/MDX YAML frontmatter once for every corpus producer.
+ *
+ * `lines` contains one-based source-file lines for top-level fields. Keeping
+ * this alongside YAML's decoded values prevents identity drift between a
+ * producer and validate when authors use quotes, comments, or numeric values.
+ */
+export function parseFrontmatter(source, fileLabel = 'frontmatter') {
+  const text = String(source);
+  const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  if (!match) return { frontmatter: {}, body: text, lines: {} };
+
+  const lineCounter = new LineCounter();
+  const document = parseDocument(match[1], {
+    lineCounter,
+    prettyErrors: false,
+    uniqueKeys: true,
+  });
+  if (document.errors.length > 0) {
+    const error = document.errors[0];
+    const yamlLine = error.linePos?.[0]?.line ?? 1;
+    const detail = `invalid YAML frontmatter: ${error.message}`;
+    const failure = new Error(`${fileLabel}:${yamlLine + 1}: ${detail}`, { cause: error });
+    failure.frontmatterLine = yamlLine + 1;
+    failure.frontmatterDetail = detail;
+    throw failure;
   }
-  return null;
+
+  const value = document.toJS();
+  if (value != null && !isObject(value)) {
+    const detail = 'YAML frontmatter must be a top-level mapping.';
+    const failure = new Error(`${fileLabel}:2: ${detail}`);
+    failure.frontmatterLine = 2;
+    failure.frontmatterDetail = detail;
+    throw failure;
+  }
+
+  const lines = {};
+  for (const pair of document.contents?.items ?? []) {
+    const key = pair?.key?.value;
+    const offset = pair?.key?.range?.[0];
+    if (typeof key !== 'string' || typeof offset !== 'number') continue;
+    // YAML line 1 begins on source-file line 2, immediately after `---`.
+    lines[key] = lineCounter.linePos(offset).line + 1;
+  }
+  return {
+    frontmatter: value ?? {},
+    body: text.slice(match[0].length),
+    lines,
+  };
 }
 
-/** Return an explicit book-local slug from simple YAML frontmatter. */
-export function frontmatterSlug(source) {
-  const frontmatter = String(source).match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
-  if (!frontmatter) return null;
-  for (const line of frontmatter[1].split(/\r?\n/)) {
-    const match = line.match(/^\s*slug\s*:\s*(.*?)\s*$/);
-    if (!match || match[1].length === 0) continue;
-    return match[1].replace(/^(?:"([\s\S]*)"|'([\s\S]*)')$/, (_all, dq, sq) => dq ?? sq);
-  }
-  return null;
+/** Extract a legacy scalar `book:` field and its source line from frontmatter. */
+export function legacyFrontmatterBook(source, fileLabel) {
+  const parsed = parseFrontmatter(source, fileLabel);
+  if (!Object.prototype.hasOwnProperty.call(parsed.frontmatter, 'book')) return null;
+  return {
+    value: parsed.frontmatter.book,
+    line: parsed.lines.book ?? 2,
+  };
+}
+
+/** Return an explicit book-local slug from YAML frontmatter. */
+export function frontmatterSlug(source, fileLabel) {
+  const { frontmatter } = parseFrontmatter(source, fileLabel);
+  return typeof frontmatter.slug === 'string' && frontmatter.slug.length > 0
+    ? frontmatter.slug
+    : null;
 }
 
 export function assertLegacyBookMatches(source, book, fileLabel) {
-  const legacy = legacyFrontmatterBook(source);
+  const legacy = legacyFrontmatterBook(source, fileLabel);
   if (legacy && legacy.value !== book.id) {
     throw new Error(
       `${fileLabel}:${legacy.line}: frontmatter book ${JSON.stringify(legacy.value)} ` +

@@ -125,11 +125,16 @@ export async function* walkMdx(dir, baseDir = dir) {
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
-  } catch {
-    return; // dir missing or unreadable — treat as zero chapters
+  } catch (error) {
+    if (error?.code === 'ENOENT') return; // optional content dir absent
+    throw error;
   }
   entries.sort((a, b) => a.name.localeCompare(b.name));
   for (const entry of entries) {
+    // Astro's content glob excludes every path segment beginning with `_`.
+    // Apply the same convention centrally so all artifact producers and
+    // validate see an identical content set, including nested draft dirs.
+    if (entry.name.startsWith('_')) continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       yield* walkMdx(full, baseDir);

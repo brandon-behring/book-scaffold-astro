@@ -54,6 +54,7 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 
 const CWD = process.cwd();
 const OUTPUT_PATH = process.env.BOOK_TIPS_OUT ?? 'src/data/tips.json';
+let DIAGNOSTIC_SCOPE = null;
 
 /**
  * Extract <Tip n="..." title="..."> tags and their body content from MDX.
@@ -112,7 +113,9 @@ function extractTips(source, chapterSlug) {
 
 async function main() {
   const toolingConfig = await loadResolvedBookConfig(CWD);
+  if (toolingConfig.corpus) DIAGNOSTIC_SCOPE = 'corpus';
   const selection = resolveBookSelection(toolingConfig, process.argv.slice(2), 'build-tips');
+  DIAGNOSTIC_SCOPE = selection.corpus ? 'corpus' : null;
   const chaptersRoot = await readChaptersBase(CWD, { corpus: selection.corpus });
   const runs = selection.corpus
     ? selection.books.map((book) => ({ book, dir: resolve(chaptersRoot, book.id) }))
@@ -137,8 +140,11 @@ async function main() {
           `[book:${run.book.id}] ${resolve(CWD, chapterPath).replace(`${CWD}/`, '')}`,
         );
       }
+      const fileLabel = run.book
+        ? `[book:${run.book.id}] ${resolve(CWD, chapterPath).replace(`${CWD}/`, '')}`
+        : resolve(CWD, chapterPath).replace(`${CWD}/`, '');
       const chapterSlug = run.book
-        ? frontmatterSlug(source) ?? rel.replace(/\.mdx?$/, '')
+        ? frontmatterSlug(source, fileLabel) ?? rel.replace(/\.mdx?$/, '')
         : basename(rel).replace(/\.mdx?$/, '');
       allTips.push(...extractTips(source, chapterSlug));
     }
@@ -197,8 +203,11 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('build-tips: failed');
-  console.error(err.message ?? err);
+  const message = String(err?.message ?? err);
+  const prefix = DIAGNOSTIC_SCOPE ? `[book:${DIAGNOSTIC_SCOPE}] ` : '';
+  console.error(
+    message.startsWith('[book:') ? message : `${prefix}build-tips: failed: ${message}`,
+  );
   process.exit(1);
 });
 

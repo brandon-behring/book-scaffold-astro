@@ -80,6 +80,7 @@ const BIB_PATH = configuredBibPath
 const OUT_PATH = resolve(PROJECT_ROOT, 'src/data/references.json');
 const SOURCES_PATH = resolve(PROJECT_ROOT, 'sources/manifest.yaml');
 const SOURCES_OUT = resolve(PROJECT_ROOT, 'src/data/sources.json');
+let DIAGNOSTIC_SCOPE = null;
 
 function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -127,13 +128,17 @@ async function buildReferences(selection) {
     seen.add(entry.id);
   }
   if (dupes.length > 0) {
-    console.error(`build-bib: ${dupes.length} duplicate bibkeys:`);
-    for (const id of dupes) console.error(`  - ${id}`);
+    const prefix = selection.corpus ? '[book:corpus] ' : '';
+    console.error(`${prefix}build-bib: ${dupes.length} duplicate bibkeys:`);
+    for (const id of dupes) console.error(`${prefix}build-bib:   - ${id}`);
     process.exit(1);
   }
 
   const byKey = Object.fromEntries(data.map((entry) => [entry.id, entry]));
 
+  if (selection.corpus) {
+    DIAGNOSTIC_SCOPE = 'corpus';
+  }
   const output = selection.corpus
     ? await mergeCorpusArtifact({
         path: OUT_PATH,
@@ -185,12 +190,19 @@ async function buildSources(selection) {
   try {
     yamlText = await readFile(SOURCES_PATH, 'utf8');
   } catch (err) {
-    if (err.code === 'ENOENT') return; // no manifest — nothing to emit
-    throw err;
+    if (err.code === 'ENOENT') {
+      // A corpus artifact must be a complete, deterministic envelope. Clear
+      // stale source data when the shared manifest disappears; legacy
+      // single-book mode retains its historical no-file/no-write behavior.
+      if (!selection.corpus) return;
+      yamlText = null;
+    } else {
+      throw err;
+    }
   }
 
   const { parse } = await import('yaml');
-  const parsed = parse(yamlText);
+  const parsed = yamlText === null ? null : parse(yamlText);
   // The manifest is a YAML array of source objects. Keep only well-formed
   // entries (a string `id` is the citation key + the /references anchor target).
   // A blank or comments-only manifest parses to null/undefined/[].
@@ -235,13 +247,17 @@ async function buildSources(selection) {
 
 async function main() {
   const toolingConfig = await loadResolvedBookConfig(PROJECT_ROOT);
+  if (toolingConfig.corpus) DIAGNOSTIC_SCOPE = 'corpus';
   const selection = resolveBookSelection(toolingConfig, process.argv.slice(2), 'build-bib');
   await buildReferences(selection);
   await buildSources(selection);
 }
 
 main().catch((err) => {
-  console.error(`build-bib: failed`);
-  console.error(err);
+  const message = String(err?.message ?? err);
+  const prefix = DIAGNOSTIC_SCOPE ? `[book:${DIAGNOSTIC_SCOPE}] ` : '';
+  console.error(
+    message.startsWith('[book:') ? message : `${prefix}build-bib: failed: ${message}`,
+  );
   process.exit(1);
 });

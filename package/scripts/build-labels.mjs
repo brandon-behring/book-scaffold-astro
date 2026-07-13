@@ -48,15 +48,16 @@
  *
  * Designed to run in <2 s on a medium book.
  */
-import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
-import { resolve, relative, join, dirname, sep } from 'node:path';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { resolve, relative, dirname, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createMarkdownProcessor } from '@astrojs/markdown-remark';
-import { readChaptersBase } from './walk-mdx.mjs';
+import { readChaptersBase, walkMdx } from './walk-mdx.mjs';
 import { loadResolvedBookConfig } from './resolve-book-config.mjs';
 import {
   assertLegacyBookMatches,
   mergeCorpusArtifact,
+  parseFrontmatter,
   resolveBookSelection,
 } from './corpus-tooling.mjs';
 // #126: reuse the ONE kind vocabulary (theorem-label.ts → its own lean tsup
@@ -94,6 +95,7 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 }
 
 const OUTPUT_PATH = process.env.BOOK_LABELS_OUT ?? 'src/data/labels.json';
+let DIAGNOSTIC_SCOPE = null;
 
 /** Component names that participate in cross-referencing. */
 const LABELABLE_TYPES = [
@@ -114,27 +116,6 @@ const TYPE_DISPLAY = {
   NoteBox: 'Note',
   CaseStudy: 'Case study',
 };
-
-// ===== Frontmatter parsing =====
-
-function splitFrontmatter(source) {
-  // Standard MDX/YAML frontmatter: `---\n…\n---`.
-  // Remove it before Markdown processing: YAML comments beginning with `#`
-  // must not become phantom headings.
-  const m = source.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
-  if (!m) return { frontmatter: {}, body: source };
-  const fm = {};
-  for (const line of m[1].split(/\r?\n/)) {
-    const kv = line.match(/^(\w+)\s*:\s*(.+?)\s*$/);
-    if (!kv) continue;
-    const [, key, raw] = kv;
-    // Strip quotes; coerce numeric scalars.
-    let val = raw.replace(/^["']|["']$/g, '');
-    if (/^-?\d+$/.test(val)) val = parseInt(val, 10);
-    fm[key] = val;
-  }
-  return { frontmatter: fm, body: source.slice(m[0].length) };
-}
 
 function chapterNumberOf(frontmatter) {
   // Tools profile uses `chapter`; academic uses `week`. Prefer chapter.
@@ -166,43 +147,19 @@ function extractAttr(attrsBlob, name) {
   return null;
 }
 
-// ===== Filesystem walk =====
-
-async function walkChapters(dir) {
-  const out = [];
-  let entries;
-  try {
-    entries = await readdir(dir, { withFileTypes: true });
-  } catch (err) {
-    if (err.code === 'ENOENT') return out;
-    throw err;
-  }
-  entries.sort((a, b) => a.name.localeCompare(b.name));
-  for (const e of entries) {
-    const path = join(dir, e.name);
-    if (e.isDirectory()) {
-      out.push(...(await walkChapters(path)));
-      continue;
-    }
-    if (!e.isFile()) continue;
-    if (!/\.mdx?$/.test(e.name)) continue;
-    if (e.name.startsWith('_')) continue; // hidden by convention
-    out.push(path);
-  }
-  return out;
-}
-
 // ===== Main =====
 
 async function main() {
   const cwd = process.cwd();
   const toolingConfig = await loadResolvedBookConfig(cwd);
+  if (toolingConfig.corpus) DIAGNOSTIC_SCOPE = 'corpus';
   const { numberStyle, chapterRoute, bookField } = toolingConfig;
   const selection = resolveBookSelection(
     toolingConfig,
     process.argv.slice(2),
     'build-labels',
   );
+  DIAGNOSTIC_SCOPE = selection.corpus ? 'corpus' : null;
   const chaptersRoot = await readChaptersBase(cwd, { corpus: selection.corpus });
   const runs = selection.corpus
     ? selection.books.map((book) => ({ book, dir: resolve(chaptersRoot, book.id) }))
@@ -217,7 +174,8 @@ async function main() {
   const stats = [];
 
   for (const run of runs) {
-    const files = await walkChapters(run.dir);
+    const files = [];
+    for await (const file of walkMdx(run.dir)) files.push(resolve(run.dir, file));
     const labels = {};
     let totalIds = 0;
     let chaptersWithIds = 0;
@@ -231,7 +189,10 @@ async function main() {
           `[book:${run.book.id}] ${relative(cwd, file)}`,
         );
       }
-      const { frontmatter: fm, body } = splitFrontmatter(source);
+      const fileLabel = run.book
+        ? `[book:${run.book.id}] ${relative(cwd, file)}`
+        : relative(cwd, file);
+      const { frontmatter: fm, body } = parseFrontmatter(source, fileLabel);
       const chapterNum = chapterNumberOf(fm);
       const contentId = relative(run.dir, file)
         .split(sep)
@@ -397,6 +358,10 @@ async function main() {
 }
 
 main().catch((err) => {
-  process.stderr.write(`build-labels: fatal: ${err?.message ?? err}\n`);
+  const message = String(err?.message ?? err);
+  const prefix = DIAGNOSTIC_SCOPE ? `[book:${DIAGNOSTIC_SCOPE}] ` : '';
+  process.stderr.write(
+    message.startsWith('[book:') ? `${message}\n` : `${prefix}build-labels: fatal: ${message}\n`,
+  );
   process.exit(1);
 });

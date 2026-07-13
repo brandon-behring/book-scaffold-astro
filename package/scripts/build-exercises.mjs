@@ -54,6 +54,7 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 
 const CWD = process.cwd();
 const OUTPUT_PATH = process.env.BOOK_EXERCISES_OUT ?? 'src/data/exercises.json';
+let DIAGNOSTIC_SCOPE = null;
 
 /**
  * Extract <Exercise id="..."> tags and their body content from MDX.
@@ -93,11 +94,13 @@ function extractExercises(source) {
 
 async function main() {
   const toolingConfig = await loadResolvedBookConfig(CWD);
+  if (toolingConfig.corpus) DIAGNOSTIC_SCOPE = 'corpus';
   const selection = resolveBookSelection(
     toolingConfig,
     process.argv.slice(2),
     'build-exercises',
   );
+  DIAGNOSTIC_SCOPE = selection.corpus ? 'corpus' : null;
   const chaptersRoot = await readChaptersBase(CWD, { corpus: selection.corpus });
   const runs = selection.corpus
     ? selection.books.map((book) => ({ book, dir: resolve(chaptersRoot, book.id) }))
@@ -126,8 +129,11 @@ async function main() {
           `[book:${run.book.id}] ${chapterPath.replace(`${CWD}/`, '')}`,
         );
       }
+      const fileLabel = run.book
+        ? `[book:${run.book.id}] ${chapterPath.replace(`${CWD}/`, '')}`
+        : chapterPath.replace(`${CWD}/`, '');
       const chapterSlug = run.book
-        ? frontmatterSlug(source) ?? rel.replace(/\.mdx?$/, '')
+        ? frontmatterSlug(source, fileLabel) ?? rel.replace(/\.mdx?$/, '')
         : basename(rel).replace(/\.mdx?$/, '');
       const exercises = extractExercises(source);
       if (exercises.length > 0) {
@@ -184,8 +190,11 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('build-exercises: failed');
-  console.error(err.message ?? err);
+  const message = String(err?.message ?? err);
+  const prefix = DIAGNOSTIC_SCOPE ? `[book:${DIAGNOSTIC_SCOPE}] ` : '';
+  console.error(
+    message.startsWith('[book:') ? message : `${prefix}build-exercises: failed: ${message}`,
+  );
   process.exit(1);
 });
 
