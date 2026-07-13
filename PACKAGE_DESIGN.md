@@ -1,6 +1,6 @@
 # Package Design — `@brandon_m_behring/book-scaffold-astro` v4
 
-> **Status**: living v4 API contract, updated through v4.27.0 stabilization.
+> **Status**: living v4 API contract, updated through v4.31.0.
 > **Origin**: the v3.0 npm-package pivot designed on 2026-05-18; historical
 > branch `v3.0` forked `main`@`529205b` (`v2.0.0`).
 > **Master plan**: `~/.claude/plans/i-want-to-investigate-recursive-yao.md` (12 D-decisions).
