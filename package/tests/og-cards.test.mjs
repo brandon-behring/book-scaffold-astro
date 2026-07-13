@@ -8,6 +8,7 @@ import {
   readFile,
   readdir,
   rm,
+  symlink,
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -218,6 +219,32 @@ test('#157 all five presets emit deterministic non-empty 1200x630 PNGs', async (
     [...firstBytes.values()].map((bytes) => createHash('sha256').update(bytes).digest('hex')),
   );
   assert.equal(distinct.size, 5, 'the five profile theme pairs must produce distinct cards');
+});
+
+test('#157 contract-limit unbroken strings stay inside non-overlapping card regions', async () => {
+  const root = await fixture();
+  try {
+    const hostname = `${'w'.repeat(63)}.${'w'.repeat(8)}.invalid`;
+    assert.equal(hostname.length, 80);
+    await writeRoute(root, '/', page({
+      title: 'W'.repeat(96),
+      description: 'W'.repeat(180),
+      canonical: `https://${hostname}/`,
+    }));
+    await runIntegration(root, {
+      profile: 'research-portfolio',
+      title: 'W'.repeat(72),
+    });
+
+    const source = await readFile(join(root, 'index.html'), 'utf8');
+    const hash = hashFromUrl(generatedImageUrl(source));
+    const image = await pngInfo(join(root, '_og', `${hash}.png`));
+    assert.equal(image.width, 1200);
+    assert.equal(image.height, 630);
+    assert.ok(image.bytes.length > 1_000);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test('#157 route is not drawn or hashed and identical payloads deduplicate', async () => {
@@ -482,6 +509,45 @@ test('#157 stale scaffold hashes are pruned while unrelated _og files are preser
     assert.match(messages.join('\n'), /1 stale pruned/);
   } finally {
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('#157 _og directories and scaffold-owned entries never traverse symlinks', async () => {
+  const externalDirectory = await fixture();
+  const linkedDirectoryBuild = await fixture();
+  try {
+    const externalCard = join(externalDirectory, 'deadbeefdeadbeef.png');
+    await writeFile(externalCard, 'external sentinel');
+    await writeRoute(linkedDirectoryBuild, '/', page());
+    await symlink(externalDirectory, join(linkedDirectoryBuild, '_og'), 'dir');
+
+    await assert.rejects(
+      runIntegration(linkedDirectoryBuild, { staticOgImage: '/social/static.png' }),
+      /OG card output must be a real directory, never a symlink/,
+    );
+    assert.equal(await readFile(externalCard, 'utf8'), 'external sentinel');
+  } finally {
+    await rm(linkedDirectoryBuild, { recursive: true, force: true });
+    await rm(externalDirectory, { recursive: true, force: true });
+  }
+
+  const externalFileRoot = await fixture();
+  const linkedEntryBuild = await fixture();
+  try {
+    const externalCard = join(externalFileRoot, 'sentinel.png');
+    await writeFile(externalCard, 'external sentinel');
+    await writeRoute(linkedEntryBuild, '/', page());
+    await mkdir(join(linkedEntryBuild, '_og'));
+    await symlink(externalCard, join(linkedEntryBuild, '_og', 'deadbeefdeadbeef.png'));
+
+    await assert.rejects(
+      runIntegration(linkedEntryBuild, { staticOgImage: '/social/static.png' }),
+      /scaffold-owned OG filenames must not be symlinks/,
+    );
+    assert.equal(await readFile(externalCard, 'utf8'), 'external sentinel');
+  } finally {
+    await rm(linkedEntryBuild, { recursive: true, force: true });
+    await rm(externalFileRoot, { recursive: true, force: true });
   }
 });
 

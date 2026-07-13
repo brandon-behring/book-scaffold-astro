@@ -325,9 +325,10 @@ export interface BookConfigOptions {
    * `ogImage` — default Open Graph image URL (relative to the site root, or
    * absolute). When omitted, no `<meta property="og:image">` is emitted by
    * default; per-page `Astro.props.ogImage` can still set one. Consumers
-   * opt-in to OG cards by adding e.g. `/og-default.png` to their `public/`
-   * AND setting `seo: { ogImage: '/og-default.png' }`. Avoids broken-link
-   * meta tags on consumers who haven't authored an OG image yet.
+   * opt in to a static default by adding e.g. `/og-default.png` to `public/`
+   * and setting `seo: { ogImage: '/og-default.png' }`. A static default
+   * suppresses generation; use `ogCards` below for generated cards. Omitting
+   * both avoids broken-link meta tags when no image has been authored.
    *
    * `twitterHandle` — adds `<meta name="twitter:site" content="@handle">`
    * when set. Omitted by default.

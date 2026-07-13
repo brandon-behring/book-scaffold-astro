@@ -6,12 +6,12 @@
  * rendered canonical metadata the single source of truth.
  */
 import { createHash } from 'node:crypto';
-import { constants as fsConstants } from 'node:fs';
 import {
-  access,
+  lstat,
   mkdir,
   readFile,
   readdir,
+  realpath,
   stat,
   unlink,
   writeFile,
@@ -119,6 +119,13 @@ interface PlannedStaticImage {
 interface Theme {
   background: string;
   accent: string;
+}
+
+interface CardLayoutBox {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
 }
 
 const PROFILE_THEMES: Readonly<Record<BookProfile, Theme>> = Object.freeze({
@@ -660,16 +667,26 @@ async function htmlFiles(outputDir: string): Promise<string[]> {
 }
 
 function cardTree(payload: CardPayload, theme: Theme): Record<string, unknown> {
+  const bookLength = Array.from(payload.bookTitle).length;
+  const titleLength = Array.from(payload.title).length;
+  const descriptionLength = Array.from(payload.description).length;
+  const hostnameLength = Array.from(payload.hostname).length;
   const children: Record<string, unknown>[] = [
     {
       type: 'div',
+      key: 'og-book',
       props: {
         style: {
           display: 'flex',
           alignItems: 'center',
-          fontSize: 25,
+          width: '100%',
+          maxWidth: 1056,
+          flexShrink: 0,
+          fontSize: bookLength > 56 ? 22 : 25,
           fontWeight: 700,
+          lineHeight: 1.15,
           letterSpacing: '-0.01em',
+          wordBreak: 'break-word',
           color: '#F7F5F0',
         },
         children: payload.bookTitle,
@@ -677,15 +694,19 @@ function cardTree(payload: CardPayload, theme: Theme): Record<string, unknown> {
     },
     {
       type: 'div',
+      key: 'og-title',
       props: {
         style: {
           display: 'flex',
-          marginTop: 32,
+          width: '100%',
+          marginTop: 28,
           maxWidth: 1040,
-          fontSize: payload.title.length > 70 ? 53 : 62,
+          flexShrink: 0,
+          fontSize: titleLength > 80 ? 42 : titleLength > 60 ? 48 : titleLength > 40 ? 54 : 62,
           fontWeight: 700,
           lineHeight: 1.08,
           letterSpacing: '-0.035em',
+          wordBreak: 'break-word',
           color: '#FDFCF9',
         },
         children: payload.title,
@@ -696,13 +717,17 @@ function cardTree(payload: CardPayload, theme: Theme): Record<string, unknown> {
   if (payload.description) {
     children.push({
       type: 'div',
+      key: 'og-description',
       props: {
         style: {
           display: 'flex',
-          marginTop: 25,
+          width: '100%',
+          marginTop: 22,
           maxWidth: 1010,
-          fontSize: 25,
-          lineHeight: 1.35,
+          flexShrink: 0,
+          fontSize: descriptionLength > 140 ? 20 : descriptionLength > 90 ? 22 : 25,
+          lineHeight: 1.3,
+          wordBreak: 'break-word',
           color: '#E8E5DD',
         },
         children: payload.description,
@@ -712,30 +737,53 @@ function cardTree(payload: CardPayload, theme: Theme): Record<string, unknown> {
 
   children.push({
     type: 'div',
+    key: 'og-footer',
     props: {
       style: {
         display: 'flex',
+        width: '100%',
+        flexShrink: 0,
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-end',
+        gap: 32,
         marginTop: 'auto',
-        fontSize: 20,
-        lineHeight: 1,
+        lineHeight: 1.15,
         color: '#E8E5DD',
       },
       children: [
         {
           type: 'div',
-          props: { style: { display: 'flex' }, children: payload.hostname },
-        },
-        {
-          type: 'div',
+          key: 'og-hostname',
           props: {
             style: {
               display: 'flex',
+              width: 640,
+              minWidth: 0,
+              flexShrink: 1,
+              fontSize: hostnameLength > 60 ? 16 : hostnameLength > 40 ? 18 : 20,
+              lineHeight: 1.15,
+              wordBreak: 'break-all',
+            },
+            children: payload.hostname,
+          },
+        },
+        {
+          type: 'div',
+          key: 'og-profile',
+          props: {
+            style: {
+              display: 'flex',
+              width: 384,
+              maxWidth: 384,
+              flexShrink: 0,
+              justifyContent: 'flex-end',
               fontSize: 17,
               fontWeight: 700,
+              lineHeight: 1.15,
               letterSpacing: '0.08em',
+              textAlign: 'right',
               textTransform: 'uppercase',
+              wordBreak: 'break-word',
               color: '#F7F5F0',
             },
             children: `BOOK SCAFFOLD · ${payload.profile.replaceAll('-', ' ')}`,
@@ -747,6 +795,7 @@ function cardTree(payload: CardPayload, theme: Theme): Record<string, unknown> {
 
   return {
     type: 'div',
+    key: 'og-root',
     props: {
       style: {
         display: 'flex',
@@ -762,6 +811,47 @@ function cardTree(payload: CardPayload, theme: Theme): Record<string, unknown> {
       children,
     },
   };
+}
+
+function validateCardLayout(boxes: ReadonlyMap<string, CardLayoutBox>): void {
+  const required = ['og-root', 'og-book', 'og-title', 'og-footer', 'og-hostname', 'og-profile'];
+  for (const role of required) {
+    if (!boxes.has(role)) throw new Error(`OG renderer did not report the ${role} layout box.`);
+  }
+
+  const epsilon = 0.01;
+  for (const [role, box] of boxes) {
+    if (
+      !Number.isFinite(box.left)
+      || !Number.isFinite(box.top)
+      || !Number.isFinite(box.width)
+      || !Number.isFinite(box.height)
+      || box.left < -epsilon
+      || box.top < -epsilon
+      || box.left + box.width > CARD_WIDTH + epsilon
+      || box.top + box.height > CARD_HEIGHT + epsilon
+    ) {
+      throw new Error(`OG renderer placed ${role} outside the ${CARD_WIDTH}x${CARD_HEIGHT} card.`);
+    }
+  }
+
+  const footer = boxes.get('og-footer')!;
+  const contentBottom = Math.max(
+    boxes.get('og-book')!.top + boxes.get('og-book')!.height,
+    boxes.get('og-title')!.top + boxes.get('og-title')!.height,
+    ...(boxes.has('og-description')
+      ? [boxes.get('og-description')!.top + boxes.get('og-description')!.height]
+      : []),
+  );
+  if (contentBottom > footer.top + epsilon) {
+    throw new Error('OG renderer content overlaps the footer; shorten or resize the card template.');
+  }
+
+  const hostname = boxes.get('og-hostname')!;
+  const profile = boxes.get('og-profile')!;
+  if (hostname.left + hostname.width > profile.left + epsilon) {
+    throw new Error('OG renderer hostname overlaps the profile mark.');
+  }
 }
 
 async function readFont(name: string): Promise<Buffer> {
@@ -786,6 +876,7 @@ async function renderCard(payload: CardPayload): Promise<Buffer> {
     readFont('Inter-Regular.ttf'),
     readFont('Inter-Bold.ttf'),
   ]);
+  const boxes = new Map<string, CardLayoutBox>();
   const svg = await satori(cardTree(payload, PROFILE_THEMES[payload.profile]), {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
@@ -793,7 +884,18 @@ async function renderCard(payload: CardPayload): Promise<Buffer> {
       { name: 'Inter', data: regular, weight: 400, style: 'normal' },
       { name: 'Inter', data: bold, weight: 700, style: 'normal' },
     ],
+    onNodeDetected(node) {
+      if (typeof node.key !== 'string' || !node.key.startsWith('og-')) return;
+      if (boxes.has(node.key)) throw new Error(`OG renderer reported duplicate ${node.key} layout boxes.`);
+      boxes.set(node.key, {
+        left: node.left,
+        top: node.top,
+        width: node.width,
+        height: node.height,
+      });
+    },
   });
+  validateCardLayout(boxes);
   const png = new Resvg(svg, {
     fitTo: { mode: 'width', value: CARD_WIDTH },
   }).render().asPng();
@@ -813,11 +915,16 @@ async function loadResvg(): Promise<typeof import('@resvg/resvg-js')> {
 }
 
 async function writeCollisionSafeImage(file: string, bytes: Buffer): Promise<void> {
+  let info;
   try {
-    await access(file, fsConstants.F_OK);
-  } catch {
+    info = await lstat(file);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     await writeFile(file, bytes, { flag: 'wx' });
     return;
+  }
+  if (!info.isFile() || info.isSymbolicLink()) {
+    throw new Error(`${file}: OG card output must be a regular file, never a symlink.`);
   }
   const existing = await readFile(file);
   if (!existing.equals(bytes)) {
@@ -825,20 +932,44 @@ async function writeCollisionSafeImage(file: string, bytes: Buffer): Promise<voi
   }
 }
 
-async function pruneStaleCards(ogDir: string, expectedHashes: ReadonlySet<string>): Promise<number> {
-  let entries;
+async function safeOgDirectory(outputDir: string, create: boolean): Promise<string | null> {
+  const ogDir = join(outputDir, '_og');
+  let info;
   try {
-    entries = await readdir(ogDir, { withFileTypes: true });
+    info = await lstat(ogDir);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 0;
-    throw error;
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    if (!create) return null;
+    await mkdir(ogDir, { recursive: true });
+    info = await lstat(ogDir);
   }
+  if (!info.isDirectory() || info.isSymbolicLink()) {
+    throw new Error(`${ogDir}: OG card output must be a real directory, never a symlink.`);
+  }
+
+  const [outputReal, ogReal] = await Promise.all([realpath(outputDir), realpath(ogDir)]);
+  if (ogReal !== join(outputReal, '_og')) {
+    throw new Error(`${ogDir}: OG card output resolved outside the Astro output directory.`);
+  }
+  return ogDir;
+}
+
+async function pruneStaleCards(
+  ogDir: string | null,
+  expectedHashes: ReadonlySet<string>,
+): Promise<number> {
+  if (ogDir === null) return 0;
+  const entries = await readdir(ogDir, { withFileTypes: true });
 
   let removed = 0;
   entries.sort((left, right) => left.name.localeCompare(right.name, 'en'));
   for (const entry of entries) {
     const match = /^([a-f\d]{16})\.png$/u.exec(entry.name);
-    if (!entry.isFile() || !match || expectedHashes.has(match[1])) continue;
+    if (!match || expectedHashes.has(match[1])) continue;
+    if (entry.isSymbolicLink()) {
+      throw new Error(`${join(ogDir, entry.name)}: scaffold-owned OG filenames must not be symlinks.`);
+    }
+    if (!entry.isFile()) continue;
     await unlink(join(ogDir, entry.name));
     removed += 1;
   }
@@ -914,8 +1045,7 @@ async function processBuild(
     payloadByHash.set(plan.hash, plan.payloadJson);
   }
 
-  const ogDir = join(outputDir, '_og');
-  if (generatedPlans.length > 0) await mkdir(ogDir, { recursive: true });
+  const ogDir = await safeOgDirectory(outputDir, generatedPlans.length > 0);
   const rendered = new Map<string, Buffer>();
   let reused = 0;
   for (const plan of generatedPlans) {
@@ -925,7 +1055,7 @@ async function processBuild(
     }
     const bytes = await renderCard(plan.payload);
     if (bytes.length === 0) throw new Error(`${plan.page.file}: OG renderer returned an empty PNG.`);
-    await writeCollisionSafeImage(join(ogDir, `${plan.hash}.png`), bytes);
+    await writeCollisionSafeImage(join(ogDir!, `${plan.hash}.png`), bytes);
     rendered.set(plan.hash, bytes);
   }
   const pruned = await pruneStaleCards(ogDir, new Set(generatedPlans.map(({ hash }) => hash)));
