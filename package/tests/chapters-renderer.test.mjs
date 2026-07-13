@@ -3,13 +3,15 @@
  * per-profile ChaptersRenderer strategy (closes #35).
  *
  * Tests run after `npm run build` and import from dist/ since node:test
- * can't load TS directly. Three renderers + their interactions:
+ * can't load TS directly. Four renderers + their interactions:
  *
  *   - toolsChaptersRenderer (the v3.5.2 tools branch, extracted)
  *   - academicChaptersRenderer (the v3.5.2 academic branch, extracted)
  *   - fallbackChaptersRenderer (field-presence dispatch; safety net for
- *     minimal / course-notes / research-portfolio when a consumer opts
- *     into routes.chapters: true on a profile without a dedicated renderer)
+ *     minimal / course-notes when a consumer opts into routes.chapters: true
+ *     on a profile without a dedicated renderer)
+ *   - researchPortfolioChaptersRenderer (fallback field-shape affordances,
+ *     with numeric Parts kept numbered throughout the portfolio schema range)
  *
  * Run: node --test tests/chapters-renderer.test.mjs
  */
@@ -19,6 +21,7 @@ import {
   toolsChaptersRenderer,
   academicChaptersRenderer,
   fallbackChaptersRenderer,
+  researchPortfolioChaptersRenderer,
   chapterSortKey,
 } from '../dist/index.mjs';
 
@@ -167,6 +170,25 @@ test('academic: sortKey unknown part sorts to end', () => {
   const known = academicChaptersRenderer.sortKey({ part: 'synthesis', week: 99 });
   const unknown = academicChaptersRenderer.sortKey({ part: 'consumer-custom', week: 1 });
   assert.ok(unknown > known);
+});
+
+// ===== Research-portfolio renderer =====
+
+test('research portfolio: numeric parts 6 and 20 remain numbered Parts', () => {
+  assert.equal(researchPortfolioChaptersRenderer.formatPartLabel(6), 'Part 6');
+  assert.equal(researchPortfolioChaptersRenderer.formatPartLabel(20), 'Part 20');
+});
+
+test('research portfolio: numeric parts are never treated as appendices', () => {
+  assert.equal(researchPortfolioChaptersRenderer.isAppendix(6), false);
+  assert.equal(researchPortfolioChaptersRenderer.isAppendix(20), false);
+});
+
+test('research portfolio: chapter numbering still delegates to the fallback shape renderer', () => {
+  assert.equal(
+    researchPortfolioChaptersRenderer.formatChapterNumber({ chapter: 18 }, false),
+    'Chapter 18',
+  );
 });
 
 // ===== Fallback renderer =====

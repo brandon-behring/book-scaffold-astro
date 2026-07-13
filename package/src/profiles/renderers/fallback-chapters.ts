@@ -1,11 +1,11 @@
 /**
  * src/profiles/renderers/fallback-chapters.ts — ChaptersRenderer used by
- * profiles that don't ship a dedicated renderer (minimal, course-notes,
- * research-portfolio). Dispatches by field presence — exactly the v3.5.2
+ * profiles that don't ship a dedicated renderer (minimal, course-notes).
+ * Dispatches by field presence — exactly the v3.5.2
  * logic that lived inline in pages/chapters.astro before #35.
  *
  * Safety net for shapes we haven't designed for explicitly. If a consumer
- * opts a course-notes or research-portfolio book into `routes.chapters: true`,
+ * opts a course-notes book into `routes.chapters: true`,
  * the fallback renders reasonably without crashing. Custom output for those
  * profiles is a v4+ extension point (consumer-overridable renderer).
  */
