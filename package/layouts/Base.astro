@@ -17,14 +17,13 @@
  *                 Set false for the landing page or any full-bleed surface.
  *                 Below 80rem (1280px) the sidebar is auto-hidden via CSS and
  *                 the mobile nav drawer is the chapter nav (v4.26.0, #80).
- *   showChrome  — render the tools chrome (ToolFilter + VersionSelector)
+ *   showChrome  — render the automatic tools chrome (ToolFilter)
  *                 (default: true). Set false on a landing/hub page with no
- *                 chapters/tools/versions; search + theme toggle always render.
+ *                 chapter filtering; search + theme toggle always render.
  *
- * Tools chrome (ToolFilter, VersionSelector): only mounted when
- * BOOK_PROFILE !== 'academic' AND showChrome !== false. Academic-profile books
- * (and any page with showChrome={false}) get no JS islands in the chrome row
- * (search + theme toggle only).
+ * Tools chrome (ToolFilter): only mounted when BOOK_PROFILE !== 'academic' AND
+ * showChrome !== false. VersionSelector is a prop-driven public component that
+ * consumers mount explicitly once they have real deployed-version data.
  *
  * Usage:
  *   ---
@@ -52,12 +51,11 @@ import '../styles/chapter.css';
 import '../styles/tool-filter.css';
 import '../styles/convergence.css';
 import '../styles/print.css';
-// Use package-path imports for the .tsx islands so Vite resolves them
+// Use the package-path import for the .tsx island so Vite resolves it
 // via the exports map (→ pre-compiled dist/components/*.mjs with proper
 // preact JSX). The raw .tsx files are also shipped so consumers can
 // import them directly, but relative imports from inside the package
 // must route through the exports map, not the raw source.
-import VersionSelector from '@brandon_m_behring/book-scaffold-astro/components/VersionSelector';
 import ToolFilter from '@brandon_m_behring/book-scaffold-astro/components/ToolFilter';
 import Sidebar from '../components/Sidebar.astro';
 // v4.27.0 (#149): site-wide release-state banner, driven by defineBookConfig.
@@ -77,10 +75,10 @@ interface Props {
   description?: string;
   lang?: string;
   showSidebar?: boolean;
-  /** #163: render the optional "tools chrome" — the ToolFilter +
-   *  VersionSelector islands (default true). Set false on landing/hub pages
-   *  with no chapters/tools/versions; the search + theme-toggle cluster always
-   *  renders. (No-op for the academic profile, which never shows them.) */
+  /** #163: render the optional automatic tools chrome — the ToolFilter island
+   *  (default true). Set false on landing/hub pages with no chapter filtering;
+   *  the search + theme-toggle cluster always renders. (No-op for the academic
+   *  profile, which never shows the ToolFilter.) */
   showChrome?: boolean;
   /** v4.6.0: Open Graph image URL (relative to site root, or absolute). */
   ogImage?: string;
@@ -98,9 +96,9 @@ const {
   ogType = 'website',
 } = Astro.props;
 
-// Tools chrome (ToolFilter + VersionSelector) renders only for non-academic
+// Automatic tools chrome (ToolFilter) renders only for non-academic
 // profiles AND when the page opts in via showChrome (default true). A
-// landing/hub page (no chapters/tools/versions) passes showChrome={false} to
+// landing/hub page (no chapter filtering) passes showChrome={false} to
 // get the search + theme-toggle cluster only — the chrome-free path that
 // previously forced borrowing the academic profile (and its katex deps). #163.
 const showToolsChrome = (profile !== 'academic') && showChrome;
@@ -197,7 +195,6 @@ const baseUrl = normalizeBase(import.meta.env.BASE_URL);
         </a>
       )}
       {showToolsChrome && <ToolFilter client:idle />}
-      {showToolsChrome && <VersionSelector client:idle />}
       <a
         href={`${baseUrl}search/`}
         class="chrome-button"
@@ -392,7 +389,8 @@ const baseUrl = normalizeBase(import.meta.env.BASE_URL);
     text-decoration: none;
   }
 
-  /* Version selector dropdown */
+  /* Opt-in VersionSelector dropdown. Base provides its visual language but
+   * deliberately does not mount it without a consumer-owned version manifest. */
   .version-selector {
     position: relative;
     display: inline-block;

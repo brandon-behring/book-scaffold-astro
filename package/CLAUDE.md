@@ -19,9 +19,16 @@ Read `BOOK_PROFILE` from the environment or `.env`. It controls:
 - Which content-collection schema is enforced (`academic` / `tools` / `minimal`)
 - Which markdown integrations run (KaTeX gated on `academic`)
 - Which callout family is the "default" import in templates
-- Whether ToolFilter / VersionSelector Preact islands mount in the chrome row
+- Whether the ToolFilter Preact island mounts in the automatic chrome row
 
 When in doubt, run `grep BOOK_PROFILE .env astro.config.mjs src/content.config.ts` to see the wiring.
+
+`VersionSelector` is different: it is a manual, prop-driven island because only
+the consuming book knows which versions are actually deployed. Import it from
+`@brandon_m_behring/book-scaffold-astro/components/VersionSelector`, pass
+`versions: [{ href, label, date, current? }]`, and hydrate it where your own
+navigation belongs. It renders nothing for an omitted or empty manifest;
+`Base.astro` never invents or auto-mounts version links.
 
 ## Frontmatter schemas
 

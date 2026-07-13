@@ -95,9 +95,9 @@ Each subsection is one of the audit pairs from the plan. Format: scaffold-has â†
 - **v2.0**: verbatim port to scaffold. Adapt the `partLabel` map to support either schema (`'foundations' | 'ssm-core' | ...` for academic, `1..5` for tools). One paint of polish: when sidebar runs under tools profile, sort by `chapter` not `week`.
 
 ### 3.7 `Base.astro` layout shell
-- Scaffold v1: `Base.astro` loads fonts + tokens + typography + layout + callouts + chapter + tool-filter + convergence + print CSS. ToolFilter and VersionSelector islands top-right.
+- Scaffold v1: `Base.astro` loaded fonts + tokens + typography + layout + callouts + chapter + tool-filter + convergence + print CSS. Its historical top-right chrome included both islands; the current package auto-mounts only `ToolFilter` and leaves `VersionSelector` to consumers with real deployment data.
 - post-transformers: `Base.astro` loads same minus tool-filter/convergence CSS. Adds `showSidebar` prop default true; wraps content in `<div class="layout-with-sidebar"><Sidebar />{slot}</div>` when true.
-- **v2.0**: take post-transformers' showSidebar pattern. CSS imports stay scaffold-style (load tool-filter/convergence CSS conditionally per profile â€” or unconditionally since they're tiny). ToolFilter/VersionSelector chrome remains tools-profile but hidden via CSS when `BOOK_PROFILE !== 'tools'`.
+- **Current outcome**: take post-transformers' showSidebar pattern. CSS imports stay scaffold-style. `ToolFilter` remains profile-gated automatic chrome; the exported `VersionSelector` is a prop-driven manual opt-in and is never mounted by `Base.astro`.
 
 ### 3.8 `Chapter.astro` layout
 - Scaffold v1: wraps Base, renders ChapterHeader + ChapterTOC + slot + ChapterNav.
