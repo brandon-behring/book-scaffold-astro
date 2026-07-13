@@ -70,15 +70,15 @@ function setupSiblingConfig(root, siblingBooks) {
   );
 }
 
-function setupBaseConfig(root, base, { integration = true } = {}) {
+function setupBaseConfig(root, base, { integration = true, style = 'minimalStyle' } = {}) {
   if (!integration) {
     writeFileSync(join(root, 'astro.config.mjs'), `export default { base: ${JSON.stringify(base)} };\n`);
     return;
   }
   writeFileSync(
     join(root, 'astro.config.mjs'),
-    `import { defineBookConfig, minimalStyle } from ${JSON.stringify(DIST_INDEX_URL)};\n` +
-      `export default await defineBookConfig({ styles: [minimalStyle], site: 'https://test.invalid', ` +
+    `import { defineBookConfig, ${style} } from ${JSON.stringify(DIST_INDEX_URL)};\n` +
+      `export default await defineBookConfig({ styles: [${style}], site: 'https://test.invalid', ` +
       `base: ${JSON.stringify(base)} });\n`,
   );
 }
@@ -336,6 +336,34 @@ test('validate (#190): root base permits root-absolute authored targets', () => 
     });
     assert.equal(result.status, 0, `stdout: ${result.stdout}\nstderr: ${result.stderr}`);
     assert.doesNotMatch(result.stderr, /Authored .* escapes configured Astro base/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#190): academic math uses the runtime grammar under a non-root base', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    setupBaseConfig(tmp, '/library/books/', { style: 'academicStyle' });
+    writeLinkFixture(
+      tmp,
+      'week03.mdx',
+      `Inline math: $f(x) = e^{i\\pi x}$.
+
+$$\\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx = \\sqrt{\\pi}$$
+
+This code example stays inert: \`<BookLink book="docs" to="/outside/" />\``,
+    );
+
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    assert.equal(result.status, 0, `stdout: ${result.stdout}\nstderr: ${result.stderr}`);
+    assert.match(result.stdout, /profile=academic/);
+    assert.doesNotMatch(result.stderr, /Could not parse authored links|Cannot structurally validate <BookLink>/);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
