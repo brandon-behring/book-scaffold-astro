@@ -2,6 +2,23 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.26.2] — 2026-07-13
+
+Patch release — **registry reconciliation plus research-portfolio Part numbering.** The v4.26.1 source commit and tag exist, but that version was never published to npm. Registry users therefore upgrade directly from v4.26.0 to v4.26.2; this artifact contains the full v4.26.1 reconciliation described below, the site-wide pre-release banner from #201, and the portfolio renderer fix from #203.
+
+### Added
+
+- **Site-wide pre-release banner configuration (#201).** `defineBookConfig({ releaseStatus })` can now provide the release state, dismissal threshold, and optional message consumed by `Base.astro` to render `PreReleaseBanner` across the site without repeating page-level props.
+- **Dedicated `researchPortfolioChaptersRenderer` export (#203).** The research-portfolio profile now has an explicit renderer while retaining the fallback renderer's field-shape dispatch for chapter labels.
+
+### Fixed
+
+- **Research portfolios keep every numeric Part numbered (#203).** Parts 6 through the schema maximum of 20 now render as `Part 6` through `Part 20` instead of inheriting the tools profile's historical `part >= 6` appendix convention. Tools-profile appendices and all other fallback-renderer consumers are unchanged.
+
+### Tests
+
+- Package suite **528 → 531** (+3): coverage now locks the research-portfolio boundary at Parts 6 and 20, verifies neither is an appendix, and confirms ordinary chapter-number formatting still delegates to the fallback renderer. The final package suite passes 531/531; `create-book` passes 23/23.
+
 ## [4.26.1] — 2026-07-02
 
 Patch release — **the #178 release reconciliation.** v4.26.0 was tagged and published from a feature branch that was never merged to `main`, while `main` carried two release commits that were never published (v4.25.2, v4.25.3). This release is cut from the reconciled `main` and is the **first published artifact carrying the v4.25.3 responsive work** (#170–#173); v4.25.2's code (#162/#163) had already shipped inside the 4.26.0 tarball. No new features.
