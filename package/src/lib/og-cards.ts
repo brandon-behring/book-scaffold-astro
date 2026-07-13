@@ -245,6 +245,9 @@ function resolveStaticImageUrl(value: string, site: URL, base: string): string {
     return absoluteHttpUrl(trimmed, 'static OG image', '(config)').toString();
   }
   if (trimmed.startsWith('//')) {
+    if (trimmed.startsWith('///')) {
+      throw new Error(`OG card static image has an invalid protocol-relative URL: ${JSON.stringify(value)}.`);
+    }
     return absoluteHttpUrl(`${site.protocol}${trimmed}`, 'static OG image', '(config)').toString();
   }
   if (/^[a-z][a-z\d+.-]*:/iu.test(trimmed)) {
@@ -252,8 +255,8 @@ function resolveStaticImageUrl(value: string, site: URL, base: string): string {
       `OG card static image must be local, protocol-relative, or http(s) (got ${JSON.stringify(value)}).`,
     );
   }
-  if (trimmed.includes('\\')) {
-    throw new Error('OG card local static image must not contain a backslash.');
+  if (trimmed.includes('\\') || /[\u0000-\u001F\u007F]/u.test(trimmed)) {
+    throw new Error('OG card local static image must not contain a backslash or control character.');
   }
 
   const rawPath = trimmed.split(/[?#]/u, 1)[0];
@@ -269,7 +272,13 @@ function resolveStaticImageUrl(value: string, site: URL, base: string): string {
     } catch {
       throw new Error(`OG card local static image contains invalid percent encoding: ${JSON.stringify(value)}.`);
     }
-    if (decoded === '.' || decoded === '..' || decoded.includes('/') || decoded.includes('\\')) {
+    if (
+      decoded === '.'
+      || decoded === '..'
+      || decoded.includes('/')
+      || decoded.includes('\\')
+      || /[\u0000-\u001F\u007F]/u.test(decoded)
+    ) {
       throw new Error(`OG card local static image must not contain encoded path traversal: ${JSON.stringify(value)}.`);
     }
   }

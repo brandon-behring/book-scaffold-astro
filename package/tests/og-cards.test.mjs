@@ -367,11 +367,14 @@ test('#157 local static image URLs reject blanks, schemes, and decoded traversal
     '   ',
     'data:image/png;base64,abc',
     'javascript:alert(1)',
+    '///cdn.test.invalid/card.png',
     '../social/card.png',
     '/social/%2e%2e/card.png',
     '/social/%252e%252e/card.png',
     '/social/%2Fescape.png',
+    '/social/%00escape.png',
     '/social/card\\name.png',
+    '/social/card\nname.png',
     '?version=1',
   ]) {
     const root = await fixture();
