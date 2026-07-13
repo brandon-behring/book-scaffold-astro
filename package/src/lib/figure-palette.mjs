@@ -14,22 +14,22 @@ function frozenEntries(entries) {
 export const SEMANTIC_FIGURE_TOKENS = frozenEntries([
   {
     family: 'semantic', name: 'blue', token: '--fig-blue', label: 'default / lightweight',
-    authoring: '#3B6FA0', hostLight: 'var(--warm-blue)', standaloneLight: '#3B6FA0',
+    authoring: '#3B6FA0', hostLight: '#3B6FA0', standaloneLight: '#3B6FA0',
     hostDark: '#7297BB', standaloneDark: '#7297BB',
   },
   {
     family: 'semantic', name: 'rose', token: '--fig-rose', label: 'caution / problem',
-    authoring: '#C06858', hostLight: 'var(--warm-rose)', standaloneLight: '#C06858',
+    authoring: '#C06858', hostLight: '#C06858', standaloneLight: '#C06858',
     hostDark: '#D29287', standaloneDark: '#D29287',
   },
   {
     family: 'semantic', name: 'green', token: '--fig-green', label: 'positive outcome',
-    authoring: '#4A7E3F', hostLight: 'var(--warm-green)', standaloneLight: '#4A7E3F',
+    authoring: '#4A7E3F', hostLight: '#4A7E3F', standaloneLight: '#4A7E3F',
     hostDark: '#7DA275', standaloneDark: '#7DA275',
   },
   {
     family: 'semantic', name: 'plum', token: '--fig-plum', label: 'authority / heaviest',
-    authoring: '#8A4E82', hostLight: 'var(--warm-plum)', standaloneLight: '#8A4E82',
+    authoring: '#8A4E82', hostLight: '#8A4E82', standaloneLight: '#8A4E82',
     hostDark: '#AB80A5', standaloneDark: '#AB80A5',
   },
   {
@@ -41,7 +41,7 @@ export const SEMANTIC_FIGURE_TOKENS = frozenEntries([
   },
   {
     family: 'semantic', name: 'crimson', token: '--fig-crimson', label: 'failure / severe problem',
-    authoring: '#A03838', hostLight: 'var(--warm-crimson)', standaloneLight: '#A03838',
+    authoring: '#A03838', hostLight: '#A03838', standaloneLight: '#A03838',
     hostDark: '#BB7070', standaloneDark: '#BB7070',
   },
 ]);

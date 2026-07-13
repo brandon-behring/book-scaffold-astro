@@ -208,12 +208,12 @@
 /* Do not edit this block by hand. Semantic Warm–Tol roles and ordinal
  * Okabe–Ito series are intentionally separate public contracts. */
 :root {
-  --fig-blue: var(--warm-blue); /* default / lightweight */
-  --fig-rose: var(--warm-rose); /* caution / problem */
-  --fig-green: var(--warm-green); /* positive outcome */
-  --fig-plum: var(--warm-plum); /* authority / heaviest */
+  --fig-blue: #3B6FA0; /* default / lightweight */
+  --fig-rose: #C06858; /* caution / problem */
+  --fig-green: #4A7E3F; /* positive outcome */
+  --fig-plum: #8A4E82; /* authority / heaviest */
   --fig-gold: #9D7D34; /* packaging / coordination */
-  --fig-crimson: var(--warm-crimson); /* failure / severe problem */
+  --fig-crimson: #A03838; /* failure / severe problem */
   --fig-ink: var(--color-text); /* labels / axes / outlines */
   --fig-paper: var(--color-bg); /* figure background */
   --fig-grid: #8C8981; /* essential secondary structure */

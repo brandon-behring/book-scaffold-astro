@@ -212,6 +212,34 @@ export function shouldInline(src) {
   );
 }
 
+/**
+ * Convert a local SVG URL into a path relative to the consumer's `public/`
+ * directory. Astro prefixes dynamic asset URLs with BASE_URL on non-root
+ * deployments, but that prefix is a URL concern and is not present on disk.
+ * Literal root URLs remain supported so this helper is backward-compatible.
+ *
+ * Reject dot segments and backslashes before the filesystem boundary. Figure
+ * sources are author-controlled, but an inline helper should never make an
+ * out-of-tree file available to `set:html` accidentally.
+ */
+export function publicSvgPath(src, base = '/') {
+  if (!shouldInline(src) || src.includes('\\')) return null;
+
+  const baseSegments = typeof base === 'string'
+    ? base.split('/').filter(Boolean)
+    : [];
+  const normalizedBase = baseSegments.length ? `/${baseSegments.join('/')}/` : '/';
+  const withoutBase = normalizedBase !== '/' && src.startsWith(normalizedBase)
+    ? src.slice(normalizedBase.length)
+    : src.replace(/^\/+/, '');
+  const segments = withoutBase.split('/');
+
+  if (!segments.length || segments.some((segment) => !segment || segment === '.' || segment === '..')) {
+    return null;
+  }
+  return segments.join('/');
+}
+
 /** Remove the standalone self-theming block so host tokens.css is the sole
  *  source of figure variables once the SVG is inlined into the page. */
 export function stripThemeBlock(svg) {
@@ -252,7 +280,7 @@ function mergeSvgStyle(openTag, css) {
  * Prepare a raw pipeline SVG for inline embedding in <Figure>:
  *   - strip the standalone <style data-diagram-theme> (host tokens.css themes it);
  *   - replace any pre-existing <title>/<desc> with ones from the call-site props
- *     (caption → <title>, desc ?? alt → <desc>) and wire aria-labelledby;
+ *     (alt ?? caption → <title>, desc → <desc>) and wire aria-labelledby;
  *   - ensure role="img" and a responsive width on the root <svg>.
  * Pure string transform; output is a trusted local build artifact (set:html).
  */
@@ -270,23 +298,23 @@ export function assembleSvg(raw, opts = {}) {
     .replace(/<title\b[^>]*>[\s\S]*?<\/title>/gi, '')
     .replace(/<desc\b[^>]*>[\s\S]*?<\/desc>/gi, '');
 
-  const titleText = caption ?? alt ?? '';
-  const descText = desc ?? (alt && alt !== titleText ? alt : '');
+  // Match the raster fallback: `alt` is the short accessible name. A caption
+  // is only its fallback, while `desc` remains the optional long description.
+  const titleText = alt ?? caption ?? '';
+  const descText = desc ?? '';
   const id = String(idBase).replace(/[^a-zA-Z0-9_-]/g, '-');
 
   const a11y = [];
-  const labelledby = [];
   if (titleText) {
     a11y.push(`<title id="${id}-title">${escapeXml(titleText)}</title>`);
-    labelledby.push(`${id}-title`);
   }
   if (descText) {
     a11y.push(`<desc id="${id}-desc">${escapeXml(descText)}</desc>`);
-    labelledby.push(`${id}-desc`);
   }
 
   openTag = ensureSvgAttr(openTag, 'role', 'img');
-  if (labelledby.length) openTag = setSvgAttr(openTag, 'aria-labelledby', labelledby.join(' '));
+  if (titleText) openTag = setSvgAttr(openTag, 'aria-labelledby', `${id}-title`);
+  if (descText) openTag = setSvgAttr(openTag, 'aria-describedby', `${id}-desc`);
   openTag = mergeSvgStyle(openTag, `width:${width};max-width:100%;height:auto`);
 
   return `${svg.slice(0, openMatch.index)}${openTag}${a11y.join('')}${body}`;

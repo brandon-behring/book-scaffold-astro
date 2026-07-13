@@ -4,7 +4,11 @@
 
 ## TL;DR
 
-Drop `figures/<topic>/diagram.tex` (standalone TikZ source). Run `npm run build:figures` (or it's wired into `prebuild`). Get `public/figures/<topic>/diagram.svg` ready to reference in MDX as `<Figure src="/figures/<topic>/diagram.svg" />`.
+Drop `figures/<topic>/diagram.tex` (standalone TikZ source). Run
+`npm run build:figures` explicitly; figure conversion is not wired into
+`prebuild` because TeX and Poppler are optional system tools. The command emits
+`public/figures/<topic>/diagram.svg`, ready to reference in MDX as
+`<Figure src="/figures/<topic>/diagram.svg" />`.
 
 ## The TikZ source
 

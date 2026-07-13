@@ -45,7 +45,7 @@ test('utilities — standalone + data-backed (light + dark)', async ({ page }) =
   const figure = page.locator('#fig-sample');
   const semantic = figure.locator('#palette-semantic');
   const series = figure.locator('#palette-series');
-  await expect(figure.getByRole('img', { name: /Semantic roles change with the theme/ })).toBeVisible();
+  await expect(figure.getByRole('img', { name: 'A semantic stage beside a dashed categorical series' })).toBeVisible();
   await expect(figure.locator('style[data-diagram-theme]')).toHaveCount(0);
   await expect(figure.locator('style[data-diagram-map="2"]')).toHaveCount(1);
   await expect(semantic).toHaveAttribute('fill-opacity', '0.14');

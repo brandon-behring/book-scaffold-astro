@@ -117,6 +117,10 @@ test('tokens.css generated block exactly matches the canonical palette manifest'
 
 test('palette manifest keeps Warm–Tol meaning separate from Okabe–Ito ordinals', () => {
   assert.ok(SEMANTIC_FIGURE_TOKENS.every(({ token }) => token.startsWith('--fig-')));
+  assert.ok(
+    SEMANTIC_FIGURE_TOKENS.every(({ hostLight }) => /^#[0-9A-F]{6}$/i.test(hostLight)),
+    'semantic light values are owned directly by the figure manifest, not aliased to a second palette',
+  );
   assert.deepEqual(
     SERIES_FIGURE_TOKENS.map(({ token }) => token),
     Array.from({ length: 8 }, (_, index) => `--series-${index + 1}`),

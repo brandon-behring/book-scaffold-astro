@@ -34,12 +34,13 @@
  * Idempotent: skips when the target SVG is newer than the source PDF (and the
  * recolor itself is a no-op on an already-themed SVG, so re-runs after an
  * upgrade safely theme pre-existing figures).
- * Run on `prebuild` so Astro always sees fresh figures.
+ * Run explicitly with `npm run build:figures`; optional system tools keep this
+ * authoring pipeline out of the generated project's `prebuild` hook.
  *
  * Graceful skip: when pdftocairo / pdftoppm aren't on PATH (e.g. Cloudflare
  * build container), the script warns and exits 0. Committed SVGs/PNGs under
- * public/figures/ are served as-is. Local devs with poppler-utils regenerate
- * from PDFs on every `npm run dev`.
+ * public/figures/ are served as-is. Local authors with poppler-utils regenerate
+ * from PDFs when source figures change.
  */
 import { readdir, stat, mkdir } from 'node:fs/promises';
 import { existsSync, statSync, readFileSync, writeFileSync } from 'node:fs';

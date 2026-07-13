@@ -126,6 +126,8 @@ TikZ:
 Matplotlib:
 
 ```python
+import matplotlib.pyplot as plt
+
 FIG = {
     "blue": "#3B6FA0",
     "rose": "#C06858",
@@ -136,14 +138,26 @@ SERIES = [
     "#0072B2", "#D55E00", "#CC79A7", "#000000",
 ]
 
+fig, ax = plt.subplots()
+# Keep the canvas transparent: the host's --fig-paper must show through after
+# PDF → SVG conversion instead of baking a light-only rectangle into the plot.
+fig.patch.set_alpha(0)
+ax.set_facecolor("none")
 ax.fill_between(x, low, high, color=FIG["blue"], alpha=.14)
 ax.plot(x, mean, color=FIG["blue"], linewidth=2)
 ax.plot(x, baseline, color=SERIES[0], linestyle="--", marker="o", label="Baseline")
-ax.set_facecolor("#FDFCF9")
-fig.savefig("figures/results/summary.pdf", bbox_inches="tight")
+fig.savefig(
+    "figures/results/summary.pdf",
+    format="pdf",
+    transparent=True,
+    bbox_inches="tight",
+)
 ```
 
-Then run `npm run build:figures`. Re-run it after upgrading the scaffold so
+Then run `npm run build:figures` to preserve the vector PDF→SVG path. Export a
+raster (`.png`) only when the source is true pixel data, such as a photograph
+or instrument raster. Lines, text, markers, and diagram geometry should remain
+vector PDF/SVG. Re-run the command after upgrading the scaffold so
 already-generated SVGs receive new mappings; the rewrite is idempotent.
 
 ## 4. Accessible name and description

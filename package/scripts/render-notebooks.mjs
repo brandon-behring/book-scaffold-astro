@@ -16,7 +16,8 @@
  * canonical; the notebook is a code companion.
  *
  * Idempotent: skips when the target HTML is newer than the source .ipynb.
- * Run on `prebuild` so Astro always sees fresh notebook HTML.
+ * Run explicitly with `npm run build:notebooks`; optional system tools keep
+ * this authoring pipeline out of the generated project's `prebuild` hook.
  *
  * Style scoping: nbconvert's `basic` template emits HTML without nbviewer
  * chrome, but with embedded <style> tags. To prevent CSS bleed, each

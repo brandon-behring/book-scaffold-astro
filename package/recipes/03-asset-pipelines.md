@@ -2,7 +2,12 @@
 
 **Profile**: any (build:figures and build:notebooks both graceful-skip when source dirs / tools are absent).
 
-**TL;DR**: Put PDFs in `figures/`, Jupyter notebooks in `notebooks/`. `npm run dev` / `npm run build` runs both pipelines via the `build:assets` prebuild hook. Output: `public/figures/*.svg` (PDF→SVG via `pdftocairo`) and `public/notebooks/*.html` (ipynb→HTML via `uv run jupyter nbconvert`).
+**TL;DR**: Put PDFs in `figures/`, Jupyter notebooks in `notebooks/`, then run
+`npm run build:figures` and `npm run build:notebooks` explicitly. Output:
+`public/figures/*.svg` (PDF→SVG via `pdftocairo`) and
+`public/notebooks/*.html` (ipynb→HTML via `uv run jupyter nbconvert`). These
+optional system-tool pipelines are not part of `prebuild`; generated books run
+validation there instead.
 
 ## How each pipeline works
 
@@ -59,8 +64,9 @@ Cloudflare Workers build containers don't have `pdftocairo` or `uv` installed. T
 
 1. **Commit derived artifacts** (recommended for low-friction deploy):
    - Edit `.gitignore`: remove the `public/figures/` and `public/notebooks/` lines.
-   - Run `npm run build:assets` locally; commit the generated outputs.
-   - CI's prebuild gracefully skips (tools missing), serves committed artifacts.
+   - Run `npm run build:figures` and `npm run build:notebooks` locally; commit
+     the generated outputs.
+   - CI serves the committed artifacts without needing either optional system tool.
    - Trade-off: ~3 MB of binary artifacts in git history.
 
 2. **Install poppler + uv in CI**: prepend `apt-get install -y poppler-utils && curl -LsSf https://astral.sh/uv/install.sh | sh && ...` to the build command. More setup; cleaner repo.
@@ -78,7 +84,7 @@ post_transformers chose option 1 (see commit `f7fa75d`).
 
 - `scripts/build-figures.mjs:23-32` — path resolution + env overrides
 - `scripts/render-notebooks.mjs:30-46` — same
-- `package.json` `prebuild` / `predev` / `build:assets` — orchestration
+- `package.json` `build:figures` / `build:notebooks` — explicit authoring commands
 - `.gitignore` — toggles whether artifacts are committed
 
 ## Reference implementation
