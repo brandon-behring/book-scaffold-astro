@@ -61,6 +61,30 @@ Another paragraph.
   writeFileSync(join(dataDir, 'labels.json'), '{}');
 }
 
+function setupSiblingConfig(root, siblingBooks) {
+  writeFileSync(
+    join(root, 'astro.config.mjs'),
+    `import { defineBookConfig, minimalStyle } from ${JSON.stringify(DIST_INDEX_URL)};\n` +
+      `export default await defineBookConfig({ styles: [minimalStyle], site: 'https://test.invalid', ` +
+      `siblingBooks: ${JSON.stringify(siblingBooks)} });\n`,
+  );
+}
+
+function writeBookLinkChapter(root, body) {
+  writeFileSync(
+    join(root, 'src', 'content', 'chapters', 'week03.mdx'),
+    `---
+week: 3
+part: foundations
+title: "Cross-book links"
+status: implemented
+---
+
+${body}
+`,
+  );
+}
+
 /**
  * Add a study-guide `questions` collection + an `astro.config.mjs` declaring
  * `examDomains` to a fixture root, for validate check #8 (v4.17.0, #112).
@@ -650,6 +674,148 @@ status: implemented
       /<Theorem id="w3:thm:missing"> — not in labels\.json/,
       `validate should name the unresolved theorem id; got stderr: ${result.stderr}`,
     );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+// ---- validate check #7 (#147): vendored sibling labels indexes ----
+
+test('validate (#147): literal sibling targets resolve through a declared labels index', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    mkdirSync(join(tmp, 'vendor'), { recursive: true });
+    writeFileSync(
+      join(tmp, 'vendor', 'design-labels.json'),
+      JSON.stringify({
+        'heading:chapters/patterns#layered': {
+          href: 'chapters/patterns#layered',
+          display: 'Section “Layered systems”',
+          number: null,
+        },
+        'heading:chapters/alternate#layered': {
+          href: 'chapters/alternate#layered',
+          display: 'Layered (another chapter)',
+          number: null,
+        },
+      }),
+    );
+    setupSiblingConfig(tmp, {
+      design: {
+        url: 'https://hub.example/library/design/',
+        labels: './vendor/design-labels.json',
+      },
+    });
+    writeBookLinkChapter(
+      tmp,
+      `<BookLink book="design" to="/chapters/patterns/#layered">Quoted target.</BookLink>
+
+<BookLink book={'design'} to={\`chapters/patterns#layered\`}>Braced literals.</BookLink>
+
+<BookLink book="design" to="chapters/alternate#layered">Same fragment, other chapter.</BookLink>`,
+    );
+
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    assert.equal(result.status, 0, `stdout: ${result.stdout}\nstderr: ${result.stderr}`);
+    assert.doesNotMatch(result.stderr, /BookLink.*skipped/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#147): unknown anchors, wrong sibling paths, and unknown books fail loud', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    mkdirSync(join(tmp, 'vendor'), { recursive: true });
+    writeFileSync(
+      join(tmp, 'vendor', 'design-labels.json'),
+      JSON.stringify({
+        'heading:chapters/patterns#layered': { href: 'chapters/patterns#layered' },
+      }),
+    );
+    setupSiblingConfig(tmp, {
+      design: {
+        url: 'https://design.example',
+        labels: './vendor/design-labels.json',
+      },
+    });
+    writeBookLinkChapter(
+      tmp,
+      `<BookLink book="design" to="chapters/patterns/#layerd">Typo.</BookLink>
+<BookLink book="design" to="chapters/wrong/#layered">Wrong path.</BookLink>
+<BookLink book="missing" to="chapters/patterns/#layered">Unknown book.</BookLink>`,
+    );
+
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    assert.equal(result.status, 3, result.stderr);
+    assert.match(result.stderr, /fragment "layerd" is not in \.\/vendor\/design-labels\.json/);
+    assert.match(
+      result.stderr,
+      /path\/fragment does not match.*indexes "layered" at "chapters\/patterns#layered"/s,
+    );
+    assert.match(result.stderr, /book="missing".*not in evaluated defineBookConfig siblingBooks \(design\)/s);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#147): every declared missing or malformed sibling index is an error', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    mkdirSync(join(tmp, 'vendor'), { recursive: true });
+    writeFileSync(join(tmp, 'vendor', 'malformed.json'), '{ not valid JSON');
+    setupSiblingConfig(tmp, {
+      missing: { url: 'https://missing.example', labels: './vendor/missing.json' },
+      malformed: { url: 'https://malformed.example', labels: './vendor/malformed.json' },
+    });
+
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    assert.equal(result.status, 2, result.stderr);
+    assert.match(result.stderr, /siblingBooks\.missing\.labels.*missing, unreadable, or invalid/);
+    assert.match(result.stderr, /siblingBooks\.malformed\.labels.*missing, unreadable, or invalid/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#147): dynamic props and URL-only entries warn and skip explicitly', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    setupSiblingConfig(tmp, { legacy: 'https://legacy.example/books/design/' });
+    writeBookLinkChapter(
+      tmp,
+      `<BookLink book="legacy" to="chapters/patterns/#layered">URL-only.</BookLink>
+<BookLink book={selectedBook} to="chapters/patterns/#layered">Dynamic book.</BookLink>
+<BookLink book="legacy" to={selectedTarget}>Dynamic target.</BookLink>
+<BookLink {...linkProps}>Dynamic spread.</BookLink>`,
+    );
+
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    assert.equal(result.status, 0, `stdout: ${result.stdout}\nstderr: ${result.stderr}`);
+    assert.match(result.stderr, /siblingBooks entry is URL-only/);
+    assert.match(result.stderr, /dynamic book= expression/);
+    assert.match(result.stderr, /dynamic to= expression/);
+    assert.match(result.stderr, /dynamic prop spread/);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }

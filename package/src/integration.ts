@@ -24,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { AstroIntegration } from 'astro';
-import type { BookScaffoldIntegrationOptions } from './types.js';
+import type { BookScaffoldIntegrationOptions, SiblingBooks } from './types.js';
 import { PROFILES } from './profiles/index.js';
 import { normalizeFrontmatterConfig } from './lib/define-style.js';
 import { resolveGithubRepo, DEFAULT_GITHUB_BRANCH } from './lib/repo-url.js';
@@ -100,8 +100,8 @@ function makeBookConfigVitePlugin(config: {
   // to the wrong repo).
   githubRepo: string | null;
   githubBranch: string;
-  // v4.16.0 (#96): sibling-book base-URL registry for <BookLink>.
-  siblingBooks: Record<string, string>;
+  // v4.16.0 (#96), extended in #147: sibling-book registry for <BookLink>.
+  siblingBooks: SiblingBooks;
   // v4.17.0 (#112): per-book exam-domain taxonomy for the questions collection.
   examDomains: readonly string[];
   // v4.26.0 (#80): book-aware nav route patterns (token strings). Defaults
@@ -453,7 +453,13 @@ export function bookScaffoldIntegration(
   // metadata on the resolved integration instead of re-parsing style source.
   // Non-enumerable keeps it out of Astro's own config serialization/debugging.
   Object.defineProperty(integration, '__bookScaffoldResolvedConfig', {
-    value: Object.freeze({ preset: profile, numberStyle }),
+    value: Object.freeze({
+      preset: profile,
+      numberStyle,
+      siblingBooks: siblingBooks ?? {},
+      chapterRoute: chapterRoute ?? '/chapters/:id/',
+      bookField: bookField ?? 'book',
+    }),
     enumerable: false,
     configurable: false,
     writable: false,

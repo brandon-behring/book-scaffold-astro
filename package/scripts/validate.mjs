@@ -16,8 +16,9 @@
  *   6. <Theorem> — has a resolvable kind= (or legacy type=); else it would
  *      render an empty label and throw at build (#121). An id'd theorem must
  *      resolve in labels.json, and a literal n= must agree with that index.
- *   7. <BookLink book="…" to="…"> (#96) — both props present, and book= is a
- *      key in the consumer's siblingBooks registry (best-effort).
+ *   7. <BookLink book="…" to="…"> (#96/#147) — both props present, book= is
+ *      registered, and literal fragment targets resolve in the sibling's
+ *      declared vendored labels index. Dynamic and URL-only entries warn/skip.
  *   8. Questions collection (#112) — each question's frontmatter `domain` is a
  *      member of the consumer's examDomains registry (best-effort), and question
  *      `id`s are unique (the cross-ref key for the appendix / flashcards).
@@ -256,6 +257,32 @@ async function loadJson(path) {
 const refs = await loadJson(join(DATA_DIR, 'references.json'));
 const labels = await loadJson(join(DATA_DIR, 'labels.json'));
 
+// #147: eagerly load every labels index explicitly declared by the evaluated
+// siblingBooks registry. Unlike this book's generated labels.json, sibling
+// indexes are vendored inputs: never self-heal or silently replace them. A
+// missing, unreadable, malformed, or non-object index is a configuration error
+// even when no current chapter happens to reference that sibling.
+const siblingLabelIndexes = new Map();
+for (const [book, entry] of Object.entries(TOOLING_CONFIG.siblingBooks)) {
+  if (typeof entry === 'string' || entry.labels === undefined) continue;
+  const indexPath = resolve(ROOT, entry.labels);
+  try {
+    const index = JSON.parse(await readFile(indexPath, 'utf8'));
+    if (index === null || typeof index !== 'object' || Array.isArray(index)) {
+      throw new Error('top-level JSON value must be an object');
+    }
+    siblingLabelIndexes.set(book, { index, configuredPath: entry.labels });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail(
+      'astro.config',
+      1,
+      `siblingBooks.${book}.labels (${JSON.stringify(entry.labels)}) is missing, unreadable, or invalid: ${detail}. ` +
+        'Vendor a readable sibling labels.json at that path or remove labels to opt out with a warning.',
+    );
+  }
+}
+
 // ===== Collect chapter files =====
 // v3.7.1 (closes #52): walkMdx (in ./walk-mdx.mjs) is a recursive readdir
 // walker that replaces the previous `glob` import from `node:fs/promises`.
@@ -282,8 +309,8 @@ const RE_MD_LINK = /\[(?:[^\]]*)\]\((\/[^)\s#]+)(?:#[^)]*)?\)/g;
 // #121: a <Theorem> opening tag — capture its attributes to assert a
 // resolvable kind= (or legacy type=) is present.
 const RE_THEOREM = /<Theorem\b([^>]*)>/g;
-// #96: a <BookLink> opening tag — assert book= + to= present, and (best-effort)
-// that book= is a registered sibling.
+// #96/#147: a <BookLink> opening tag — assert book= + to=, membership, and
+// literal sibling label targets when a vendored index is declared.
 const RE_BOOKLINK = /<BookLink\b([^>]*)>/g;
 
 async function fileExists(p) {
@@ -322,23 +349,58 @@ function literalTheoremNumber(attrs) {
   return null;
 }
 
-// #96: best-effort siblingBooks registry keys from astro.config.mjs, so the
-// <BookLink> check can flag an unknown book= earlier than the component's
-// build-time throw. null = couldn't determine → membership not checked (the
-// component still fails loud at build).
-let siblingBookKeys = null;
-{
-  const astroConfigPath = resolve(ROOT, 'astro.config.mjs');
-  if (existsSync(astroConfigPath)) {
-    const block = readFileSync(astroConfigPath, 'utf8').match(/siblingBooks\s*:\s*\{([^}]*)\}/);
-    if (block) {
-      // Anchor each key to an entry boundary ({ , or start) so the `https:` in
-      // a URL value isn't mistaken for a key.
-      siblingBookKeys = new Set(
-        [...block[1].matchAll(/(?:^|[{,])\s*['"]?([\w-]+)['"]?\s*:/g)].map((x) => x[1]),
-      );
+/**
+ * Read a statically knowable MDX string attribute. Direct quoted strings and
+ * braced string/template literals without interpolation are safe; identifiers,
+ * calls, interpolated templates, and malformed expressions are dynamic.
+ */
+function literalMdxStringAttribute(attrs, name) {
+  const assignment = new RegExp(`(?:^|\\s)${name}\\s*=\\s*`).exec(attrs);
+  if (!assignment) return { present: false, literal: false, value: null };
+
+  const rest = attrs.slice(assignment.index + assignment[0].length);
+  const quoted = rest.match(/^(["'])([\s\S]*?)\1/);
+  if (quoted) return { present: true, literal: true, value: quoted[2] };
+
+  const braced = rest.match(/^\{\s*([\s\S]*?)\s*\}/);
+  if (braced) {
+    const expression = braced[1].trim();
+    const stringLiteral = expression.match(/^(["'`])([\s\S]*)\1$/);
+    if (stringLiteral && !(stringLiteral[1] === '`' && stringLiteral[2].includes('${'))) {
+      return { present: true, literal: true, value: stringLiteral[2] };
     }
   }
+  return { present: true, literal: false, value: null };
+}
+
+/**
+ * Canonical comparison shape for a sibling labels href. The generated index
+ * intentionally omits the deployment base, so only normalize route seams:
+ * leading slashes and the optional trailing slash immediately before `#`.
+ */
+function normalizeSiblingTarget(value) {
+  const hash = value.indexOf('#');
+  if (hash < 0 || hash === value.length - 1) return null;
+  const fragment = value.slice(hash + 1);
+  const path = value.slice(0, hash).trim().replace(/^\/+/, '').replace(/\/+$/, '');
+  return { fragment, href: `${path}#${fragment}` };
+}
+
+/**
+ * Heading keys in labels.json are deliberately opaque and path-qualified so
+ * `#summary` can exist in every chapter. Resolve sibling targets from href
+ * values, while remaining compatible with historical component-id keys.
+ */
+function siblingTargetCandidates(index, fragment) {
+  const candidates = [];
+  for (const [key, entry] of Object.entries(index)) {
+    if (entry === null || typeof entry !== 'object' || typeof entry.href !== 'string') continue;
+    const normalized = normalizeSiblingTarget(entry.href);
+    if (normalized?.fragment === fragment) {
+      candidates.push({ key, href: entry.href, normalized });
+    }
+  }
+  return candidates;
 }
 
 // ===== Run all checks on each chapter =====
@@ -443,21 +505,124 @@ for (const rel of chapterFiles) {
     }
   }
 
-  // 7. BookLink (#96): structural (book= + to=) + best-effort registry membership.
+  // 7. BookLink (#96/#147): structural props + evaluated registry membership,
+  //    then literal path/fragment validation against a declared vendored index.
+  //    Dynamic values and URL-only compatibility entries are explicit warnings
+  //    rather than guessed validations.
   for (const m of content.matchAll(RE_BOOKLINK)) {
     const attrs = m[1];
-    const bookMatch = attrs.match(/\bbook=["']([^"']+)["']/);
-    if (!bookMatch || !/\bto=["']/.test(attrs)) {
+    const line = lineOf(content, m.index);
+    const bookAttr = literalMdxStringAttribute(attrs, 'book');
+    const toAttr = literalMdxStringAttribute(attrs, 'to');
+    const hasDynamicSpread = /\{\s*\.\.\./.test(attrs);
+
+    if ((!bookAttr.present || !toAttr.present) && hasDynamicSpread) {
+      warn(
+        rel,
+        line,
+        '<BookLink> validation skipped: a dynamic prop spread may supply book=/to=, so neither presence nor target can be proven statically.',
+      );
+      continue;
+    }
+    if (!bookAttr.present || !toAttr.present) {
       fail(rel, lineOf(content, m.index), `<BookLink> requires both book="…" and to="…".`);
       continue;
     }
-    if (siblingBookKeys && !siblingBookKeys.has(bookMatch[1])) {
+
+    if (!bookAttr.literal) {
+      warn(
+        rel,
+        line,
+        '<BookLink> target validation skipped: dynamic book= expression cannot be evaluated statically.',
+      );
+      continue;
+    }
+
+    const book = bookAttr.value;
+    const registered = Object.prototype.hasOwnProperty.call(TOOLING_CONFIG.siblingBooks, book);
+    if (!registered) {
       fail(
         rel,
-        lineOf(content, m.index),
-        `<BookLink book="${bookMatch[1]}"> — not in defineBookConfig siblingBooks (${[...siblingBookKeys].join(', ') || 'none'}). Register it or fix the key.`,
+        line,
+        `<BookLink book="${book}"> — not in evaluated defineBookConfig siblingBooks (${Object.keys(TOOLING_CONFIG.siblingBooks).join(', ') || 'none'}). Register it or fix the key.`,
       );
+      continue;
     }
+    const siblingEntry = TOOLING_CONFIG.siblingBooks[book];
+
+    if (!toAttr.literal) {
+      warn(
+        rel,
+        line,
+        `<BookLink book="${book}"> target validation skipped: dynamic to= expression cannot be evaluated statically.`,
+      );
+      continue;
+    }
+
+    const target = normalizeSiblingTarget(toAttr.value);
+    if (!target) {
+      warn(
+        rel,
+        line,
+        `<BookLink book="${book}" to="${toAttr.value}"> has no static #fragment; sibling labels validation skipped.`,
+      );
+      continue;
+    }
+
+    if (typeof siblingEntry === 'string' || siblingEntry.labels === undefined) {
+      warn(
+        rel,
+        line,
+        `<BookLink book="${book}" to="${toAttr.value}"> target validation skipped: ` +
+          'the siblingBooks entry is URL-only. Use { url, labels } to enable vendored-label validation.',
+      );
+      continue;
+    }
+
+    const loaded = siblingLabelIndexes.get(book);
+    if (!loaded) continue; // A config-level error was already recorded above.
+
+    const candidates = siblingTargetCandidates(loaded.index, target.fragment);
+    if (candidates.some((candidate) => candidate.normalized.href === target.href)) {
+      continue;
+    }
+
+    if (candidates.length === 0) {
+      // Preserve the actionable diagnostic for a malformed historical entry
+      // whose key is the literal fragment. Opaque heading keys are found by
+      // valid href values and never need to be decoded here.
+      const legacyEntry = loaded.index[target.fragment];
+      if (
+        Object.prototype.hasOwnProperty.call(loaded.index, target.fragment) &&
+        (legacyEntry === null ||
+          typeof legacyEntry !== 'object' ||
+          typeof legacyEntry.href !== 'string')
+      ) {
+        fail(
+          rel,
+          line,
+          `<BookLink book="${book}" to="${toAttr.value}"> — ${loaded.configuredPath} entry ` +
+            `"${target.fragment}" has no string href; re-vendor a valid sibling labels.json.`,
+        );
+        continue;
+      }
+      fail(
+        rel,
+        line,
+        `<BookLink book="${book}" to="${toAttr.value}"> — fragment "${target.fragment}" is not in ` +
+          `${loaded.configuredPath}. Vendor the current sibling labels.json, or fix the target id.`,
+      );
+      continue;
+    }
+
+    const indexedHrefs = candidates.map((candidate) => `"${candidate.href}"`).join(', ');
+    fail(
+      rel,
+      line,
+      `<BookLink book="${book}" to="${toAttr.value}"> — path/fragment does not match ` +
+        `${loaded.configuredPath}, which indexes "${target.fragment}" at ${indexedHrefs}. ` +
+        'Fix to= or refresh the vendored index.',
+    );
   }
 
   // <Rationale appendix> in CHAPTER bodies (v4.21.0, #114): same missing-for=

@@ -11,8 +11,9 @@
  * build (fail-loud, see `src/lib/book-link`), never a dead cross-origin link.
  *
  * `to` is a path within the sibling book (its router shape), e.g.
- * `chapters/<slug>/#<id>`. Phase 1 builds the href; Phase 2 (deferred) will
- * validate `to` against a vendored sibling `labels.json`.
+ * `chapters/<slug>/#<id>`. A `{ url, labels }` registry descriptor lets
+ * `book-scaffold validate` check literal path/fragment targets against a
+ * vendored sibling `labels.json`; URL strings remain runtime-compatible.
  *
  * Usage:
  *   For design depth see

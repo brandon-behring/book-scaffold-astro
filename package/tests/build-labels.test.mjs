@@ -26,22 +26,42 @@ const OVERRIDE_NOKIND_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'theo
 const NO_KIND_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'bad-theorem-nokind.mdx');
 const NO_CHAPTER_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'theorem-no-chapter.mdx');
 const NUMBER_STYLES_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'theorem-number-styles.mdx');
+const HEADING_ANCHORS_FIXTURE = resolve(__dirname, 'fixtures', 'chapters', 'heading-anchors.mdx');
 const DIST_INDEX_URL = pathToFileURL(resolve(__dirname, '..', 'dist', 'index.mjs')).href;
 
-/** Run build-labels.mjs in a temp dir containing one fixture chapter. Returns parsed labels.json. */
-function runInTempDir(fixturePaths = [FIXTURE_CHAPTER], numberStyle = null) {
+function headingLabel(labels, href) {
+  return labels[`heading:${href}`];
+}
+
+/** Run build-labels.mjs in a temp consumer. String fixtures copy flat; an
+ *  object `{ path, destination }` can exercise nested content entry IDs. */
+function runInTempDir(fixturePaths = [FIXTURE_CHAPTER], config = {}) {
+  // Preserve the historical helper call used by the numberStyle tests.
+  if (typeof config === 'string') config = { numberStyle: config };
   const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-test-'));
   try {
     const chaptersDir = join(tmp, 'src', 'content', 'chapters');
     mkdirSync(chaptersDir, { recursive: true });
-    for (const fp of fixturePaths) {
-      copyFileSync(fp, join(chaptersDir, fp.split('/').pop()));
+    for (const fixture of fixturePaths) {
+      const fp = typeof fixture === 'string' ? fixture : fixture.path;
+      const destination = typeof fixture === 'string'
+        ? fp.split('/').pop()
+        : fixture.destination;
+      const target = join(chaptersDir, destination);
+      mkdirSync(dirname(target), { recursive: true });
+      copyFileSync(fp, target);
     }
-    if (numberStyle) {
+    if (config.numberStyle || config.chapterRoute || config.bookField) {
+      const options = {
+        ...(config.numberStyle ? { numberStyle: config.numberStyle } : {}),
+        ...(config.chapterRoute ? { chapterRoute: config.chapterRoute } : {}),
+        ...(config.bookField ? { bookField: config.bookField } : {}),
+      };
       writeFileSync(
         join(tmp, 'astro.config.mjs'),
         `import { defineBookConfig, minimalStyle } from ${JSON.stringify(DIST_INDEX_URL)};\n` +
-          `export default await defineBookConfig({ styles: [minimalStyle], numberStyle: ${JSON.stringify(numberStyle)}, site: 'https://test.invalid' });\n`,
+          `const options = ${JSON.stringify(options)};\n` +
+          `export default await defineBookConfig({ styles: [minimalStyle], ...options, site: 'https://test.invalid' });\n`,
       );
     }
     execSync(`node ${SCRIPT}`, { cwd: tmp, stdio: 'pipe' });
@@ -91,6 +111,79 @@ test('build-labels: frontmatter slug: overrides the filename in the href (v4.9.0
   assert.equal(
     labels['slug:thm:demo'].href,
     'chapters/clean-name#slug:thm:demo',
+  );
+});
+
+test('#147: h2–h6 use Astro heading text and GitHub duplicate slugs', () => {
+  const labels = runInTempDir([HEADING_ANCHORS_FIXTURE]);
+
+  // h1 is the chapter title and deliberately not a cross-chapter anchor.
+  assert.equal(headingLabel(labels, 'chapters/heading-anchors#chapter-title-is-not-indexed'), undefined);
+  assert.equal(labels['build--verify'], undefined, 'heading keys are path-qualified and opaque');
+  assert.deepEqual(headingLabel(labels, 'chapters/heading-anchors#build--verify'), {
+    href: 'chapters/heading-anchors#build--verify',
+    display: 'Build & Verify',
+    number: null,
+  });
+  assert.equal(
+    headingLabel(labels, 'chapters/heading-anchors#the-ultrathink-keyword').display,
+    'The ultrathink keyword',
+  );
+  assert.equal(
+    headingLabel(labels, 'chapters/heading-anchors#adrs-the-why-one-decision-at-a-time').display,
+    'ADRs: the why, one decision at a time',
+  );
+  assert.equal(headingLabel(labels, 'chapters/heading-anchors#link-text').display, 'Link text');
+
+  // Astro smartypants turns `--` into an em dash before its heading collector;
+  // GitHubSlugger removes the punctuation but preserves the surrounding spaces.
+  assert.equal(headingLabel(labels, 'chapters/heading-anchors#a--b').display, 'A — B');
+  assert.equal(headingLabel(labels, 'chapters/heading-anchors#repeat').href, 'chapters/heading-anchors#repeat');
+  assert.equal(headingLabel(labels, 'chapters/heading-anchors#repeat-1').href, 'chapters/heading-anchors#repeat-1');
+  assert.equal(headingLabel(labels, 'chapters/heading-anchors#repeat-2').href, 'chapters/heading-anchors#repeat-2');
+});
+
+test('#147: nested chapter IDs survive the default /chapters/:id/ route', () => {
+  const labels = runInTempDir([
+    { path: HEADING_ANCHORS_FIXTURE, destination: 'part-one/heading-anchors.mdx' },
+  ]);
+  assert.equal(
+    headingLabel(labels, 'chapters/part-one/heading-anchors#build--verify').href,
+    'chapters/part-one/heading-anchors#build--verify',
+  );
+});
+
+test('#147: identical headings in separate chapters remain separately indexed', () => {
+  const labels = runInTempDir([
+    { path: HEADING_ANCHORS_FIXTURE, destination: 'part-one/heading-anchors.mdx' },
+    { path: HEADING_ANCHORS_FIXTURE, destination: 'part-two/heading-anchors.mdx' },
+  ]);
+  assert.equal(
+    headingLabel(labels, 'chapters/part-one/heading-anchors#repeat').display,
+    'Repeat',
+  );
+  assert.equal(
+    headingLabel(labels, 'chapters/part-two/heading-anchors#repeat').display,
+    'Repeat',
+  );
+});
+
+test('#147: evaluated root chapterRoute replaces the historical /chapters/ prefix', () => {
+  const labels = runInTempDir([HEADING_ANCHORS_FIXTURE], { chapterRoute: '/:id/' });
+  assert.equal(
+    headingLabel(labels, 'heading-anchors#build--verify').href,
+    'heading-anchors#build--verify',
+  );
+});
+
+test('#147: chapterRoute :book/:slug tokens honor the evaluated bookField', () => {
+  const labels = runInTempDir(
+    [{ path: HEADING_ANCHORS_FIXTURE, destination: 'design/heading-anchors.mdx' }],
+    { chapterRoute: '/:book/:slug/', bookField: 'series' },
+  );
+  assert.equal(
+    headingLabel(labels, 'design/heading-anchors#build--verify').href,
+    'design/heading-anchors#build--verify',
   );
 });
 

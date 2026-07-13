@@ -240,6 +240,15 @@ import type { Style, PartialRouteToggles } from '@brandon_m_behring/book-scaffol
 
 export type BookPreset = 'academic' | 'tools' | 'minimal' | 'course-notes' | 'research-portfolio';
 
+export interface SiblingBookDescriptor {
+  /** Deployment base, including an optional path prefix. */
+  url: string;
+  /** Vendored labels.json path, relative to the consumer project root. */
+  labels?: string;
+}
+
+export type SiblingBooks = Record<string, string | SiblingBookDescriptor>;
+
 export interface BookConfigOptions extends Omit<AstroUserConfig, 'integrations' | 'markdown'> {
   /** v4.0.0 NEW: array of Style objects composed left-to-right.
    *  Each style's fields are merged per the per-key strategy table (see §4a). */
@@ -274,6 +283,16 @@ export interface BookConfigOptions extends Omit<AstroUserConfig, 'integrations' 
     contentSecurityPolicy?: string;
   };
 
+  /** Cross-book registry (#96/#147). URL strings are runtime-compatible;
+   *  descriptors let validate check literal path/fragment targets against a
+   *  vendored sibling labels index. */
+  siblingBooks?: SiblingBooks;
+
+  /** Base-relative chapter route tokens; build-labels and nav share this resolver. */
+  chapterRoute?: string;
+  /** Frontmatter field supplying :book and :slug route-token context. */
+  bookField?: string;
+
   /** Optional. RESERVED (#50, #180) — accepted and style-chain-merged, but has no
    *  runtime effect. The wrangler.toml shape is set at scaffold time by create-book
    *  from the profile name; this field does not change it.
@@ -292,7 +311,7 @@ export function defineBookConfig(opts: BookConfigOptions): Promise<AstroUserConf
 4. Resolve `preset` from composed style; throw `BookConfigError` if unknown.
 5. Require `site` to be set after composition; throw otherwise.
 6. Build the package's integration list: `[mdx(), preact(), bookScaffoldIntegration({ preset, routes, extraStyles, mdxComponentsModule, securityHeaders })]`.
-7. Thread `securityHeaders` to the integration without forwarding it to Astro's own config. Omission means defaults, `false` means no scaffold emission, and `{ contentSecurityPolicy }` replaces only the default CSP.
+7. Thread `securityHeaders`, `siblingBooks`, `chapterRoute`, and `bookField` to the integration without forwarding them to Astro's own config. Security-header omission means defaults, `false` means no scaffold emission, and `{ contentSecurityPolicy }` replaces only the default CSP. Non-enumerable resolved metadata exposes the evaluated sibling registry and chapter-route contract to CLI tooling, avoiding source-text parsing of computed/spread config.
 8. If `PROFILES[preset]?.katex === true` (academic + research-portfolio), dynamically import `remark-math`, `rehype-katex`, and `ssmMacros`; merge `katexMacros` on top; append to `markdown.remarkPlugins` / `markdown.rehypePlugins`.
 9. Concatenate `extraIntegrations` after the package list.
 10. Spread-merge `opts.markdown` over package markdown config (plugin arrays concat).
@@ -788,6 +807,7 @@ What consumers must install themselves; what the package ships bundled.
     "remark-math":   { "optional": true }
   },
   "dependencies": {
+    "@astrojs/markdown-remark":  "^7.1.2",
     "@citation-js/core":         "^0.7.21",
     "@citation-js/plugin-bibtex": "^0.7.21",
     "@fontsource-variable/roboto":           "^5.2.10",
@@ -806,7 +826,7 @@ What consumers must install themselves; what the package ships bundled.
 
 - **Peers (required)**: Astro 6, MDX, Preact, and `preact` package proper. Consumers import these in their own code (e.g., to extend integrations). Bundling them would cause version mismatches.
 - **Peers (optional)**: KaTeX trio. Only academic profile needs them; `npm install --no-optional` skips them; consumer install fails loudly if `BOOK_PROFILE=academic` but KaTeX missing.
-- **Bundled deps**: citation-js (used by `book-scaffold build-bib`), fonts (CSS-imported by `tokens.css`), Pagefind (used at build time for search index). These are package-internal; consumers should never import them directly.
+- **Bundled deps**: Astro's Markdown processor (used by `book-scaffold build-labels` so heading text/slug behavior matches Astro), citation-js (used by `book-scaffold build-bib`), fonts (CSS-imported by `tokens.css`), and Pagefind (used at build time for search index). These are package-internal; consumers should never import them directly.
 - **Dev deps**: `tsup` for compiling `src/*.ts` → `dist/*.{mjs,d.ts}`. Not installed by consumers.
 
 **Optional system dependencies** (NOT npm packages — install via OS package manager):
@@ -832,7 +852,7 @@ Single bin entry, sub-command dispatcher (Q4). Mirrors `git`, `wrangler`, `gh`.
 | Command | Action | Source |
 |---|---|---|
 | `book-scaffold validate` | Pre-flight content validator | `scripts/validate.mjs` (port of v2.0) |
-| `book-scaffold build-labels` | Emit `src/data/labels.json` for `<XRef>` / `<Theorem>` cross-refs | `scripts/build-labels.mjs` (**Phase C**) |
+| `book-scaffold build-labels` | Emit `src/data/labels.json` for `<XRef>` / `<Theorem>` component IDs and `<BookLink>` h2–h6 anchors | `scripts/build-labels.mjs` (**Phase C**) |
 | `book-scaffold build-bib` | BibTeX → CSL JSON | `scripts/build-bib.mjs` (port of v2.0) |
 | `book-scaffold build-figures` | PDF → SVG via pdftocairo with PNG fallback; v4.2.0+ also auto-compiles TikZ standalone `.tex` → `.pdf` via pdflatex first (see [recipe 16](package/recipes/16-tikz-figures.md)) | `scripts/build-figures.mjs` |
 | `book-scaffold render-notebooks` | ipynb → HTML via Jupyter nbconvert | `scripts/render-notebooks.mjs` (port of v2.0) |
@@ -928,6 +948,16 @@ import { readChaptersBase, readBookSchemaConfig } from '@brandon_m_behring/book-
 // readBookSchemaConfig(projectRoot) → { preset, chaptersBase }  (both nullable)
 // readChaptersBase(projectRoot)     → string (always returns a resolved abs path)
 ```
+
+Separately, `validate` and `build-labels` evaluate the consumer's real Astro
+config through Vite and read the scaffold integration's non-enumerable metadata.
+This supplies composed/computed `numberStyle` and `siblingBooks` values, plus
+`chapterRoute` and `bookField`. `build-labels` feeds each nested content entry
+through the same `chapterHref` resolver used by navigation and indexes Astro's
+h2–h6 GitHub-style heading slugs (including duplicate suffixes). Heading keys
+are opaque/path-qualified and sibling validation resolves exact href values, so
+the same fragment in multiple chapters is lossless. The legacy defaults remain
+shared numbering and `/chapters/:id/`, and component ID keys are unchanged.
 
 ---
 

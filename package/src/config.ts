@@ -240,8 +240,8 @@ export async function defineBookConfig(
       // v4.15.0 (#109): repo/branch override; integration auto-detects when undefined.
       githubRepo: opts.githubRepo as string | undefined,
       githubBranch: opts.githubBranch as string | undefined,
-      // v4.16.0 (#96): cross-book link registry.
-      siblingBooks: opts.siblingBooks as Record<string, string> | undefined,
+      // v4.16.0 (#96), extended in #147: cross-book link registry.
+      siblingBooks: opts.siblingBooks,
       // v4.17.0 (#112): per-book exam-domain taxonomy for the questions collection.
       examDomains: opts.examDomains as readonly string[] | undefined,
       // v4.26.0 (#80): book-aware nav route patterns (undefined → single-book defaults).

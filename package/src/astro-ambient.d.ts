@@ -30,6 +30,7 @@ declare module 'astro:content' {
  * `package/layouts/Chapter.astro` (article:author fallback).
  */
 declare module 'virtual:book-scaffold/book-config' {
+  type SiblingBookEntry = string | { url: string; labels?: string };
   const bookConfig: {
     title: string | null;
     /** v4.23.0 (#135): sidebar brand subtitle (Sidebar.astro). */
@@ -48,8 +49,8 @@ declare module 'virtual:book-scaffold/book-config' {
     /** v4.15.0 (#109): resolved GitHub repo for CodeRef/CodeBlock, or null. */
     githubRepo: string | null;
     githubBranch: string;
-    /** v4.16.0 (#96): sibling-book base-URL registry for <BookLink>. */
-    siblingBooks: Record<string, string>;
+    /** v4.16.0 (#96), extended in #147: sibling-book registry for <BookLink>. */
+    siblingBooks: Record<string, SiblingBookEntry>;
     /** v4.17.0 (#112): per-book exam-domain taxonomy for the questions collection. */
     examDomains: readonly string[];
   };

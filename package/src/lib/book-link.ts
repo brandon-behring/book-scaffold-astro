@@ -10,22 +10,42 @@
  * sibling redeploys or extracts to its own repo. An unknown `book` THROWS
  * rather than emitting a dead cross-origin link (fail-loud, like #109).
  *
- * Phase 1 (this): registry-backed href + fail-loud on unknown book. Phase 2
- * (deferred): validate the `to` id against a vendored sibling `labels.json`.
+ * #147 extends each registry entry from a URL string to the backward-compatible
+ * `{ url, labels? }` descriptor. Runtime href resolution uses `url`; the
+ * validator uses `labels` to check literal sibling path/fragment targets.
  */
+import type { SiblingBookEntry, SiblingBooks } from '../types.js';
+
+function entryUrl(entry: SiblingBookEntry | undefined): string | undefined {
+  if (typeof entry === 'string') return entry;
+  return entry?.url;
+}
+
 export function resolveBookHref(
-  siblingBooks: Record<string, string> | null | undefined,
+  siblingBooks: SiblingBooks | null | undefined,
   book: string,
   to: string,
 ): string {
-  const base = siblingBooks?.[book];
-  if (!base) {
+  const registered =
+    siblingBooks !== null &&
+    siblingBooks !== undefined &&
+    Object.prototype.hasOwnProperty.call(siblingBooks, book);
+  if (!registered) {
     const known = siblingBooks ? Object.keys(siblingBooks) : [];
     throw new Error(
       `<BookLink book="${book}">: unknown sibling book. Register it in ` +
         `defineBookConfig({ siblingBooks: { "${book}": "https://…" } })` +
         (known.length ? ` (known: ${known.join(', ')})` : '') +
         '.',
+    );
+  }
+
+  const entry = siblingBooks![book];
+  const base = entryUrl(entry);
+  if (typeof base !== 'string' || base.length === 0) {
+    throw new Error(
+      `<BookLink book="${book}">: invalid siblingBooks entry. Expected a URL ` +
+        'string or { url: "https://…", labels?: "./path/to/labels.json" }.',
     );
   }
   return `${base.replace(/\/+$/, '')}/${to.replace(/^\/+/, '')}`;

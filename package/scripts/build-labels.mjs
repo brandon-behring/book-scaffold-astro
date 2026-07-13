@@ -2,9 +2,9 @@
 /**
  * build-labels.mjs — emit src/data/labels.json for <XRef> resolution.
  *
- * Walks the consumer's `src/content/chapters/**\/*.mdx`, extracts each
- * labelable component invocation (Theorem, Figure, Section, … — see
- * `LABELABLE_TYPES` below), and assigns it an entry of the form
+ * Walks the consumer's `src/content/chapters/**\/*.mdx`, extracts every h2–h6
+ * Markdown heading plus each labelable component invocation (Theorem, Figure,
+ * Section, … — see `LABELABLE_TYPES` below), and assigns it an entry of the form
  *   { href, display: "Theorem 4.2", number: "4.2" }
  * matching the LaTeX `\cref` convention. The map is consumed by XRef.astro
  * (display + href) AND Theorem.astro (#126: `number`, so a heading auto-
@@ -25,11 +25,15 @@
  *   - tools profile: `chapter` field (number).
  *   - academic profile: `week` field (number).
  *
- * Slug used for the href: the chapter's frontmatter `slug:` if set,
- * else filename minus `.mdx`. The href shape mirrors the consumer's pages
- * router: `/chapters/<slug>#<id>`. Academic books using `[...slug].astro`
- * get the same shape since Astro slugifies filenames identically when no
- * frontmatter override is present.
+ * Chapter IDs use frontmatter `slug:` when set, else the chapter-relative path
+ * minus `.md`/`.mdx` (so nested content IDs preserve their directory). Hrefs
+ * are resolved through the evaluated defineBookConfig `chapterRoute` and
+ * `bookField`; the default remains `chapters/<id>#<label>`.
+ *
+ * Heading anchors come from Astro's own Markdown processor, including its
+ * smartypants text normalization and GitHubSlugger duplicate suffixes. h1 is
+ * intentionally excluded because it is the chapter title, not an in-chapter
+ * BookLink target.
  *
  * Optional override:
  *   <Theorem id="…" label="Custom display" />
@@ -45,7 +49,9 @@
  * Designed to run in <2 s on a medium book.
  */
 import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
-import { resolve, relative, join, basename, dirname } from 'node:path';
+import { resolve, relative, join, dirname, sep } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { createMarkdownProcessor } from '@astrojs/markdown-remark';
 import { readChaptersBase } from './walk-mdx.mjs';
 import { loadResolvedBookConfig } from './resolve-book-config.mjs';
 // #126: reuse the ONE kind vocabulary (theorem-label.ts → its own lean tsup
@@ -54,13 +60,16 @@ import { loadResolvedBookConfig } from './resolve-book-config.mjs';
 // throw as the render path, #121) one build step earlier. Requires `dist/`
 // (run `npm run build` first; the published tarball ships dist + scripts).
 import { theoremLabel } from '../dist/lib/theorem-label.mjs';
+// #147: reuse the same route-token resolver as Sidebar/ChapterNav rather than
+// maintaining a second, hardcoded `chapters/<slug>` interpretation here.
+import { chapterHref } from '../dist/lib/nav-href.mjs';
 
 // --help / -h: non-mutating (closes #14).
 const USAGE = `Usage: book-scaffold build-labels
 
-Emit src/data/labels.json for <XRef> resolution. Walks chapter MDX files,
-extracts labelable components (Theorem, Figure, ...), assigns display strings
-like "Theorem 4.2" matching LaTeX \\cref.
+Emit src/data/labels.json for <XRef> and <BookLink> resolution. Walks chapter
+Markdown/MDX files, indexes h2–h6 anchors, and extracts labelable components
+(Theorem, Figure, ...) with display strings like "Theorem 4.2".
 
 Env:
   BOOK_CHAPTERS_DIR   Override chapters dir (default: src/content/chapters).
@@ -69,8 +78,8 @@ Env:
 Options:
   --help, -h          Print this message and exit (non-mutating).
 
-Numbering is read from defineBookConfig / defineStyle numberStyle. It defaults
-to shared when no scaffold integration can be resolved.
+Numbering and chapter hrefs are read from evaluated defineBookConfig metadata.
+Defaults are shared numbering and /chapters/:id/ when no integration resolves.
 `;
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
@@ -111,12 +120,14 @@ const TYPE_DISPLAY = {
 
 // ===== Frontmatter parsing =====
 
-function parseFrontmatter(source) {
+function splitFrontmatter(source) {
   // Standard MDX/YAML frontmatter: `---\n…\n---`.
-  const m = source.match(/^---\n([\s\S]*?)\n---/);
-  if (!m) return {};
+  // Remove it before Markdown processing: YAML comments beginning with `#`
+  // must not become phantom headings.
+  const m = source.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  if (!m) return { frontmatter: {}, body: source };
   const fm = {};
-  for (const line of m[1].split('\n')) {
+  for (const line of m[1].split(/\r?\n/)) {
     const kv = line.match(/^(\w+)\s*:\s*(.+?)\s*$/);
     if (!kv) continue;
     const [, key, raw] = kv;
@@ -125,7 +136,7 @@ function parseFrontmatter(source) {
     if (/^-?\d+$/.test(val)) val = parseInt(val, 10);
     fm[key] = val;
   }
-  return fm;
+  return { frontmatter: fm, body: source.slice(m[0].length) };
 }
 
 function chapterNumberOf(frontmatter) {
@@ -187,9 +198,13 @@ async function walkChapters(dir) {
 
 async function main() {
   const cwd = process.cwd();
-  const { numberStyle } = await loadResolvedBookConfig(cwd);
+  const { numberStyle, chapterRoute, bookField } = await loadResolvedBookConfig(cwd);
   const chaptersDir = resolve(cwd, CHAPTERS_DIR);
   const files = await walkChapters(chaptersDir);
+  // Syntax highlighting cannot affect heading metadata and is expensive to
+  // initialize. Everything that does affect Astro heading text/IDs (GFM,
+  // smartypants, rehypeHeadingIds/GitHubSlugger) retains Astro's defaults.
+  const headingProcessor = await createMarkdownProcessor({ syntaxHighlight: false });
 
   const labels = {};
   const tagRegex = buildTagRegex();
@@ -198,15 +213,62 @@ async function main() {
 
   for (const file of files) {
     const source = await readFile(file, 'utf8');
-    const fm = parseFrontmatter(source);
+    const { frontmatter: fm, body } = splitFrontmatter(source);
     const chapterNum = chapterNumberOf(fm);
-    const slug = (typeof fm.slug === 'string' && fm.slug.length > 0)
+    const contentId = relative(chaptersDir, file)
+      .split(sep)
+      .join('/')
+      .replace(/\.mdx?$/, '');
+    const entryId = (typeof fm.slug === 'string' && fm.slug.length > 0)
       ? fm.slug
-      : basename(file).replace(/\.mdx?$/, '');
+      : contentId;
+    const chapterPath = chapterHref(
+      { id: entryId, data: fm },
+      chapterRoute,
+      '/',
+      bookField,
+    ).replace(/^\/+|\/+$/g, '');
+
+    const addLabel = (id, value) => {
+      if (labels[id]) {
+        // Duplicate id — surface but don't fail; consumer's validator catches
+        // collisions with full diagnostic context. Component IDs retain their
+        // historical precedence over an identically named heading anchor.
+        process.stderr.write(
+          `build-labels: WARN duplicate id "${id}" (first in ` +
+            `${labels[id].href.split('#')[0]}, now in ${entryId})\n`,
+        );
+      }
+      labels[id] = value;
+    };
 
     // Per-chapter counters reset for each file.
     const counters = {};
     let foundInChapter = 0;
+
+    // #147: BookLink fragments normally target prose sections rather than
+    // labelable components. Astro owns both text extraction and GitHub-style
+    // slug collision behavior, so consume its heading metadata directly.
+    const rendered = await headingProcessor.render(body, {
+      fileURL: pathToFileURL(file),
+      frontmatter: fm,
+    });
+    for (const heading of rendered.metadata.headings) {
+      if (heading.depth < 2 || heading.depth > 6) continue;
+      foundInChapter += 1;
+      totalIds += 1;
+      const href = `${chapterPath}#${heading.slug}`;
+      // Heading fragments are only document-local: many chapters legitimately
+      // contain `#summary`. A path-qualified, opaque key preserves every one
+      // without colliding with component IDs or another chapter. BookLink
+      // validation resolves the exact href VALUE; consumers must not derive
+      // heading semantics from this internal key.
+      addLabel(`heading:${href}`, {
+        href,
+        display: heading.text,
+        number: null,
+      });
+    }
 
     for (const match of source.matchAll(tagRegex)) {
       const [, componentName, attrs] = match;
@@ -267,21 +329,13 @@ async function main() {
           : String(counters[counterKey]);
       const display = labelOverride ?? `${word} ${number}`;
 
-      if (labels[id]) {
-        // Duplicate id — surface but don't fail; consumer's validator
-        // catches collisions with full diagnostic context.
-        process.stderr.write(
-          `build-labels: WARN duplicate id "${id}" (first in ` +
-            `${labels[id].href.split('#')[0]}, now in ${slug})\n`,
-        );
-      }
-      labels[id] = {
+      addLabel(id, {
         // #142: base-less ref — XRef.astro prefixes BASE_URL at render so one
         // labels.json serves any deploy base (root or path-proxied series).
-        href: `chapters/${slug}#${id}`,
+        href: `${chapterPath}#${id}`,
         display,
         number,
-      };
+      });
     }
 
     if (foundInChapter > 0) chaptersWithIds += 1;
