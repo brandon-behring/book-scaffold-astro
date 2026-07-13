@@ -150,7 +150,9 @@ jobs:
         run: |
           set -euo pipefail
           cd package
-          TARBALL=$(npm pack --json | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.parse(d)[0].filename))")
+          # npm 11 returns an array; npm 12 returns an object keyed by package
+          # name. Accept both shapes because npm is upgraded to latest above.
+          TARBALL=$(npm pack --json | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{const p=JSON.parse(d);const e=Array.isArray(p)?p[0]:Object.values(p)[0];if(!e?.filename)throw new Error('npm pack --json returned no filename');console.log(e.filename)})")
           TARBALL_PATH="$GITHUB_WORKSPACE/package/$TARBALL"
           cd "$GITHUB_WORKSPACE"
 
