@@ -124,6 +124,12 @@ to test workflow changes before a real release.
 `force=true` bypasses ancestry only for legitimate historical-tag replay. It is
 not a normal release escape hatch.
 
+If the pre-publish smoke fails before either publish step and the repair changes
+the tagged source, first verify both registry versions are absent, delete the
+unpublished tag locally and remotely, land the repair on `main`, then recreate
+the tag at the repaired commit. Do not move a tag after either npm artifact
+exists.
+
 npm versions are immutable. If one package publishes and the second fails:
 
 - do not overwrite or unpublish the successful version;
@@ -136,6 +142,7 @@ npm versions are immutable. If one package publishes and the second fails:
 
 Each npm package must name this repository and `.github/workflows/publish.yml`
 as its trusted GitHub Actions publisher. The workflow requires `id-token: write`
-and a current npm CLI (it upgrades npm before publishing). Account/password,
+and pins npm 11.7.0 (above trusted publishing's 11.5.1 minimum) on the Node 22
+runner. Account/password,
 2FA, and local token instructions are intentionally outside the recurring
 release procedure because local `npm publish` is not the supported path.

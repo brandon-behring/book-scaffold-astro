@@ -112,8 +112,11 @@ jobs:
           cache-dependency-path: package-lock.json
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Upgrade npm (trusted publishing requires >= 11.5.1)
-        run: npm install -g npm@latest
+      # Trusted publishing requires npm >=11.5.1. Keep the release runner on
+      # the reviewed Node-22-compatible major instead of floating to npm 12,
+      # which currently requires a newer Node 22 patch than setup-node ships.
+      - name: Install reviewed npm for trusted publishing
+        run: npm install -g npm@11.7.0
 
       - name: Install (workspace-aware)
         run: npm install
@@ -150,8 +153,8 @@ jobs:
         run: |
           set -euo pipefail
           cd package
-          # npm 11 returns an array; npm 12 returns an object keyed by package
-          # name. Accept both shapes because npm is upgraded to latest above.
+          # Accept both npm 11's array and npm 12's keyed-object JSON shapes so
+          # this parser remains forward-compatible even though release npm is pinned.
           TARBALL=$(npm pack --json | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{const p=JSON.parse(d);const e=Array.isArray(p)?p[0]:Object.values(p)[0];if(!e?.filename)throw new Error('npm pack --json returned no filename');console.log(e.filename)})")
           TARBALL_PATH="$GITHUB_WORKSPACE/package/$TARBALL"
           cd "$GITHUB_WORKSPACE"
@@ -166,9 +169,15 @@ jobs:
           # not whatever's already on the registry.
           node -e "const p=require('./package.json');p.dependencies['@brandon_m_behring/book-scaffold-astro']='file:$TARBALL_PATH';require('fs').writeFileSync('./package.json',JSON.stringify(p,null,2)+'\n')"
 
-          npm install
+          # The hosted runner already provides Chrome (the same system channel
+          # used by visual CI). Avoid a redundant 300+ MB Puppeteer download;
+          # the generated package separately carries npm 12's pinned approval
+          # so ordinary consumer installs still provision their own browser.
+          PUPPETEER_SKIP_DOWNLOAD=true npm install
           npm run build
-          npm run pdf
+          CHROME_PATH=$(command -v google-chrome)
+          test -n "$CHROME_PATH"
+          PUPPETEER_EXECUTABLE_PATH="$CHROME_PATH" npm run pdf
 
           # Hard assertions: prove the scaffolded book actually emitted what
           # consumers will see. Each assertion guards a class of failure from

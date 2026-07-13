@@ -284,6 +284,7 @@ test('#207: every preset receives build-before-render PDF scripts and dependenci
     assert.equal(pkg.scripts.pdf, 'start-server-and-test preview http://localhost:4321/ pdf:render');
     assert.equal(pkg.devDependencies['pagedjs-cli'], '^0.4.3');
     assert.equal(pkg.devDependencies['start-server-and-test'], '^3.0.11');
+    assert.deepEqual(pkg.allowScripts, { 'puppeteer@20.9.0': true });
   }
 });
 

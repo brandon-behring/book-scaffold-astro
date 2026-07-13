@@ -176,6 +176,9 @@ function makeTemplates(name, profile, toolkitVersion, author) {
   "devDependencies": {
     "pagedjs-cli": "^0.4.3",
     "start-server-and-test": "^3.0.11"
+  },
+  "allowScripts": {
+    "puppeteer@20.9.0": true
   }
 }
 `,

@@ -10,7 +10,7 @@ Minor release — **distribution hardening, complete generated books, and self-h
 
 - **Default deployment security headers (#188).** Builds emit a Cloudflare/Netlify-compatible `_headers` file with CSP, HSTS, frame, MIME-sniffing, referrer, and permissions protections. `securityHeaders: false` is an explicit opt-out; a custom `contentSecurityPolicy` replaces only CSP; a consumer-owned `public/_headers` remains byte-for-byte authoritative.
 - **The shared SSM KaTeX vocabulary is public (#177).** All 37 scaffold macros ship as the `ssmMacros` main-entry export so consumers can extend the exact set used by the toolkit.
-- **Generated-book licensing, attribution, and PDF workflow (#206, #207).** Both packages and generated books carry MIT software plus CC BY 4.0 content terms. `create-book` accepts `--author`, records attribution in book config and license text, and generates a turnkey `npm run pdf` pipeline backed by Paged.js.
+- **Generated-book licensing, attribution, and PDF workflow (#206, #207).** Both packages and generated books carry MIT software plus CC BY 4.0 content terms. `create-book` accepts `--author`, records attribution in book config and license text, and generates a turnkey `npm run pdf` pipeline backed by Paged.js, including the pinned Puppeteer install-script approval required by npm 12's default-deny policy.
 - **All five presets are first-class in `create-book` (#181).** Help, validation, generated guidance, and tests cover `academic`, `tools`, `minimal`, `course-notes`, and `research-portfolio`; generated documentation links are pinned to the matching release tag.
 
 ### Fixed
