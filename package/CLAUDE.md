@@ -14,14 +14,15 @@ If the hub isn't available in your environment (e.g. external contributor), the 
 
 ## Profile
 
-Read `BOOK_PROFILE` from the environment or `.env`. It controls:
+Read `BOOK_PRESET` (preferred) or its `BOOK_PROFILE` compatibility alias from
+the environment or `.env`. It controls:
 
-- Which content-collection schema is enforced (`academic` / `tools` / `minimal`)
-- Which markdown integrations run (KaTeX gated on `academic`)
+- Which of the five content-collection schemas is enforced
+- Which markdown integrations run (KaTeX for `academic` and `research-portfolio`)
 - Which callout family is the "default" import in templates
 - Whether the ToolFilter Preact island mounts in the automatic chrome row
 
-When in doubt, run `grep BOOK_PROFILE .env astro.config.mjs src/content.config.ts` to see the wiring.
+When in doubt, run `grep -E 'BOOK_(PRESET|PROFILE)' .env astro.config.mjs src/content.config.ts` to see the wiring.
 
 `VersionSelector` is different: it is a manual, prop-driven island because only
 the consuming book knows which versions are actually deployed. Import it from
@@ -101,9 +102,9 @@ sources:
 
 Two callout families coexist. Authors import what they need.
 
-**Tools family** (`src/components/callouts/`, 8 components): `SkillBox`, `CaseStudy`, `ConceptBox`, `KeyIdea`, `TryThis`, `Recovery`, `Convergence`, `Divergence`.
+**Tools family** (8 components, imported from the flat `@brandon_m_behring/book-scaffold-astro/components/<Name>.astro` path): `SkillBox`, `CaseStudy`, `ConceptBox`, `KeyIdea`, `TryThis`, `Recovery`, `Convergence`, `Divergence`.
 
-**Academic family** (`src/components/callouts/`, 10 components): `NoteBox`, `ExampleBox`, `DynConnect`, `InsightBox`, `WarnBox`, `CounterBox`, `TipBox`, `OpenQuestion`, `PaperBox`, `ResultBox`. Plus `Theorem` (unified for theorem/proposition/lemma/corollary/definition/example/exercise/remark/proof). **Props (v4.14.3, #121):** `kind=` is canonical; `type=` is accepted as a legacy alias (likewise `title=`/`label=` alias `name=`). An absent or unknown kind **throws at build** (via `src/lib/theorem-label`) rather than rendering an empty label; `book-scaffold validate` flags a `<Theorem>` with neither `kind=` nor `type=` even earlier. **Numbering (v4.18.0, #126):** a theorem with an `id` auto-numbers from `labels.json` — the same index `<XRef>` reads — so the heading number equals every cross-reference to it by construction; explicit `n=` is a fallback for un-id'd theorems. `build-labels` indexes the kind-accurate word (`Proposition 8.1`, not a kind-blind `Theorem 8.1`) and throws on an unknown kind.
+**Academic family** (10 components, using the same flat import path): `NoteBox`, `ExampleBox`, `DynConnect`, `InsightBox`, `WarnBox`, `CounterBox`, `TipBox`, `OpenQuestion`, `PaperBox`, `ResultBox`. Plus `Theorem` (unified for theorem/proposition/lemma/corollary/definition/example/exercise/remark/proof). **Props (v4.14.3, #121):** `kind=` is canonical; `type=` is accepted as a legacy alias (likewise `title=`/`label=` alias `name=`). An absent or unknown kind **throws at build** (via `src/lib/theorem-label`) rather than rendering an empty label; `book-scaffold validate` flags a `<Theorem>` with neither `kind=` nor `type=` even earlier. **Numbering (v4.18.0, #126):** a theorem with an `id` auto-numbers from `labels.json` — the same index `<XRef>` reads — so the heading number equals every cross-reference to it by construction; explicit `n=` is a fallback for un-id'd theorems. `build-labels` indexes the kind-accurate word (`Proposition 8.1`, not a kind-blind `Theorem 8.1`) and throws on an unknown kind.
 
 **Pedagogy family** (v4.1.0+, any profile, 4 components): `Pitfall` (rose; "common mistake" — distinct from `WarnBox`'s preemptive warning), `WorkedExample` (plum; collapsible `<details>` block with `#worked-example-{id}` anchor for deep links), `YouWillLearn` (gold; chapter-opener with optional `prerequisites` prop), `Diagnostic` (v4.19.0, #110; teal; pre-reading "Do I Know This Already?" DIKTA self-check — a slotted question list + a skip/skim/read routing rubric via `skimTo`, plus an optional collapsible answer key via `slot="answers"`). Slot bullets/code freely; render at any preset.
 
@@ -169,11 +170,17 @@ npm run build:bib            # rebuild references.json after .bib edit
 npm run pdf                  # render dist-pdf/book.pdf via Paged.js
 ```
 
-`prebuild` chains: `build:assets` (bib + figures + notebooks) → `validate` → `astro build`.
+Generated academic/research-portfolio books use `prevalidate` to rebuild
+bibliography and label indexes before validation; the other presets keep those
+steps in `prebuild`. Figure and notebook conversion remain explicit authoring
+commands because their system tools are optional. `prepdf` always runs the
+full site build before previewing `/print/` and rendering `dist-pdf/book.pdf`.
 
 ## Deploy
 
-Cloudflare Workers + Static Assets via `wrangler.toml`. Recipe 05 has the dashboard flow. URL after first deploy: `https://<book-name>.<account>.workers.dev`.
+The generated `wrangler.toml` uses Cloudflare Workers + Static Assets for
+academic/tools/minimal presets and Cloudflare Pages for course-notes and
+research-portfolio. Recipe 05 documents both flows.
 
 For monorepo Astro projects (Astro project in subdir), prefix build + deploy commands with `cd <subdir> &&`.
 
@@ -257,6 +264,6 @@ Types: `feat` / `fix` / `refactor` / `docs` / `test` / `chore` / `release`. One 
 
 ## Reading this guide didn't help?
 
-- `recipes/README.md` — index of all 11 recipes
+- `recipes/README.md` — index of all recipes
 - `recipes/08-decisions-ledger.md` — why everything is shaped the way it is
 - `~/.claude/plans/i-want-to-investigate-recursive-yao.md` — full design discussion

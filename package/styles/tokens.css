@@ -85,19 +85,17 @@
    * Three-tier responsive measure tuned via Playwright comparison at
    * 375 / 1280 / 1440 / 1920px viewports (post_transformers commit d9d085b).
    *
-   * The classic 65ch Tufte measure feels narrow on wide desktops (≥1440px)
-   * where ~38% of the viewport sits as empty margin. The tiered approach
-   * keeps 65ch where it's typographically right (laptop) and expands to
-   * 80ch / 90ch on wider monitors without crossing the 90ch upper limit
-   * of comfortable line length.
+   * The tiered measures leave room for the book-aware left sidebar and the
+   * Tufte right gutter at every desktop width. v4.26.0 tightened the older
+   * 65/80/90ch values after the responsive audit found horizontal overflow.
    *
    * Tier values + utilization (verified):
-   *   default (≤1440px): 65ch + 28ch  → 70% at 1280px
-   *   1440px tier:       80ch + 24ch  → 69% (with sidebar: 89%)
-   *   1920px tier:       90ch + 26ch  → 57% (with sidebar: 72%)
+   *   default:      60ch + 20ch
+   *   1440px tier:  66ch + 20ch
+   *   1920px tier:  78ch + 24ch
    *
-   * Sidenote column shrinks slightly at wider tiers (24ch / 26ch) to give
-   * main column more room while staying readable for short notes.
+   * These values keep `main + gutter ≤ layout-main` after subtracting the
+   * sidebar, while preserving readable line length and short-note width.
    *
    * Mobile (<48rem) handled separately in layout.css — sidenotes reflow
    * inline; the tokens here don't apply below 48rem.

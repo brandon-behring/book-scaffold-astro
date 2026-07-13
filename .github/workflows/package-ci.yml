@@ -6,11 +6,11 @@ name: package-ci
 #
 # Triggers on pushes/PRs touching the package, the create-book CLI, the
 # demo workspace, or this workflow itself. Visual regression coverage is in
-# its own workflow (.github/workflows/visual-regression.yml).
+# its own workflow (.github/workflows/visual-pw.yml).
 
 on:
   push:
-    branches: [main, v3.0]
+    branches: [main]
     paths:
       - 'package/**'
       - 'create-book/**'

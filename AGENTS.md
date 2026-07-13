@@ -8,4 +8,6 @@ If your tool reads `AGENTS.md` rather than `CLAUDE.md` (Codex CLI, some others),
 
 Per Q10 in the v2.0 decisions ledger, the scaffold ships both `CLAUDE.md` and `AGENTS.md` at root so any agent finds something. Maintaining two parallel files invites drift; the pointer pattern is simpler and matches the precedent set by [`agentprotocol.org`](https://agentprotocol.org)-style cross-tool standards.
 
-If a downstream tool needs an actual file at this path, copy `CLAUDE.md` to `AGENTS.md` verbatim. Both should always be the same content.
+If a downstream tool requires the full guide inline at this path, copy
+`CLAUDE.md` here verbatim. Otherwise keep this pointer small and edit only the
+canonical `CLAUDE.md` content.

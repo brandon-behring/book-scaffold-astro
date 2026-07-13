@@ -2,18 +2,18 @@
 
 **npm package** for long-form technical books. Astro + MDX + Paged.js + Pagefind with Tufte-inspired typography, profile-aware pedagogy (academic vs tools-comparative), KaTeX math, BibTeX citations, and Cloudflare Workers + Static Assets deploy.
 
-**Current release**: [`@brandon_m_behring/book-scaffold-astro@4.0.0`](https://www.npmjs.com/package/@brandon_m_behring/book-scaffold-astro) (2026-05-23) — **BREAKING**: `preset:` shorthand replaced by typed `defineStyle()` composition. Migrating from v3.x? → [`MIGRATION-v3-to-v4.md`](package/MIGRATION-v3-to-v4.md). Sibling CLI: [`@brandon_m_behring/create-book@4.0.0`](https://www.npmjs.com/package/@brandon_m_behring/create-book). Both ship in lock-step via OIDC trusted publishing on tag push. See [`PACKAGE_DESIGN.md`](PACKAGE_DESIGN.md) for the full API contract and [`CHANGELOG.md`](CHANGELOG.md) for the release history.
+**Current release**: [`@brandon_m_behring/book-scaffold-astro`](https://www.npmjs.com/package/@brandon_m_behring/book-scaffold-astro) — npm's `latest` tag is canonical; [`CHANGELOG.md`](CHANGELOG.md) records every release. The v4 line is **breaking** vs v3: `preset:` shorthand was replaced by typed `defineStyle()` composition. Migrating? → [`MIGRATION-v3-to-v4.md`](package/MIGRATION-v3-to-v4.md). Sibling CLI: [`@brandon_m_behring/create-book`](https://www.npmjs.com/package/@brandon_m_behring/create-book). Both publish in lock-step from a main-reachable version tag. See [`PACKAGE_DESIGN.md`](PACKAGE_DESIGN.md) for the full API contract.
 
 ## Start a new book
 
 ```bash
-npx @brandon_m_behring/create-book my-book --preset=academic
+npx @brandon_m_behring/create-book my-book --preset=academic --author="Ada Lovelace"
 cd my-book
 npm install
 npm run dev
 ```
 
-`--preset` (or v3.4.0+ alias `--profile`) is one of `academic` / `tools` / `minimal` / `course-notes` / `research-portfolio`. The scaffold emits ~13 templated files including a v4 `astro.config.mjs` that composes the matching built-in style. See [recipes/15-defining-styles.md](package/recipes/15-defining-styles.md) for the full Style composition pattern (workspace-local vs npm-package styles, per-key merge semantics, escape hatches).
+`--preset` (or the backward-compatible `--profile` alias) is one of `academic` / `tools` / `minimal` / `course-notes` / `research-portfolio`. `--author` accepts either `--author=NAME` or `--author NAME` and defaults to `Book contributors`. The complete starter tree includes a v4 `astro.config.mjs`, paired agent guides, scoped licenses, and a turnkey PDF command. See [recipes/15-defining-styles.md](package/recipes/15-defining-styles.md) for the Style composition pattern.
 
 ## Consumer config (what you own)
 
@@ -39,16 +39,16 @@ BOOK_PROFILE=academic
 
 ## What ships in the package
 
-- **53 components** at one flat path (`./components/<Name>.astro`) — Cite / XRef / Figure / Theorem / 18 callouts (academic + tools families) / 2 Preact islands / nav + headers / per-chapter `Provenance` audit block (v4.8.0)
-- **8 stylesheets** auto-injected by profile via the dual-purpose Astro Integration (route + style injection)
-- **Default pages** auto-injected: `/references` / `/search` / `/print` (all profiles); `/convergence` (tools profile); `/chapters` (tools profile by default, opt-in for academic via `routes.chapters: true` — schema-aware as of v3.5.2)
+- **65 Astro components + 5 Preact islands** at the exported `./components/<Name>` surface — citations, figures, theorem/callout families, study tools, book-aware nav, and the per-chapter `Provenance` audit block
+- **12 exported stylesheets**, loaded where their ownership belongs: preset/profile integration, the base layout, opt-in routes, or their component
+- **Default pages** auto-injected: `/references` / `/search` / `/print` / `/chapters` (all five presets); `/convergence` (tools); optional frontmatter and study-guide routes
 - **Profile-aware Zod schemas** — academic 7-state status / tools volatility + T1-T4 source tiers
-- **Tufte three-tier layout** — 65ch (default) / 80ch (≥90rem) / 90ch (≥120rem)
-- **KaTeX 36-macro library** (academic profile)
+- **Tufte three-tier layout** — 60ch (default) / 66ch (≥90rem) / 78ch (≥120rem), with a book-aware desktop sidebar and mobile drawer
+- **KaTeX 37-macro library** (academic + research-portfolio presets)
 - **BibTeX citation pipeline** via citation-js (academic profile)
 - **Pagefind full-text search** + **Paged.js PDF export**
-- **`book-scaffold` CLI** dispatcher with sub-commands: `validate`, `build-labels`, `build-bib`, `build-figures`, `render-notebooks`
-- **Cloudflare Workers + Static Assets** deploy via `wrangler.toml`
+- **`book-scaffold` CLI** dispatcher with sub-commands: `validate`, `build-labels`, `build-bib`, `build-figures`, `build-tips`, `build-exercises`, `render-notebooks`
+- **Cloudflare deploy templates**: Workers + Static Assets for academic/tools/minimal; Pages for course-notes/research-portfolio
 - **Warm Tol 5-hue palette** (colorblind-safe; light + dark modes)
 
 ### Per-chapter provenance audit trail (v4.8.0)
@@ -85,11 +85,11 @@ built site); only `http(s)` values become links. Distinct from
 
 ## Deploy
 
-The shipped `wrangler.toml` template produces a Workers + Static Assets deploy via either `npx wrangler deploy` (one-shot from local) or Cloudflare Workers Builds (auto-deploy on `git push origin main`).
+The generated `wrangler.toml` is preset-aware: academic/tools/minimal use Workers + Static Assets; course-notes/research-portfolio use Pages. Recipe 05 documents both deployment flows.
 
 For Brandon's books, the public URL follows a per-project-subdomain pattern: each book deploys to `<repo-slug>.brandon-behring.dev`. See [the Subdomain convention in brandon-behring.dev/README.md](https://github.com/brandon-behring/brandon-behring.dev#subdomain-convention) for the slug rule, dashboard click-path, and registry. Consumer books built from this scaffold should follow the same pattern unless deploying to a different domain.
 
-Both books consume `@brandon_m_behring/book-scaffold-astro@^3.6.0` with ≤5 lines of book-side config. The v3.5/v3.6 cycle added [`double-ml-time-series`](https://github.com/brandon-behring/double-ml-time-series) as the third pilot — first non-SSM academic book through the scaffold, surfacing #20/#22/#24 in 24 hours.
+The reference books consume `@brandon_m_behring/book-scaffold-astro` on the current v4 major with ≤5 lines of book-side config. The v3.5/v3.6 cycle added [`double-ml-time-series`](https://github.com/brandon-behring/double-ml-time-series) as the third pilot — first non-SSM academic book through the scaffold, surfacing #20/#22/#24 in 24 hours.
 
 ## Provenance
 
@@ -103,11 +103,11 @@ Version arc:
 
 ## API reference
 
-[`PACKAGE_DESIGN.md`](PACKAGE_DESIGN.md) — 18-section design doc. Audience: Phase B implementers + consumers. Each API entry includes signature + behavior + error cases + copy-pasteable example. File issues with section number citations at <https://github.com/brandon-behring/book-scaffold-astro/issues>.
+[`PACKAGE_DESIGN.md`](PACKAGE_DESIGN.md) — package design and API contract for implementers and consumers. API entries include signatures, behavior, error cases, and examples. File issues with section citations at <https://github.com/brandon-behring/book-scaffold-astro/issues>.
 
 ## License
 
 Dual:
 
 - [`LICENSE`](LICENSE) — MIT, applies to code, scripts, and configuration.
-- [`LICENSE-CONTENT`](LICENSE-CONTENT) — CC-BY-4.0, applies to prose / book content shipped in `pedagogy/`.
+- [`LICENSE-CONTENT`](LICENSE-CONTENT) — CC BY 4.0, applies to substantive prose, recipes, pedagogy, examples, and book content.

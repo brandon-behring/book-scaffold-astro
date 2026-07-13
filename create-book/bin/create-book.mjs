@@ -7,11 +7,9 @@
  *   npx @brandon_m_behring/create-book <name> [--preset=academic|tools|minimal|course-notes|research-portfolio]
  *   npx @brandon_m_behring/create-book my-book --profile=academic
  *
- * Emits ~12 templated files in `./<name>/` covering the consumer's full
- * surface — astro.config.mjs (2 lines), src/content.config.ts (2 lines),
- * package.json (with toolkit dep + bin scripts), demo chapter, deploy
- * config, AI authoring guide. No installation; user runs `npm install`
- * themselves.
+ * Emits a complete starter tree in `./<name>/`: package/config files, demo
+ * content, deploy + PDF commands, dual licenses, and paired agent guides.
+ * No installation; the user runs `npm install` themselves.
  *
  * Sibling to `@brandon_m_behring/book-scaffold-astro`; D12 lock-step
  * version. See PACKAGE_DESIGN.md and master plan Phase D.
