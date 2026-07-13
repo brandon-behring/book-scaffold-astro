@@ -32,13 +32,13 @@ Patch release — **registry reconciliation plus research-portfolio Part numberi
 
 - Package suite **528 → 531** (+3): coverage now locks the research-portfolio boundary at Parts 6 and 20, verifies neither is an appendix, and confirms ordinary chapter-number formatting still delegates to the fallback renderer. The final package suite passes 531/531; `create-book` passes 23/23.
 
-## [4.26.1] — 2026-07-02
+## [4.26.1] — 2026-07-02 *(tagged, not published to either npm package; superseded by 4.26.2)*
 
-Patch release — **the #178 release reconciliation.** v4.26.0 was tagged and published from a feature branch that was never merged to `main`, while `main` carried two release commits that were never published (v4.25.2, v4.25.3). This release is cut from the reconciled `main` and is the **first published artifact carrying the v4.25.3 responsive work** (#170–#173); v4.25.2's code (#162/#163) had already shipped inside the 4.26.0 tarball. No new features.
+Intended patch release — **the #178 release reconciliation.** v4.26.0 was tagged and published from a feature branch that was never merged to `main`, while `main` carried v4.25.2/v4.25.3 release commits whose **toolkit-only** packages reached npm without matching `create-book` versions or tags. The reconciled source was tagged as v4.26.1, but its publish never completed; v4.26.2 became the first valid lock-step artifact carrying the complete responsive and reconciliation work. No new features were intended here.
 
 ### Fixed
 
-- **npm now carries the v4.25.3 responsive code/equation/table treatment (#171)** — the `--measure-code` break-out, edge scroll-shadows on scrollable code + display math, the phone code font, and mobile table scroll — previously stranded on `main`, unpublished (consumer signal: `double_ml_time_series#46`).
+- **The reconciled source carries the v4.25.3 responsive code/equation/table treatment (#171)** — the `--measure-code` break-out, edge scroll-shadows on scrollable code + display math, the phone code font, and mobile table scroll. It reached both lock-step packages in v4.26.2 (consumer signal: `double_ml_time_series#46`).
 
 ### Changed
 
@@ -76,7 +76,7 @@ Minor release. **Book-aware responsive navigation (#80)** — the nav components
 - **Right-gutter now FITS beside the sidebar (BC-affecting layout change).** The Tufte right-gutter (`.section-map` scrollspy + sidenote / margin-figure floats) sized its main+gutter measure against the FULL viewport, ignoring that a left sidebar steals 14–16rem — so the negative-margin float overflowed the viewport at 1024px AND 1440px. Fixed properly (the gutter still shows — no suppression): (a) the shared text measure is trimmed to a more typographic width — `--measure-main` 65→60ch / 80→66ch / 90→78ch and `--measure-side` 28→20ch / 24→20ch / 26→24ch; (b) the sidebar grid is trimmed to 14rem / 16rem; and (c) the **full 3-column (sidebar + floated gutter scrollspy) now activates at ≥80rem (1280px)** instead of 64rem — below 1280px the new mobile drawer is the chapter nav, content runs full-width, and the collapsed in-flow ChapterTOC is the "on this page". **BC impact for single-book sidebar consumers (academic/tools): the sidebar + gutter scrollspy now appear at ≥1280px (was ≥1024px; the 1024–1280px band uses the drawer), and the body text measure is narrower. Verified `scrollWidth == clientWidth` at every viewport (390–1440px, light + dark) via the responsive audit harness.**
 - **Defensive narrow-viewport overflow guards** (`:not(pre) > code { overflow-wrap: anywhere }`, `.prose > table` scroll) — prevent a long inline-code identifier or wide table from forcing horizontal page scroll on a phone.
 
-## [4.25.3] — 2026-06-21 *(never published to npm; this content first reached the registry in 4.26.1)*
+## [4.25.3] — 2026-06-21 *(toolkit-only npm artifact; no matching create-book version or tag; superseded by 4.26.2)*
 
 Patch release. The responsive code/equation/table treatment from the responsive-reading design (`docs/responsive-reading.md`, #170): code fits ~80-column lines on tablet+ without scrolling, wide code + display math get an edge scroll-shadow, and wide tables scroll on mobile instead of overflowing the page.
 
@@ -101,9 +101,9 @@ Patch release. The responsive code/equation/table treatment from the responsive-
 
 ### Notes
 
-- The `visual` snapshot check will flag the (expected) code/table render changes; refresh baselines via CI `--update-snapshots`. *(Done: baselines regenerated in the 4.26.1 reconciliation, #178.)*
+- The `visual` snapshot check will flag the (expected) code/table render changes; refresh baselines via CI `--update-snapshots`. *(Done in the v4.26.1 source reconciliation and first shipped lock-step in v4.26.2, #178.)*
 
-## [4.25.2] — 2026-06-20 *(never published to npm as 4.25.2; its code shipped inside the 4.26.0 tarball)*
+## [4.25.2] — 2026-06-20 *(toolkit-only npm artifact; no matching create-book version or tag; code also shipped inside 4.26.0 and returned lock-step in 4.26.2)*
 
 Patch release. Two dogfood fixes surfaced by the cross-property visual recon (#165): a WCAG-AA display-math overflow fix and one additive, fully backward-compatible `Base.astro` prop.
 

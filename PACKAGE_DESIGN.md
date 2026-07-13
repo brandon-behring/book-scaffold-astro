@@ -1,8 +1,8 @@
-# Package Design — `@brandon_m_behring/book-scaffold-astro` v3.0
+# Package Design — `@brandon_m_behring/book-scaffold-astro` v4
 
-> **Status**: design document for `book-scaffold-astro` v3.0 (npm package pivot).
-> **Date**: 2026-05-18.
-> **Branch**: `v3.0` (forks `main`@`529205b` = tag `v2.0.0`).
+> **Status**: living v4 API contract, updated through v4.27.0 stabilization.
+> **Origin**: the v3.0 npm-package pivot designed on 2026-05-18; historical
+> branch `v3.0` forked `main`@`529205b` (`v2.0.0`).
 > **Master plan**: `~/.claude/plans/i-want-to-investigate-recursive-yao.md` (12 D-decisions).
 > **Phase A plan**: `~/.claude/plans/1-cd-claude-book-scaffold-astro-polymorphic-kernighan.md` (6 Q-decisions + spike outcome).
 > **POC**: `~/.claude/plans/poc-archive/v3-poc-outcome.md` (Outcome A, cross-package `.astro` + Zod + style auto-injection all verified).

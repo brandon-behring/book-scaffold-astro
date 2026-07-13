@@ -170,11 +170,11 @@ npm run build:bib            # rebuild references.json after .bib edit
 npm run pdf                  # render dist-pdf/book.pdf via Paged.js
 ```
 
-Generated academic/research-portfolio books use `prevalidate` to rebuild
-bibliography and label indexes before validation; the other presets keep those
-steps in `prebuild`. Figure and notebook conversion remain explicit authoring
-commands because their system tools are optional. `prepdf` always runs the
-full site build before previewing `/print/` and rendering `dist-pdf/book.pdf`.
+Every generated preset uses the same `prevalidate` hook to rebuild applicable
+bibliography and label indexes, while `prebuild` delegates to validation.
+Figure and notebook conversion remain explicit authoring commands because
+their system tools are optional. `prepdf` always runs the full site build
+before previewing `/print/` and rendering `dist-pdf/book.pdf`.
 
 ## Deploy
 
