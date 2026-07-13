@@ -1,8 +1,8 @@
 # Build-time Open Graph card contract
 
-**Date:** 2026-07-13 · **Issue:** #157 · **Status:** accepted design; implementation in progress for v5.2.0
+**Date:** 2026-07-13 · **Issue:** #157 · **Status:** shipped in v5.2.0 (PR #224; publish run 29292640530)
 
-The scaffold will generate social cards after Astro renders static HTML. This
+The scaffold generates social cards after Astro renders static HTML. This
 post-render design covers scaffold and consumer-owned pages uniformly, derives
 the final canonical metadata rather than guessing it from source files, and
 adds no runtime service.
