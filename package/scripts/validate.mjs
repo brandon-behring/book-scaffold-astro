@@ -6,10 +6,8 @@
  * can call it in-process. This adapter alone owns process I/O, exit status,
  * and the historical child-process artifact self-heal behavior.
  */
-import { spawnSync } from 'node:child_process';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { runValidation, VALIDATE_USAGE } from './validate-core.mjs';
+import { regenerateValidationArtifact } from './validation-artifacts.mjs';
 
 const argv = process.argv.slice(2);
 if (argv.includes('--help') || argv.includes('-h')) {
@@ -17,22 +15,11 @@ if (argv.includes('--help') || argv.includes('-h')) {
   process.exit(0);
 }
 
-const scriptDir = dirname(fileURLToPath(import.meta.url));
-const regenerateArtifact = ({ scriptName, book, root, env }) => {
-  const childArgs = [join(scriptDir, scriptName)];
-  if (book) childArgs.push('--book', book);
-  return spawnSync(process.execPath, childArgs, {
-    cwd: root,
-    env,
-    encoding: 'utf8',
-  });
-};
-
 const result = await runValidation({
   root: process.cwd(),
   argv,
   env: process.env,
-  regenerateArtifact,
+  regenerateArtifact: regenerateValidationArtifact,
 });
 
 if (result.output.stdout) process.stdout.write(result.output.stdout);

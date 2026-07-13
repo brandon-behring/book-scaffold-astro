@@ -59,6 +59,20 @@ test('CLI dispatcher rejects an unknown sub-command with exit 2', () => {
   assert.match(result.stderr, /unknown sub-command 'unknown-task'/);
 });
 
+for (const command of ['qa', 'init-qa']) {
+  test(`CLI dispatcher routes ${command} help without project reads`, () => {
+    const result = run(
+      join(PACKAGE_ROOT, 'bin/book-scaffold.mjs'),
+      PACKAGE_ROOT,
+      {},
+      [command, '--help'],
+    );
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, new RegExp(`^Usage: book-scaffold ${command}\\b`));
+    assert.equal(result.stderr, '');
+  });
+}
+
 test('build-bib reports output write failures and exits non-zero', (t) => {
   const root = fixture(t);
   write(root, 'src/data', 'not a directory');

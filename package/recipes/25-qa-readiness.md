@@ -57,6 +57,19 @@ Amber advisories stay visible but do not fail CI. Exit status is:
 | `1` | At least one selected book or corpus-shared check is `red` |
 | `2` | Invalid invocation, unresolved configuration, or internal failure |
 
+The link check inspects internal links authored in chapter Markdown/MDX. It
+uses the resolved scaffold route toggles, Astro page conventions, and public
+assets as its route oracle. Fragments that depend on a consumer-defined MDX
+component or a known non-chapter route are reported as amber
+`fragment_unverified` advisories instead of guessed successes or blocking
+failures.
+
+Schema-v1 fixture validation supports JSON Schema draft-07 (also the default
+when `$schema` is absent), 2019-09, and 2020-12. Recursive `$ref` resources must
+remain inside the project after symlink resolution; QA never fetches network
+schemas. The JSON Schema `format` keyword is annotation-only in v1. Unsupported
+or mixed dialects and out-of-project references make that fixture red.
+
 ## Human and JSON output
 
 Human output is compact and terminal-oriented:

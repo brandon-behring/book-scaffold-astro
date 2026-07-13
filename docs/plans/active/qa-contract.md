@@ -57,6 +57,16 @@ excluded. In a corpus, `src/data/<book>/` belongs to that book; JSON outside a
 registered book directory is checked once as corpus-shared data and can make
 only the corpus verdict red. `qa` verifies JSON syntax and a referenced JSON
 Schema when `$schema` is present; it does not run consumer simulation kernels.
+Schema v1 supports draft-07 (the default when `$schema` is absent), 2019-09,
+and 2020-12. Recursive references must resolve to files inside the project after
+symlink resolution, mixed/unsupported dialects are rejected, network schemas
+are never fetched, and `format` remains annotation-only.
+
+The link inventory covers internal targets authored in chapter Markdown/MDX.
+Resolved scaffold toggles, Astro page routes, and public files establish route
+existence. A fragment whose render semantics depend on a consumer-defined MDX
+component or a known non-chapter route is an explicit amber
+`fragment_unverified` advisory rather than a fabricated pass or blocking miss.
 
 ## Verdicts and exit codes
 

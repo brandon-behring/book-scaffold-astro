@@ -5,7 +5,7 @@
  * spawns, or writes. The command adapter injects the shared validation core
  * and decides whether to render human or schema-v1 JSON output.
  */
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile, readdir, realpath } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createMarkdownProcessor } from '@astrojs/markdown-remark';
@@ -69,9 +69,6 @@ export const SCAFFOLD_MDX_COMPONENTS = Object.freeze([
   'BlockedByCallout',
   'BookLink',
   'CaseStudy',
-  'ChapterHeader',
-  'ChapterNav',
-  'ChapterTOC',
   'Citation',
   'Cite',
   'CodeBlock',
@@ -85,36 +82,28 @@ export const SCAFFOLD_MDX_COMPONENTS = Object.freeze([
   'DynConnect',
   'Epigraph',
   'EvidenceTag',
-  'ExamRunner',
   'ExampleBox',
   'Exercise',
   'ExerciseSolutions',
-  'Flashcards',
   'Figure',
   'InsightBox',
   'KeyIdea',
   'MarginFigure',
   'MarginNote',
-  'NavContent',
   'Newthought',
   'NoteBox',
   'ObjectiveMap',
   'OpenQuestion',
   'PaperBox',
   'PartReview',
-  'PatternTimeline',
   'Pitfall',
   'PocLayout',
   'PolicyRef',
   'Practice',
   'PreReleaseBanner',
-  'Provenance',
-  'QuestionCard',
   'Rationale',
   'Recovery',
   'ResultBox',
-  'SectionMap',
-  'Sidebar',
   'Sidenote',
   'SkillBox',
   'Slider',
@@ -128,7 +117,6 @@ export const SCAFFOLD_MDX_COMPONENTS = Object.freeze([
   'Tip',
   'TipBox',
   'TipsCard',
-  'ToolFilter',
   'TryThis',
   'VersionSelector',
   'WarnBox',
@@ -305,8 +293,11 @@ function mdxParser(preset) {
 function literalAttribute(attribute) {
   if (typeof attribute?.value === 'string') return attribute.value;
   const expression = attribute?.value?.data?.estree?.body?.[0]?.expression;
-  if (expression?.type === 'Literal' && typeof expression.value === 'string') {
-    return expression.value;
+  if (
+    expression?.type === 'Literal' &&
+    (typeof expression.value === 'string' || typeof expression.value === 'number')
+  ) {
+    return String(expression.value);
   }
   if (
     expression?.type === 'TemplateLiteral' &&
@@ -321,25 +312,84 @@ function literalAttribute(attribute) {
 function inspectMdxTree(tree) {
   const components = new Map();
   const ids = new Set();
+  const uncertainIds = new Set();
   const visit = (node) => {
     if (!node || typeof node !== 'object') return;
     if (node.type === 'mdxJsxFlowElement' || node.type === 'mdxJsxTextElement') {
       if (SCAFFOLD_COMPONENT_SET.has(node.name)) {
         components.set(node.name, (components.get(node.name) ?? 0) + 1);
       }
-      for (const attribute of node.attributes ?? []) {
-        if (attribute?.type !== 'mdxJsxAttribute' || attribute.name !== 'id') continue;
-        const value = literalAttribute(attribute);
-        if (value) ids.add(value);
+      const valueOf = (name) => literalAttribute(
+        (node.attributes ?? []).find(
+          (attribute) => attribute?.type === 'mdxJsxAttribute' && attribute.name === name,
+        ),
+      );
+      const rawId = valueOf('id');
+      let idSemanticsKnown = false;
+      if (/^[a-z]/.test(node.name ?? '') && rawId) {
+        ids.add(rawId);
+        idSemanticsKnown = true;
+      } else if (
+        ['Theorem', 'Figure', 'MarginFigure', 'DemoFrame', 'Slider'].includes(node.name) &&
+        rawId
+      ) {
+        ids.add(rawId);
+        idSemanticsKnown = true;
+      } else if (node.name === 'Exercise' && rawId) {
+        ids.add(`exercise-${rawId}`);
+        idSemanticsKnown = true;
+      } else if (node.name === 'Practice' && rawId) {
+        ids.add(`practice-${rawId}`);
+        idSemanticsKnown = true;
+      } else if (node.name === 'WorkedExample' && rawId) {
+        ids.add(`worked-example-${rawId}`);
+        idSemanticsKnown = true;
+      }
+      if (
+        rawId &&
+        !idSemanticsKnown &&
+        /^[A-Z]/.test(node.name ?? '') &&
+        !SCAFFOLD_COMPONENT_SET.has(node.name)
+      ) {
+        uncertainIds.add(rawId);
+      }
+
+      if (node.name === 'DemoFrame' && rawId) {
+        ids.add(`${rawId}-title`);
+        if (valueOf('description')) ids.add(`${rawId}-description`);
+        if (valueOf('caption')) ids.add(`${rawId}-caption`);
+      }
+      if (node.name === 'Slider' && rawId && valueOf('description')) {
+        ids.add(`${rawId}-description`);
+      }
+
+      const tipNumber = node.name === 'Tip' ? valueOf('n') : null;
+      if (tipNumber) ids.add(`tip-${tipNumber}`);
+      const solutionFor = node.name === 'Solution' ? valueOf('for') : null;
+      if (solutionFor) ids.add(`solution-${solutionFor}`);
+      if (node.name === 'ExerciseSolutions') ids.add('exercise-solutions');
+      if (node.name === 'AICollaborationDisclosure') ids.add('ai-collab-h');
+      if (node.name === 'BlockedByCallout') ids.add('blocked-by-h');
+      if (node.name === 'SourceArchive') {
+        for (const tier of [
+          'T1-official',
+          'T2-release-notes',
+          'T3-practitioner',
+          'T4-conjecture',
+        ]) ids.add(`tier-${tier}`);
       }
     }
     for (const child of node.children ?? []) visit(child);
   };
   visit(tree);
-  return { components, ids };
+  return { components, ids, uncertainIds };
 }
 
-async function* walkFiles(dir, baseDir = dir, { includeHidden = false } = {}) {
+async function* walkFiles(
+  dir,
+  baseDir = dir,
+  { includeHidden = false, includeWellKnown = false } = {},
+) {
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
@@ -349,9 +399,15 @@ async function* walkFiles(dir, baseDir = dir, { includeHidden = false } = {}) {
   }
   entries.sort((a, b) => a.name.localeCompare(b.name));
   for (const entry of entries) {
-    if (!includeHidden && (entry.name.startsWith('.') || entry.name.startsWith('_'))) continue;
+    if (
+      !includeHidden &&
+      (entry.name.startsWith('.') || entry.name.startsWith('_')) &&
+      !(includeWellKnown && entry.name === '.well-known')
+    ) continue;
     const full = join(dir, entry.name);
-    if (entry.isDirectory()) yield* walkFiles(full, baseDir, { includeHidden });
+    if (entry.isDirectory()) {
+      yield* walkFiles(full, baseDir, { includeHidden, includeWellKnown });
+    }
     else yield posix(relative(baseDir, full));
   }
 }
@@ -487,6 +543,7 @@ async function inspectChapter({
     hasObjectives: Object.prototype.hasOwnProperty.call(parsed.frontmatter, 'los'),
     components: new Map(),
     anchors: new Set(),
+    uncertainAnchors: new Set(),
     targets: [],
     parseDiagnostics: [],
   };
@@ -496,6 +553,7 @@ async function inspectChapter({
     const inspected = inspectMdxTree(tree);
     result.components = inspected.components;
     for (const id of inspected.ids) result.anchors.add(id);
+    for (const id of inspected.uncertainIds) result.uncertainAnchors.add(id);
   } catch (error) {
     result.parseDiagnostics.push(diagnostic({
       severity: 'warning',
@@ -578,20 +636,37 @@ function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function routePatternMatcher(pattern) {
+  const normalized = `/${String(pattern).replace(/^\/+|\/+$/g, '')}`;
+  if (normalized === '/') return /^\/?$/;
+  const segments = normalized.slice(1).split('/');
+  let expression = '^';
+  for (const segment of segments) {
+    if (/^\[\.\.\.[^\]]+\]$/.test(segment)) {
+      expression += '(?:/(?:.*))?';
+      continue;
+    }
+    let cursor = 0;
+    let compiled = '';
+    for (const match of segment.matchAll(/\[(\.\.\.)?[^\]]+\]/g)) {
+      compiled += escapeRegex(segment.slice(cursor, match.index));
+      compiled += match[1] ? '(?:.*)' : '[^/]+';
+      cursor = match.index + match[0].length;
+    }
+    expression += `/${compiled}${escapeRegex(segment.slice(cursor))}`;
+  }
+  return new RegExp(`${expression}/?$`);
+}
+
 async function collectConsumerRoutes(root) {
   const matchers = [];
   const pagesRoot = resolve(root, 'src/pages');
-  for await (const file of walkFiles(pagesRoot)) {
-    if (!/\.(?:astro|md|mdx|html|js|mjs|ts)$/.test(file)) continue;
+  for await (const file of walkFiles(pagesRoot, pagesRoot, { includeWellKnown: true })) {
+    if (!/\.(?:astro|html|md|markdown|mdown|mkdn|mkd|mdwn|mdx|js|ts)$/.test(file)) continue;
     const withoutExtension = file.replace(/\.[^.]+$/, '');
     const segments = withoutExtension.split('/');
     if (segments.at(-1) === 'index') segments.pop();
-    const expression = segments.map((segment) => {
-      if (/^\[\.\.\.[^\]]+\]$/.test(segment)) return '(?:.*)';
-      if (/^\[[^\]]+\]$/.test(segment)) return '[^/]+';
-      return escapeRegex(segment);
-    }).join('/');
-    matchers.push(new RegExp(`^/${expression}${expression ? '' : ''}/?$`));
+    matchers.push(routePatternMatcher(`/${segments.join('/')}`));
   }
   return matchers;
 }
@@ -599,7 +674,7 @@ async function collectConsumerRoutes(root) {
 async function collectPublicRoutes(root) {
   const routes = new Set();
   const publicRoot = resolve(root, 'public');
-  for await (const file of walkFiles(publicRoot)) {
+  for await (const file of walkFiles(publicRoot, publicRoot, { includeHidden: true })) {
     routes.add(normalizeRoute(`/${file}`));
     if (file.endsWith('/index.html') || file === 'index.html') {
       routes.add(normalizeRoute(`/${file.replace(/(?:^|\/)index\.html$/, '')}`));
@@ -609,18 +684,37 @@ async function collectPublicRoutes(root) {
 }
 
 function knownScaffoldRoutes(config, corpus) {
-  const routes = new Set(['/', '/chapters', '/search']);
+  const enabled = new Set(config.enabledRoutes ?? []);
+  const routes = new Set();
+  const apparatusRouteByToggle = {
+    references: 'references',
+    print: 'print',
+    convergence: 'convergence',
+    tips: 'tips',
+    exercises: 'exercises',
+    practiceExam: 'practice-exam',
+    glossary: 'glossary',
+    answers: 'answers',
+    flashcards: 'flashcards',
+  };
   if (!corpus) {
-    for (const route of config.apparatusRoutes ?? []) {
+    if (enabled.has('landing')) routes.add('/');
+    if (enabled.has('chapters')) routes.add('/chapters');
+    if (enabled.has('search')) routes.add('/search');
+    for (const [toggle, route] of Object.entries(apparatusRouteByToggle)) {
+      if (!enabled.has(toggle)) continue;
       routes.add(normalizeRoute(routeTokens(config.apparatusRoute, {
         book: '', id: '', slug: '', route,
       })));
     }
     return routes;
   }
+  if (enabled.has('landing')) routes.add('/');
+  if (enabled.has('chapters')) routes.add('/chapters');
+  if (enabled.has('search')) routes.add('/search');
   for (const book of corpus.books) {
-    routes.add(normalizeRoute(`/${book.id}`));
-    routes.add(normalizeRoute(`/chapters/${book.id}`));
+    if (enabled.has('landing')) routes.add(normalizeRoute(`/${book.id}`));
+    if (enabled.has('chapters')) routes.add(normalizeRoute(`/chapters/${book.id}`));
     for (const route of book.apparatus ?? config.apparatusRoutes ?? []) {
       routes.add(normalizeRoute(routeTokens(config.apparatusRoute, {
         book: book.id, id: '', slug: '', route,
@@ -628,6 +722,13 @@ function knownScaffoldRoutes(config, corpus) {
     }
   }
   return routes;
+}
+
+function knownScaffoldRouteMatchers(config) {
+  const enabled = new Set(config.enabledRoutes ?? []);
+  return enabled.has('frontmatter')
+    ? [routePatternMatcher(config.frontmatterRoute)]
+    : [];
 }
 
 function internalTarget(target, currentRoute, base) {
@@ -665,10 +766,21 @@ function internalTarget(target, currentRoute, base) {
 
 async function analyzeLinks({ root, chapters, selectedIds, config, corpus, diagnosticsByBook }) {
   const routeAnchors = new Map();
+  const scaffoldChaptersEnabled = (config.enabledRoutes ?? []).includes('chapters');
   for (const entries of chapters.values()) {
-    for (const chapter of entries) routeAnchors.set(chapter.route, chapter.anchors);
+    for (const chapter of entries) {
+      // Draft sources are scanned for outgoing defects, but Astro does not
+      // publish their chapter routes, so they cannot satisfy an inbound link.
+      if (scaffoldChaptersEnabled && !chapter.draft) {
+        routeAnchors.set(chapter.route, {
+          verified: new Set([...chapter.anchors, 'provenance-h']),
+          uncertain: chapter.uncertainAnchors,
+        });
+      }
+    }
   }
   const scaffoldRoutes = knownScaffoldRoutes(config, corpus);
+  const scaffoldMatchers = knownScaffoldRouteMatchers(config);
   const consumerMatchers = await collectConsumerRoutes(root);
   const publicRoutes = await collectPublicRoutes(root);
   const metrics = new Map();
@@ -688,16 +800,40 @@ async function analyzeLinks({ root, chapters, selectedIds, config, corpus, diagn
         if (target === null) continue;
         checked += 1;
         let reason = null;
+        const localTarget = authored.target.trim().startsWith('#');
+        const indexed = localTarget
+          ? {
+              verified: scaffoldChaptersEnabled
+                ? new Set([...chapter.anchors, 'provenance-h'])
+                : chapter.anchors,
+              uncertain: chapter.uncertainAnchors,
+            }
+          : routeAnchors.get(target.pathname);
         if (target.malformed) {
           reason = 'is malformed';
         } else {
-          const routeExists = routeAnchors.has(target.pathname) ||
+          const routeExists = localTarget ||
+            routeAnchors.has(target.pathname) ||
             scaffoldRoutes.has(target.pathname) ||
             publicRoutes.has(target.pathname) ||
+            scaffoldMatchers.some((matcher) => matcher.test(target.pathname)) ||
             consumerMatchers.some((matcher) => matcher.test(target.pathname));
           if (!routeExists) reason = 'does not resolve to a known route or public asset';
-          else if (target.fragment && routeAnchors.has(target.pathname)) {
-            if (!routeAnchors.get(target.pathname).has(target.fragment)) {
+          else if (target.fragment && indexed) {
+            if (indexed.verified.has(target.fragment)) {
+              // Verified chapter/local fragment.
+            } else if (indexed.uncertain.has(target.fragment)) {
+              skippedFragments += 1;
+              bookDiagnostics.push(diagnostic({
+                severity: 'warning',
+                code: 'qa.links.fragment_unverified',
+                message: `Internal link ${JSON.stringify(authored.target)} may be rendered by a custom MDX component, so QA could not verify its fragment.`,
+                book,
+                check: 'links',
+                file: chapter.file,
+                line: lineOf(chapter.source, authored.index),
+              }));
+            } else {
               reason = `has no fragment ${JSON.stringify(target.fragment)}`;
             }
           } else if (target.fragment) {
@@ -751,6 +887,9 @@ function schemaReference(root, fixturePath, reference) {
   if (/^https?:/i.test(pathPart)) {
     return { error: 'must reference a local schema; QA never fetches network schemas' };
   }
+  if (pathPart.startsWith('//') || pathPart.startsWith('\\\\')) {
+    return { error: 'must not use a protocol-relative or network path' };
+  }
   if (/^[a-z][a-z0-9+.-]*:/i.test(pathPart) && !pathPart.startsWith('file:')) {
     return { error: `uses unsupported URI scheme in ${JSON.stringify(reference)}` };
   }
@@ -783,6 +922,24 @@ function schemaFailureMessage(errors) {
     .join('; ');
 }
 
+function* nestedSchemaReferences(value) {
+  if (Array.isArray(value)) {
+    for (const entry of value) yield* nestedSchemaReferences(entry);
+    return;
+  }
+  if (!isRecord(value)) return;
+  for (const [key, entry] of Object.entries(value)) {
+    if (
+      (key === '$ref' || key === '$dynamicRef' || key === '$recursiveRef') &&
+      typeof entry === 'string'
+    ) {
+      yield entry;
+    } else {
+      yield* nestedSchemaReferences(entry);
+    }
+  }
+}
+
 async function analyzeDemoFixtures({
   root,
   corpus,
@@ -792,6 +949,7 @@ async function analyzeDemoFixtures({
   sharedDiagnostics,
 }) {
   const dataRoot = resolve(root, 'src/data');
+  const canonicalRoot = await realpath(root);
   const candidates = [];
   for await (const file of walkFiles(dataRoot, dataRoot, { includeHidden: true })) {
     if (!file.endsWith('.json') || GENERATED_DATA_PATHS.has(file)) continue;
@@ -808,10 +966,28 @@ async function analyzeDemoFixtures({
   }
 
   const referencedSchemas = new Set();
+  const candidateByPath = new Map(candidates.map((candidate) => [candidate.path, candidate]));
   for (const candidate of candidates) {
     if (candidate.parseError || !isRecord(candidate.value) || !('$schema' in candidate.value)) continue;
     const resolved = schemaReference(root, candidate.path, candidate.value.$schema);
     if (resolved.path) referencedSchemas.add(resolved.path);
+  }
+  const pendingSchemas = [...referencedSchemas];
+  for (let index = 0; index < pendingSchemas.length; index += 1) {
+    const candidate = candidateByPath.get(pendingSchemas[index]);
+    if (!candidate || candidate.parseError) continue;
+    for (const reference of nestedSchemaReferences(candidate.value)) {
+      if (reference.startsWith('#')) continue;
+      const resolved = schemaReference(root, candidate.path, reference);
+      if (
+        resolved.path &&
+        candidateByPath.has(resolved.path) &&
+        !referencedSchemas.has(resolved.path)
+      ) {
+        referencedSchemas.add(resolved.path);
+        pendingSchemas.push(resolved.path);
+      }
+    }
   }
 
   const bookMetrics = new Map(selectedIds.map((id) => [id, {
@@ -865,6 +1041,11 @@ async function analyzeDemoFixtures({
       let schemaSource;
       let schema;
       try {
+        const canonicalSchemaPath = await realpath(reference.path);
+        const local = relative(canonicalRoot, canonicalSchemaPath);
+        if (local.startsWith('..') || isAbsolute(local)) {
+          throw new Error('resolved schema escapes the project root after symlink resolution');
+        }
         schemaSource = await readFile(reference.path, 'utf8');
         schema = JSON.parse(schemaSource);
       } catch (error) {

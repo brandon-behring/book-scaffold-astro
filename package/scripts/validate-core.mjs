@@ -174,6 +174,7 @@ export async function runValidation(options = {}) {
       fatal,
       preset: context.preset,
       numberStyle: context.toolingConfig?.numberStyle ?? null,
+      toolingConfig: context.toolingConfig,
       scope: selection
         ? {
             kind: selection.corpus ? 'corpus' : 'single',

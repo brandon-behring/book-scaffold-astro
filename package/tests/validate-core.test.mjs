@@ -97,6 +97,8 @@ test('validate core returns structured single-book results without process-globa
     assert.equal(result.fatal, null);
     assert.deepEqual(result.scope, { kind: 'single', requestedBook: null, selected: [] });
     assert.equal(result.counts.chapters, 1);
+    assert.equal(result.toolingConfig.numberStyle, 'shared');
+    assert.equal(result.toolingConfig.corpus, null);
     assert.equal(result.bookResults.length, 1);
     assert.equal(result.bookResults[0].errors.length, 1);
     assert.equal(result.diagnostics[0].severity, 'error');

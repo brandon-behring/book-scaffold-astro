@@ -14,6 +14,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const handlers = {
   validate: '../scripts/validate.mjs',
+  qa: '../scripts/qa.mjs',
+  'init-qa': '../scripts/init-qa.mjs',
   'build-labels': '../scripts/build-labels.mjs',
   'build-bib': '../scripts/build-bib.mjs',
   'build-figures': '../scripts/build-figures.mjs',
@@ -26,6 +28,8 @@ const HELP = `Usage: book-scaffold <sub-command> [args...]
 
 Sub-commands:
   validate           Pre-flight content validator (XRef ids, Cite keys, Figure srcs).
+  qa                 Content-health and readiness report (human or schema-v1 JSON).
+  init-qa            Generate deterministic guide_qa.yaml interoperability config.
   build-labels       Emit src/data/labels.json for cross-references (Phase C).
   build-bib          BibTeX -> references.json (+ sources/manifest.yaml -> sources.json).
   build-figures      PDF -> SVG via pdftocairo / pdftoppm fallback (+ TikZ in v4.2.0).
