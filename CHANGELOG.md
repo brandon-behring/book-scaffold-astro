@@ -2,6 +2,38 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.30.0] — 2026-07-13
+
+### Added
+
+- **Fail-loud authored-link containment (#190).** Under a non-root Astro
+  `base`, `book-scaffold validate` now rejects literal root-absolute targets
+  that would escape the deployed book. Structural parsing covers Markdown
+  links, images, and used reference definitions; raw HTML `href`/`src`; and
+  statically evaluated MDX attributes. HTML entities, JavaScript escapes,
+  non-interpolated templates, JSX spread order, and browser dot-segment
+  normalization follow their rendered semantics.
+
+### Fixed
+
+- Validation suggestions are normalized before the configured base is added,
+  so encoded or literal `..` segments cannot produce a second escaping URL.
+- Code examples, comments, frontmatter, dynamic expressions, unused reference
+  definitions, and attributes inside `<pre>`/`<code>` no longer create false
+  authored-link errors or legacy internal-link warnings. `rel="external"` is
+  not treated as an opt-out because it does not change URL resolution.
+- Fatal validation counts are capped at exit status 255, preventing 256 errors
+  from wrapping to shell success while retaining the historical count-based
+  status for smaller failure sets.
+
+### Tests
+
+- Package coverage **608 → 619** exercises root and non-root bases, evaluated
+  Astro config with and without the scaffold integration, Markdown reference
+  semantics, decoded HTML/MDX literals, spread precedence, safe suggestions,
+  code/comment exclusions, question content, and the 255/256 exit boundary.
+  The rule is validation-only and never rewrites authored content.
+
 ## [4.29.0] — 2026-07-13
 
 ### Added
