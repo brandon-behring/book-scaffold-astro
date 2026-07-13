@@ -22,17 +22,21 @@ All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](
   definitions, and attributes inside `<pre>`/`<code>` no longer create false
   authored-link errors or legacy internal-link warnings. `rel="external"` is
   not treated as an opt-out because it does not change URL resolution.
+- Authored-link parsing now enables the same math grammar as the resolved
+  academic or research-portfolio preset, so valid TeX braces are not mistaken
+  for JavaScript expressions while non-math books retain dollar-wrapped links.
 - Fatal validation counts are capped at exit status 255, preventing 256 errors
   from wrapping to shell success while retaining the historical count-based
   status for smaller failure sets.
 
 ### Tests
 
-- Package coverage **608 → 619** exercises root and non-root bases, evaluated
+- Package coverage **608 → 622** exercises root and non-root bases, evaluated
   Astro config with and without the scaffold integration, Markdown reference
-  semantics, decoded HTML/MDX literals, spread precedence, safe suggestions,
-  code/comment exclusions, question content, and the 255/256 exit boundary.
-  The rule is validation-only and never rewrites authored content.
+  semantics, decoded HTML/MDX literals, spread precedence, profile-aware math,
+  safe suggestions, code/comment exclusions, question content, and the 255/256
+  exit boundary. The rule is validation-only and never rewrites authored
+  content.
 
 ## [4.29.0] — 2026-07-13
 

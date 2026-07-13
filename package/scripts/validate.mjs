@@ -46,6 +46,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
+import remarkMath from 'remark-math';
 import remarkMdx from 'remark-mdx';
 import { walkMdx, readChaptersBase, readBookSchemaConfig } from './walk-mdx.mjs';
 import { readEnvFile } from './read-env.mjs';
@@ -152,6 +153,7 @@ if (!PRESET_CANDIDATE) {
 }
 // Alias kept for downstream message text only; the resolution above is canonical.
 const PROFILE = PRESET;
+const MATH_ENABLED = PROFILE === 'academic' || PROFILE === 'research-portfolio';
 const REPO_ROOT = process.env.BOOK_REPO_ROOT ?? null;
 
 // v4.6.0 (issue #76 Layer 3b): chapter-route shadow warning. Detect a
@@ -324,6 +326,7 @@ const RE_THEOREM = /<Theorem\b([^>]*)>/g;
 // regex stops at `>` inside a quoted value or expression and can mistake text
 // inside another prop for a real book=/to= assignment.
 const mdxParser = unified().use(remarkParse).use(remarkMdx);
+if (MATH_ENABLED) mdxParser.use(remarkMath);
 
 async function fileExists(p) {
   try {
@@ -346,7 +349,10 @@ function authoredFormat(file) {
 
 function collectAuthoredTargets(file, content) {
   try {
-    return findAuthoredTargets(content, { format: authoredFormat(file) });
+    return findAuthoredTargets(content, {
+      format: authoredFormat(file),
+      math: MATH_ENABLED,
+    });
   } catch (error) {
     const line = error?.line ?? error?.place?.start?.line ?? error?.position?.start?.line ?? 1;
     const detail = String(error?.reason ?? error?.message ?? error).split('\n')[0];

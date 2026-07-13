@@ -7,6 +7,7 @@
  * the Markdown AST identified as HTML. This module never rewrites content.
  */
 import { parseFragment } from 'parse5';
+import remarkMath from 'remark-math';
 import remarkMdx from 'remark-mdx';
 import remarkParse from 'remark-parse';
 import { unified } from 'unified';
@@ -82,13 +83,17 @@ function blankFrontmatter(content) {
   );
 }
 
-function processorFor(format) {
-  if (!processors.has(format)) {
+function processorFor(format, math) {
+  const key = `${format}:${math ? 'math' : 'plain'}`;
+  if (!processors.has(key)) {
     const processor = unified().use(remarkParse);
     if (format === 'mdx') processor.use(remarkMdx);
-    processors.set(format, processor);
+    // Math syntax is profile-dependent. Enabling it for every book would hide
+    // real links authored between dollar signs in non-math profiles.
+    if (math) processor.use(remarkMath);
+    processors.set(key, processor);
   }
-  return processors.get(format);
+  return processors.get(key);
 }
 
 function positionStart(node) {
@@ -231,8 +236,9 @@ function formatFrom(options) {
 export function findAuthoredTargets(content, options = {}) {
   if (typeof content !== 'string') throw new TypeError('authored link content must be a string');
   const format = formatFrom(options);
+  const math = typeof options === 'object' && options?.math === true;
   const source = blankFrontmatter(content);
-  const tree = processorFor(format).parse(source);
+  const tree = processorFor(format, math).parse(source);
   const targets = [];
   const seen = new Set();
   const rawHtmlRanges = [];

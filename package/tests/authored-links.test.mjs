@@ -164,6 +164,46 @@ example: '<a href="/frontmatter">'
   assert.ok(!violations.some(({ target }) => target.includes('not-an-attribute')));
 });
 
+test('#190: academic TeX braces stay math rather than becoming MDX expressions', () => {
+  const content = `Inline math: $f(x) = e^{i\\pi x}$.
+
+$$\\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx = \\sqrt{\\pi}$$
+
+[chapter](/chapters/one/)
+<Card href="/comparison/" />
+`;
+
+  const violations = findEscapingAuthoredTargets(content, BASE, { format: 'mdx', math: true });
+  assert.deepEqual(
+    violations.map(({ target, kind }) => ({ target, kind })),
+    [
+      { target: '/chapters/one/', kind: 'Markdown link destination' },
+      { target: '/comparison/', kind: 'href attribute' },
+    ],
+  );
+});
+
+test('#190: math parsing is opt-in for both Markdown and MDX profiles', () => {
+  const content = '$[rendered link](/outside/)$';
+  for (const format of ['md', 'mdx']) {
+    assert.deepEqual(
+      findEscapingAuthoredTargets(content, BASE, { format }).map(({ target }) => target),
+      ['/outside/'],
+      `${format} without math must retain the rendered link`,
+    );
+    assert.deepEqual(
+      findEscapingAuthoredTargets(content, BASE, { format, math: true }),
+      [],
+      `${format} with math must treat the dollar span as math`,
+    );
+    assert.deepEqual(
+      findEscapingAuthoredTargets(content, BASE, { format }).map(({ target }) => target),
+      ['/outside/'],
+      `${format} plain parser cache must remain independent`,
+    );
+  }
+});
+
 test('#190: AST boundaries exclude comments and every rendered code-example form', () => {
   const markdown = `---
 example: '[frontmatter](/frontmatter)'
