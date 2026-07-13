@@ -76,6 +76,7 @@ export type {
 export { toolsChaptersRenderer } from './profiles/renderers/tools-chapters.js';
 export { academicChaptersRenderer } from './profiles/renderers/academic-chapters.js';
 export { fallbackChaptersRenderer } from './profiles/renderers/fallback-chapters.js';
+export { researchPortfolioChaptersRenderer } from './profiles/renderers/research-portfolio-chapters.js';
 
 // v4.14.0 (#95): single source of truth for academic-profile part labels,
 // shared by the /chapters renderer, Sidebar, and ChapterHeader.
