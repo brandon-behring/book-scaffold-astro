@@ -11,10 +11,11 @@ import Convergence from '@brandon_m_behring/book-scaffold-astro/components/Conve
 import Divergence from '@brandon_m_behring/book-scaffold-astro/components/Divergence.astro';
 import Sidenote from '@brandon_m_behring/book-scaffold-astro/components/Sidenote.astro';
 import Citation from '@brandon_m_behring/book-scaffold-astro/components/Citation.astro';
+import { normalizeBase } from '@brandon_m_behring/book-scaffold-astro';
 
 // #154: the demo ships at base '/', but as the copy-paste reference it must
 // model base-aware links like every scaffold page (#140/#142 lineage).
-const baseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 ---
 
 <Base

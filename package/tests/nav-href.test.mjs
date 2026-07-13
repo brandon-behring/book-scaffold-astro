@@ -96,13 +96,13 @@ test('isCurrentChapter: multi-book pattern', () => {
 
 // ===== #182: shared BASE_URL normalizers — equivalence with the three retired inline idioms =====
 
-test('normalizeBase (#182): equivalent to both retired inline idioms over the base input space', () => {
+test('normalizeBase (#182): preserves supported forms and canonicalizes malformed multi-slash tails', () => {
   const cases = [undefined, '', '/', '/foo', '/foo/', '/foo//', '/a/b', '/a/b/'];
   for (const raw of cases) {
     const legacyQ = (raw ?? '/').replace(/\/?$/, '/');   // 14-site idiom
     const legacyStar = (raw ?? '/').replace(/\/*$/, '/'); // 3-site idiom
     const helper = normalizeBase(raw);
-    assert.equal(helper, legacyStar, `normalizeBase(${JSON.stringify(raw)}) must match the /\\/*$/ idiom`);
+    assert.equal(helper, legacyStar, `normalizeBase(${JSON.stringify(raw)}) must match the canonical /\\/*$/ idiom`);
     // the /? idiom differs from /* only on multi-slash tails ('/foo//'), where
     // it left '/foo//' — the helper collapses to one slash, which is the
     // CORRECT normalization (the /? form was the weaker of the two).
@@ -121,4 +121,20 @@ test('baseNoSlash (#182): equivalent to the retired Rationale idiom', () => {
   }
   assert.equal(baseNoSlash('/') , '', "'/' composes to '' so `${base}/answers` → '/answers'");
   assert.equal(baseNoSlash('/foo/'), '/foo');
+});
+
+test('Rationale route equality is exact at root and non-root bases (#182)', () => {
+  const onAnswersRoute = (base, pathname) =>
+    baseNoSlash(pathname) === `${baseNoSlash(base)}/answers`;
+
+  for (const [base, pathname] of [
+    ['/', '/answers'],
+    ['/', '/answers/'],
+    ['/foo', '/foo/answers'],
+    ['/foo/', '/foo/answers/'],
+  ]) {
+    assert.equal(onAnswersRoute(base, pathname), true, `${base} + ${pathname}`);
+  }
+  assert.equal(onAnswersRoute('/', '/chapters/answers/'), false);
+  assert.equal(onAnswersRoute('/foo/', '/foo/chapters/answers/'), false);
 });

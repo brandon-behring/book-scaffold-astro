@@ -132,3 +132,11 @@ test('Rationale routes its base + pathname strips through baseNoSlash (#182)', (
   assert.match(src, /baseNoSlash\(import\.meta\.env\.BASE_URL\)/);
   assert.match(src, /baseNoSlash\(Astro\.url\.pathname\)/);
 });
+
+test('the copyable demo landing uses the shared normalizer (#154, #182)', () => {
+  const src = readFileSync(new URL('../../demo/src/pages/index.astro', import.meta.url), 'utf8');
+  assert.match(src, /import \{ normalizeBase \} from '@brandon_m_behring\/book-scaffold-astro'/);
+  assert.match(src, /const baseUrl = normalizeBase\(import\.meta\.env\.BASE_URL\)/);
+  assert.doesNotMatch(src, /BASE_URL[^\n]*\.replace\(/, 'demo must not reintroduce an inline base regex');
+  assert.doesNotMatch(src, /href="\//, 'demo must not emit root-absolute anchors');
+});

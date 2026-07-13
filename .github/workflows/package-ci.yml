@@ -113,3 +113,18 @@ jobs:
           test -f dist/print/index.html       || (echo "missing /print" && exit 1)
           test -f dist/references/index.html  || (echo "missing /references" && exit 1)
           test -f dist/search/index.html      || (echo "missing /search" && exit 1)
+
+      - name: Build demo at a non-root base (#154)
+        working-directory: demo
+        env:
+          BOOK_PRESET: academic
+          DEMO_BASE: /foo/
+        run: npx astro build --outDir dist-nonroot
+
+      - name: Verify non-root demo links and assets stay under the base
+        working-directory: demo
+        run: |
+          grep -q 'href="/foo/chapters/"' dist-nonroot/index.html || (echo "demo chapters link escaped /foo/" && exit 1)
+          grep -q 'href="/foo/search/"' dist-nonroot/index.html || (echo "demo search link escaped /foo/" && exit 1)
+          grep -q '/foo/pagefind/pagefind-ui.js' dist-nonroot/search/index.html || (echo "Pagefind JS escaped /foo/" && exit 1)
+          grep -q '/foo/pagefind/pagefind-ui.css' dist-nonroot/search/index.html || (echo "Pagefind CSS escaped /foo/" && exit 1)

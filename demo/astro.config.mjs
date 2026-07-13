@@ -22,6 +22,9 @@ import { defineBookConfig, academicStyle } from '@brandon_m_behring/book-scaffol
 export default await defineBookConfig({
   styles: [academicStyle],
   site: 'https://example.invalid',
+  // CI sets DEMO_BASE=/foo/ for the non-root regression build (#154).
+  // Keeping this environment-only avoids changing the normal demo URL.
+  base: process.env.DEMO_BASE ?? '/',
   title: 'book-scaffold-astro demo',
   // v4.23.0 (#135): sidebar brand subtitle — smoke-covers the new config field.
   subtitle: 'Integration smoke book',
