@@ -1,7 +1,7 @@
 {
   "name": "@brandon_m_behring/book-scaffold-astro",
   "description": "Astro 6 + MDX toolkit for long-form technical books with five typed presets, Tufte typography, citations, search, PDF, and Cloudflare deployment.",
-  "version": "4.26.3",
+  "version": "4.27.0",
   "type": "module",
   "license": "MIT",
   "author": "Brandon Behring",

@@ -198,6 +198,9 @@ import { defineBookConfig, ${styleExportName} } from '@brandon_m_behring/book-sc
 export default await defineBookConfig({
   styles: [${styleExportName}],
   site: 'https://example.invalid',
+  // This scaffold owns src/pages/index.astro, so disable the package landing
+  // route explicitly. Astro plans to make duplicate static routes a hard error.
+  routes: { landing: false },
 });
 `,
 
@@ -378,6 +381,9 @@ directory = "./dist"
     // route. Mirrors the working pattern from package/tests/visual/fixture/src/pages/.
     'src/pages/index.astro': `---
 import Base from '@brandon_m_behring/book-scaffold-astro/layouts/Base.astro';
+import { normalizeBase } from '@brandon_m_behring/book-scaffold-astro';
+
+const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 ---
 <Base title="${name}" description="A book scaffolded with @brandon_m_behring/create-book (${profile} profile).">
   <article class="prose">
@@ -388,10 +394,10 @@ import Base from '@brandon_m_behring/book-scaffold-astro/layouts/Base.astro';
     </p>
     <p>
       Chapters live under <code>src/content/chapters/</code>. The auto-injected
-      routes are <a href="/chapters/">/chapters</a>,
-      <a href="/references/">/references</a>,
-      <a href="/search/">/search</a>, and
-      <a href="/print/">/print</a>.
+      routes are <a href={baseUrl + 'chapters/'}>/chapters</a>,
+      <a href={baseUrl + 'references/'}>/references</a>,
+      <a href={baseUrl + 'search/'}>/search</a>, and
+      <a href={baseUrl + 'print/'}>/print</a>.
     </p>
   </article>
 </Base>

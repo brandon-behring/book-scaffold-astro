@@ -21,6 +21,8 @@ import { defineBookConfig, academicStyle } from '@brandon_m_behring/book-scaffol
 
 export default await defineBookConfig({
   styles: [academicStyle],
+  // The demo owns src/pages/index.astro; make that route ownership explicit.
+  routes: { landing: false },
   site: 'https://example.invalid',
   // CI sets DEMO_BASE=/foo/ for the non-root regression build (#154).
   // Keeping this environment-only avoids changing the normal demo URL.

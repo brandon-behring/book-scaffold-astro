@@ -2,6 +2,35 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.27.0] — 2026-07-13
+
+Minor release — **distribution hardening, complete generated books, and self-healing authoring tools.** This stabilization release closes the reviewed v4.27 backlog: deploy artifacts are secure by default, every built-in preset is scaffoldable and documented, fresh generated books can build and render PDF locally, and the validation/label/bibliography commands now share the consumer's real Astro configuration.
+
+### Added
+
+- **Default deployment security headers (#188).** Builds emit a Cloudflare/Netlify-compatible `_headers` file with CSP, HSTS, frame, MIME-sniffing, referrer, and permissions protections. `securityHeaders: false` is an explicit opt-out; a custom `contentSecurityPolicy` replaces only CSP; a consumer-owned `public/_headers` remains byte-for-byte authoritative.
+- **The shared SSM KaTeX vocabulary is public (#177).** All 37 scaffold macros ship as the `ssmMacros` main-entry export so consumers can extend the exact set used by the toolkit.
+- **Generated-book licensing, attribution, and PDF workflow (#206, #207).** Both packages and generated books carry MIT software plus CC BY 4.0 content terms. `create-book` accepts `--author`, records attribution in book config and license text, and generates a turnkey `npm run pdf` pipeline backed by Paged.js.
+- **All five presets are first-class in `create-book` (#181).** Help, validation, generated guidance, and tests cover `academic`, `tools`, `minimal`, `course-notes`, and `research-portfolio`; generated documentation links are pinned to the matching release tag.
+
+### Fixed
+
+- **Subpath deployments are normalized from one source (#154, #182).** The demo and all runtime sites now use the shared base helper, covering both `/foo` and `/foo/`; the non-root demo gate verifies its chapter, search, Pagefind, and asset URLs.
+- **Generated landing pages declare their route ownership (#129 follow-through).** Every scaffold disables the package's auto-injected landing route and derives starter-page links from the configured base, eliminating Astro's duplicate-route warning and a future hard build failure.
+- **Book config compatibility and deploy semantics (#180).** Consumer configuration is loaded through Vite's real config loader. The legacy `deploy` option is explicitly deprecated and inert instead of implying a per-book adapter override; an authored value produces one actionable warning.
+- **Numbering, validation, and bibliography commands self-heal (#175, #176, #179, #186).** Label generation supports shared or per-kind theorem counters; validation catches literal heading-number drift while leaving dynamic expressions alone; an unset preset has a tested `minimal` default; missing generated data files are recreated on every prevalidation path; `BOOK_BIB_PATH` works through both the process and `.env`; child-process failures propagate.
+- **The mobile drawer's full keyboard contract is covered (#183).** Space activation, focus trapping, Escape/backdrop/dismiss close paths, scroll-lock release, responsive auto-close, and the no-JS target fallback run against real consumer fixtures. Fatal CLI/build-script exits and the preset default branch also have regression tests.
+- **The unconfigured VersionSelector stub is gone (#208).** The component renders only when real versions are supplied and accepts explicit label, date, href, and current-version data; `Base.astro` no longer mounts placeholder release metadata automatically.
+
+### Documentation and distribution
+
+- **Agent and consumer guidance now ships with both tools (#184).** Root, toolkit, and generated-book `CLAUDE.md`/`AGENTS.md` entry points describe current paths and behavior; package/readme counts, typography measures, recipes, CI scope, publishing history, and the v5 roadmap are reconciled.
+- Package tarballs are contract-tested for guides, dual licenses, generated-book assets, and the public type/export surface. The generated academic preset is also installed from local tarballs, built, and rendered to PDF as a release gate.
+
+### Tests
+
+- Package suite **537 → 582** (+45), `create-book` **23 → 31** (+8), plus type-surface checks, root and non-root demo builds, gallery builds, real-browser drawer tests, tarball contract tests, and generated-book build/PDF smoke tests.
+
 ## [4.26.3] — 2026-07-13
 
 Patch release — **release-status style inheritance hotfix.** v4.26.2 added the site-wide `releaseStatus` configuration, but `composeStyles()` omitted that field, so a status supplied by a shared or project Style never reached the runtime book-config module. Direct top-level `defineBookConfig({ releaseStatus: { ... } })` usage was unaffected.

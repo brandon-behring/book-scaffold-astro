@@ -65,6 +65,20 @@ test('#28: scaffold emits src/pages/index.astro for academic preset', async () =
   assert.match(body, /Base/, 'index.astro should import Base layout');
 });
 
+test('#129 follow-through: generated landing route is explicit and base-aware', async () => {
+  for (const preset of ['academic', 'tools', 'minimal', 'course-notes', 'research-portfolio']) {
+    const name = `demo-landing-129-${preset}`;
+    const r = runCli([name, `--preset=${preset}`], workRoot);
+    assert.equal(r.status, 0, `${preset}: expected exit 0; stderr: ${r.stderr}`);
+    const dir = join(workRoot, name);
+    const config = await readFile(join(dir, 'astro.config.mjs'), 'utf8');
+    const landing = await readFile(join(dir, 'src', 'pages', 'index.astro'), 'utf8');
+    assert.match(config, /routes:\s*\{\s*landing:\s*false\s*\}/, `${preset}: route owner`);
+    assert.match(landing, /normalizeBase\(import\.meta\.env\.BASE_URL\)/, `${preset}: base helper`);
+    assert.doesNotMatch(landing, /href=["']\//, `${preset}: no root-absolute landing links`);
+  }
+});
+
 test('v4.6.0 Layer 3c: scaffold does NOT emit src/pages/chapters/[...slug].astro (tools)', async () => {
   // book-scaffold-astro v4.3.0+ auto-injects the per-chapter route via
   // bookScaffoldIntegration (see package/src/integration.ts ROUTE_REGISTRY).
