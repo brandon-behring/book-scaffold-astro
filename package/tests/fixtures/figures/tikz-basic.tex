@@ -3,9 +3,20 @@
 % a valid SVG. Single-page; no \input{} dependencies; PortablyTeX-compatible.
 \documentclass[tikz,border=2mm]{standalone}
 \usepackage{tikz}
+\definecolor{figblue}{HTML}{3B6FA0}
+\definecolor{seriesone}{HTML}{E69F00}
 \begin{document}
 \begin{tikzpicture}
   \draw[thick] (0,0) -- (2,0) -- (1,1.7) -- cycle;
-  \node at (1,0.6) {TikZ};
+  \node[
+    draw=figblue,
+    fill=figblue,
+    fill opacity=.14,
+    text opacity=1,
+    line width=1.2pt,
+    minimum width=1.1cm,
+    minimum height=.65cm,
+  ] at (1,0.63) {Semantic};
+  \draw[seriesone, very thick, dashed] (0.2,0.15) -- (1.8,1.45);
 \end{tikzpicture}
 \end{document}

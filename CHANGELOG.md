@@ -2,6 +2,37 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [4.31.0] — 2026-07-13
+
+### Added
+
+- **Semantic figure palette and authoring standard (#161, #164).** A checked
+  manifest now owns Warm–Tol semantic roles (`--fig-*`) independently from the
+  ordered Okabe–Ito data series (`--series-1..8`) in both themes. Recipe 24
+  documents transparent Matplotlib PDF→SVG and TikZ pipelines, captions and
+  long descriptions, redundant non-color cues, raster-only exceptions for true
+  pixel data, and dual-theme/CVD release checks.
+- `sync:figure-tokens` and `check:figure-tokens` generate and verify the
+  manifest-owned CSS block. Historical `--diagram-*` names remain aliases;
+  `--diagram-grid` now follows the contrast-safe `--fig-grid` role.
+
+### Changed
+
+- `build-figures` recognizes the canonical semantic and categorical source
+  colors, emits a versioned palette mapping, and upgrades cached pre-v2 SVGs.
+  Regenerate existing figures after upgrading so they receive the new mapping.
+- `<Figure>` uses `alt` as an inline SVG's accessible name, keeps `desc` as a
+  separate long description, and can still inline a public SVG when its source
+  is prefixed with a non-root Astro base.
+
+### Tests
+
+- Package coverage **622 → 635** locks palette ownership and drift, light/dark
+  mappings, migration and idempotence, opacity preservation, Poppler/TikZ
+  conversion, accessible SVG assembly, safe base-prefixed public paths, and a
+  unique recipe index. Gallery utilities verify stable categorical identity,
+  semantic recoloring, labels, dash/marker redundancy, and light/dark output.
+
 ## [4.30.0] — 2026-07-13
 
 ### Added

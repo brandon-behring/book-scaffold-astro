@@ -8,7 +8,13 @@
  */
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { shouldInline, assembleSvg, stripThemeBlock, recolorSvg } from '../src/lib/figure.mjs';
+import {
+  shouldInline,
+  publicSvgPath,
+  assembleSvg,
+  stripThemeBlock,
+  recolorSvg,
+} from '../src/lib/figure.mjs';
 
 test('shouldInline: only local .svg paths', () => {
   assert.equal(shouldInline('/figures/phase.svg'), true);
@@ -19,6 +25,21 @@ test('shouldInline: only local .svg paths', () => {
   assert.equal(shouldInline('figures/x.svg'), false, 'relative path (no leading slash)');
   assert.equal(shouldInline(undefined), false);
   assert.equal(shouldInline(''), false);
+});
+
+test('publicSvgPath: removes a non-root BASE_URL for local public-file lookup', () => {
+  assert.equal(publicSvgPath('/guide/figures/phase.svg', '/guide/'), 'figures/phase.svg');
+  assert.equal(publicSvgPath('/guide/figures/phase.svg', '/guide'), 'figures/phase.svg');
+  assert.equal(
+    publicSvgPath('/figures/phase.svg', '/guide/'),
+    'figures/phase.svg',
+    'literal root URLs retain the historical lookup behavior',
+  );
+  assert.equal(publicSvgPath('/figures/phase.svg'), 'figures/phase.svg');
+  assert.equal(publicSvgPath('/guidebook/figures/phase.svg', '/guide/'), 'guidebook/figures/phase.svg');
+  assert.equal(publicSvgPath('/guide/../private.svg', '/guide/'), null, 'dot segments cannot escape public');
+  assert.equal(publicSvgPath('/guide/figures\\private.svg', '/guide/'), null, 'backslashes are rejected');
+  assert.equal(publicSvgPath('/guide/figures/phase.png', '/guide/'), null, 'non-SVG stays raster');
 });
 
 // A raw SVG as build-figures would emit it: standalone theme block + map block,
@@ -46,10 +67,11 @@ test('assembleSvg: injects title/desc from props, replaces stale title', () => {
     idBase: 'w4:fig:phase',
   });
   assert.ok(!out.includes('stale'), 'stale hand-authored <title> removed');
-  assert.match(out, /<title id="w4-fig-phase-title">Phase portrait<\/title>/, 'colon-sanitized title id + caption text');
+  assert.match(out, /<title id="w4-fig-phase-title">A damped spiral<\/title>/, 'alt is the short accessible name');
   assert.match(out, /<desc id="w4-fig-phase-desc">Trajectory spiraling to the origin.<\/desc>/);
   assert.match(out, /<svg\b[^>]*\brole="img"/, 'role="img" on root');
-  assert.match(out, /aria-labelledby="w4-fig-phase-title w4-fig-phase-desc"/, 'aria wires both nodes');
+  assert.match(out, /aria-labelledby="w4-fig-phase-title"/, 'accessible name points to the alt-derived title');
+  assert.match(out, /aria-describedby="w4-fig-phase-desc"/, 'long description stays separate from the name');
   assert.match(out, /style="[^"]*width:80%[^"]*max-width:100%[^"]*height:auto/, 'responsive sizing applied');
 });
 
@@ -60,10 +82,11 @@ test('assembleSvg: alt-only → title=alt, no separate desc', () => {
   assert.match(out, /aria-labelledby="f2-title"/);
 });
 
-test('assembleSvg: caption + distinct alt (no desc) → alt becomes desc', () => {
+test('assembleSvg: caption + distinct alt (no desc) → title uses alt', () => {
   const out = assembleSvg(RAW, { caption: 'Title here', alt: 'Described differently', idBase: 'f3' });
-  assert.match(out, /<title id="f3-title">Title here<\/title>/);
-  assert.match(out, /<desc id="f3-desc">Described differently<\/desc>/);
+  assert.match(out, /<title id="f3-title">Described differently<\/title>/);
+  assert.ok(!out.includes('<desc'), 'caption is visible prose, not a substitute long description');
+  assert.match(out, /aria-labelledby="f3-title"/);
 });
 
 test('assembleSvg: escapes XML metacharacters in a11y text', () => {

@@ -4,7 +4,11 @@
 
 ## TL;DR
 
-Drop `figures/<topic>/diagram.tex` (standalone TikZ source). Run `npm run build:figures` (or it's wired into `prebuild`). Get `public/figures/<topic>/diagram.svg` ready to reference in MDX as `<Figure src="/figures/<topic>/diagram.svg" />`.
+Drop `figures/<topic>/diagram.tex` (standalone TikZ source). Run
+`npm run build:figures` explicitly; figure conversion is not wired into
+`prebuild` because TeX and Poppler are optional system tools. The command emits
+`public/figures/<topic>/diagram.svg`, ready to reference in MDX as
+`<Figure src="/figures/<topic>/diagram.svg" />`.
 
 ## The TikZ source
 
@@ -24,6 +28,13 @@ Use the `standalone` document class; configure for SVG via `tikz` option. Recomm
 ```
 
 The `border=2mm` adds a small margin around the figure so it doesn't crop right at the edge.
+
+For theme-aware color, define the canonical Warm–Tol or Okabe–Ito hex and use
+`fill opacity` rather than an xcolor pre-blend such as `warmblue!13`. The base
+color survives PDF export and `build-figures` can map it to `--fig-*` or
+`--series-*`; the pre-blended RGB cannot preserve its meaning. See
+[Recipe 24 — Figure authoring standard](24-figure-authoring-standard.md) for
+the palette, accessible description pattern, and dual-theme release gate.
 
 ## Discovery rule
 
@@ -136,6 +147,6 @@ layout: wide      # widens --measure-main to 80ch; omit (or 'default') for the s
 
 ## See also
 
-- `recipes/06-figures.md` — overall figure pipeline + matplotlib/svg sources
+- `recipes/24-figure-authoring-standard.md` — palette, matplotlib/TikZ authoring, dark mode, and accessibility
 - `PACKAGE_DESIGN.md §7` — peer dependencies (lists `pdflatex` as optional system dep)
 - `PACKAGE_DESIGN.md §8` — `book-scaffold` CLI reference (build-figures subcommand)

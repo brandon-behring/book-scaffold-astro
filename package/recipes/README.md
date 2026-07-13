@@ -29,6 +29,7 @@ Terse pointers into canonical code for the most common book-authoring workflows.
 | 21 | [Multiple guides in one app](21-multi-guide-single-app.md) | any | `generateId` namespacing over one collection; flat-slug footgun; interim until multibook (#80) |
 | 22 | [Responsive navigation and multi-book routing](22-responsive-nav-and-multibook-routing.md) | any | Mobile/desktop nav, base-aware route ownership, and the interim multi-book routing contract |
 | 23 | [Interactive demo substrate](23-interactive-demo-substrate.md) | any | Opt-in Preact shell, slider, stat cards, theme colors, a11y, and reduced motion |
+| 24 | [Figure authoring standard](24-figure-authoring-standard.md) | any | Warm–Tol semantics, Okabe–Ito series, dual-theme exports, contrast, and accessible descriptions |
 
 ## How to read recipes
 

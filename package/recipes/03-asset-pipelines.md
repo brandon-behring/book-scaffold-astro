@@ -2,7 +2,12 @@
 
 **Profile**: any (build:figures and build:notebooks both graceful-skip when source dirs / tools are absent).
 
-**TL;DR**: Put PDFs in `figures/`, Jupyter notebooks in `notebooks/`. `npm run dev` / `npm run build` runs both pipelines via the `build:assets` prebuild hook. Output: `public/figures/*.svg` (PDF→SVG via `pdftocairo`) and `public/notebooks/*.html` (ipynb→HTML via `uv run jupyter nbconvert`).
+**TL;DR**: Put PDFs in `figures/`, Jupyter notebooks in `notebooks/`, then run
+`npm run build:figures` and `npm run build:notebooks` explicitly. Output:
+`public/figures/*.svg` (PDF→SVG via `pdftocairo`) and
+`public/notebooks/*.html` (ipynb→HTML via `uv run jupyter nbconvert`). These
+optional system-tool pipelines are not part of `prebuild`; generated books run
+validation there instead.
 
 ## How each pipeline works
 
@@ -11,6 +16,7 @@
 - **Source**: `figures/` at scaffold root (override via `BOOK_FIGURES_PATH` env var; e.g. `BOOK_FIGURES_PATH=../shared/figures` to share with a LaTeX sibling)
 - **Output**: `public/figures/<same-subdir-structure>/<stem>.svg`
 - **Tool**: `pdftocairo` (poppler-utils) with `pdftoppm` fallback for malformed SVG
+- **Theming**: canonical Warm–Tol / Okabe–Ito colors and neutral paints are mapped to theme-aware CSS variables; see [Recipe 24](24-figure-authoring-standard.md)
 - **Idempotency**: skips when SVG mtime >= PDF mtime
 - **Graceful skip**: if `pdftocairo` or `pdftoppm` not on PATH (Cloudflare build container), warns and exits 0 — committed SVGs under `public/figures/` are served as-is
 
@@ -58,8 +64,9 @@ Cloudflare Workers build containers don't have `pdftocairo` or `uv` installed. T
 
 1. **Commit derived artifacts** (recommended for low-friction deploy):
    - Edit `.gitignore`: remove the `public/figures/` and `public/notebooks/` lines.
-   - Run `npm run build:assets` locally; commit the generated outputs.
-   - CI's prebuild gracefully skips (tools missing), serves committed artifacts.
+   - Run `npm run build:figures` and `npm run build:notebooks` locally; commit
+     the generated outputs.
+   - CI serves the committed artifacts without needing either optional system tool.
    - Trade-off: ~3 MB of binary artifacts in git history.
 
 2. **Install poppler + uv in CI**: prepend `apt-get install -y poppler-utils && curl -LsSf https://astral.sh/uv/install.sh | sh && ...` to the build command. More setup; cleaner repo.
@@ -71,12 +78,13 @@ post_transformers chose option 1 (see commit `f7fa75d`).
 - **Notebooks should be output-free** for a clean rendered HTML — clear outputs before committing, or use `nbstripout` as a pre-commit hook. Cells with embedded outputs render those outputs in the HTML; this may or may not be what you want.
 - **Stub-size threshold** at 1500 bytes is empirical from post_transformers — adjust via `NOTEBOOK_STUB_BYTES` if your placeholder notebooks are larger.
 - **`pdftocairo` produces a tiny SVG** for some PDF inputs (vector layers ungrouped, etc.). The script auto-falls back to `pdftoppm -r 200 -png` at 200 DPI when SVG output is < 200 bytes.
+- **Do not pre-blend semantic fills** (`warmblue!13`, for example). Export the canonical base color with a separate opacity so the SVG rewrite can preserve its role in dark mode. Recipe 24 has TikZ and matplotlib examples.
 
 ## Canonical files
 
 - `scripts/build-figures.mjs:23-32` — path resolution + env overrides
 - `scripts/render-notebooks.mjs:30-46` — same
-- `package.json` `prebuild` / `predev` / `build:assets` — orchestration
+- `package.json` `build:figures` / `build:notebooks` — explicit authoring commands
 - `.gitignore` — toggles whether artifacts are committed
 
 ## Reference implementation

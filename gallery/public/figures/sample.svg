@@ -1,5 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 120" width="240" height="120">
-  <rect x="8" y="8" width="224" height="104" rx="6" fill="none" stroke="#888888" stroke-width="2"/>
-  <circle cx="120" cy="60" r="28" fill="#6a8caf"/>
-  <text x="120" y="64" text-anchor="middle" font-size="12" fill="#222222">sample</text>
+<svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 150" width="360" height="150"><style data-diagram-theme>:root{--fig-blue:#3B6FA0;--fig-rose:#C06858;--fig-green:#4A7E3F;--fig-plum:#8A4E82;--fig-gold:#9D7D34;--fig-crimson:#A03838;--fig-ink:#1A1A19;--fig-paper:#FDFCF9;--fig-grid:#8C8981;--series-1:#E69F00;--series-2:#56B4E9;--series-3:#009E73;--series-4:#F0E442;--series-5:#0072B2;--series-6:#D55E00;--series-7:#CC79A7;--series-8:var(--fig-ink);--diagram-ink:var(--fig-ink);--diagram-paper:var(--fig-paper);--diagram-grid:var(--fig-grid)}@media (prefers-color-scheme:dark){:root{--fig-blue:#7297BB;--fig-rose:#D29287;--fig-green:#7DA275;--fig-plum:#AB80A5;--fig-gold:#D2B575;--fig-crimson:#BB7070;--fig-ink:#E8E5DD;--fig-paper:#1A1816;--fig-grid:#746E67;--series-1:#E69F00;--series-2:#56B4E9;--series-3:#009E73;--series-4:#F0E442;--series-5:#0072B2;--series-6:#D55E00;--series-7:#CC79A7;--series-8:var(--fig-ink)}}</style><style data-diagram-map="2">[fill="#3B6FA0"]{fill:var(--fig-blue, #3B6FA0)}[stroke="#3B6FA0"]{stroke:var(--fig-blue, #3B6FA0)}[fill="#E69F00"]{fill:var(--series-1, #E69F00)}[stroke="#E69F00"]{stroke:var(--series-1, #E69F00)}[fill="#000000"]{fill:var(--diagram-ink, #000000)}[stroke="#000000"]{stroke:var(--diagram-ink, #000000)}</style>
+  <title>Generated palette proof</title>
+  <desc>A semantic blue stage and an orange categorical series use shape, dash, and text cues.</desc>
+  <rect id="palette-semantic" x="24" y="34" width="118" height="72" rx="8" fill="#3B6FA0" fill-opacity="0.14" stroke="#3B6FA0" stroke-width="3"/>
+  <path id="palette-series" d="M178 98 C220 30 272 112 336 44" fill="none" stroke="#E69F00" stroke-width="4" stroke-dasharray="10 6"/>
+  <circle id="palette-series-marker" cx="257" cy="72" r="7" fill="#E69F00" stroke="#000000" stroke-width="2"/>
+  <text x="83" y="76" text-anchor="middle" fill="#000000" font-size="16">Semantic stage</text>
+  <text x="257" y="132" text-anchor="middle" fill="#000000" font-size="15">Series 1 — dashed + marker</text>
 </svg>

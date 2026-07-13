@@ -54,15 +54,6 @@
   --callout-learn:    var(--warm-gold);
   --callout-diagnostic: color-mix(in srgb, var(--warm-blue) 55%, var(--warm-green)); /* #110 DIKTA self-check — teal blend, distinct from plum Practice */
 
-  /* Diagram semantic roles (v4.11.0, #84): theme-aware TikZ→SVG figures.
-   * build-figures remaps an SVG's neutral fills/strokes to these via
-   * var(--diagram-*, <original>); <Figure> inlines the SVG so this cascade
-   * reaches it. They point at existing roles, so they auto-flip in dark mode
-   * (no dark-block edits) — ink↔text, paper↔page bg, grid↔border. */
-  --diagram-ink:      var(--color-text);
-  --diagram-paper:    var(--color-bg);
-  --diagram-grid:     var(--color-border);
-
   /* ===== Typography scale ===== */
   --font-body: 'Roboto Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-code: 'Source Code Pro Variable', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
@@ -212,3 +203,76 @@
   --astro-code-token-parameter:         color-mix(in srgb, var(--warm-blue)  55%, white);
   --astro-code-token-function:          color-mix(in srgb, var(--warm-gold)  65%, white);
 }
+
+/* BEGIN GENERATED FIGURE TOKENS — source: src/lib/figure-palette.mjs */
+/* Do not edit this block by hand. Semantic Warm–Tol roles and ordinal
+ * Okabe–Ito series are intentionally separate public contracts. */
+:root {
+  --fig-blue: #3B6FA0; /* default / lightweight */
+  --fig-rose: #C06858; /* caution / problem */
+  --fig-green: #4A7E3F; /* positive outcome */
+  --fig-plum: #8A4E82; /* authority / heaviest */
+  --fig-gold: #9D7D34; /* packaging / coordination */
+  --fig-crimson: #A03838; /* failure / severe problem */
+  --fig-ink: var(--color-text); /* labels / axes / outlines */
+  --fig-paper: var(--color-bg); /* figure background */
+  --fig-grid: #8C8981; /* essential secondary structure */
+
+  /* Canonical Okabe–Ito order. Never reorder ordinals per chart or theme. */
+  --series-1: #E69F00; /* orange */
+  --series-2: #56B4E9; /* sky blue */
+  --series-3: #009E73; /* bluish green */
+  --series-4: #F0E442; /* yellow */
+  --series-5: #0072B2; /* blue */
+  --series-6: #D55E00; /* vermillion */
+  --series-7: #CC79A7; /* reddish purple */
+  --series-8: var(--fig-ink); /* neutral ink */
+
+  /* Backward-compatible aliases used by build-figures since v4.11.0. */
+  --diagram-ink: var(--fig-ink);
+  --diagram-paper: var(--fig-paper);
+  --diagram-grid: var(--fig-grid);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fig-blue: #7297BB;
+    --fig-rose: #D29287;
+    --fig-green: #7DA275;
+    --fig-plum: #AB80A5;
+    --fig-gold: #D2B575;
+    --fig-crimson: #BB7070;
+    --fig-ink: var(--color-text);
+    --fig-paper: var(--color-bg);
+    --fig-grid: #746E67;
+    --series-1: #E69F00;
+    --series-2: #56B4E9;
+    --series-3: #009E73;
+    --series-4: #F0E442;
+    --series-5: #0072B2;
+    --series-6: #D55E00;
+    --series-7: #CC79A7;
+    --series-8: var(--fig-ink);
+  }
+}
+
+:root[data-theme="dark"] {
+  --fig-blue: #7297BB;
+  --fig-rose: #D29287;
+  --fig-green: #7DA275;
+  --fig-plum: #AB80A5;
+  --fig-gold: #D2B575;
+  --fig-crimson: #BB7070;
+  --fig-ink: var(--color-text);
+  --fig-paper: var(--color-bg);
+  --fig-grid: #746E67;
+  --series-1: #E69F00;
+  --series-2: #56B4E9;
+  --series-3: #009E73;
+  --series-4: #F0E442;
+  --series-5: #0072B2;
+  --series-6: #D55E00;
+  --series-7: #CC79A7;
+  --series-8: var(--fig-ink);
+}
+/* END GENERATED FIGURE TOKENS */

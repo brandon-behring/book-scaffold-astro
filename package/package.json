@@ -1,7 +1,7 @@
 {
   "name": "@brandon_m_behring/book-scaffold-astro",
   "description": "Astro 6 + MDX toolkit for long-form technical books with five typed presets, Tufte typography, citations, search, PDF, and Cloudflare deployment.",
-  "version": "4.30.0",
+  "version": "4.31.0",
   "type": "module",
   "license": "MIT",
   "author": "Brandon Behring",
@@ -174,6 +174,8 @@
   ],
   "scripts": {
     "build": "tsup",
+    "sync:figure-tokens": "node scripts/sync-figure-tokens.mjs --write",
+    "check:figure-tokens": "node scripts/sync-figure-tokens.mjs --check",
     "check:types": "tsc -p tests/types/tsconfig.json",
     "prepublishOnly": "npm run build && npm run check:types",
     "test": "node --test tests/*.test.mjs"
