@@ -117,6 +117,9 @@ jobs:
           test -f dist/print/index.html       || (echo "missing /print" && exit 1)
           test -f dist/references/index.html  || (echo "missing /references" && exit 1)
           test -f dist/search/index.html      || (echo "missing /search" && exit 1)
+          test -f dist/_headers               || (echo "missing default security _headers (#188)" && exit 1)
+          grep -q 'Strict-Transport-Security' dist/_headers || (echo "missing HSTS default (#188)" && exit 1)
+          grep -Fq "img-src 'self' data: https:" dist/_headers || (echo "default CSP blocks HTTPS figures (#188)" && exit 1)
 
       - name: Build demo at a non-root base (#154)
         working-directory: demo

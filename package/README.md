@@ -20,6 +20,12 @@ for the current release overview, and
 [PACKAGE_DESIGN.md](https://github.com/brandon-behring/book-scaffold-astro/blob/main/PACKAGE_DESIGN.md)
 for the complete API contract.
 
+Astro builds emit a Cloudflare-compatible `dist/_headers` with audited
+security defaults. A consumer-owned `public/_headers` wins unchanged;
+`defineBookConfig({ securityHeaders: false })` disables scaffold emission,
+and `securityHeaders.contentSecurityPolicy` replaces only the default CSP.
+See [Recipe 05](./recipes/05-deploy-cloudflare.md#default-security-headers).
+
 ## Licensing
 
 Code, configuration, and scripts are MIT-licensed. Recipes, pedagogy, examples,

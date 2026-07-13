@@ -21,7 +21,7 @@
  * See PACKAGE_DESIGN.md §6.
  */
 import { fileURLToPath } from 'node:url';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { AstroIntegration } from 'astro';
 import type { BookScaffoldIntegrationOptions } from './types.js';
@@ -183,6 +183,42 @@ const ROUTE_REGISTRY = {
   frontmatter: { pattern: '/frontmatter/[slug]',  file: 'frontmatter/[...slug].astro' },
 } as const;
 
+/**
+ * #188: scaffold-adapted CSP for the Cloudflare `_headers` format. Each
+ * allowance corresponds to behavior shipped by the toolkit:
+ *
+ * - `unsafe-inline`: the theme/drawer scripts and Astro component styles
+ * - `wasm-unsafe-eval`: Pagefind's WebAssembly search index
+ * - `static.cloudflareinsights.com` / `cloudflareinsights.com`: optional
+ *   Cloudflare Web Analytics used by deployed consumer books
+ * - `img-src ... data: https:`: inline assets plus consumer-hosted figures
+ *
+ * Fonts, KaTeX assets, and the search index otherwise remain self-hosted.
+ */
+const DEFAULT_CONTENT_SECURITY_POLICY =
+  "default-src 'self'; " +
+  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; " +
+  "style-src 'self' 'unsafe-inline'; " +
+  "img-src 'self' data: https:; " +
+  "font-src 'self'; " +
+  "connect-src 'self' https://cloudflareinsights.com; " +
+  "object-src 'none'; " +
+  "base-uri 'self'; " +
+  "frame-ancestors 'self'; " +
+  "form-action 'self'";
+
+/** Render the five audited defaults, replacing only CSP when requested. */
+function renderSecurityHeaders(contentSecurityPolicy?: string): string {
+  const csp = contentSecurityPolicy ?? DEFAULT_CONTENT_SECURITY_POLICY;
+  return `/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: ${csp}
+`;
+}
+
 /** Compute the frontmatter route URL pattern from the prefix.
  *  Empty string → root mount `/[slug]`. Any other string → `/<prefix>/[slug]`.
  *  Undefined → uses the default ROUTE_REGISTRY pattern. */
@@ -213,6 +249,7 @@ export function bookScaffoldIntegration(
     title,
     subtitle,
     releaseStatus,
+    securityHeaders,
     description,
     portfolio,
     // v4.6.0: book-level author + SEO config, propagated through the
@@ -355,6 +392,31 @@ export function bookScaffoldIntegration(
             },
           },
         });
+      },
+
+      // v4.27.0 (#188): emit defaults for every build, not only newly
+      // scaffolded projects, so existing consumers become protected on their
+      // next package upgrade. Astro copies public/_headers into the output
+      // before build:done; an existing target therefore means the consumer
+      // owns the complete file and must win byte-for-byte.
+      'astro:build:done': ({ dir, logger }) => {
+        if (securityHeaders === false) {
+          logger.info('security-header emission disabled by defineBookConfig (#188)');
+          return;
+        }
+
+        const target = join(fileURLToPath(dir), '_headers');
+        if (existsSync(target)) {
+          logger.info('consumer public/_headers present; scaffold defaults skipped (#188)');
+          return;
+        }
+
+        writeFileSync(
+          target,
+          renderSecurityHeaders(securityHeaders?.contentSecurityPolicy),
+          'utf8',
+        );
+        logger.info('emitted default security headers; public/_headers overrides them (#188)');
       },
     },
   };

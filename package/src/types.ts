@@ -39,6 +39,17 @@ export interface ReleaseStatusConfig {
 }
 
 /**
+ * v4.27.0 (#188): build-time security-header customization.
+ *
+ * The integration emits a Cloudflare-compatible `dist/_headers` file by
+ * default. Consumers that need a different CSP can replace that one header
+ * while retaining the scaffold's other audited defaults.
+ */
+export interface SecurityHeadersConfig {
+  contentSecurityPolicy?: string;
+}
+
+/**
  * Options for `defineBookConfig`. See PACKAGE_DESIGN.md §4.
  *
  * Note on the index signature: `AstroUserConfig` carries generic parameters
@@ -173,6 +184,14 @@ export interface BookConfigOptions {
    * composed style chain; set `false` to suppress an inherited banner.
    */
   releaseStatus?: ReleaseStatusConfig | false;
+  /**
+   * v4.27.0 (#188): security headers emitted to `dist/_headers` after an
+   * Astro build. Omit for the scaffold defaults; set `false` to emit no
+   * scaffold-owned file; provide `contentSecurityPolicy` to replace only the
+   * default CSP while retaining HSTS, XCTO, Referrer-Policy, and
+   * Permissions-Policy. A consumer-owned `public/_headers` always wins.
+   */
+  securityHeaders?: SecurityHeadersConfig | false;
   /**
    * v4.5.0: Book description. Read by the auto-injected `/` landing page (lead paragraph + <meta description>).
    * Optional; landing renders no description paragraph if unset.
@@ -327,6 +346,8 @@ export interface BookScaffoldIntegrationOptions {
   /** v4.26.2 (#149; style inheritance fixed in v4.26.3): resolved
    *  release-state banner propagated via the book-config virtual module. */
   releaseStatus?: ReleaseStatusConfig;
+  /** v4.27.0 (#188): resolved security-header emission policy. */
+  securityHeaders?: SecurityHeadersConfig | false;
   /** v4.5.0: book description, propagated to `/` landing via vite.define. */
   description?: string;
   /**
