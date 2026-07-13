@@ -305,6 +305,36 @@ needed for the blessed recipe.
   designed now and implemented after the v5 corpus core.
 - #210's Anki authoring/export contract remains parked and out of scope.
 
+## Implementation clarifications
+
+The implementation audit recorded these decisions so the public contract is
+unambiguous at the code boundary:
+
+- `ApparatusRoute` is the existing scaffold-owned closed set: `references`,
+  `print`, `convergence`, `tips`, `exercises`, `practice-exam`, `glossary`,
+  `flashcards`, and `answers`. An omitted per-book `apparatus` inherits the
+  application-enabled subset; an explicit empty list enables none. A per-book
+  entry naming an application-disabled route is a configuration error rather
+  than a dead link. Dynamic apparatus routes emit paths only for books that
+  expose them.
+- `examDomains` remains application-wide in v5, like the preset and Markdown
+  pipeline. Question and glossary entry ids are book-prefixed and their routes
+  select the current book, but heterogeneous per-book taxonomies are deferred.
+- `bibliography.bib` (or `BOOK_BIB_PATH`) and `sources/manifest.yaml` remain
+  corpus-shared authoring inputs for the zero-restructure Recipe 21 migration.
+  Their parsed values are stored beneath every selected book key; renderers and
+  validation must still select a book namespace before resolving a citation.
+- `--book` applies to the content-derived commands in this contract:
+  `validate`, `build-labels`, `build-bib`, `build-tips`, and
+  `build-exercises`. Figure and notebook conversion are application-wide asset
+  transforms and remain outside corpus identity. A selected build updates only
+  that key in an existing valid envelope and preserves other registered keys;
+  a full build rewrites all keys in manifest order.
+- For a local corpus target, `<BookLink book="evaluation" to="chapters/foo#bar">`
+  resolves to `/chapters/evaluation/foo/#bar`; other relative targets resolve
+  below `/<book>/`. Empty, absolute, traversal, query-only, and fragment-only
+  `to` values fail loudly. External `siblingBooks` retain their v4 semantics.
+
 ## Implementation and release gates
 
 The v5 implementation is complete only when:
@@ -320,4 +350,3 @@ The v5 implementation is complete only when:
 7. a Recipe 21 fixture migrates without changing its public chapter URLs; and
 8. #211 and #212 ship with one reviewed v5 migration guide and lock-step package
    versions.
-
