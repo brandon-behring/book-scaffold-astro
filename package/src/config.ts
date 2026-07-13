@@ -90,6 +90,19 @@ export async function defineBookConfig(
     throw v3MigrationError(opts as Record<string, unknown>);
   }
 
+  // #180: the top-level field was documented as functional but has always
+  // been stripped before Astro sees it. Warn only when the consumer writes
+  // the field explicitly; built-in styles still carry historical metadata,
+  // and warning every normal consumer would turn the signal into noise.
+  if (Object.prototype.hasOwnProperty.call(opts, 'deploy')) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      'book-scaffold-astro: defineBookConfig({ deploy }) is inert and deprecated; ' +
+        'create-book chooses wrangler.toml from its CLI preset. Remove this field ' +
+        'before upgrading to v5 (#180).',
+    );
+  }
+
   // 1. Compose the style chain. Empty chain returns an empty Style; defaults
   //    fall back to 'minimal' preset below (matches v3 behavior when no
   //    BOOK_PROFILE was set anywhere).

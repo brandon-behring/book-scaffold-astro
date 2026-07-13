@@ -45,7 +45,7 @@ export const minimalStyle: Style = defineStyle({
 });
 
 /** Course-notes preset — chapters derived from a video course / MOOC / book.
- *  Content-heavy static sites → defaults to Cloudflare Pages deploy. */
+ *  `deploy` is retained as deprecated metadata only (#180). */
 export const courseNotesStyle: Style = defineStyle({
   name: 'course-notes',
   preset: 'course-notes',
@@ -53,8 +53,7 @@ export const courseNotesStyle: Style = defineStyle({
 });
 
 /** Research-portfolio preset — academic structure + tools-style provenance + portfolio components.
- *  Defaults to Pages deploy + frontmatter route enabled (portfolios universally need
- *  title-page / disclosure / banner pages). */
+ *  `deploy` is retained as deprecated metadata only (#180); frontmatter routes remain enabled. */
 export const researchPortfolioStyle: Style = defineStyle({
   name: 'research-portfolio',
   preset: 'research-portfolio',

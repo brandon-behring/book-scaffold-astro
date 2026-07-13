@@ -258,7 +258,8 @@ export interface BookConfigOptions extends Omit<AstroUserConfig, 'integrations' 
 
   /** Optional. RESERVED (#50, #180) — accepted and style-chain-merged, but has no
    *  runtime effect. The wrangler.toml shape is set at scaffold time by create-book
-   *  from the profile name; this field does not change it. Wire-or-remove: v5. */
+   *  from the profile name; this field does not change it.
+   *  @deprecated Remove before v5. */
   deploy?: 'pages' | 'workers';
 }
 
@@ -350,6 +351,7 @@ export interface Style {
   readonly extraIntegrations?: readonly AstroIntegration[];
   readonly mdxComponentsModule?: string;
   readonly markdown?: AstroUserConfig['markdown'];
+  /** @deprecated Reserved metadata with no runtime effect; remove before v5. */
   readonly deploy?: 'pages' | 'workers';
   /** Scoped consumer-side metadata; ignored by toolkit; survives merge as shallow override.
    *  Preserves typo protection on known fields (closed shape — no public index signature). */

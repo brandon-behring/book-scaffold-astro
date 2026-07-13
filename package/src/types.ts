@@ -83,6 +83,8 @@ export interface BookConfigOptions {
    * scaffold time, by `create-book` from the profile name (academic/tools/
    * minimal → Workers; course-notes/research-portfolio → Pages); setting this
    * field changes nothing afterward. Wire-or-remove is a v5 decision.
+   * @deprecated Inert in v4; remove this option before v5. Deployment shape
+   * is chosen by create-book or by the consumer's own deployment files.
    */
   deploy?: 'pages' | 'workers';
   /**

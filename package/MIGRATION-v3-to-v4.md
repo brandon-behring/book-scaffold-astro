@@ -64,9 +64,13 @@ defineBookConfig({
 // → routes mount at /<slug> (root, useful for /methodology, /about)
 ```
 
-### 3. `deploy: 'pages' | 'workers'` field (new)
+### 3. `deploy: 'pages' | 'workers'` field (reserved; deprecated)
 
-Top-level option that drives `create-book`'s `wrangler.toml` shape. Defaults from the chosen style (academic/tools/minimal → 'workers'; course-notes/research-portfolio → 'pages'). Closes #50.
+The field was introduced as reserved metadata but was incorrectly documented
+as driving `create-book`. It never did: the CLI writes `wrangler.toml` from the
+`--preset` selected before the generated book's configuration exists. In v4 an
+explicit top-level field prints a deprecation warning and changes nothing; remove
+it before v5. Choose or edit the deployment file directly instead (#180).
 
 ### 4. `site` field is now optional at the type level
 

@@ -157,7 +157,10 @@ defineBookConfig({ styles: [researchPortfolioStyle], ... });
 defineBookConfig({ styles: [BUILTIN_STYLES['research-portfolio']], ... });
 ```
 
-Each built-in style has a `name` matching its preset, a `preset` field, and sane `deploy` defaults (academic/tools/minimal → 'workers'; course-notes/research-portfolio → 'pages').
+Each built-in style has a `name` matching its preset and a `preset` field. Its
+historical `deploy` value is reserved metadata only; it does not alter a
+generated or existing deployment. `create-book --preset` selects the initial
+`wrangler.toml`, after which the consumer owns that file (#180).
 
 ---
 

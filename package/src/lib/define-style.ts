@@ -118,10 +118,10 @@ export interface Style {
    *  scalar fields override. */
   readonly markdown?: AstroUserConfig['markdown'];
 
-  /** Deploy target — drives create-book's wrangler.toml shape.
-   *  - `'workers'`: Cloudflare Workers + Static Assets (default for academic/tools/minimal)
-   *  - `'pages'`: Cloudflare Pages (default for research-portfolio/course-notes)
-   *  Closes #50. */
+  /** Reserved legacy metadata. It is composed but has no runtime or
+   *  create-book effect: create-book chooses wrangler.toml from its CLI
+   *  preset before a consumer Style exists (#180).
+   *  @deprecated Inert in v4; scheduled for removal in v5. */
   readonly deploy?: 'pages' | 'workers';
   /** v4.27.0 (#149): release-state banner; shallow override (last wins). */
   readonly releaseStatus?: { state: 'alpha' | 'beta' | 'rc' | 'locked'; dismissAt?: string; message?: string };
