@@ -236,6 +236,15 @@ test('#80: validate resolves local BookLink targets in the target book namespace
       const built = run(root, script);
       assert.equal(built.status, 0, built.stderr);
     }
+    mkdirSync(join(root, 'src/content/questions/alpha'), { recursive: true });
+    mkdirSync(join(root, 'src/content/questions/beta'), { recursive: true });
+    const question = (title) =>
+      `---\nid: shared-question\ntype: free\ndomain: shared\nchapter: 1\ntitle: ${title}\n---\nQuestion.\n`;
+    writeFileSync(join(root, 'src/content/questions/alpha/one.mdx'), question('Alpha'));
+    // Deliberately invalid only in the unselected namespace: selected alpha
+    // validation must neither scan nor collide with beta's local ids.
+    writeFileSync(join(root, 'src/content/questions/beta/one.mdx'), question('Beta one'));
+    writeFileSync(join(root, 'src/content/questions/beta/two.mdx'), question('Beta two'));
 
     writeChapter(
       root,
@@ -244,7 +253,7 @@ test('#80: validate resolves local BookLink targets in the target book namespace
     );
     const valid = run(root, 'validate.mjs', ['--book', 'alpha']);
     assert.equal(valid.status, 0, `stdout: ${valid.stdout}\nstderr: ${valid.stderr}`);
-    assert.match(valid.stdout, /\[book:alpha\].*1 chapter\(s\) checked/);
+    assert.match(valid.stdout, /\[book:alpha\].*1 chapter\(s\) \+ 1 question\(s\) checked/);
     assert.match(valid.stdout, /\[book:corpus\]/);
 
     writeChapter(

@@ -1050,6 +1050,7 @@ ACTIVE_BOOK_ID = BOOK_SELECTION.corpus ? 'corpus' : null;
 // examDomains can't be read from astro.config.mjs, membership is left to the
 // build-time throw.
 let questionsChecked = 0;
+const questionsCheckedByBook = new Map();
 {
   const QUESTIONS_DIR = resolve(ROOT, 'src/content/questions');
   if (existsSync(QUESTIONS_DIR)) {
@@ -1063,76 +1064,94 @@ let questionsChecked = 0;
       }
     }
 
-    const seenIds = new Map(); // question id → first file that declared it
-    const questionFiles = [];
-    for await (const f of walkMdx(QUESTIONS_DIR)) {
-      if (!f.split('/').pop().startsWith('_')) questionFiles.push(f);
+    const runs = BOOK_SELECTION.corpus
+      ? BOOK_SELECTION.books.map((book) => ({
+          book,
+          dir: join(QUESTIONS_DIR, book.id),
+          prefix: `questions/${book.id}`,
+        }))
+      : [{ book: null, dir: QUESTIONS_DIR, prefix: 'questions' }];
+
+    for (const run of runs) {
+      ACTIVE_BOOK_ID = run.book?.id ?? null;
+      const seenIds = new Map(); // ids are book-local in corpus mode
+      const questionFiles = [];
+      for await (const file of walkMdx(run.dir)) {
+        if (!file.split('/').pop().startsWith('_')) questionFiles.push(file);
+      }
+      for (const rel of questionFiles) {
+        const abs = join(run.dir, rel);
+        const content = await readFile(abs, 'utf8');
+        const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+        const front = fm ? fm[1] : '';
+        const qrel = `${run.prefix}/${rel}`;
+        if (run.book) {
+          const legacy = legacyFrontmatterBook(content);
+          if (legacy && legacy.value !== run.book.id) {
+            fail(
+              qrel,
+              legacy.line,
+              `frontmatter book ${JSON.stringify(legacy.value)} does not match ` +
+                `path-derived corpus book ${JSON.stringify(run.book.id)}.`,
+            );
+          }
+        }
+
+        // Questions do not run the legacy link-resolution advisory, so keep the
+        // #190 root-base contract fully inert by parsing only for a non-root base.
+        const authoredTargets = ASTRO_BASE === '/' ? [] : collectAuthoredTargets(qrel, content);
+        validateAuthoredTargets(qrel, content, authoredTargets);
+
+        const idMatch = front.match(/^id\s*:\s*["']?([^"'\n]+?)["']?\s*$/m);
+        if (idMatch) {
+          const id = idMatch[1].trim();
+          if (seenIds.has(id)) {
+            fail(
+              qrel,
+              1,
+              `Duplicate question id "${id}" — also declared in ${seenIds.get(id)}. Question ids must be unique (cross-ref key for the appendix / flashcards).`,
+            );
+          } else {
+            seenIds.set(id, qrel);
+          }
+        }
+
+        if (examDomains) {
+          const domainMatch = front.match(/^domain\s*:\s*["']?([^"'\n]+?)["']?\s*$/m);
+          if (domainMatch && !examDomains.has(domainMatch[1].trim())) {
+            fail(
+              qrel,
+              1,
+              `Question domain "${domainMatch[1].trim()}" not in defineBookConfig examDomains (${[...examDomains].join(', ') || 'none'}). Register it or fix the value.`,
+            );
+          }
+        }
+
+        // v4.21.0 (#114): <Rationale appendix> needs for= (the /answers#answer-<id>
+        // anchor target) — the component throws at build; flag it here, earlier.
+        for (const m of content.matchAll(/<Rationale\b([^>]*)>/g)) {
+          const attrs = m[1];
+          if (!/(^|\s)appendix(\s|=|$)/.test(attrs)) continue;
+          const forMatch = attrs.match(/\bfor\s*=\s*["']([^"']+)["']/);
+          if (!forMatch) {
+            fail(
+              qrel,
+              lineOf(content, m.index),
+              `<Rationale appendix> without for="<question-id>" — no appendix anchor target; throws at build.`,
+            );
+          } else if (idMatch && forMatch[1] !== idMatch[1].trim()) {
+            fail(
+              qrel,
+              lineOf(content, m.index),
+              `<Rationale appendix for="${forMatch[1]}"> does not match this question's id "${idMatch[1].trim()}" — the /answers anchor would land on the wrong (or no) answer.`,
+            );
+          }
+        }
+      }
+      questionsChecked += questionFiles.length;
+      if (run.book) questionsCheckedByBook.set(run.book.id, questionFiles.length);
     }
-    for (const rel of questionFiles) {
-      const abs = join(QUESTIONS_DIR, rel);
-      const content = await readFile(abs, 'utf8');
-      const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-      const front = fm ? fm[1] : '';
-      const qrel = `questions/${rel}`;
-
-      // Questions do not run the legacy link-resolution advisory, so keep the
-      // #190 root-base contract fully inert by parsing only for a non-root base.
-      const authoredTargets = ASTRO_BASE === '/' ? [] : collectAuthoredTargets(qrel, content);
-      validateAuthoredTargets(qrel, content, authoredTargets);
-
-      const idMatch = front.match(/^id\s*:\s*["']?([^"'\n]+?)["']?\s*$/m);
-      if (idMatch) {
-        const id = idMatch[1].trim();
-        if (seenIds.has(id)) {
-          fail(
-            qrel,
-            1,
-            `Duplicate question id "${id}" — also declared in ${seenIds.get(id)}. Question ids must be unique (cross-ref key for the appendix / flashcards).`,
-          );
-        } else {
-          seenIds.set(id, qrel);
-        }
-      }
-
-      if (examDomains) {
-        const domainMatch = front.match(/^domain\s*:\s*["']?([^"'\n]+?)["']?\s*$/m);
-        if (domainMatch && !examDomains.has(domainMatch[1].trim())) {
-          fail(
-            qrel,
-            1,
-            `Question domain "${domainMatch[1].trim()}" not in defineBookConfig examDomains (${[...examDomains].join(', ') || 'none'}). Register it or fix the value.`,
-          );
-        }
-      }
-
-      // v4.21.0 (#114): <Rationale appendix> needs for= (the /answers#answer-<id>
-      // anchor target) — the component throws at build; flag it here, earlier,
-      // the same way #7 pre-flights BookLink. Inside a question's own body the
-      // natural invariant is for= === this file's frontmatter id — a mismatch
-      // (copy-paste drift) anchors the reader to the wrong (or no) answer,
-      // which the component CAN'T check (it has no collection access).
-      // `(^|\s)appendix(\s|=|$)` anchors the bare prop so prose like
-      // title="See the appendix" can't false-fire.
-      for (const m of content.matchAll(/<Rationale\b([^>]*)>/g)) {
-        const attrs = m[1];
-        if (!/(^|\s)appendix(\s|=|$)/.test(attrs)) continue;
-        const forMatch = attrs.match(/\bfor\s*=\s*["']([^"']+)["']/);
-        if (!forMatch) {
-          fail(
-            qrel,
-            lineOf(content, m.index),
-            `<Rationale appendix> without for="<question-id>" — no appendix anchor target; throws at build.`,
-          );
-        } else if (idMatch && forMatch[1] !== idMatch[1].trim()) {
-          fail(
-            qrel,
-            lineOf(content, m.index),
-            `<Rationale appendix for="${forMatch[1]}"> does not match this question's id "${idMatch[1].trim()}" — the /answers anchor would land on the wrong (or no) answer.`,
-          );
-        }
-      }
-    }
-    questionsChecked = questionFiles.length;
+    ACTIVE_BOOK_ID = BOOK_SELECTION.corpus ? 'corpus' : null;
   }
 }
 
@@ -1148,6 +1167,8 @@ if (warnings.length > 0) {
 if (BOOK_SELECTION.corpus) {
   for (const book of BOOK_SELECTION.books) {
     const count = chapterCountsByBook.get(book.id) ?? 0;
+    const questionCount = questionsCheckedByBook.get(book.id) ?? 0;
+    const questionNote = questionCount > 0 ? ` + ${questionCount} question(s)` : '';
     const bookErrors = errors.filter((error) => error.book === book.id).length;
     const bookWarnings = warnings.filter((warning) => warning.book === book.id).length;
     const result = bookErrors === 0 ? '✓' : '✗';
@@ -1155,7 +1176,7 @@ if (BOOK_SELECTION.corpus) {
       ? 'no errors'
       : `${bookErrors} error${bookErrors === 1 ? '' : 's'}`;
     console.log(
-      `[book:${book.id}] validate: ${result} ${count} chapter(s) checked; ${detail}, ` +
+      `[book:${book.id}] validate: ${result} ${count} chapter(s)${questionNote} checked; ${detail}, ` +
         `${bookWarnings} warning${bookWarnings === 1 ? '' : 's'} ` +
         `(profile=${PROFILE}, number-style=${TOOLING_CONFIG.numberStyle}).`,
     );
