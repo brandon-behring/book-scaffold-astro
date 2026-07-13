@@ -70,6 +70,19 @@ function setupSiblingConfig(root, siblingBooks) {
   );
 }
 
+function setupBaseConfig(root, base, { integration = true } = {}) {
+  if (!integration) {
+    writeFileSync(join(root, 'astro.config.mjs'), `export default { base: ${JSON.stringify(base)} };\n`);
+    return;
+  }
+  writeFileSync(
+    join(root, 'astro.config.mjs'),
+    `import { defineBookConfig, minimalStyle } from ${JSON.stringify(DIST_INDEX_URL)};\n` +
+      `export default await defineBookConfig({ styles: [minimalStyle], site: 'https://test.invalid', ` +
+      `base: ${JSON.stringify(base)} });\n`,
+  );
+}
+
 function writeBookLinkChapter(root, body) {
   writeFileSync(
     join(root, 'src', 'content', 'chapters', 'week03.mdx'),
@@ -77,6 +90,19 @@ function writeBookLinkChapter(root, body) {
 week: 3
 part: foundations
 title: "Cross-book links"
+status: implemented
+---
+
+${body}
+`,
+  );
+}
+
+function writeLinkFixture(root, file, body) {
+  writeFileSync(
+    join(root, 'src', 'content', 'chapters', file),
+    `---
+title: "Authored links"
 status: implemented
 ---
 
@@ -165,6 +191,170 @@ See <XRef id="nonexistent-id" /> for details.
       /Unknown XRef id "nonexistent-id"/,
       `validate should name the bad XRef; got stderr: ${result.stderr}`,
     );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#190): non-root base rejects escaping Markdown, HTML, and literal JSX targets', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    setupBaseConfig(tmp, '/library/books/');
+    writeLinkFixture(
+      tmp,
+      'week03.md',
+      `[chapter](/chapters/week01/)
+![diagram](/figures/diagram.svg "Diagram")
+
+[docs]: /references/#entry
+[documentation][docs]
+[inside](/library/books/chapters/week01/)
+[external](https://example.com/chapters/week01/)
+[cdn](//cdn.example.com/diagram.svg)
+[fragment](#local)
+\`[example](/inline-code)\`
+\`\`\`md
+[fenced](/fenced-code)
+\`\`\``,
+    );
+    writeLinkFixture(
+      tmp,
+      'week04.mdx',
+      `<a href="/search/">Search</a>
+<img src="/figures/raw.png" alt="Raw" />
+<Card href={'/chapters/week02/'} src={\`/assets/card.png\`} />
+<Card href={computedHref} src={\`\${base}/dynamic.png\`} />
+<a href="/corporate/" rel="external noopener">rel does not change URL resolution</a>`,
+    );
+    mkdirSync(join(tmp, 'src', 'content', 'questions'), { recursive: true });
+    writeFileSync(
+      join(tmp, 'src', 'content', 'questions', 'link.mdx'),
+      `---
+id: q-link
+type: free
+domain: links
+chapter: 1
+answer: Use the base.
+---
+<a href="/answers/">Escaping question link.</a>
+`,
+    );
+
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    assert.equal(result.status, 9, `stdout: ${result.stdout}\nstderr: ${result.stderr}`);
+    assert.match(result.stderr, /week03\.md:6\s+Authored Markdown link destination "\/chapters\/week01\/"/);
+    assert.match(result.stderr, /week03\.md:7\s+Authored Markdown image destination "\/figures\/diagram\.svg"/);
+    assert.match(result.stderr, /week03\.md:9\s+Authored Markdown reference destination "\/references\/#entry"/);
+    assert.match(result.stderr, /week04\.mdx:6\s+Authored href attribute "\/search\/"/);
+    assert.match(result.stderr, /week04\.mdx:7\s+Authored src attribute "\/figures\/raw\.png"/);
+    assert.match(result.stderr, /week04\.mdx:8\s+Authored href attribute "\/chapters\/week02\/"/);
+    assert.match(result.stderr, /week04\.mdx:8\s+Authored src attribute "\/assets\/card\.png"/);
+    assert.match(result.stderr, /week04\.mdx:10\s+Authored href attribute "\/corporate\/"/);
+    assert.match(result.stderr, /questions\/link\.mdx:8\s+Authored href attribute "\/answers\/"/);
+    assert.match(result.stderr, /escapes configured Astro base "\/library\/books"/);
+    assert.doesNotMatch(
+      result.stderr,
+      /Authored[^\n]*(?:inline-code|fenced-code|computedHref)/,
+    );
+    assert.doesNotMatch(result.stderr, /Internal link[^\n]*(?:inline-code|fenced-code)/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#190): suggested replacements remain contained after dot-segment normalization', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    setupBaseConfig(tmp, '/library/books/');
+    writeLinkFixture(tmp, 'week03.md', '[dot segment](/%2e%2e/outside/?q=1#part)');
+
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    assert.equal(result.status, 1, `stdout: ${result.stdout}\nstderr: ${result.stderr}`);
+    assert.match(
+      result.stderr,
+      /week03\.md:6\s+Authored Markdown link destination "\/%2e%2e\/outside\/\?q=1#part"/i,
+    );
+    assert.match(result.stderr, /Use "\/library\/books\/outside\/\?q=1#part"/);
+    assert.doesNotMatch(result.stderr, /Use "[^"\n]*\.\./);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#190): error-count exit remains non-zero at the 255/256 boundary', () => {
+  for (const count of [255, 256]) {
+    const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+    try {
+      setupCleanFixture(tmp);
+      setupBaseConfig(tmp, '/library/books/');
+      writeLinkFixture(
+        tmp,
+        'many-links.mdx',
+        Array.from({ length: count }, (_, index) => `<a href="/outside-${index}/" />`).join('\n'),
+      );
+
+      const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+        cwd: tmp,
+        encoding: 'utf8',
+        timeout: 30_000,
+      });
+      assert.equal(result.status, 255, `${count} errors must not wrap to success\n${result.stderr}`);
+      assert.match(result.stderr, new RegExp(`validate: ✗ ${count} error\\(s\\)`));
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  }
+});
+
+test('validate (#190): root base permits root-absolute authored targets', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    setupBaseConfig(tmp, '/');
+    writeLinkFixture(
+      tmp,
+      'week03.mdx',
+      `[chapter](/chapters/week01/)
+<a href="/search/">Search</a>
+<Card src={'/assets/card.png'} />`,
+    );
+
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    assert.equal(result.status, 0, `stdout: ${result.stdout}\nstderr: ${result.stderr}`);
+    assert.doesNotMatch(result.stderr, /Authored .* escapes configured Astro base/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#190): base is enforced from evaluated Astro config without the integration', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    setupBaseConfig(tmp, '/standalone/', { integration: false });
+    writeLinkFixture(tmp, 'week03.md', '<a href="/search/">Escapes.</a>');
+
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    assert.equal(result.status, 1, `stdout: ${result.stdout}\nstderr: ${result.stderr}`);
+    assert.match(result.stderr, /week03\.md:6.*escapes configured Astro base "\/standalone"/s);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }

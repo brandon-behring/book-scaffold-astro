@@ -959,6 +959,16 @@ are opaque/path-qualified and sibling validation resolves exact href values, so
 the same fragment in multiple chapters is lossless. The legacy defaults remain
 shared numbering and `/chapters/:id/`, and component ID keys are unchanged.
 
+**Astro base resolution (#190).** `validate` separately evaluates the actual
+`astro.config.*` through Vite and reads `config.base` via
+`scripts/resolve-book-config.mjs`; this works with computed configuration and
+does not require the scaffold integration to be present. Omission resolves to
+`/`. Under a non-root base, literal authored Markdown/HTML/JSX `href` and `src`
+targets that start at the host root but fall outside the base are errors. The
+validator uses structural Markdown/MDX/HTML parsing, evaluates decoded static
+string literals, and suggests a browser-normalized contained target. It never
+rewrites content and adds no configuration or `rel=` opt-out.
+
 ---
 
 ## 9. Consumer config snippets

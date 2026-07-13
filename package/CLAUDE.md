@@ -201,6 +201,7 @@ the full precedence and customization contract.
 - Literal `<Theorem n>` values that disagree with `labels.json` (dynamic expressions and `label=` overrides are skipped)
 - Missing `<Figure src>` files under `public/`
 - Internal markdown links that don't resolve
+- Authored root-absolute Markdown/HTML/JSX `href` or `src` targets that escape a configured non-root Astro `base` (#190). Structurally parsed and decoded literal targets fail with file/line context; root-base books, external/protocol-relative URLs, fragments, dynamic JSX expressions, and already base-prefixed targets are unaffected. `rel="external"` does not change URL resolution or opt out. Validation never rewrites prose.
 - Study-guide questions (v4.17.0, #112) — a question whose frontmatter `domain` isn't in `examDomains`, and duplicate question `id`s
 
 Missing `src/data/labels.json` or `references.json` self-heals before checks by running the corresponding package build script; an existing artifact is never rewritten implicitly.

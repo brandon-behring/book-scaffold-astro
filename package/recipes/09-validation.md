@@ -2,7 +2,7 @@
 
 **Profile**: any (Cite checks skip under non-academic).
 
-**TL;DR**: `npm run validate` runs `scripts/validate.mjs` against all chapter MDX files. It first regenerates missing `labels.json` and `references.json`, then catches typo'd bibkeys / XRef ids / Figure paths / internal links that `astro build` would either miss or surface with poor context. Auto-runs as `prebuild`; recommend wiring into pre-commit too.
+**TL;DR**: `npm run validate` runs `scripts/validate.mjs` against chapter MD/MDX files (plus its question-collection checks). It first regenerates missing `labels.json` and `references.json`, then catches typo'd bibkeys / XRef ids / Figure paths / internal links that `astro build` would either miss or surface with poor context. Auto-runs as `prebuild`; recommend wiring into pre-commit too.
 
 ## What gets checked
 
@@ -17,6 +17,7 @@
 | `<BookLink book= to=>` both present; `book=` registered; literal fragment target resolves in a declared sibling labels index (#96, #147) | all | Pre-flights the component's build-time throw and dead cross-book anchors across all files at once. |
 | Questions collection: unique `id`s + `domain` in `examDomains` (#112); `<Rationale appendix>` carries `for=` (#114, v4.21.0) | all, when `src/content/questions/` exists | Duplicate ids break the appendix/flashcards cross-ref key; an unregistered domain throws one-at-a-time at build; an appendix rationale without its anchor target throws at build. |
 | `los[].anchor` ↔ `{/* anchor: <slug> */}` prose markers agree both ways (#130, v4.20.0) | all, when frontmatter has `los:` | A declared objective whose prose marker is missing/misspelled (or an orphan marker) builds green otherwise — frontmatter↔prose drift only a hand audit would catch. |
+| Literal authored Markdown/HTML/JSX `href`/`src` stays inside a non-root Astro `base` (#190) | all | A browser resolves `/chapters/...` from the host root, bypassing Astro's deployment base and producing a convincing 404. This is a build-blocking error, not a rewrite. |
 
 Validate also emits two **non-blocking shadow-route warnings** (exit code unaffected): a consumer-owned `src/pages/chapters/[...slug].astro` without `routes: { chapters: false }` (v4.6.0, #76), and a consumer-owned `src/pages/index.astro` without `routes: { landing: false }` (v4.20.0, #129 — Astro has announced this collision becomes a hard error). See [recipe 18](./18-chapter-route-ownership.md).
 
@@ -47,6 +48,24 @@ Generate the sibling artifact in that sibling's project with `book-scaffold buil
 Heading-entry keys are intentionally opaque and path-qualified: `#summary` can legitimately occur in every chapter. Validation matches the normalized `href` values, so every repeated fragment remains addressable. Component-ID keys keep their historical shape for `<XRef>`; do not use a heading's internal JSON key as an XRef ID or derive it in consumer code.
 
 A declared `labels` file that is missing, unreadable, malformed, or not a JSON object is an error. An unknown book, unknown fragment, wrong path, or malformed label entry is also an error with the source file and target. Dynamic `book=`/`to=` expressions and prop spreads cannot be evaluated safely, so they emit explicit skip warnings. URL strings and `{ url }` descriptors likewise warn for literal fragment links because no index was declared. Non-fragment route links warn and skip: labels indexes describe anchors, not every sibling route.
+
+## Authored links under a non-root base (#190)
+
+When evaluated `astro.config.*` sets a non-root base such as `base: '/library/books/'`, a root-absolute authored URL escapes that deployment mount:
+
+```mdx
+<!-- Errors: both resolve from the host root, outside /library/books/. -->
+[Chapter one](/chapters/one/)
+<img src="/figures/overview.svg" alt="Overview" />
+
+<!-- Valid: explicitly remains inside the configured base. -->
+[Chapter one](/library/books/chapters/one/)
+<a href={`${import.meta.env.BASE_URL}references/`}>References</a>
+```
+
+The validator structurally parses inline Markdown links and images, Markdown reference definitions, quoted or unquoted HTML `href`/`src`, and quoted or statically braced JSX string attributes. HTML entities and JavaScript string escapes are decoded before containment is checked. It reports the authored file and line, the evaluated target, the evaluated base, and a browser-normalized base-prefixed replacement. It also scans question MD/MDX files already visited by validation.
+
+The check is deliberately validation-only: it does not mutate or rewrite content, and there is no opt-out. Under the root base (`/`) it is inert. Protocol URLs (`https:`, `mailto:`, `data:`, and others), protocol-relative URLs (`//cdn…`), fragments, relative targets, targets already inside the base, and dynamic JSX expressions are excluded. `rel="external"` describes a relationship but does not change where a browser navigates, so it does not exempt a host-root URL. Frontmatter, comments, fenced/inline/indented code examples, and `<pre>`/`<code>` examples are excluded by their parsed Markdown/MDX structure so documentation snippets do not become false diagnostics.
 
 ## Missing generated artifacts
 
@@ -96,7 +115,7 @@ For pre-commit: add to `.pre-commit-config.yaml`:
 
 ## Preset / chaptersBase resolution (v4.7.0+, #75)
 
-The validator evaluates `astro.config.*` through Vite first. A resolved scaffold integration supplies the composed preset and `numberStyle`, so CLI tooling sees the same Style chain as the Astro build. Without such an integration, the legacy preset chain remains: `--preset` → process `BOOK_PRESET`/`BOOK_PROFILE` → root `.env` → the literal value in `defineBookSchemas` → a warned `minimal` v4 compatibility fallback. Every selected value is checked against the five-preset enum; config-evaluation failures stop validation instead of silently using defaults.
+The validator evaluates `astro.config.*` through Vite first. A resolved scaffold integration supplies the composed preset and `numberStyle`, so CLI tooling sees the same Style chain as the Astro build. The evaluated Astro `base` is read from that same config regardless of whether the scaffold integration is present; omission defaults to `/`. Without such an integration, the legacy preset chain remains: `--preset` → process `BOOK_PRESET`/`BOOK_PROFILE` → root `.env` → the literal value in `defineBookSchemas` → a warned `minimal` v4 compatibility fallback. Every selected value is checked against the five-preset enum; config-evaluation failures stop validation instead of silently using defaults.
 
 `chaptersBase` resolution still consults `BOOK_CHAPTERS_DIR`, content configuration, then `src/content/chapters`. The v4.5+ canonical form is:
 
