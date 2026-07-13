@@ -128,6 +128,7 @@ export async function* walkMdx(dir, baseDir = dir) {
   } catch {
     return; // dir missing or unreadable — treat as zero chapters
   }
+  entries.sort((a, b) => a.name.localeCompare(b.name));
   for (const entry of entries) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
@@ -242,12 +243,17 @@ export async function readBookSchemaConfig(projectRoot) {
  *
  * Honors env override: BOOK_CHAPTERS_DIR (when set) wins over config parse.
  */
-export async function readChaptersBase(projectRoot) {
+export async function readChaptersBase(projectRoot, { corpus = null } = {}) {
   const envOverride = process.env.BOOK_CHAPTERS_DIR;
   if (envOverride) {
     return resolve(projectRoot, envOverride);
   }
-  const DEFAULT_BASE = resolve(projectRoot, 'src/content/chapters');
+  // A corpus registers first-segment book ids under one shared content root;
+  // single-book projects retain Astro's historical `chapters/` directory.
+  const DEFAULT_BASE = resolve(
+    projectRoot,
+    corpus ? 'src/content' : 'src/content/chapters',
+  );
   for (const ext of ['ts', 'mjs', 'js']) {
     const configPath = join(projectRoot, `src/content.config.${ext}`);
     if (!existsSync(configPath)) continue;

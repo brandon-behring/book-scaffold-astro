@@ -52,6 +52,12 @@ import { walkMdx, readChaptersBase, readBookSchemaConfig } from './walk-mdx.mjs'
 import { readEnvFile } from './read-env.mjs';
 import { loadResolvedBookConfig } from './resolve-book-config.mjs';
 import {
+  assertCorpusEnvelope,
+  frontmatterSlug,
+  legacyFrontmatterBook,
+  resolveBookSelection,
+} from './corpus-tooling.mjs';
+import {
   findAuthoredTargets,
   normalizeAstroBase,
   rootTargetEscapesBase,
@@ -68,6 +74,7 @@ internal authored links, and (when BOOK_REPO_ROOT is set) CodeRef paths.
 Options:
   --preset <name>    academic | tools | minimal | course-notes | research-portfolio
                      Legacy override when no scaffold integration is resolved.
+  --book <id>        In corpus mode, validate only one registered book.
   --help, -h         Print this message and exit (non-mutating).
 
 Env:
@@ -93,11 +100,6 @@ const presetFromFlag = presetFlagIdx >= 0 ? argv[presetFlagIdx + 1] : undefined;
 // Resolves issue #8 — three reference consumers reported "0 chapter(s) checked"
 // because ROOT was the package directory inside node_modules.
 const ROOT = process.cwd();
-// v4.1.1 (closes #63): read the consumer's content.config.{ts,mjs,js} to
-// honor `loader.base` overrides (multi-guide pattern uses
-// `src/content/<guide-slug>/` instead of the Astro 5 default).
-// Falls back to `src/content/chapters` when no override / no config file.
-const CHAPTERS_DIR = await readChaptersBase(ROOT);
 const PUBLIC_DIR = resolve(ROOT, 'public');
 const DATA_DIR = resolve(ROOT, 'src/data');
 
@@ -108,6 +110,16 @@ try {
   process.stderr.write(`validate: fatal: ${error?.message ?? error}\n`);
   process.exit(1);
 }
+let BOOK_SELECTION;
+try {
+  BOOK_SELECTION = resolveBookSelection(TOOLING_CONFIG, argv, 'validate');
+} catch (error) {
+  process.stderr.write(`validate: fatal: ${error?.message ?? error}\n`);
+  process.exit(1);
+}
+// Corpus content uses one root with a registered first segment per book;
+// single-book consumers retain the historical chapters directory.
+const CHAPTERS_DIR = await readChaptersBase(ROOT, { corpus: BOOK_SELECTION.corpus });
 
 // Preset resolution:
 //   composed Astro-config preset > --preset flag > BOOK_PRESET env > BOOK_PROFILE env >
@@ -226,8 +238,9 @@ const REPO_ROOT = process.env.BOOK_REPO_ROOT ?? null;
 
 const errors = [];
 const warnings = [];
-const fail = (file, line, msg) => errors.push({ file, line, msg });
-const warn = (file, line, msg) => warnings.push({ file, line, msg });
+let ACTIVE_BOOK_ID = BOOK_SELECTION.corpus ? 'corpus' : null;
+const fail = (file, line, msg, book = ACTIVE_BOOK_ID) => errors.push({ file, line, msg, book });
+const warn = (file, line, msg, book = ACTIVE_BOOK_ID) => warnings.push({ file, line, msg, book });
 
 // ===== Self-heal missing generated artifacts (#186) =====
 // These files are intentionally gitignored. Direct `book-scaffold validate`
@@ -236,8 +249,13 @@ const warn = (file, line, msg) => warnings.push({ file, line, msg });
 // are propagated verbatim instead of becoming downstream unknown-id noise.
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 function regenerate(scriptName, artifact) {
-  process.stdout.write(`validate: ${artifact} is missing — regenerating via ${scriptName} (#186)\n`);
-  const result = spawnSync(process.execPath, [join(scriptDir, scriptName)], {
+  const prefix = BOOK_SELECTION.corpus ? '[book:corpus] ' : '';
+  process.stdout.write(
+    `${prefix}validate: ${artifact} is missing — regenerating via ${scriptName} (#186)\n`,
+  );
+  const childArgs = [join(scriptDir, scriptName)];
+  if (BOOK_SELECTION.requestedBook) childArgs.push('--book', BOOK_SELECTION.requestedBook);
+  const result = spawnSync(process.execPath, childArgs, {
     cwd: ROOT,
     env: process.env,
     encoding: 'utf8',
@@ -247,7 +265,7 @@ function regenerate(scriptName, artifact) {
   if (result.error || result.status !== 0) {
     const detail = result.error ? `: ${result.error.message}` : '';
     process.stderr.write(
-      `validate: ${scriptName} failed (exit ${result.status ?? 1})${detail} — cannot self-heal.\n`,
+      `${prefix}validate: ${scriptName} failed (exit ${result.status ?? 1})${detail} — cannot self-heal.\n`,
     );
     process.exit(result.status ?? 1);
   }
@@ -268,8 +286,28 @@ async function loadJson(path) {
     return {};
   }
 }
-const refs = await loadJson(join(DATA_DIR, 'references.json'));
-const labels = await loadJson(join(DATA_DIR, 'labels.json'));
+function isRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+async function loadGeneratedArtifact(name) {
+  const path = join(DATA_DIR, name);
+  if (!BOOK_SELECTION.corpus) return loadJson(path);
+  try {
+    const parsed = JSON.parse(await readFile(path, 'utf8'));
+    return assertCorpusEnvelope(parsed, BOOK_SELECTION.corpus, `src/data/${name}`, isRecord);
+  } catch (error) {
+    process.stderr.write(
+      `[book:corpus] validate: fatal: ${error?.message ?? error}. ` +
+        `Run book-scaffold ${name === 'labels.json' ? 'build-labels' : 'build-bib'} ` +
+        'to regenerate the corpus envelope.\n',
+    );
+    process.exit(1);
+  }
+}
+
+const refsArtifact = await loadGeneratedArtifact('references.json');
+const labelsArtifact = await loadGeneratedArtifact('labels.json');
 
 // #147: eagerly load every labels index explicitly declared by the evaluated
 // siblingBooks registry. Unlike this book's generated labels.json, sibling
@@ -304,15 +342,67 @@ for (const [book, entry] of Object.entries(TOOLING_CONFIG.siblingBooks)) {
 // Node 20 — `npm run validate` crashed on every consumer's prebuild hook.
 // Walker uses readdir + path only; works on Node 18+.
 const chapterFiles = [];
-for await (const f of walkMdx(CHAPTERS_DIR)) {
-  if (!f.split('/').pop().startsWith('_')) chapterFiles.push(f);
+const chapterBookByFile = new Map();
+const chapterCountsByBook = new Map();
+if (BOOK_SELECTION.corpus) {
+  for (const book of BOOK_SELECTION.books) {
+    let count = 0;
+    for await (const file of walkMdx(join(CHAPTERS_DIR, book.id))) {
+      if (file.split('/').pop().startsWith('_')) continue;
+      const scoped = `${book.id}/${file}`;
+      chapterFiles.push(scoped);
+      chapterBookByFile.set(scoped, book.id);
+      count += 1;
+    }
+    chapterCountsByBook.set(book.id, count);
+  }
+} else {
+  for await (const file of walkMdx(CHAPTERS_DIR)) {
+    if (!file.split('/').pop().startsWith('_')) chapterFiles.push(file);
+  }
+}
+
+function bookArtifacts(rel) {
+  const book = chapterBookByFile.get(rel) ?? null;
+  if (!book) return { book: null, refs: refsArtifact, labels: labelsArtifact };
+  return {
+    book,
+    refs: refsArtifact.books[book],
+    labels: labelsArtifact.books[book],
+  };
 }
 
 // ===== Build slug set from chapter filenames (for internal-link check) =====
-const validSlugs = new Set(chapterFiles.map((f) => f.replace(/\.(md|mdx)$/, '')));
+const validSlugs = new Set(
+  BOOK_SELECTION.corpus
+    ? []
+    : chapterFiles.map((file) => file.replace(/\.(md|mdx)$/, '')),
+);
+if (BOOK_SELECTION.corpus) {
+  // A selected validation run still needs the complete route set so links to
+  // another registered local book are checked rather than misreported.
+  for (const book of BOOK_SELECTION.corpus.books) {
+    for await (const file of walkMdx(join(CHAPTERS_DIR, book.id))) {
+      if (!file.split('/').pop().startsWith('_')) {
+        const source = await readFile(join(CHAPTERS_DIR, book.id, file), 'utf8');
+        const localId = frontmatterSlug(source) ?? file.replace(/\.(md|mdx)$/, '');
+        validSlugs.add(`${book.id}/${localId}`);
+      }
+    }
+  }
+}
 const validTopLevelRoutes = new Set([
   '/', '/chapters/', '/references/', '/search/', '/print/', '/convergence/',
 ]);
+if (BOOK_SELECTION.corpus) {
+  for (const book of BOOK_SELECTION.corpus.books) {
+    validTopLevelRoutes.add(`/${book.id}/`);
+    validTopLevelRoutes.add(`/chapters/${book.id}/`);
+    for (const route of book.apparatus ?? []) {
+      validTopLevelRoutes.add(`/${book.id}/${route}/`);
+    }
+  }
+}
 
 // ===== Pattern helpers for component-specific checks =====
 const RE_CITE = /<Cite[^>]+key=["']([^"']+)["']/g;
@@ -504,10 +594,76 @@ function siblingTargetCandidates(index, fragment) {
   return candidates;
 }
 
+function normalizeCorpusTarget(book, to) {
+  if (typeof to !== 'string' || to.trim().length === 0) {
+    return { error: 'target must be non-empty' };
+  }
+  if (to !== to.trim()) return { error: 'surrounding whitespace is not allowed' };
+  if (/^[a-z][a-z0-9+.-]*:/i.test(to) || to.startsWith('/') || to.includes('\\')) {
+    return { error: 'absolute URLs and paths are not allowed' };
+  }
+  if (/[\u0000-\u001f\u007f]/.test(to)) return { error: 'control characters are not allowed' };
+
+  const query = to.indexOf('?');
+  const hash = to.indexOf('#');
+  const suffixIndex = [query, hash]
+    .filter((index) => index >= 0)
+    .reduce((minimum, index) => Math.min(minimum, index), to.length);
+  const path = to.slice(0, suffixIndex).replace(/\/+$/, '');
+  if (!path) return { error: 'query-only and fragment-only targets are not allowed' };
+  const segments = path.split('/');
+  if (segments.some((segment) => segment.length === 0)) {
+    return { error: 'empty path segments are not allowed' };
+  }
+  for (const segment of segments) {
+    let decoded;
+    try {
+      decoded = decodeURIComponent(segment);
+    } catch {
+      return { error: 'malformed percent encoding' };
+    }
+    if (decoded === '.' || decoded === '..' || decoded.includes('/') || decoded.includes('\\')) {
+      return { error: 'path traversal is not allowed' };
+    }
+  }
+
+  const localPath = segments.join('/');
+  const canonicalPath = localPath === 'chapters'
+    ? `chapters/${book.id}`
+    : localPath.startsWith('chapters/')
+      ? `chapters/${book.id}/${localPath.slice('chapters/'.length)}`
+      : `${book.id}/${localPath}`;
+  const fragment = hash >= 0 ? to.slice(hash + 1) : null;
+  return {
+    error: null,
+    localPath,
+    canonicalPath,
+    fragment,
+    href: fragment ? `${canonicalPath}#${fragment}` : canonicalPath,
+    chapterSlug: localPath.startsWith('chapters/')
+      ? `${book.id}/${localPath.slice('chapters/'.length)}`
+      : null,
+  };
+}
+
 // ===== Run all checks on each chapter =====
 for (const rel of chapterFiles) {
   const abs = join(CHAPTERS_DIR, rel);
   const content = await readFile(abs, 'utf8');
+  const artifacts = bookArtifacts(rel);
+  const { refs, labels } = artifacts;
+  ACTIVE_BOOK_ID = artifacts.book;
+  if (artifacts.book) {
+    const legacy = legacyFrontmatterBook(content);
+    if (legacy && legacy.value !== artifacts.book) {
+      fail(
+        rel,
+        legacy.line,
+        `frontmatter book ${JSON.stringify(legacy.value)} does not match ` +
+          `path-derived corpus book ${JSON.stringify(artifacts.book)}.`,
+      );
+    }
+  }
   const authoredTargets = collectAuthoredTargets(rel, content);
 
   // 10. Root-absolute authored targets under a non-root Astro base (#190).
@@ -653,12 +809,88 @@ for (const rel of chapterFiles) {
     }
 
     const book = bookAttr.value;
+    const corpusBook = BOOK_SELECTION.corpus?.books.find((candidate) => candidate.id === book);
+    if (corpusBook) {
+      if (!toAttr.literal) {
+        warn(
+          rel,
+          line,
+          `<BookLink book="${book}"> target validation skipped: dynamic to= expression cannot be evaluated statically.`,
+        );
+        continue;
+      }
+
+      const target = normalizeCorpusTarget(corpusBook, toAttr.value);
+      if (target.error) {
+        fail(
+          rel,
+          line,
+          `<BookLink book="${book}" to="${toAttr.value}"> has invalid local corpus target: ` +
+            `${target.error}.`,
+        );
+        continue;
+      }
+
+      let targetExists = true;
+      if (target.chapterSlug) {
+        targetExists = validSlugs.has(target.chapterSlug);
+      } else if (target.localPath !== 'chapters') {
+        const [apparatus] = target.localPath.split('/');
+        targetExists = (
+          corpusBook.apparatus ?? TOOLING_CONFIG.apparatusRoutes
+        ).includes(apparatus);
+      }
+      if (!targetExists) {
+        fail(
+          rel,
+          line,
+          `<BookLink book="${book}" to="${toAttr.value}"> — unknown local corpus target ` +
+            `"${target.canonicalPath}".`,
+        );
+        continue;
+      }
+
+      if (target.fragment !== null) {
+        if (target.fragment.length === 0) {
+          fail(
+            rel,
+            line,
+            `<BookLink book="${book}" to="${toAttr.value}"> — local fragment is empty.`,
+          );
+          continue;
+        }
+        const localIndex = labelsArtifact.books[book];
+        const candidates = siblingTargetCandidates(localIndex, target.fragment);
+        if (!candidates.some((candidate) => candidate.normalized.href === target.href)) {
+          const indexedHrefs = candidates.map((candidate) => `"${candidate.href}"`).join(', ');
+          fail(
+            rel,
+            line,
+            `<BookLink book="${book}" to="${toAttr.value}"> — local fragment ` +
+              `"${target.fragment}" does not resolve in labels.json book namespace "${book}"` +
+              (indexedHrefs ? ` (indexed at ${indexedHrefs})` : '') +
+              '.',
+          );
+        }
+      }
+      continue;
+    }
+
     const registered = Object.prototype.hasOwnProperty.call(TOOLING_CONFIG.siblingBooks, book);
     if (!registered) {
+      const known = [
+        ...(BOOK_SELECTION.corpus?.books.map((candidate) => candidate.id) ?? []),
+        ...Object.keys(TOOLING_CONFIG.siblingBooks),
+      ];
       fail(
         rel,
         line,
-        `<BookLink book="${book}"> — not in evaluated defineBookConfig siblingBooks (${Object.keys(TOOLING_CONFIG.siblingBooks).join(', ') || 'none'}). Register it or fix the key.`,
+        BOOK_SELECTION.corpus
+          ? `<BookLink book="${book}"> — not a registered local corpus or sibling book ` +
+              `(${known.join(', ') || 'none'}). Register it or fix the key.`
+          : `<BookLink book="${book}"> — not in evaluated defineBookConfig siblingBooks ` +
+              `(${Object.keys(TOOLING_CONFIG.siblingBooks).join(', ') || 'none'}). ` +
+              'Register it or fix the key.',
       );
       continue;
     }
@@ -805,6 +1037,7 @@ for (const rel of chapterFiles) {
     }
   }
 }
+ACTIVE_BOOK_ID = BOOK_SELECTION.corpus ? 'corpus' : null;
 
 // ===== 8. Questions collection (#112): domain membership + unique ids =====
 //
@@ -904,11 +1137,49 @@ let questionsChecked = 0;
 }
 
 // ===== Report =====
-const format = ({ file, line, msg }) => `  ${file}:${line}  ${msg}`;
+const format = ({ file, line, msg, book }) =>
+  `${book ? `[book:${book}] ` : '  '}${file}:${line}  ${msg}`;
 if (warnings.length > 0) {
-  console.warn(`validate: ${warnings.length} warning(s):`);
-  warnings.forEach((w) => console.warn(format(w)));
+  const prefix = BOOK_SELECTION.corpus ? '[book:corpus] ' : '';
+  console.warn(`${prefix}validate: ${warnings.length} warning(s):`);
+  warnings.forEach((warning) => console.warn(format(warning)));
 }
+
+if (BOOK_SELECTION.corpus) {
+  for (const book of BOOK_SELECTION.books) {
+    const count = chapterCountsByBook.get(book.id) ?? 0;
+    const bookErrors = errors.filter((error) => error.book === book.id).length;
+    const bookWarnings = warnings.filter((warning) => warning.book === book.id).length;
+    const result = bookErrors === 0 ? '✓' : '✗';
+    const detail = bookErrors === 0
+      ? 'no errors'
+      : `${bookErrors} error${bookErrors === 1 ? '' : 's'}`;
+    console.log(
+      `[book:${book.id}] validate: ${result} ${count} chapter(s) checked; ${detail}, ` +
+        `${bookWarnings} warning${bookWarnings === 1 ? '' : 's'} ` +
+        `(profile=${PROFILE}, number-style=${TOOLING_CONFIG.numberStyle}).`,
+    );
+  }
+
+  const qNote = questionsChecked > 0 ? ` + ${questionsChecked} question(s)` : '';
+  const aggregateResult = errors.length === 0 ? '✓' : '✗';
+  const aggregateDetail = errors.length === 0
+    ? 'no errors'
+    : `${errors.length} error${errors.length === 1 ? '' : 's'}`;
+  const aggregateMessage =
+    `[book:corpus] validate: ${aggregateResult} ${chapterFiles.length} chapter(s)${qNote} ` +
+    `across ${BOOK_SELECTION.books.length} book${BOOK_SELECTION.books.length === 1 ? '' : 's'}; ` +
+    `${aggregateDetail}, ${warnings.length} warning${warnings.length === 1 ? '' : 's'} ` +
+    `(profile=${PROFILE}, number-style=${TOOLING_CONFIG.numberStyle})`;
+  if (errors.length === 0) {
+    console.log(`${aggregateMessage}.`);
+    process.exit(0);
+  }
+  console.error(`${aggregateMessage}:`);
+  errors.forEach((error) => console.error(format(error)));
+  process.exit(Math.min(errors.length, 255));
+}
+
 if (errors.length === 0) {
   const qNote = questionsChecked > 0 ? ` + ${questionsChecked} question(s)` : '';
   console.log(
@@ -921,5 +1192,5 @@ console.error(
   `validate: ✗ ${errors.length} error(s) in ${chapterFiles.length} chapter(s) ` +
     `(profile=${PROFILE}, number-style=${TOOLING_CONFIG.numberStyle}):`,
 );
-errors.forEach((e) => console.error(format(e)));
+errors.forEach((error) => console.error(format(error)));
 process.exit(Math.min(errors.length, 255));

@@ -40,6 +40,8 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readEnvFile } from './read-env.mjs';
+import { loadResolvedBookConfig } from './resolve-book-config.mjs';
+import { mergeCorpusArtifact, resolveBookSelection } from './corpus-tooling.mjs';
 
 // --help / -h: non-mutating (closes #14).
 const USAGE = `Usage: book-scaffold build-bib
@@ -54,6 +56,7 @@ Env:
                      .env; default: ./bibliography.bib).
 
 Options:
+  --book <id>        In corpus mode, rebuild only one registered book.
   --help, -h         Print this message and exit (non-mutating).
 `;
 
@@ -78,7 +81,11 @@ const OUT_PATH = resolve(PROJECT_ROOT, 'src/data/references.json');
 const SOURCES_PATH = resolve(PROJECT_ROOT, 'sources/manifest.yaml');
 const SOURCES_OUT = resolve(PROJECT_ROOT, 'src/data/sources.json');
 
-async function buildReferences() {
+function isRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+async function buildReferences(selection) {
   // Graceful skip when the .bib file is absent (minimal/tools profile, or
   // an academic book that hasn't authored citations yet). Emits an empty
   // references.json so consumers can still `import refs from '...'`.
@@ -87,15 +94,10 @@ async function buildReferences() {
     bibText = await readFile(BIB_PATH, 'utf8');
   } catch (err) {
     if (err.code === 'ENOENT') {
-      console.log(
-        `build-bib: ${BIB_PATH.replace(PROJECT_ROOT + '/', '')} not found — ` +
-          `emitting empty references.json (no citations to process).`,
-      );
-      await mkdir(dirname(OUT_PATH), { recursive: true });
-      await writeFile(OUT_PATH, '{}\n', 'utf8');
-      return;
+      bibText = null;
+    } else {
+      throw err;
     }
-    throw err;
   }
   // v4.0.0 (closes #54): strip `%`-comment lines before passing to citation-js.
   // The plugin-bibtex lexer doesn't honor BibTeX's %-line-comment semantics —
@@ -107,13 +109,14 @@ async function buildReferences() {
   // BibTeX's real comment grammar is "% at the start of a line (after optional
   // whitespace) to end of line". Mid-line `%` (e.g., `note = {50% confidence}`)
   // is NOT a comment and is preserved.
-  const sanitizedBib = bibText
-    .split(/\r?\n/)
-    .map((line) => (line.trimStart().startsWith('%') ? '' : line))
-    .join('\n');
-
-  const cite = new Cite(sanitizedBib);
-  const data = cite.data;
+  const data = bibText === null
+    ? []
+    : new Cite(
+        bibText
+          .split(/\r?\n/)
+          .map((line) => (line.trimStart().startsWith('%') ? '' : line))
+          .join('\n'),
+      ).data;
 
   // Detect duplicates the way biber would (citation-js silently
   // overwrites the earlier entry, which is the opposite of what we want).
@@ -131,12 +134,42 @@ async function buildReferences() {
 
   const byKey = Object.fromEntries(data.map((entry) => [entry.id, entry]));
 
+  const output = selection.corpus
+    ? await mergeCorpusArtifact({
+        path: OUT_PATH,
+        corpus: selection.corpus,
+        requestedBook: selection.requestedBook,
+        values: new Map(selection.books.map((book) => [book.id, byKey])),
+        emptyValue: () => ({}),
+        artifact: 'src/data/references.json',
+        validateValue: isRecord,
+      })
+    : byKey;
   await mkdir(dirname(OUT_PATH), { recursive: true });
-  await writeFile(OUT_PATH, JSON.stringify(byKey, null, 2) + '\n', 'utf8');
+  await writeFile(OUT_PATH, JSON.stringify(output, null, 2) + '\n', 'utf8');
 
-  console.log(
-    `build-bib: ${data.length} entries -> ${OUT_PATH.replace(PROJECT_ROOT + '/', '')}`,
-  );
+  if (selection.corpus) {
+    for (const book of selection.books) {
+      console.log(
+        `[book:${book.id}] build-bib: ${data.length} entries -> ` +
+          OUT_PATH.replace(PROJECT_ROOT + '/', ''),
+      );
+    }
+    console.log(
+      `[book:corpus] build-bib: ${data.length * selection.books.length} namespaced entries ` +
+        `across ${selection.books.length} book${selection.books.length === 1 ? '' : 's'} -> ` +
+        OUT_PATH.replace(PROJECT_ROOT + '/', ''),
+    );
+  } else if (bibText === null) {
+    console.log(
+      `build-bib: ${BIB_PATH.replace(PROJECT_ROOT + '/', '')} not found — ` +
+        `emitting empty references.json (no citations to process).`,
+    );
+  } else {
+    console.log(
+      `build-bib: ${data.length} entries -> ${OUT_PATH.replace(PROJECT_ROOT + '/', '')}`,
+    );
+  }
 }
 
 // v4.10.0 (closes #85): tools-profile books keep their sources in
@@ -147,7 +180,7 @@ async function buildReferences() {
 // references.json. Absent manifest -> no file written (academic/minimal books
 // degrade to empty, exactly like a missing .bib). YAML is lazy-imported so the
 // --help / no-manifest paths stay dependency-free.
-async function buildSources() {
+async function buildSources(selection) {
   let yamlText;
   try {
     yamlText = await readFile(SOURCES_PATH, 'utf8');
@@ -165,17 +198,46 @@ async function buildSources() {
     ? parsed.filter((s) => s && typeof s.id === 'string')
     : [];
 
+  const output = selection.corpus
+    ? await mergeCorpusArtifact({
+        path: SOURCES_OUT,
+        corpus: selection.corpus,
+        requestedBook: selection.requestedBook,
+        values: new Map(selection.books.map((book) => [book.id, sources])),
+        emptyValue: () => [],
+        artifact: 'src/data/sources.json',
+        validateValue: Array.isArray,
+      })
+    : sources;
   await mkdir(dirname(SOURCES_OUT), { recursive: true });
-  await writeFile(SOURCES_OUT, JSON.stringify(sources, null, 2) + '\n', 'utf8');
-  console.log(
-    `build-bib: ${sources.length} source${sources.length === 1 ? '' : 's'} -> ` +
-      `${SOURCES_OUT.replace(PROJECT_ROOT + '/', '')}`,
-  );
+  await writeFile(SOURCES_OUT, JSON.stringify(output, null, 2) + '\n', 'utf8');
+  if (selection.corpus) {
+    for (const book of selection.books) {
+      console.log(
+        `[book:${book.id}] build-bib: ${sources.length} ` +
+          `source${sources.length === 1 ? '' : 's'} -> ` +
+          SOURCES_OUT.replace(PROJECT_ROOT + '/', ''),
+      );
+    }
+    console.log(
+      `[book:corpus] build-bib: ${sources.length * selection.books.length} namespaced ` +
+        `source${sources.length * selection.books.length === 1 ? '' : 's'} across ` +
+        `${selection.books.length} book${selection.books.length === 1 ? '' : 's'} -> ` +
+        SOURCES_OUT.replace(PROJECT_ROOT + '/', ''),
+    );
+  } else {
+    console.log(
+      `build-bib: ${sources.length} source${sources.length === 1 ? '' : 's'} -> ` +
+        `${SOURCES_OUT.replace(PROJECT_ROOT + '/', '')}`,
+    );
+  }
 }
 
 async function main() {
-  await buildReferences();
-  await buildSources();
+  const toolingConfig = await loadResolvedBookConfig(PROJECT_ROOT);
+  const selection = resolveBookSelection(toolingConfig, process.argv.slice(2), 'build-bib');
+  await buildReferences(selection);
+  await buildSources(selection);
 }
 
 main().catch((err) => {

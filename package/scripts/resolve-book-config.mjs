@@ -6,8 +6,11 @@ export const DEFAULT_TOOLING_CONFIG = Object.freeze({
   preset: null,
   numberStyle: 'shared',
   siblingBooks: Object.freeze({}),
+  corpus: null,
   chapterRoute: '/chapters/:id/',
   bookField: 'book',
+  apparatusRoute: '/:route/',
+  apparatusRoutes: Object.freeze([]),
   base: '/',
   integrationFound: false,
 });
@@ -19,6 +22,17 @@ const ASTRO_CONFIG_NAMES = [
   'astro.config.cjs',
 ];
 const PRESETS = ['academic', 'tools', 'minimal', 'course-notes', 'research-portfolio'];
+const APPARATUS_ROUTES = [
+  'references',
+  'print',
+  'convergence',
+  'tips',
+  'exercises',
+  'glossary',
+  'practice-exam',
+  'flashcards',
+  'answers',
+];
 
 function findAstroConfig(projectRoot) {
   for (const name of ASTRO_CONFIG_NAMES) {
@@ -115,6 +129,81 @@ function resolveSiblingBooks(value, configPath) {
   return Object.fromEntries(resolved);
 }
 
+function resolveApparatusRoutes(value, configPath) {
+  if (value == null) return [];
+  if (
+    !Array.isArray(value) ||
+    value.some((route) => typeof route !== 'string' || !APPARATUS_ROUTES.includes(route)) ||
+    new Set(value).size !== value.length
+  ) {
+    throw new Error(
+      `book-scaffold tooling: ${configPath} resolved invalid apparatusRoutes; ` +
+        `expected unique values from ${APPARATUS_ROUTES.join(' | ')}.`,
+    );
+  }
+  return Object.freeze([...value]);
+}
+
+function resolveCorpus(value, preset, configPath) {
+  if (value == null) return null;
+  if (
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    value.__bookCorpusVersion !== 1 ||
+    !PRESETS.includes(value.preset) ||
+    !Array.isArray(value.books) ||
+    value.books.length === 0
+  ) {
+    throw new Error(
+      `book-scaffold tooling: ${configPath} resolved invalid corpus metadata; ` +
+        'expected defineBookCorpus() v1 output.',
+    );
+  }
+  if (preset != null && value.preset !== preset) {
+    throw new Error(
+      `book-scaffold tooling: ${configPath} resolved corpus preset ` +
+        `${JSON.stringify(value.preset)} but integration preset is ${JSON.stringify(preset)}.`,
+    );
+  }
+
+  const seen = new Set();
+  const books = value.books.map((book, index) => {
+    if (
+      book === null ||
+      typeof book !== 'object' ||
+      Array.isArray(book) ||
+      typeof book.id !== 'string' ||
+      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(book.id) ||
+      typeof book.title !== 'string' ||
+      book.title.trim().length === 0
+    ) {
+      throw new Error(
+        `book-scaffold tooling: ${configPath} resolved invalid corpus.books[${index}].`,
+      );
+    }
+    if (seen.has(book.id)) {
+      throw new Error(
+        `book-scaffold tooling: ${configPath} resolved duplicate corpus book ` +
+          `${JSON.stringify(book.id)}.`,
+      );
+    }
+    seen.add(book.id);
+    const apparatus = book.apparatus === undefined
+      ? undefined
+      : resolveApparatusRoutes(book.apparatus, configPath);
+    return Object.freeze({
+      ...book,
+      ...(apparatus === undefined ? {} : { apparatus }),
+    });
+  });
+
+  return Object.freeze({
+    __bookCorpusVersion: 1,
+    preset: value.preset,
+    books: Object.freeze(books),
+  });
+}
+
 /**
  * Evaluate the consumer's actual Astro config and read the scaffold
  * integration's internal resolved metadata. Absence of a config/integration is
@@ -162,10 +251,12 @@ export async function loadResolvedBookConfig(projectRoot = process.cwd()) {
   const numberStyle = metadata.numberStyle ?? 'shared';
   assertNumberStyle(numberStyle, configPath);
   assertPreset(metadata.preset, configPath);
+  const preset = metadata.preset ?? null;
   return {
-    preset: metadata.preset ?? null,
+    preset,
     numberStyle,
     siblingBooks: resolveSiblingBooks(metadata.siblingBooks, configPath),
+    corpus: resolveCorpus(metadata.corpus, preset, configPath),
     chapterRoute: resolveNonEmptyString(
       metadata.chapterRoute,
       DEFAULT_TOOLING_CONFIG.chapterRoute,
@@ -178,6 +269,13 @@ export async function loadResolvedBookConfig(projectRoot = process.cwd()) {
       'bookField',
       configPath,
     ),
+    apparatusRoute: resolveNonEmptyString(
+      metadata.apparatusRoute,
+      DEFAULT_TOOLING_CONFIG.apparatusRoute,
+      'apparatusRoute',
+      configPath,
+    ),
+    apparatusRoutes: resolveApparatusRoutes(metadata.apparatusRoutes, configPath),
     base,
     integrationFound: true,
   };

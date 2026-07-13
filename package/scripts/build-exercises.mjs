@@ -24,6 +24,13 @@
 import { writeFile, mkdir, readFile } from 'node:fs/promises';
 import { resolve, dirname, basename } from 'node:path';
 import { walkMdx, readChaptersBase } from './walk-mdx.mjs';
+import { loadResolvedBookConfig } from './resolve-book-config.mjs';
+import {
+  assertLegacyBookMatches,
+  frontmatterSlug,
+  mergeCorpusArtifact,
+  resolveBookSelection,
+} from './corpus-tooling.mjs';
 
 const USAGE = `Usage: book-scaffold build-exercises
 
@@ -36,6 +43,7 @@ Env:
   BOOK_EXERCISES_OUT       Override output path (default: src/data/exercises.json).
 
 Options:
+  --book <id>              In corpus mode, rebuild only one registered book.
   --help, -h               Print this message and exit (non-mutating).
 `;
 
@@ -45,7 +53,6 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 }
 
 const CWD = process.cwd();
-const CHAPTERS_DIR = await readChaptersBase(CWD);
 const OUTPUT_PATH = process.env.BOOK_EXERCISES_OUT ?? 'src/data/exercises.json';
 
 /**
@@ -85,34 +92,95 @@ function extractExercises(source) {
 }
 
 async function main() {
-  const byChapter = {};
-  let totalExercises = 0;
-  let chaptersWithExercises = 0;
+  const toolingConfig = await loadResolvedBookConfig(CWD);
+  const selection = resolveBookSelection(
+    toolingConfig,
+    process.argv.slice(2),
+    'build-exercises',
+  );
+  const chaptersRoot = await readChaptersBase(CWD, { corpus: selection.corpus });
+  const runs = selection.corpus
+    ? selection.books.map((book) => ({ book, dir: resolve(chaptersRoot, book.id) }))
+    : [{ book: null, dir: chaptersRoot }];
+  const values = new Map();
+  let corpusExercises = 0;
+  let corpusChapters = 0;
 
-  for await (const rel of walkMdx(CHAPTERS_DIR)) {
-    const chapterPath = resolve(CHAPTERS_DIR, rel);
-    const chapterSlug = basename(rel).replace(/\.mdx?$/, '');
-    let source;
-    try {
-      source = await readFile(chapterPath, 'utf8');
-    } catch {
-      continue;
+  for (const run of runs) {
+    const byChapter = {};
+    let totalExercises = 0;
+    let chaptersWithExercises = 0;
+
+    for await (const rel of walkMdx(run.dir)) {
+      const chapterPath = resolve(run.dir, rel);
+      let source;
+      try {
+        source = await readFile(chapterPath, 'utf8');
+      } catch {
+        continue;
+      }
+      if (run.book) {
+        assertLegacyBookMatches(
+          source,
+          run.book,
+          `[book:${run.book.id}] ${chapterPath.replace(`${CWD}/`, '')}`,
+        );
+      }
+      const chapterSlug = run.book
+        ? frontmatterSlug(source) ?? rel.replace(/\.mdx?$/, '')
+        : basename(rel).replace(/\.mdx?$/, '');
+      const exercises = extractExercises(source);
+      if (exercises.length > 0) {
+        byChapter[chapterSlug] = exercises;
+        totalExercises += exercises.length;
+        chaptersWithExercises += 1;
+      }
     }
-    const exercises = extractExercises(source);
-    if (exercises.length > 0) {
-      byChapter[chapterSlug] = exercises;
-      totalExercises += exercises.length;
-      chaptersWithExercises += 1;
+
+    if (run.book) {
+      values.set(run.book.id, byChapter);
+      corpusExercises += totalExercises;
+      corpusChapters += chaptersWithExercises;
+      process.stdout.write(
+        `[book:${run.book.id}] build-exercises: ${totalExercises} ` +
+          `exercise${totalExercises === 1 ? '' : 's'} across ${chaptersWithExercises} ` +
+          `chapter${chaptersWithExercises === 1 ? '' : 's'} → ${OUTPUT_PATH}\n`,
+      );
+    } else {
+      values.set('', byChapter);
+      corpusExercises = totalExercises;
+      corpusChapters = chaptersWithExercises;
     }
   }
 
   const outPath = resolve(CWD, OUTPUT_PATH);
+  const output = selection.corpus
+    ? await mergeCorpusArtifact({
+        path: outPath,
+        corpus: selection.corpus,
+        requestedBook: selection.requestedBook,
+        values,
+        emptyValue: () => ({}),
+        artifact: OUTPUT_PATH,
+        validateValue: (value) =>
+          value !== null && typeof value === 'object' && !Array.isArray(value),
+      })
+    : values.get('');
   await mkdir(dirname(outPath), { recursive: true });
-  await writeFile(outPath, JSON.stringify(byChapter, null, 2) + '\n');
-  process.stdout.write(
-    `build-exercises: ${totalExercises} exercise${totalExercises === 1 ? '' : 's'} across ` +
-      `${chaptersWithExercises} chapter${chaptersWithExercises === 1 ? '' : 's'} → ${OUTPUT_PATH}\n`,
-  );
+  await writeFile(outPath, JSON.stringify(output, null, 2) + '\n');
+  if (selection.corpus) {
+    process.stdout.write(
+      `[book:corpus] build-exercises: ${corpusExercises} ` +
+        `exercise${corpusExercises === 1 ? '' : 's'} across ${corpusChapters} ` +
+        `chapter${corpusChapters === 1 ? '' : 's'} and ${selection.books.length} ` +
+        `book${selection.books.length === 1 ? '' : 's'} → ${OUTPUT_PATH}\n`,
+    );
+  } else {
+    process.stdout.write(
+      `build-exercises: ${corpusExercises} exercise${corpusExercises === 1 ? '' : 's'} across ` +
+        `${corpusChapters} chapter${corpusChapters === 1 ? '' : 's'} → ${OUTPUT_PATH}\n`,
+    );
+  }
 }
 
 main().catch((err) => {

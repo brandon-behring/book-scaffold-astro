@@ -239,6 +239,8 @@ test('#175/#190: Vite loader reads composed metadata, evaluated base, and defaul
       corpus: null,
       chapterRoute: '/:id/',
       bookField: 'volume',
+      apparatusRoute: '/:route/',
+      apparatusRoutes: [],
       base: '/library/books',
       integrationFound: true,
     });
@@ -257,6 +259,8 @@ test('#175/#190: Vite loader reads composed metadata, evaluated base, and defaul
       corpus: null,
       chapterRoute: '/chapters/:id/',
       bookField: 'book',
+      apparatusRoute: '/:route/',
+      apparatusRoutes: [],
       base: '/',
       integrationFound: true,
     });
@@ -272,6 +276,8 @@ test('#175/#190: Vite loader reads composed metadata, evaluated base, and defaul
       corpus: null,
       chapterRoute: '/chapters/:id/',
       bookField: 'book',
+      apparatusRoute: '/:route/',
+      apparatusRoutes: [],
       base: 'standalone/',
       integrationFound: false,
     });
