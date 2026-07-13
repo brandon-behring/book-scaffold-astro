@@ -44,7 +44,11 @@ const isCorpusRoot = Boolean(bookConfig.corpus && !currentBook);
 // #142: prefix BASE_URL so chapter-card links stay inside a non-root deploy base.
 const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 
-const profileName = (import.meta.env.BOOK_PROFILE ?? 'minimal') as keyof typeof PROFILES;
+const configuredProfile = import.meta.env.BOOK_PROFILE;
+if (!configuredProfile) {
+  throw new Error('book-scaffold runtime is missing the integration-defined BOOK_PROFILE.');
+}
+const profileName = configuredProfile as keyof typeof PROFILES;
 const profileDef = PROFILES[profileName];
 const renderer: ChaptersRenderer =
   (profileDef as { chaptersRenderer?: ChaptersRenderer } | undefined)?.chaptersRenderer
@@ -118,6 +122,7 @@ for (const c of chapters) {
     (isCorpusRoot ? 'All books in this corpus.' : 'All chapters grouped by Part.')
   }
   bookId={currentBook?.id}
+  showSidebar={!isCorpusRoot}
   pagefindSurface={isCorpusRoot ? 'corpus' : undefined}
 >
   <article class="prose chapters-index">

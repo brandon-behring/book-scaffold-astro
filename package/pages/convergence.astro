@@ -19,6 +19,9 @@ import {
 } from '../src/lib/patterns';
 import { patternCategories } from '@brandon_m_behring/book-scaffold-astro';
 
+interface Props { bookId?: string; }
+const { bookId } = Astro.props;
+
 // A tools-profile book may use the inline <Convergence> component yet define
 // no `changelog/patterns.yaml` — then the `patterns` collection is never
 // registered and getCollection('patterns') errors with "The collection
@@ -51,6 +54,7 @@ const noManifestHint = hasPatterns
 <Base
   title="Convergence — Agentic Coding"
   description="Which agentic-coding patterns have converged across Claude Code, Gemini CLI, and Codex CLI — and when? A live timeline driven from the changelog manifest."
+  bookId={bookId}
 >
   <article class="prose convergence-dashboard">
     <header class="convergence-header">

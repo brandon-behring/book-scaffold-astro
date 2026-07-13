@@ -25,11 +25,14 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { AstroIntegration } from 'astro';
 import {
+  BookConfigError,
   CORPUS_APPARATUS_ROUTES,
+  type CorpusApparatusRoute,
   type BookCorpus,
   type BookScaffoldIntegrationOptions,
   type SiblingBooks,
 } from './types.js';
+import { CORPUS_APPARATUS_TOGGLE_BY_ROUTE } from './lib/corpus.js';
 import { PROFILES } from './profiles/index.js';
 import { normalizeFrontmatterConfig } from './lib/define-style.js';
 import { resolveGithubRepo, DEFAULT_GITHUB_BRANCH } from './lib/repo-url.js';
@@ -325,6 +328,45 @@ export function bookScaffoldIntegration(
     frontmatter: fmEnabled,
   };
 
+  // Corpus manifests speak in public URL slugs while RouteToggles uses the
+  // historical camelCase `practiceExam` key. Derive the inherited public set
+  // through the explicit map; never infer it with string inclusion.
+  if (corpus && apparatusRoutes !== undefined) {
+    throw new BookConfigError(
+      'Corpus mode owns apparatusRoutes; remove the explicit override and use each ' +
+        'manifest book.apparatus as a subset of the globally enabled route toggles.',
+    );
+  }
+  if (corpus) {
+    for (const book of corpus.books) {
+      for (const route of book.apparatus ?? []) {
+        const toggle = CORPUS_APPARATUS_TOGGLE_BY_ROUTE[route];
+        if (!enabledRoutes[toggle]) {
+          throw new BookConfigError(
+            `Corpus book ${JSON.stringify(book.id)} enables apparatus route ` +
+              `${JSON.stringify(route)}, but RouteToggles.${toggle} is disabled. ` +
+              `Enable routes.${toggle} globally or remove the book apparatus entry.`,
+          );
+        }
+      }
+    }
+  }
+  const inheritedCorpusApparatusRoutes: readonly CorpusApparatusRoute[] = corpus
+    ? CORPUS_APPARATUS_ROUTES.filter(
+        (route) => enabledRoutes[CORPUS_APPARATUS_TOGGLE_BY_ROUTE[route]],
+      )
+    : [];
+  const corpusApparatusRoutes: readonly CorpusApparatusRoute[] = corpus
+    ? CORPUS_APPARATUS_ROUTES.filter((route) =>
+        corpus.books.some((book) =>
+          (book.apparatus ?? inheritedCorpusApparatusRoutes).includes(route),
+        ),
+      )
+    : [];
+  const corpusApparatusToggleKeys = new Set<string>(
+    Object.values(CORPUS_APPARATUS_TOGGLE_BY_ROUTE),
+  );
+
   const integration: AstroIntegration = {
     name: 'book-scaffold-astro',
     hooks: {
@@ -351,6 +393,7 @@ export function bookScaffoldIntegration(
         const routesToInject: string[] = [];
         for (const [name, on] of Object.entries(enabledRoutes)) {
           if (!on) continue;
+          if (corpus && corpusApparatusToggleKeys.has(name)) continue;
           routesToInject.push(name);
           if (name === 'chapters') {
             routesToInject.push('chaptersSlug');
@@ -365,13 +408,19 @@ export function bookScaffoldIntegration(
             name === 'frontmatter' ? frontmatterPatternFromPrefix(fmPrefix) : route.pattern;
           if (corpus && name === 'chaptersSlug') {
             pattern = '/chapters/[book]/[...slug]';
-          } else if (corpus && CORPUS_APPARATUS_ROUTES.includes(name as never)) {
-            pattern = `/[book]/${route.pattern.replace(/^\/+/, '')}`;
           }
           injectRoute({
             pattern,
             entrypoint: resolvePage(route.file),
           });
+        }
+        if (corpus) {
+          for (const route of corpusApparatusRoutes) {
+            injectRoute({
+              pattern: `/[book]/${route}`,
+              entrypoint: resolvePage(`corpus-apparatus/${route}.astro`),
+            });
+          }
         }
 
         // 3. mdx-components virtual module (issue #2).
@@ -426,13 +475,9 @@ export function bookScaffoldIntegration(
                 chapterRoute: chapterRoute ?? '/chapters/:id/',
                 bookField: bookField ?? 'book',
                 apparatusRoute: corpus ? '/:book/:route/' : apparatusRoute ?? '/:route/',
-                apparatusRoutes:
-                  apparatusRoutes ??
-                  (corpus
-                    ? enabledRouteNames.filter((name) =>
-                        CORPUS_APPARATUS_ROUTES.includes(name as never),
-                      )
-                    : []),
+                apparatusRoutes: corpus
+                  ? inheritedCorpusApparatusRoutes
+                  : apparatusRoutes ?? [],
                 corpus: corpus ?? null,
               }),
             ],
@@ -488,13 +533,9 @@ export function bookScaffoldIntegration(
       chapterRoute: corpus ? '/chapters/:id/' : chapterRoute ?? '/chapters/:id/',
       bookField: bookField ?? 'book',
       apparatusRoute: corpus ? '/:book/:route/' : apparatusRoute ?? '/:route/',
-      apparatusRoutes:
-        apparatusRoutes ??
-        (corpus
-          ? Object.entries(enabledRoutes)
-              .filter(([name, enabled]) => enabled && CORPUS_APPARATUS_ROUTES.includes(name as never))
-              .map(([name]) => name)
-          : []),
+      apparatusRoutes: corpus
+        ? inheritedCorpusApparatusRoutes
+        : apparatusRoutes ?? [],
     }),
     enumerable: false,
     configurable: false,

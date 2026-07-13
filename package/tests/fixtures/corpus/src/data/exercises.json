@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "books": {
+    "evaluation": {},
+    "llm-app-engineering": {
+      "shared": [
+        {
+          "id": "shared-exercise",
+          "problem": "Prove the application boundary remains local."
+        }
+      ]
+    }
+  }
+}

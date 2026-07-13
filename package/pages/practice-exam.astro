@@ -42,15 +42,20 @@ import { getAllQuestions, groupByDomain } from '../src/lib/questions';
 import { assertKnownDomain } from '../src/lib/exam-domains';
 import { buildExamManifest } from '../src/lib/exam-manifest';
 
+interface Props { bookId?: string; }
+const { bookId } = Astro.props;
+
 // Presence-gate: only touch the collection when the directory holds files.
 const questionModules = import.meta.glob('/src/content/questions/**/*.{md,mdx}', {
   query: '?raw',
   import: 'default',
   eager: true,
 });
-const hasQuestions = Object.keys(questionModules).length > 0;
+const hasQuestions = bookId
+  ? Object.keys(questionModules).some((path) => path.includes(`/questions/${bookId}/`))
+  : Object.keys(questionModules).length > 0;
 
-const entries = hasQuestions ? await getAllQuestions() : [];
+const entries = hasQuestions ? await getAllQuestions(bookId) : [];
 
 // Fail-loud: every question's domain must be in the examDomains registry.
 for (const entry of entries) {
@@ -78,6 +83,7 @@ const manifest = buildExamManifest(entries);
 <Base
   title="Practice question bank"
   description="All practice questions in this book, grouped by exam domain, with a scored practice-exam mode and answers behind a reveal."
+  bookId={bookId}
 >
   <article class="prose practice-exam" data-exam-root>
     <h1>Practice question bank</h1>

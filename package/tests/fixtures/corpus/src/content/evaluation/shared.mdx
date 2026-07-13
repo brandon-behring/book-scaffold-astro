@@ -1,0 +1,31 @@
+---
+title: Shared Evaluation Chapter
+slug: shared
+chapter: 1
+part: 1
+last_verified: 2026-07-13
+description: Evaluation-only chapter content.
+---
+
+import Theorem from '@brandon_m_behring/book-scaffold-astro/components/Theorem.astro';
+import XRef from '@brandon_m_behring/book-scaffold-astro/components/XRef.astro';
+import Cite from '@brandon_m_behring/book-scaffold-astro/components/Cite.astro';
+import BookLink from '@brandon_m_behring/book-scaffold-astro/components/BookLink.astro';
+import Term from '@brandon_m_behring/book-scaffold-astro/components/Term.astro';
+import TipsCard from '@brandon_m_behring/book-scaffold-astro/components/TipsCard.astro';
+
+Evaluation-only sentinel. <XRef id="shared:theorem" /> is book-local.
+
+<Theorem id="shared:theorem" kind="theorem" name="Evaluation theorem">
+Evaluation evidence stays inside the evaluation book.
+</Theorem>
+
+The bibliography resolves <Cite key="shared2026" /> and <Term id="shared">shared term</Term>.
+
+Continue with the <BookLink book="llm-app-engineering" to="chapters/shared#llm-heading">LLM chapter</BookLink>.
+
+{import.meta.env.PUBLIC_CORPUS_GUARD_PROBE === '1' && <TipsCard />}
+
+## Evaluation heading
+
+Evaluation details.

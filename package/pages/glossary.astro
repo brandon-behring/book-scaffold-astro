@@ -16,6 +16,11 @@
  */
 import Base from '../layouts/Base.astro';
 import { getCollection, render } from 'astro:content';
+import bookConfig from 'virtual:book-scaffold/book-config';
+import { localCorpusEntryId } from '../src/lib/corpus';
+
+interface Props { bookId?: string; }
+const { bookId } = Astro.props;
 
 // Presence-gate: only touch the collection when the directory holds files.
 const glossModules = import.meta.glob('/src/content/glossary/**/*.{md,mdx}', {
@@ -23,14 +28,25 @@ const glossModules = import.meta.glob('/src/content/glossary/**/*.{md,mdx}', {
   import: 'default',
   eager: true,
 });
-const hasGlossary = Object.keys(glossModules).length > 0;
+const hasGlossary = bookId
+  ? Object.keys(glossModules).some((path) => path.includes(`/glossary/${bookId}/`))
+  : Object.keys(glossModules).length > 0;
 
-const entries = hasGlossary ? await getCollection('glossary', (e) => !e.data.draft) : [];
+const allEntries = hasGlossary ? await getCollection('glossary', (e) => !e.data.draft) : [];
+const entries = bookId
+  ? allEntries.filter((entry) => entry.id.startsWith(`${bookId}/`))
+  : allEntries;
 // Alphabetical by display term (locale-aware so case/accents sort naturally).
 entries.sort((a, b) => a.data.term.localeCompare(b.data.term));
 
 const rendered = await Promise.all(
-  entries.map(async (e) => ({ id: e.id, data: e.data, Content: (await render(e)).Content })),
+  entries.map(async (e) => ({
+    id: bookId && bookConfig.corpus
+      ? localCorpusEntryId(bookConfig.corpus, bookId, e.id)
+      : e.id,
+    data: e.data,
+    Content: (await render(e)).Content,
+  })),
 );
 const total = rendered.length;
 // id → display term, so "See also" links show the friendly term, not the kebab id.
@@ -39,6 +55,7 @@ const termById = new Map(rendered.map((t) => [t.id, t.data.term]));
 <Base
   title="Glossary"
   description="Searchable key-terms glossary, listed alphabetically."
+  bookId={bookId}
 >
   <article class="prose glossary">
     <h1>Glossary</h1>

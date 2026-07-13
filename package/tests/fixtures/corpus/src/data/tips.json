@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "books": {
+    "evaluation": [
+      {
+        "n": 1,
+        "title": "Stale disabled-route tip",
+        "chapter": "shared",
+        "preview": "This payload must not make a disabled route link safe."
+      }
+    ],
+    "llm-app-engineering": [
+      {
+        "n": 1,
+        "title": "Keep book boundaries explicit",
+        "chapter": "shared",
+        "preview": "Scope generated indexes before rendering."
+      }
+    ]
+  }
+}

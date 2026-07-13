@@ -1,0 +1,40 @@
+---
+title: Shared LLM Chapter
+slug: shared
+chapter: 1
+part: 1
+last_verified: 2026-07-13
+description: LLM-only chapter content.
+---
+
+import Theorem from '@brandon_m_behring/book-scaffold-astro/components/Theorem.astro';
+import XRef from '@brandon_m_behring/book-scaffold-astro/components/XRef.astro';
+import Cite from '@brandon_m_behring/book-scaffold-astro/components/Cite.astro';
+import BookLink from '@brandon_m_behring/book-scaffold-astro/components/BookLink.astro';
+import Term from '@brandon_m_behring/book-scaffold-astro/components/Term.astro';
+import Tip from '@brandon_m_behring/book-scaffold-astro/components/Tip.astro';
+import Exercise from '@brandon_m_behring/book-scaffold-astro/components/Exercise.astro';
+import ExerciseSolutions from '@brandon_m_behring/book-scaffold-astro/components/ExerciseSolutions.astro';
+import TipsCard from '@brandon_m_behring/book-scaffold-astro/components/TipsCard.astro';
+
+LLM-only sentinel. <XRef id="shared:theorem" /> is book-local.
+
+<Theorem id="shared:theorem" kind="theorem" name="LLM theorem">
+Application evidence stays inside the LLM book.
+</Theorem>
+
+The bibliography resolves <Cite key="shared2026" /> and <Term id="shared">shared term</Term>.
+
+Return to the <BookLink book="evaluation" to="chapters/shared#evaluation-heading">evaluation chapter</BookLink>.
+
+<Tip n="1" title="Keep book boundaries explicit">Scope generated indexes before rendering.</Tip>
+
+<Exercise id="shared-exercise">Prove the application boundary remains local.</Exercise>
+
+<ExerciseSolutions auto />
+
+<TipsCard />
+
+## LLM heading
+
+LLM application details.

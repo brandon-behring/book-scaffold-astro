@@ -24,7 +24,12 @@ import Base from '../layouts/Base.astro';
 import { getCollection, render } from 'astro:content';
 import Flashcards from '@brandon_m_behring/book-scaffold-astro/components/Flashcards';
 import { buildFlashcardDeck } from '../src/lib/flashcards';
+import bookConfig from 'virtual:book-scaffold/book-config';
+import { localCorpusEntryId } from '../src/lib/corpus';
 import '../styles/flashcards.css';
+
+interface Props { bookId?: string; }
+const { bookId } = Astro.props;
 
 // Presence-gate: only touch the collection when the directory holds files.
 const glossModules = import.meta.glob('/src/content/glossary/**/*.{md,mdx}', {
@@ -32,12 +37,20 @@ const glossModules = import.meta.glob('/src/content/glossary/**/*.{md,mdx}', {
   import: 'default',
   eager: true,
 });
-const hasGlossary = Object.keys(glossModules).length > 0;
+const hasGlossary = bookId
+  ? Object.keys(glossModules).some((path) => path.includes(`/glossary/${bookId}/`))
+  : Object.keys(glossModules).length > 0;
 
-const entries = hasGlossary ? await getCollection('glossary', (e) => !e.data.draft) : [];
-const deck = buildFlashcardDeck(entries);
+const allEntries = hasGlossary ? await getCollection('glossary', (e) => !e.data.draft) : [];
+const entries = bookId
+  ? allEntries.filter((entry) => entry.id.startsWith(`${bookId}/`))
+  : allEntries;
+const localId = (id: string) => bookId && bookConfig.corpus
+  ? localCorpusEntryId(bookConfig.corpus, bookId, id)
+  : id;
+const deck = buildFlashcardDeck(entries.map((entry) => ({ ...entry, id: localId(entry.id) })));
 // Render definitions in deck (alphabetical) order so cards and manifest agree.
-const byId = new Map(entries.map((e) => [e.id, e]));
+const byId = new Map(entries.map((e) => [localId(e.id), e]));
 const rendered = await Promise.all(
   deck.map(async (card) => {
     const entry = byId.get(card.id)!;
@@ -48,6 +61,7 @@ const rendered = await Promise.all(
 <Base
   title="Flashcards"
   description="Glossary flashcards: shuffled recall practice with flip-to-check and known/still-learning buckets."
+  bookId={bookId}
 >
   <article class="prose flashcards-page" data-flashcards-root>
     <h1>Flashcards</h1>

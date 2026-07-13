@@ -30,6 +30,8 @@
  *   </Theorem>
  */
 import { theoremLabel, resolveTheoremNumber, type TheoremLabelProps } from '../src/lib/theorem-label';
+import bookConfig from 'virtual:book-scaffold/book-config';
+import { corpusBookIdFromPath, selectBookArtifact } from '../src/lib/corpus';
 
 interface Props extends TheoremLabelProps {
   id?: string;
@@ -42,14 +44,22 @@ interface Props extends TheoremLabelProps {
 // a missing file → empty map → fall back to explicit n= (the same soft-degrade
 // path as XRef — the validator catches unknown ids at CI).
 type LabelEntry = { href: string; display: string; number?: string | null };
-const labelsModules = import.meta.glob<{ default: Record<string, LabelEntry> }>(
+const labelsModules = import.meta.glob<{ default: unknown }>(
   '/src/data/labels.json',
   { eager: true },
 );
-const labelsMap = (labelsModules['/src/data/labels.json']?.default ?? {}) as Record<
-  string,
-  LabelEntry
->;
+const labelsModule = labelsModules['/src/data/labels.json'];
+const currentBook = bookConfig.corpus
+  ? corpusBookIdFromPath(bookConfig.corpus, Astro.url.pathname, import.meta.env.BASE_URL)
+  : null;
+const labelsMap = labelsModule
+  ? selectBookArtifact<Record<string, LabelEntry>>(
+      labelsModule.default,
+      bookConfig.corpus,
+      currentBook,
+      'src/data/labels.json',
+    )
+  : {};
 
 const { id } = Astro.props;
 // labels.json (by id) is the number source; explicit n= is the fallback when no

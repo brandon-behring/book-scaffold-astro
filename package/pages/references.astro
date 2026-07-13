@@ -17,6 +17,11 @@
  */
 import Base from '../layouts/Base.astro';
 import SourceArchive from '../components/SourceArchive.astro';
+import bookConfig from 'virtual:book-scaffold/book-config';
+import { selectBookArtifact } from '../src/lib/corpus';
+
+interface Props { bookId?: string; }
+const { bookId } = Astro.props;
 
 type CslAuthor = { family?: string; given?: string; literal?: string };
 type CslEntry = {
@@ -36,23 +41,38 @@ type CslEntry = {
 };
 
 // --- Bibliography: BibTeX → references.json (academic profile). ---
-const refsModules = import.meta.glob<{ default: Record<string, CslEntry> }>(
+const refsModules = import.meta.glob<{ default: unknown }>(
   '/src/data/references.json',
   { eager: true },
 );
 const refsModule = refsModules['/src/data/references.json'];
-const map = (refsModule?.default ?? {}) as Record<string, CslEntry>;
+const map = refsModule
+  ? selectBookArtifact<Record<string, CslEntry>>(
+      refsModule.default,
+      bookConfig.corpus,
+      bookId,
+      'src/data/references.json',
+    )
+  : {};
 const entries = Object.values(map);
 
 // --- Cited sources: sources/manifest.yaml → sources.json (tools profile).
 // Presence-only gate; the actual render reads the live `sources` collection
 // via <SourceArchive>, which only runs when this gate is true (so it is never
 // reached on profiles without a `sources` collection). ---
-const srcModules = import.meta.glob<{ default: unknown[] }>(
+const srcModules = import.meta.glob<{ default: unknown }>(
   '/src/data/sources.json',
   { eager: true },
 );
-const sourcesData = (srcModules['/src/data/sources.json']?.default ?? []) as unknown[];
+const sourcesModule = srcModules['/src/data/sources.json'];
+const sourcesData = sourcesModule
+  ? selectBookArtifact<unknown[]>(
+      sourcesModule.default,
+      bookConfig.corpus,
+      bookId,
+      'src/data/sources.json',
+    )
+  : [];
 const hasSources = Array.isArray(sourcesData) && sourcesData.length > 0;
 const hasBib = entries.length > 0;
 
@@ -100,7 +120,7 @@ const lede =
         ? 'Every external source cited in this book, grouped by tier in descending authority.'
         : 'This book has no references yet.';
 ---
-<Base title="References" description="Bibliography and cited sources for this book.">
+<Base title="References" description="Bibliography and cited sources for this book." bookId={bookId}>
   <article class="prose">
     <header>
       <h1>References</h1>
@@ -156,7 +176,7 @@ const lede =
           External sources cited inline via <code>&lt;Citation&gt;</code>, grouped
           by tier in descending authority.
         </p>
-        <SourceArchive />
+        <SourceArchive sources={bookConfig.corpus ? sourcesData : undefined} />
       </section>
     )}
   </article>

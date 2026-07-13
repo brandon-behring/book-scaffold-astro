@@ -21,8 +21,13 @@ export {
   distinctChaptersSorted,
 } from './questions-derive.js';
 
-/** All non-draft questions, ordered by chapter then id (stable, deterministic). */
-export async function getAllQuestions(): Promise<QuestionEntry[]> {
+/**
+ * All non-draft questions, ordered by chapter then id (stable, deterministic).
+ * A corpus caller supplies the registered book id; single-book callers omit it
+ * and retain the exact historical collection behavior.
+ */
+export async function getAllQuestions(bookId?: string): Promise<QuestionEntry[]> {
   const all = await getCollection('questions', (e) => !e.data.draft);
-  return sortQuestions(all);
+  const scoped = bookId ? all.filter((entry) => entry.id.startsWith(`${bookId}/`)) : all;
+  return sortQuestions(scoped);
 }

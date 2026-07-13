@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "books": {
+    "evaluation": {
+      "shared:theorem": {
+        "href": "chapters/evaluation/shared#shared:theorem",
+        "display": "Evaluation Theorem 1.1",
+        "number": "1.1"
+      }
+    },
+    "llm-app-engineering": {
+      "shared:theorem": {
+        "href": "chapters/llm-app-engineering/shared#shared:theorem",
+        "display": "LLM Theorem 7.2",
+        "number": "7.2"
+      }
+    }
+  }
+}

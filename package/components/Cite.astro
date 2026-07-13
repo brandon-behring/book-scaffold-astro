@@ -1,5 +1,11 @@
 ---
-import { normalizeBase } from '../src/lib/nav-href';
+import { apparatusHref, normalizeBase } from '../src/lib/nav-href';
+import bookConfig from 'virtual:book-scaffold/book-config';
+import {
+  corpusBookHasApparatusRoute,
+  corpusBookIdFromPath,
+  selectBookArtifact,
+} from '../src/lib/corpus';
 /**
  * Cite — renders a `\cite{bibkey}` LaTeX citation as a clickable
  * inline reference to the bibliography page.
@@ -33,12 +39,36 @@ type CslEntry = {
 
 // Resolve references.json from consumer's project root. Missing file -> empty
 // map -> any <Cite> throws below (strict per D3 — bibkeys must resolve at build).
-const refsModules = import.meta.glob<{ default: Record<string, CslEntry> }>(
+const refsModules = import.meta.glob<{ default: unknown }>(
   '/src/data/references.json',
   { eager: true },
 );
 const refsModule = refsModules['/src/data/references.json'];
-const map = (refsModule?.default ?? {}) as Record<string, CslEntry>;
+const currentBook = bookConfig.corpus
+  ? corpusBookIdFromPath(bookConfig.corpus, Astro.url.pathname, import.meta.env.BASE_URL)
+  : null;
+if (
+  bookConfig.corpus &&
+  (!currentBook ||
+    !corpusBookHasApparatusRoute(
+      bookConfig.corpus,
+      currentBook,
+      'references',
+      bookConfig.apparatusRoutes,
+    ))
+) {
+  throw new Error(
+    `<Cite key="${Astro.props.key}"> requires the current corpus book's references route.`,
+  );
+}
+const map = refsModule
+  ? selectBookArtifact<Record<string, CslEntry>>(
+      refsModule.default,
+      bookConfig.corpus,
+      currentBook,
+      'src/data/references.json',
+    )
+  : {};
 
 interface Props {
   key: string;
@@ -47,6 +77,9 @@ interface Props {
 
 const { key, page } = Astro.props;
 const baseUrl = normalizeBase(import.meta.env.BASE_URL);
+const referencesHref = bookConfig.corpus
+  ? apparatusHref('references', currentBook, '/:book/:route/', baseUrl)
+  : `${baseUrl}references`;
 const entry = map[key];
 if (!entry) {
   throw new Error(
@@ -68,6 +101,6 @@ else authorText = `${surname(authors[0])} et al.`;
 const year = entry.issued?.['date-parts']?.[0]?.[0] ?? 'n.d.';
 const yearText = page ? `${year}, p. ${page}` : `${year}`;
 ---
-<a href={`${baseUrl}references#${key}`} class="cite" title={entry.title ?? key}>
+<a href={`${referencesHref}#${key}`} class="cite" title={entry.title ?? key}>
   {authorText} ({yearText})
 </a>

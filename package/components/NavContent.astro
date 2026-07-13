@@ -25,7 +25,10 @@ import { academicPartHeading } from '../src/lib/academic-parts';
 import { chapterHref, apparatusHref, bookOf, isCurrentChapter, type ChapterLike, normalizeBase } from '../src/lib/nav-href';
 import { corpusBookIdFromPath, corpusBookIdOf } from '../src/lib/corpus';
 
-const profile = import.meta.env.BOOK_PROFILE ?? 'minimal';
+const profile = import.meta.env.BOOK_PROFILE;
+if (!profile) {
+  throw new Error('book-scaffold runtime is missing the integration-defined BOOK_PROFILE.');
+}
 // #142: normalize the base trailing slash (Astro allows base:'/foo' with none).
 const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 
@@ -67,7 +70,9 @@ const currentBook = bookConfig.corpus
 
 const scopedChapters = currentBook
   ? rawChapters.filter((entry) => entryBook(entry) === currentBook)
-  : rawChapters;
+  : bookConfig.corpus
+    ? []
+    : rawChapters;
 
 // Pre-shape into render-ready rows (all TS casts in frontmatter — Astro's JSX
 // parser mis-tokenizes casts inside expression containers).
@@ -174,7 +179,7 @@ function partLabel(key: string): string {
   >
     All chapters
   </a>
-  {profile === 'academic' && (
+  {profile === 'academic' && !bookConfig.corpus && (
     <a
       href={referencesHref}
       class={`sidebar-link sidebar-link-index ${currentPath === referencesHref ? 'is-current' : ''}`}

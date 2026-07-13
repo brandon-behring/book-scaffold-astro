@@ -24,7 +24,10 @@ import ProvenanceBlock from '../../components/Provenance.astro';
 import bookConfig from 'virtual:book-scaffold/book-config';
 import { corpusBookIdOf, resolveCorpusBook } from '../../src/lib/corpus';
 
-const BOOK_PRESET = import.meta.env.BOOK_PRESET ?? 'minimal';
+const BOOK_PRESET = import.meta.env.BOOK_PRESET;
+if (!BOOK_PRESET) {
+  throw new Error('book-scaffold runtime is missing the integration-defined BOOK_PRESET.');
+}
 const USE_CHAPTER_LAYOUT = ['academic', 'research-portfolio'].includes(BOOK_PRESET);
 
 export async function getStaticPaths() {

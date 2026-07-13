@@ -71,7 +71,10 @@ import bookConfig from 'virtual:book-scaffold/book-config';
 import { normalizeBase } from '../src/lib/nav-href';
 import { resolveCorpusBook } from '../src/lib/corpus';
 
-const profile = import.meta.env.BOOK_PROFILE ?? 'minimal';
+const profile = import.meta.env.BOOK_PROFILE;
+if (!profile) {
+  throw new Error('book-scaffold runtime is missing the integration-defined BOOK_PROFILE.');
+}
 
 interface Props {
   title: string;
@@ -169,7 +172,7 @@ const pagefindFilter = bookId
         only when an image is explicitly set (per D3, avoids broken-link
         OG tags). sitemap link points at @astrojs/sitemap's auto-emitted
         index. */}
-    <link rel="canonical" href={canonicalURL} />
+    <link rel="canonical" href={canonicalURL} data-pagefind-meta="url[href]" />
     <link rel="sitemap" type="application/xml" href={`${baseUrl}sitemap-index.xml`} />
     <meta property="og:title" content={title} />
     {ogDescription && <meta property="og:description" content={ogDescription} />}

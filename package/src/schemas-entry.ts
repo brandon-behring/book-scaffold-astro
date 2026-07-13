@@ -56,7 +56,7 @@ function isYamlEmpty(path: string): boolean {
 
 import type { BookSchemasOptions } from './types.js';
 import { resolvePreset } from './types.js';
-import { assertBookCorpus } from './lib/corpus.js';
+import { assertBookCorpus, corpusCollectionEntryId } from './lib/corpus.js';
 import {
   academicChapterSchema,
   toolsChapterSchema,
@@ -159,26 +159,10 @@ export function defineBookSchemas(opts: BookSchemasOptions = {}) {
       ...(corpus
         ? {
             generateId: ({ entry, data }: { entry: string; data: Record<string, unknown> }) => {
-              const normalized = entry.replaceAll('\\', '/');
-              const [book, ...localParts] = normalized.split('/');
-              if (!corpus.books.some((candidate) => candidate.id === book)) {
-                throw new Error(
-                  `Chapter ${JSON.stringify(entry)} is outside the registered corpus books.`,
-                );
-              }
-              const fileSlug = localParts.join('/').replace(/\.(?:md|mdx)$/i, '');
-              const slug = typeof data.slug === 'string' ? data.slug : fileSlug;
-              if (
-                slug.length === 0 ||
-                slug.startsWith('/') ||
-                slug.endsWith('/') ||
-                slug.split('/').some((part) => part === '.' || part === '..' || part.length === 0)
-              ) {
-                throw new Error(
-                  `Chapter ${JSON.stringify(entry)} resolved invalid corpus slug ${JSON.stringify(slug)}.`,
-                );
-              }
-              return `${book}/${slug}`;
+              return corpusCollectionEntryId(corpus, entry, data, {
+                label: 'Chapter',
+                slugField: 'slug',
+              });
             },
           }
         : {}),
@@ -229,8 +213,17 @@ export function defineBookSchemas(opts: BookSchemasOptions = {}) {
   if (existsSync('./src/content/questions')) {
     collections.questions = defineCollection({
       loader: glob({
+        // In corpus mode this intentionally scans the entire dedicated root.
+        // `generateId` is the ownership boundary: a flat file or an unknown
+        // first directory must fail instead of disappearing from the loader.
         pattern: ['**/*.{md,mdx}', '!**/_*'],
         base: './src/content/questions',
+        ...(corpus
+          ? {
+              generateId: ({ entry, data }: { entry: string; data: Record<string, unknown> }) =>
+                corpusCollectionEntryId(corpus, entry, data, { label: 'Question' }),
+            }
+          : {}),
       }),
       schema: refinedQuestionSchema,
     });
@@ -242,8 +235,16 @@ export function defineBookSchemas(opts: BookSchemasOptions = {}) {
   if (existsSync('./src/content/glossary')) {
     collections.glossary = defineCollection({
       loader: glob({
+        // As with questions, discover all non-hidden entries so malformed
+        // corpus ownership is rejected rather than silently ignored.
         pattern: ['**/*.{md,mdx}', '!**/_*'],
         base: './src/content/glossary',
+        ...(corpus
+          ? {
+              generateId: ({ entry, data }: { entry: string; data: Record<string, unknown> }) =>
+                corpusCollectionEntryId(corpus, entry, data, { label: 'Glossary term' }),
+            }
+          : {}),
       }),
       schema: glossarySchema,
     });
