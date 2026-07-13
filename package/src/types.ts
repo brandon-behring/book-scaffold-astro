@@ -126,6 +126,18 @@ export interface SecurityHeadersConfig {
 }
 
 /**
+ * v5.2.0 (#157): build-time Open Graph card generation.
+ *
+ * Omit `enabled` (or set it to `true`) to enable generation when the object
+ * form is present. `exclude` contains base-relative route patterns validated
+ * by the OG-card integration during config evaluation.
+ */
+export interface OgCardsConfig {
+  enabled?: boolean;
+  exclude?: readonly string[];
+}
+
+/**
  * v4.26.2 (#149): book-level release state rendered by
  * `<PreReleaseBanner>` across every page.
  *
@@ -313,9 +325,10 @@ export interface BookConfigOptions {
    * `ogImage` — default Open Graph image URL (relative to the site root, or
    * absolute). When omitted, no `<meta property="og:image">` is emitted by
    * default; per-page `Astro.props.ogImage` can still set one. Consumers
-   * opt-in to OG cards by adding e.g. `/og-default.png` to their `public/`
-   * AND setting `seo: { ogImage: '/og-default.png' }`. Avoids broken-link
-   * meta tags on consumers who haven't authored an OG image yet.
+   * opt in to a static default by adding e.g. `/og-default.png` to `public/`
+   * and setting `seo: { ogImage: '/og-default.png' }`. A static default
+   * suppresses generation; use `ogCards` below for generated cards. Omitting
+   * both avoids broken-link meta tags when no image has been authored.
    *
    * `twitterHandle` — adds `<meta name="twitter:site" content="@handle">`
    * when set. Omitted by default.
@@ -332,6 +345,12 @@ export interface BookConfigOptions {
   seo?: {
     ogImage?: string;
     twitterHandle?: string;
+    /**
+     * v5.2.0 (#157): opt into deterministic, build-time social cards. `true`
+     * uses the defaults; the object form can disable generation explicitly or
+     * add base-relative route exclusions.
+     */
+    ogCards?: boolean | OgCardsConfig;
     sitemap?: {
       filter?: (page: string) => boolean;
       customPages?: string[];

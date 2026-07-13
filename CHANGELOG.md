@@ -2,6 +2,42 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [5.2.0] — 2026-07-13
+
+### Added
+
+- **Opt-in build-time Open Graph cards (#157).** `seo.ogCards` accepts `true`
+  or `{ enabled, exclude }` and generates deterministic 1200×630 PNGs for
+  eligible rendered static pages. Exclusions use a deliberately small
+  base-relative grammar: exact routes, whole-segment `*`, and cross-segment
+  `**`; malformed patterns fail configuration.
+- Generated cards contain rendered page/book identity and canonical-host data,
+  use package-owned local fonts without network access, and are emitted as
+  content-addressed `_og/<16-hex-sha256>.png` assets. Equal visual payloads
+  deduplicate; stale scaffold-owned hashes are pruned even when Astro preserves
+  its output directory, while unrelated files remain untouched. Corpus pages
+  keep their resolved book identity while corpus-level surfaces remain
+  corpus-attributed.
+
+### Changed
+
+- The OG-card integration runs after scaffold, Style, and consumer
+  integrations so it can inspect final HTML. Page/layout images (including
+  chapter frontmatter `image`), corpus-book manifest images, and static
+  `seo.ogImage` remain authoritative; only a missing image receives complete
+  OG/Twitter image metadata.
+- Generated image URLs combine Astro `site` and normalized `base` exactly
+  once. Requested-card render, font, hash, write, or patch failures now fail
+  the build rather than leaving metadata that points to no image.
+
+### Tests
+
+- Coverage locks all five presets; disabled, page, static, and generated
+  precedence; exact/`*`/`**` exclusions and invalid grammar; noindex,
+  redirect, and error-page skips; root and non-root bases; two-book corpus
+  attribution; deterministic hashes and deduplication; complete metadata;
+  failure propagation; and packed-package offline runtime closure.
+
 ## [5.1.0] — 2026-07-13
 
 ### Added

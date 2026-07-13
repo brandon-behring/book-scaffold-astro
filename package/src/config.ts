@@ -21,6 +21,7 @@ import { PROFILES } from './profiles/index.js';
 import { composeStyles, type Style } from './lib/define-style.js';
 import { BUILTIN_STYLES } from './styles/built-in.js';
 import { assertBookCorpus, CORPUS_OWNED_ROUTE_FIELDS } from './lib/corpus.js';
+import { createOgCardsIntegration, normalizeOgCardsConfig } from './lib/og-cards.js';
 
 /**
  * v4.5.0: Default portfolio backlink baked into the scaffold. Rendered in
@@ -230,6 +231,11 @@ export async function defineBookConfig(
   if (sitemapFilter) sitemapOptions.filter = sitemapFilter;
   if (sitemapCustomPages) sitemapOptions.customPages = sitemapCustomPages;
 
+  // v5.2.0 (#157): validate and freeze the build-time OG-card policy during
+  // config evaluation. The nested option stays out of the runtime virtual SEO
+  // payload, which intentionally exposes only ogImage + twitterHandle.
+  const ogCards = normalizeOgCardsConfig(opts.seo?.ogCards);
+
   const integrations = [
     mdx(),
     preact(),
@@ -289,6 +295,18 @@ export async function defineBookConfig(
           }),
     }),
     ...mergedExtraIntegrations,
+    // Post-render card generation must observe the final output from every
+    // consumer/style integration, so its build:done hook is installed last.
+    ...(ogCards
+      ? [createOgCardsIntegration({
+          profile,
+          corpus,
+          title: opts.title,
+          description: opts.description,
+          staticOgImage: opts.seo?.ogImage,
+          ogCards,
+        })]
+      : []),
   ];
 
   // Consumer's `markdown` spreads after the package defaults so they can

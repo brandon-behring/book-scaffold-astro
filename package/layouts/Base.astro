@@ -124,18 +124,112 @@ const showToolsChrome = (profile !== 'academic') && showChrome;
 // here. `new URL` resolves the relative pathname against it.
 const canonicalURL = new URL(Astro.url.pathname, Astro.site).toString();
 
+const baseUrl = normalizeBase(import.meta.env.BASE_URL);
+
+/**
+ * Public assets are authored relative to the deployment root, while `site`
+ * may already carry that same Astro base. Resolve against the origin and add
+ * the normalized base only when it is not already present so every local
+ * image receives the deployment prefix exactly once.
+ */
+function resolvePublicAssetUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error('Open Graph image must be a non-empty URL or public asset path.');
+  }
+  const site = new URL(Astro.site);
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const absolute = new URL(trimmed);
+      if (absolute.protocol !== 'http:' && absolute.protocol !== 'https:') throw new Error();
+    } catch {
+      throw new Error(`Open Graph image is not a valid http(s) URL: ${JSON.stringify(value)}`);
+    }
+    return trimmed;
+  }
+  if (trimmed.startsWith('//')) {
+    if (trimmed.startsWith('///')) {
+      throw new Error(
+        `Open Graph image has an invalid protocol-relative URL: ${JSON.stringify(value)}`,
+      );
+    }
+    try {
+      const absolute = new URL(`${site.protocol}${trimmed}`);
+      if (absolute.protocol !== 'http:' && absolute.protocol !== 'https:') throw new Error();
+      return absolute.toString();
+    } catch {
+      throw new Error(
+        `Open Graph image has an invalid protocol-relative URL: ${JSON.stringify(value)}`,
+      );
+    }
+  }
+  if (/^[a-z][a-z\d+.-]*:/i.test(trimmed)) {
+    throw new Error(
+      `Open Graph image must use http(s) or a public asset path: ${JSON.stringify(value)}`,
+    );
+  }
+  if (trimmed.includes('\\') || /[\u0000-\u001F\u007F]/u.test(trimmed)) {
+    throw new Error(
+      `Open Graph image contains an invalid path character: ${JSON.stringify(value)}`,
+    );
+  }
+
+  const rawPath = trimmed.split(/[?#]/u, 1)[0] ?? '';
+  if (!rawPath) {
+    throw new Error(`Open Graph image must contain a public asset path: ${JSON.stringify(value)}`);
+  }
+  for (const rawSegment of rawPath.replace(/^\/+/, '').split('/')) {
+    let segment = rawSegment;
+    try {
+      for (let pass = 0; pass < 4; pass += 1) {
+        const decoded = decodeURIComponent(segment);
+        if (decoded === segment) break;
+        segment = decoded;
+      }
+    } catch {
+      throw new Error(
+        `Open Graph image contains invalid percent encoding: ${JSON.stringify(value)}`,
+      );
+    }
+    if (
+      segment === '.'
+      || segment === '..'
+      || segment.includes('/')
+      || segment.includes('\\')
+      || /[\u0000-\u001F\u007F]/u.test(segment)
+    ) {
+      throw new Error(
+        `Open Graph image contains an invalid decoded path segment: ${JSON.stringify(value)}`,
+      );
+    }
+  }
+
+  const localPath = `/${rawPath.replace(/^\/+/, '')}`;
+  const suffix = trimmed.slice(rawPath.length);
+  const basePath = baseUrl.startsWith('/') ? baseUrl : `/${baseUrl}`;
+  const baseWithoutTrailingSlash = basePath.replace(/\/+$/, '');
+  const alreadyPrefixed = basePath === '/'
+    || localPath === baseWithoutTrailingSlash
+    || localPath.startsWith(basePath);
+  const resolvedPath = alreadyPrefixed
+    ? localPath
+    : `${basePath}${localPath.slice(1)}`;
+
+  return new URL(`${resolvedPath}${suffix}`, site.origin).toString();
+}
+
 // Per D3: og:image emits only when an image is explicitly set — either via
 // per-page Astro.props.ogImage or book-level bookConfig.seo.ogImage. No
 // '/og-default.png' fallback to avoid broken-link meta tags on consumers
 // without an OG image authored.
 const resolvedOgImage = ogImage ?? corpusBook?.image ?? bookConfig.seo?.ogImage ?? null;
 const absoluteOgImage = resolvedOgImage
-  ? new URL(resolvedOgImage, Astro.site).toString()
+  ? resolvePublicAssetUrl(resolvedOgImage)
   : null;
 const twitterHandle = bookConfig.seo?.twitterHandle ?? null;
 const ogSiteName = corpusBook?.title ?? bookConfig.title ?? title;
 const ogDescription = description ?? corpusBook?.description ?? bookConfig.description ?? '';
-const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 const searchHref = bookId
   ? `${baseUrl}search/?book=${encodeURIComponent(bookId)}`
   : `${baseUrl}search/`;
@@ -147,7 +241,11 @@ const pagefindFilter = bookId
 ---
 
 <!doctype html>
-<html lang={lang}>
+<html
+  lang={lang}
+  data-book-scaffold-book={corpusBook?.id}
+  data-book-scaffold-surface={pagefindSurface === 'corpus' ? 'corpus' : undefined}
+>
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href={`${baseUrl}favicon.svg`} />

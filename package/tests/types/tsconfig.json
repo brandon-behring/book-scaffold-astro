@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "types": []
   },
-  "files": ["consumer.ts"]
+  "files": ["consumer.ts", "og-cards.ts"]
 }

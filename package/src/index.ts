@@ -38,6 +38,7 @@ export type {
   BookConfigOptions,
   ReleaseStatusConfig,
   SecurityHeadersConfig,
+  OgCardsConfig,
   BookSchemasOptions,
   BookScaffoldIntegrationOptions,
   RouteToggles,

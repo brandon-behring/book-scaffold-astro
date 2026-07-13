@@ -89,6 +89,27 @@ security defaults. A consumer-owned `public/_headers` wins unchanged;
 and `securityHeaders.contentSecurityPolicy` replaces only the default CSP.
 See [Recipe 05](./recipes/05-deploy-cloudflare.md#default-security-headers).
 
+## Build-time Open Graph cards
+
+Social cards are an explicit, offline build feature:
+
+```ts
+seo: {
+  ogCards: true,
+  // or: { enabled: true, exclude: ['/print/', '/private/*/', '/archive/**'] }
+}
+```
+
+Eligible static pages without a page image, corpus-book manifest image, or
+static `seo.ogImage` receive a deterministic 1200×630 PNG at a
+content-addressed `_og/<hash>.png` URL. Exact exclusions, one-segment `*`, and
+cross-segment `**` are matched after Astro-base normalization. Package-owned
+local fonts keep generation network-free; corpus identity and `site`/`base`
+are applied exactly once. Requested-card failures fail the build instead of
+emitting broken metadata. See
+[Recipe 26](./recipes/26-generated-og-cards.md) for precedence, exclusion
+grammar, output, and verification.
+
 ## Interactive demos
 
 The opt-in `@brandon_m_behring/book-scaffold-astro/demo` entry exports

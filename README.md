@@ -85,12 +85,24 @@ for one. `book-scaffold init-qa` generates an overwrite-safe, network-free
 [Recipe 25](package/recipes/25-qa-readiness.md) for selectors, exit codes,
 schema-v1 JSON, and CI wiring.
 
+## Build-time Open Graph cards
+
+Opt in with `seo: { ogCards: true }`, or use the object form to add exact,
+one-segment `*`, and cross-segment `**` route exclusions. Eligible static pages
+without a page image, corpus-book manifest image, or static `seo.ogImage`
+receive an offline-generated, content-addressed 1200×630 PNG. Corpus identity
+remains book-scoped, and absolute metadata applies Astro `site`/`base` exactly
+once. See
+[Recipe 26](package/recipes/26-generated-og-cards.md) for configuration,
+precedence, failure semantics, and deployment verification.
+
 ## What ships in the package
 
 - **65 Astro components + 8 Preact components** — 70 individually exported `./components/<Name>` entries for citations, figures, pedagogy, study tools, and navigation, plus `DemoFrame` / `Slider` / `StatCards` and `useThemeColors` through the opt-in `./demo` barrel
 - **13 exported stylesheets**, loaded where their ownership belongs: preset/profile integration, the base layout, opt-in routes, their component, or an explicit demo import
 - **Default pages** auto-injected: `/references` / `/search` / `/print` / `/chapters` (all five presets); `/convergence` (tools); optional frontmatter and study-guide routes
 - **Opt-in corpus routing** — ordered book landings, namespaced chapters and apparatus, scoped generated data, local cross-book links, and one Pagefind index with per-book filters
+- **Opt-in build-time social cards** — deterministic 1200×630 Open Graph PNGs with offline local fonts, authored-image precedence, and base-safe content-addressed URLs
 - **Profile-aware Zod schemas** — academic 7-state status / tools volatility + T1-T4 source tiers
 - **Tufte three-tier layout** — 60ch (default) / 66ch (≥90rem) / 78ch (≥120rem), with a book-aware desktop sidebar and mobile drawer
 - **KaTeX 37-macro library** (academic + research-portfolio presets)
