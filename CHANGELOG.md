@@ -25,7 +25,8 @@ All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](
 ### Tests
 
 - Package coverage exercises exact sibling href matching, duplicate fragments,
-  custom routes, config evaluation, legacy URL descriptors, and tarball/type
+  structural MDX prop parsing (including decoded entities/escapes), custom
+  routes, config evaluation, legacy URL descriptors, and tarball/type
   contracts. A disposable four-book consumer matrix indexed 893 headings and
   17 component labels, resolved all seven authored fragment links, and passed
   validation for every book.

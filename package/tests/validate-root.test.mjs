@@ -709,11 +709,21 @@ test('validate (#147): literal sibling targets resolve through a declared labels
     });
     writeBookLinkChapter(
       tmp,
-      `<BookLink book="design" to="/chapters/patterns/#layered">Quoted target.</BookLink>
+      `<BookLink title="2 > 1" book="design" to="/chapters/patterns/#layered">Quoted target after a greater-than sign.</BookLink>
 
 <BookLink book={'design'} to={\`chapters/patterns#layered\`}>Braced literals.</BookLink>
 
-<BookLink book="design" to="chapters/alternate#layered">Same fragment, other chapter.</BookLink>`,
+<BookLink disabled={count > 1} book="design" to="chapters/alternate#layered">Same fragment after an expression.</BookLink>
+
+<BookLink note={'book="missing" to="chapters/wrong#fake"'} book={'design'} to={'chapters/patterns\\u0023layered'}>Unrelated prop text and a decoded JS escape.</BookLink>
+
+<BookLink book="design" to="chapters/patterns&#35;layered">Decoded entity.</BookLink>
+
+\`<BookLink book="missing" to="chapters/wrong#fake" />\`
+
+\`\`\`mdx
+<BookLink book="missing" to="chapters/wrong#fake" />
+\`\`\``,
     );
 
     const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
@@ -723,6 +733,7 @@ test('validate (#147): literal sibling targets resolve through a declared labels
     });
     assert.equal(result.status, 0, `stdout: ${result.stdout}\nstderr: ${result.stderr}`);
     assert.doesNotMatch(result.stderr, /BookLink.*skipped/);
+    assert.doesNotMatch(result.stderr, /book="missing"/);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }

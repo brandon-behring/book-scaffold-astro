@@ -42,6 +42,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import remarkMdx from 'remark-mdx';
 import { walkMdx, readChaptersBase, readBookSchemaConfig } from './walk-mdx.mjs';
 import { readEnvFile } from './read-env.mjs';
 import { loadResolvedBookConfig } from './resolve-book-config.mjs';
@@ -309,9 +312,10 @@ const RE_MD_LINK = /\[(?:[^\]]*)\]\((\/[^)\s#]+)(?:#[^)]*)?\)/g;
 // #121: a <Theorem> opening tag — capture its attributes to assert a
 // resolvable kind= (or legacy type=) is present.
 const RE_THEOREM = /<Theorem\b([^>]*)>/g;
-// #96/#147: a <BookLink> opening tag — assert book= + to=, membership, and
-// literal sibling label targets when a vendored index is declared.
-const RE_BOOKLINK = /<BookLink\b([^>]*)>/g;
+// #96/#147: BookLink attributes must be read structurally. An opening-tag
+// regex stops at `>` inside a quoted value or expression and can mistake text
+// inside another prop for a real book=/to= assignment.
+const mdxParser = unified().use(remarkParse).use(remarkMdx);
 
 async function fileExists(p) {
   try {
@@ -349,28 +353,58 @@ function literalTheoremNumber(attrs) {
   return null;
 }
 
-/**
- * Read a statically knowable MDX string attribute. Direct quoted strings and
- * braced string/template literals without interpolation are safe; identifiers,
- * calls, interpolated templates, and malformed expressions are dynamic.
- */
-function literalMdxStringAttribute(attrs, name) {
-  const assignment = new RegExp(`(?:^|\\s)${name}\\s*=\\s*`).exec(attrs);
-  if (!assignment) return { present: false, literal: false, value: null };
-
-  const rest = attrs.slice(assignment.index + assignment[0].length);
-  const quoted = rest.match(/^(["'])([\s\S]*?)\1/);
-  if (quoted) return { present: true, literal: true, value: quoted[2] };
-
-  const braced = rest.match(/^\{\s*([\s\S]*?)\s*\}/);
-  if (braced) {
-    const expression = braced[1].trim();
-    const stringLiteral = expression.match(/^(["'`])([\s\S]*)\1$/);
-    if (stringLiteral && !(stringLiteral[1] === '`' && stringLiteral[2].includes('${'))) {
-      return { present: true, literal: true, value: stringLiteral[2] };
-    }
+/** Yield MDX JSX elements with an exact component name, excluding examples in
+ * fenced/inline code and strings in expressions by construction. */
+function* mdxElements(node, name) {
+  if (
+    (node.type === 'mdxJsxFlowElement' || node.type === 'mdxJsxTextElement') &&
+    node.name === name
+  ) {
+    yield node;
   }
-  return { present: true, literal: false, value: null };
+  if (!Array.isArray(node.children)) return;
+  for (const child of node.children) yield* mdxElements(child, name);
+}
+
+function expressionString(value) {
+  const program = value?.data?.estree;
+  if (program?.body?.length !== 1 || program.body[0].type !== 'ExpressionStatement') {
+    return null;
+  }
+  const expression = program.body[0].expression;
+  if (expression.type === 'Literal' && typeof expression.value === 'string') {
+    return expression.value;
+  }
+  if (expression.type === 'TemplateLiteral' && expression.expressions.length === 0) {
+    return expression.quasis[0]?.value?.cooked ?? expression.quasis[0]?.value?.raw ?? '';
+  }
+  return null;
+}
+
+/**
+ * Evaluate one JSX prop in source order. Later explicit attributes override an
+ * earlier spread; a later spread makes the value dynamic, exactly as JSX does.
+ * Literal ESTree values are already decoded, so entities and JS escapes cannot
+ * disguise the href that the component receives at runtime.
+ */
+function mdxStringProp(element, name) {
+  let result = { present: false, literal: false, value: null, source: 'absent' };
+  for (const attribute of element.attributes) {
+    if (attribute.type === 'mdxJsxExpressionAttribute') {
+      result = { present: true, literal: false, value: null, source: 'spread' };
+      continue;
+    }
+    if (attribute.type !== 'mdxJsxAttribute' || attribute.name !== name) continue;
+    if (typeof attribute.value === 'string') {
+      result = { present: true, literal: true, value: attribute.value, source: 'attribute' };
+      continue;
+    }
+    const value = expressionString(attribute.value);
+    result = value === null
+      ? { present: true, literal: false, value: null, source: 'expression' }
+      : { present: true, literal: true, value, source: 'attribute' };
+  }
+  return result;
 }
 
 /**
@@ -407,6 +441,19 @@ function siblingTargetCandidates(index, fragment) {
 for (const rel of chapterFiles) {
   const abs = join(CHAPTERS_DIR, rel);
   const content = await readFile(abs, 'utf8');
+  let bookLinks = [];
+  if (content.includes('<BookLink')) {
+    try {
+      bookLinks = [...mdxElements(mdxParser.parse(content), 'BookLink')];
+    } catch (error) {
+      const line = error?.position?.start?.line ?? error?.line ?? 1;
+      fail(
+        rel,
+        line,
+        `Cannot structurally validate <BookLink>: ${error?.reason ?? error?.message ?? error}`,
+      );
+    }
+  }
 
   // 1. Cite keys (academic profile only — tools profile uses YAML manifest)
   if (PROFILE === 'academic') {
@@ -509,23 +556,21 @@ for (const rel of chapterFiles) {
   //    then literal path/fragment validation against a declared vendored index.
   //    Dynamic values and URL-only compatibility entries are explicit warnings
   //    rather than guessed validations.
-  for (const m of content.matchAll(RE_BOOKLINK)) {
-    const attrs = m[1];
-    const line = lineOf(content, m.index);
-    const bookAttr = literalMdxStringAttribute(attrs, 'book');
-    const toAttr = literalMdxStringAttribute(attrs, 'to');
-    const hasDynamicSpread = /\{\s*\.\.\./.test(attrs);
+  for (const element of bookLinks) {
+    const line = element.position?.start?.line ?? 1;
+    const bookAttr = mdxStringProp(element, 'book');
+    const toAttr = mdxStringProp(element, 'to');
 
-    if ((!bookAttr.present || !toAttr.present) && hasDynamicSpread) {
+    if (bookAttr.source === 'spread' || toAttr.source === 'spread') {
       warn(
         rel,
         line,
-        '<BookLink> validation skipped: a dynamic prop spread may supply book=/to=, so neither presence nor target can be proven statically.',
+        '<BookLink> validation skipped: a dynamic prop spread may supply or override book=/to=, so the target cannot be proven statically.',
       );
       continue;
     }
     if (!bookAttr.present || !toAttr.present) {
-      fail(rel, lineOf(content, m.index), `<BookLink> requires both book="…" and to="…".`);
+      fail(rel, line, `<BookLink> requires both book="…" and to="…".`);
       continue;
     }
 
