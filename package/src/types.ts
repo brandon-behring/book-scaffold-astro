@@ -126,6 +126,18 @@ export interface SecurityHeadersConfig {
 }
 
 /**
+ * v5.2.0 (#157): build-time Open Graph card generation.
+ *
+ * Omit `enabled` (or set it to `true`) to enable generation when the object
+ * form is present. `exclude` contains base-relative route patterns validated
+ * by the OG-card integration during config evaluation.
+ */
+export interface OgCardsConfig {
+  enabled?: boolean;
+  exclude?: readonly string[];
+}
+
+/**
  * v4.26.2 (#149): book-level release state rendered by
  * `<PreReleaseBanner>` across every page.
  *
@@ -332,6 +344,12 @@ export interface BookConfigOptions {
   seo?: {
     ogImage?: string;
     twitterHandle?: string;
+    /**
+     * v5.2.0 (#157): opt into deterministic, build-time social cards. `true`
+     * uses the defaults; the object form can disable generation explicitly or
+     * add base-relative route exclusions.
+     */
+    ogCards?: boolean | OgCardsConfig;
     sitemap?: {
       filter?: (page: string) => boolean;
       customPages?: string[];
