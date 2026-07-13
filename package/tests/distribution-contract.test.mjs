@@ -37,10 +37,15 @@ test('toolkit tarball ships both agent-guide names and both scoped licenses', ()
     'MIGRATION-v4-to-v5.md',
     'dist/demo.mjs',
     'dist/demo.d.ts',
+    'assets/og-fonts/Inter-Regular.ttf',
+    'assets/og-fonts/Inter-Bold.ttf',
+    'assets/og-fonts/LICENSE.txt',
+    'assets/og-fonts/SOURCE.md',
     'src/lib/corpus.ts',
     'src/types.ts',
     'styles/demo.css',
     'recipes/23-interactive-demo-substrate.md',
+    'recipes/26-generated-og-cards.md',
   ]) {
     assert.ok(files.has(path), `toolkit tarball must contain ${path}`);
   }

@@ -158,6 +158,7 @@
     "src/schemas.ts",
     "src/types.ts",
     "components",
+    "assets",
     "styles",
     "layouts",
     "pages",
