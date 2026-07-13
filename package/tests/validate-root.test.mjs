@@ -59,6 +59,12 @@ Another paragraph.
   // Empty references + labels so XRef / Cite checks don't false-fail.
   writeFileSync(join(dataDir, 'references.json'), '{}');
   writeFileSync(join(dataDir, 'labels.json'), '{}');
+  // v5 (#212): every validator fixture declares its schema preset explicitly;
+  // there is no implicit minimal fallback.
+  writeFileSync(
+    join(root, 'src', 'content.config.ts'),
+    `defineBookSchemas({ preset: 'minimal' });\n`,
+  );
 }
 
 function setupSiblingConfig(root, siblingBooks) {
@@ -1154,10 +1160,34 @@ status: implemented
       cwd: tmp,
       encoding: 'utf8',
       timeout: 30_000,
+      env: { ...process.env, BOOK_PRESET: 'minimal' },
     });
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /kind="thereom" is not one of/);
     assert.match(result.stderr, /build-labels\.mjs failed.*cannot self-heal/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#212): an unresolved preset fails with v5 migration guidance', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    rmSync(join(tmp, 'src', 'content.config.ts'));
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 30_000,
+      env: Object.fromEntries(
+        Object.entries(process.env).filter(([key]) => key !== 'BOOK_PRESET' && key !== 'BOOK_PROFILE'),
+      ),
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /no book preset was resolved/i);
+    assert.match(result.stderr, /defineBookSchemas.*BOOK_PRESET/s);
+    assert.match(result.stderr, /MIGRATION-v4-to-v5\.md/);
+    assert.doesNotMatch(result.stderr, /falling back/i);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }

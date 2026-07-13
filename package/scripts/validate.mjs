@@ -73,7 +73,7 @@ internal authored links, and (when BOOK_REPO_ROOT is set) CodeRef paths.
 
 Options:
   --preset <name>    academic | tools | minimal | course-notes | research-portfolio
-                     Legacy override when no scaffold integration is resolved.
+                     Explicit override when no scaffold integration is resolved.
   --book <id>        In corpus mode, validate only one registered book.
   --help, -h         Print this message and exit (non-mutating).
 
@@ -83,6 +83,7 @@ Env:
   BOOK_REPO_ROOT     Absolute path to a sibling code repo for CodeRef checks.
 
 Exit code = total failure count, capped at 255 so failures never wrap to success.
+No preset is inferred: configure a Style/corpus, content schema preset, flag, or env.
 `;
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
@@ -125,8 +126,7 @@ const CHAPTERS_DIR = await readChaptersBase(ROOT, { corpus: BOOK_SELECTION.corpu
 //   composed Astro-config preset > --preset flag > BOOK_PRESET env > BOOK_PROFILE env >
 //   .env BOOK_PRESET > .env BOOK_PROFILE >
 //   defineBookSchemas({ preset }) in content.config.ts >
-//   defineBookSchemas({ profile }) in content.config.ts (alias) >
-//   warned v4 compatibility fallback 'minimal'.
+//   defineBookSchemas({ profile }) in content.config.ts (alias).
 // .env fallback closes #20 — without it, consumers who set BOOK_PROFILE in
 // .env (the documented convenience in SKILL.md + create-book defaults) saw
 // the CLI silently default to minimal, hiding academic-profile errors.
@@ -156,13 +156,19 @@ if (PRESET_CANDIDATE && !PRESETS.includes(PRESET_CANDIDATE)) {
   );
   process.exit(1);
 }
-const PRESET = PRESET_CANDIDATE ?? 'minimal';
 if (!PRESET_CANDIDATE) {
   process.stderr.write(
-    "validate: no preset resolved; falling back to 'minimal' for v4 compatibility. " +
-      'This fallback will be removed in v5; configure a built-in style or BOOK_PRESET.\n',
+    'validate: no book preset was resolved. Add a built-in Style to ' +
+      '`defineBookConfig({ styles: [...] })` and pass the same preset to ' +
+      '`defineBookSchemas({ preset: "..." })`, pass one `defineBookCorpus` manifest ' +
+      'to both entrypoints, use --preset, or set BOOK_PRESET in the environment or .env. ' +
+      `Valid presets: ${PRESETS.join(' | ')}. See ` +
+      'https://github.com/brandon-behring/book-scaffold-astro/blob/main/' +
+      'package/MIGRATION-v4-to-v5.md.\n',
   );
+  process.exit(1);
 }
+const PRESET = PRESET_CANDIDATE;
 // Alias kept for downstream message text only; the resolution above is canonical.
 const PROFILE = PRESET;
 const MATH_ENABLED = PROFILE === 'academic' || PROFILE === 'research-portfolio';
@@ -398,7 +404,7 @@ if (BOOK_SELECTION.corpus) {
   for (const book of BOOK_SELECTION.corpus.books) {
     validTopLevelRoutes.add(`/${book.id}/`);
     validTopLevelRoutes.add(`/chapters/${book.id}/`);
-    for (const route of book.apparatus ?? []) {
+    for (const route of book.apparatus ?? TOOLING_CONFIG.apparatusRoutes) {
       validTopLevelRoutes.add(`/${book.id}/${route}/`);
     }
   }

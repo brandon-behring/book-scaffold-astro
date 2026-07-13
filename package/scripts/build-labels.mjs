@@ -253,6 +253,12 @@ async function main() {
           // Component IDs are book-local in corpus mode, so identical ids in
           // another namespace do not collide.
           const prefix = run.book ? `[book:${run.book.id}] ` : '';
+          if (run.book) {
+            throw new Error(
+              `${prefix}duplicate label id "${id}" (first in ` +
+                `${labels[id].href.split('#')[0]}, now in ${entryId}).`,
+            );
+          }
           process.stderr.write(
             `${prefix}build-labels: WARN duplicate id "${id}" (first in ` +
               `${labels[id].href.split('#')[0]}, now in ${entryId})\n`,

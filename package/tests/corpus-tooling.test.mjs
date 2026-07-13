@@ -24,7 +24,7 @@ const CORPUS = Object.freeze({
   preset: 'minimal',
   books: Object.freeze([
     Object.freeze({ id: 'alpha', title: 'Alpha', apparatus: Object.freeze(['references']) }),
-    Object.freeze({ id: 'beta', title: 'Beta', apparatus: Object.freeze(['references']) }),
+    Object.freeze({ id: 'beta', title: 'Beta' }),
   ]),
 });
 
@@ -198,6 +198,16 @@ test('#80: corpus producers namespace duplicate local ids and share root bibliog
     assert.equal(labels.books.alpha.shared.href, 'chapters/alpha/same#shared');
     assert.equal(labels.books.beta.shared.href, 'chapters/beta/nested/explicit#shared');
 
+    const duplicatePath = join(root, 'src/content/alpha/duplicate.mdx');
+    writeFileSync(
+      duplicatePath,
+      '---\ntitle: Duplicate\nchapter: 2\n---\n<Theorem id="shared" kind="theorem" />\n',
+    );
+    const duplicate = run(root, 'build-labels.mjs', ['--book', 'alpha']);
+    assert.notEqual(duplicate.status, 0);
+    assert.match(duplicate.stderr, /\[book:alpha\].*duplicate label id "shared"/s);
+    rmSync(duplicatePath);
+
     const tips = json(root, 'tips.json');
     assert.equal(tips.books.alpha[0].chapter, 'same');
     assert.equal(tips.books.beta[0].chapter, 'nested/explicit');
@@ -249,12 +259,14 @@ test('#80: validate resolves local BookLink targets in the target book namespace
     writeChapter(
       root,
       'alpha',
-      '<BookLink book="beta" to="chapters/nested/explicit/#shared">Beta theorem</BookLink>',
+      '<BookLink book="beta" to="chapters/nested/explicit/#shared">Beta theorem</BookLink>\n\n' +
+        '[Beta references](/beta/references/)',
     );
     const valid = run(root, 'validate.mjs', ['--book', 'alpha']);
     assert.equal(valid.status, 0, `stdout: ${valid.stdout}\nstderr: ${valid.stderr}`);
     assert.match(valid.stdout, /\[book:alpha\].*1 chapter\(s\) \+ 1 question\(s\) checked/);
     assert.match(valid.stdout, /\[book:corpus\]/);
+    assert.doesNotMatch(valid.stderr, /beta\/references.*may not resolve/);
 
     writeChapter(
       root,
