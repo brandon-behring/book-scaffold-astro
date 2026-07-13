@@ -1,0 +1,4 @@
+{
+  "$schema": "./demo.schema.json",
+  "title": "Deterministic demo"
+}
