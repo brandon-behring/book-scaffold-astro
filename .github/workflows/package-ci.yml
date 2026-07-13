@@ -53,6 +53,10 @@ jobs:
       - name: Test (node:test against fixtures)
         run: npm test
 
+      - name: Test create-book CLI
+        working-directory: ./
+        run: npm test --workspace create-book
+
       - name: Type-surface check (consumer-facing .d.ts resolves — #133)
         run: npm run check:types
 

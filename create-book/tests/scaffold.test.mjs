@@ -186,15 +186,21 @@ test('#181: help text and invalid-preset error both list all five presets', asyn
   }
 });
 
-test('#181: scaffolded self-docs link blob/main, never the frozen v3.0 branch', async () => {
+test('#181: scaffolded self-docs pin links to the installed toolkit version', async () => {
+  const { version } = JSON.parse(
+    await readFile(resolve(__dirname, '..', 'package.json'), 'utf8'),
+  );
   const r = runCli(['demo-doclinks-181', '--preset=course-notes'], workRoot);
   assert.equal(r.status, 0);
   const dir = join(workRoot, 'demo-doclinks-181');
   for (const rel of ['CLAUDE.md', 'README.md', 'sources/manifest.yaml']) {
     const text = await readFile(join(dir, rel), 'utf8');
-    assert.ok(!text.includes('blob/v3.0'), `${rel} must not pin docs to the frozen v3.0 branch`);
     if (text.includes('PACKAGE_DESIGN.md')) {
-      assert.ok(text.includes('blob/main/PACKAGE_DESIGN.md'), `${rel} PACKAGE_DESIGN link must target main`);
+      assert.ok(
+        text.includes(`blob/v${version}/PACKAGE_DESIGN.md`),
+        `${rel} PACKAGE_DESIGN link must target the matching release tag`,
+      );
+      assert.ok(!text.includes('blob/main/'), `${rel} must not float documentation links on main`);
     }
   }
 });
