@@ -2,11 +2,11 @@
 
 **Profile**: any (layout is profile-agnostic; sidebar groups chapters differently per profile).
 
-**TL;DR**: Three-tier Tufte width (65/80/90ch) + 28/24/26ch sidenote column + left chapter-nav sidebar at ≥1024px. Mobile (<48rem) collapses to single column with inline sidenote asides; sidebar hides. All pure CSS, zero JS.
+**TL;DR**: Three-tier Tufte width (65/80/90ch) + 28/24/26ch sidenote column + left chapter-nav sidebar at ≥1024px. Mobile (<48rem) collapses to single column with inline sidenote asides; sidebar hides. The layout is pure CSS; optional chrome controls hydrate independently.
 
 ## The three layers
 
-1. **Floating chrome** (top-right, `position: fixed`): theme toggle + search + tools-profile islands (`ToolFilter`, `VersionSelector`) when `BOOK_PROFILE !== 'academic'`.
+1. **Floating chrome** (top-right, `position: fixed`): theme toggle + search + the `ToolFilter` island when `BOOK_PROFILE !== 'academic'`. `VersionSelector` is manual opt-in because its links must come from a real deployment manifest (see below).
 2. **Left sidebar** (`Sidebar.astro`): chapter nav grouped by part. Sticky to top, ≤100vh, independently scrollable. Hidden below 64rem (1024px).
 3. **Main content** (`.prose`): Tufte 2-column. Main text at `--measure-main`, sidenote column at `--measure-side`, both responsive to viewport tier.
 
@@ -44,6 +44,29 @@ Re-tune with Playwright + `browser_take_screenshot` at the four viewports above 
 ```
 
 Default is `showSidebar={true}`. Set it false on full-bleed surfaces — landing pages, splash screens, search results — that have no chapter context (`Base.astro` still emits the page's single `<main>` landmark in that branch). Every chapter route inherits the default (true).
+
+## Opt-in version selector
+
+`Base.astro` does not mount a version selector or manufacture version URLs. If
+your deployment publishes multiple versions, mount the exported Preact island
+where your book's navigation belongs and pass the real destinations directly:
+
+```astro
+---
+import VersionSelector from '@brandon_m_behring/book-scaffold-astro/components/VersionSelector';
+
+const versions = [
+  { href: '/', label: 'Latest', date: '2026-07-13', current: true },
+  { href: '/versions/v4.26/', label: 'v4.26', date: '2026-06-30' },
+];
+---
+
+<VersionSelector versions={versions} client:idle />
+```
+
+Each entry requires `href`, `label`, and `date`; `current` is optional. An
+omitted or empty `versions` array renders nothing, so incomplete deployment
+metadata cannot turn placeholder releases into live navigation.
 
 ## Customizing the sidebar
 

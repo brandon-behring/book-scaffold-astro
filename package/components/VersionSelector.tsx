@@ -1,33 +1,30 @@
 /**
  * VersionSelector — Preact island for the version dropdown.
  *
- * Stage 0: stub data. The real version list arrives in Stage 3 when
- * multi-version CI deploys exist; the component is wired now to prove
- * the islands architecture works with hydration, state, and event
- * handlers.
- *
- * Hydrated with `client:idle` from Base.astro — won't run until the
- * main thread is idle, keeping initial paint fast.
- *
- * Stage 3 will replace the STUB_VERSIONS constant with a runtime fetch
- * or a build-time-injected prop that lists all deployed versions.
+ * Multi-version deployment is owned by the consuming book, so this component
+ * accepts its complete version manifest as a prop. It is a manual opt-in and
+ * is not mounted by Base.astro. With no manifest it renders nothing rather
+ * than presenting package-owned placeholder releases as real navigation.
  */
 import { useState, useRef, useEffect } from 'preact/hooks';
 
-type VersionEntry = {
-  id: string;        // URL subpath segment ('' for latest)
-  label: string;     // display label
-  date: string;      // release date
-  current: boolean;  // mark the version being viewed
-};
+export interface VersionEntry {
+  /** Resolved destination for this deployed version. */
+  href: string;
+  /** Human-readable release label, for example `v4.27`. */
+  label: string;
+  /** Human-readable release date. */
+  date: string;
+  /** Marks the version represented by the current page. */
+  current?: boolean;
+}
 
-// Stub data for Stage 0. Stage 3 will inject the real list.
-const STUB_VERSIONS: VersionEntry[] = [
-  { id: '',     label: 'Latest (main)', date: '2026-04-17', current: true },
-  { id: 'v1.0', label: 'v1.0',          date: '2026-05-01', current: false },
-];
+export interface VersionSelectorProps {
+  /** Consumer-owned deployed-version manifest. Empty/omitted renders nothing. */
+  versions?: readonly VersionEntry[];
+}
 
-export default function VersionSelector() {
+export default function VersionSelector({ versions = [] }: VersionSelectorProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -50,9 +47,11 @@ export default function VersionSelector() {
     };
   }, [open]);
 
-  // STUB_VERSIONS is a const literal with >=1 entry so the fallback is
-  // always defined; the bang silences TS's noUncheckedIndexedAccess.
-  const current = STUB_VERSIONS.find((v) => v.current) ?? STUB_VERSIONS[0]!;
+  if (versions.length === 0) return null;
+
+  // If the consumer omits `current`, present the first supplied release as
+  // the current label. The non-empty guard above makes the fallback defined.
+  const current = versions.find((version) => version.current) ?? versions[0]!;
 
   return (
     <div class="version-selector" ref={ref}>
@@ -69,17 +68,21 @@ export default function VersionSelector() {
       </button>
       {open && (
         <ul class="version-selector-menu" role="listbox">
-          {STUB_VERSIONS.map((v) => (
-            <li role="option" aria-selected={v.current}>
-              <a
-                href={v.id ? `/${v.id}/` : '/'}
-                class={v.current ? 'version-current' : ''}
-              >
-                <span class="version-label">{v.label}</span>
-                <span class="version-date">{v.date}</span>
-              </a>
-            </li>
-          ))}
+          {versions.map((version) => {
+            const isCurrent = version === current;
+            return (
+              <li key={version.href} role="option" aria-selected={isCurrent}>
+                <a
+                  href={version.href}
+                  class={isCurrent ? 'version-current' : ''}
+                  aria-current={isCurrent ? 'page' : undefined}
+                >
+                  <span class="version-label">{version.label}</span>
+                  <span class="version-date">{version.date}</span>
+                </a>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

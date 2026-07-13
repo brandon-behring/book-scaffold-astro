@@ -43,7 +43,7 @@ Component subset table for tools-profile-specific UI (volatility dashboards, con
 | Volatility badge | `Tag` | `volatility` enum chip in chapter meta |
 | Practice tag (`\official{}` / `\practitioner{}` / `\convergence{}`, also `\tagofficial{}` / `\tagpractitioner{}` / `\tagconvergence{}`) | `Tag` | `kind="official" \| "practitioner" \| "convergence"` — inline assertion of source authority. Both the bare and `\tag*` prefixed LaTeX forms map to the same component (see `package/components/Tag.astro`). |
 | Tool comparison | `ToolFilter` (island) | Interactive comparison gate |
-| Version selector | `VersionSelector` (island) | Switch between tool versions |
+| Version selector | `VersionSelector` (island) | Manual opt-in; pass real `{ href, label, date, current? }` deployment entries |
 | Convergence event | `Convergence` | "All tools converged here" timeline marker |
 | Divergence event | `Divergence` | "Tool X went its own way" annotation |
 | Pattern timeline | `PatternTimeline` | Multi-event convergence dashboard |

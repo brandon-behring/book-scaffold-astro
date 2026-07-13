@@ -975,7 +975,7 @@ See <XRef id="w1:thm:hello" /> and <Cite key="example-key2024" />.
 | Always available | Cite, XRef, Figure, MarginNote, Sidenote, CodeBlock, CodeRef, Theorem, Tag, WeekRef, ChapterHeader, ChapterNav, ChapterTOC, Sidebar, Citation, StatusBadge |
 | Academic-flavored callouts | NoteBox, ExampleBox, DynConnect, InsightBox, WarnBox, CounterBox, TipBox, OpenQuestion, PaperBox, ResultBox |
 | Tools-flavored callouts | SkillBox, KeyIdea, Convergence, Divergence, CaseStudy, ConceptBox, TryThis, Recovery |
-| Tools-only islands | ToolFilter, VersionSelector, PatternTimeline, SourceArchive |
+| Tools-oriented components | ToolFilter, PatternTimeline, SourceArchive; VersionSelector (manual prop-driven opt-in) |
 | Research-portfolio primitives (v3.5.0) | PreReleaseBanner, PolicyRef, AICollaborationDisclosure, BlockedByCallout |
 
 Mixing across categories is allowed — see `defineBookConfig({ extraStyles: ['convergence.css'] })` for the cross-profile escape hatch (§4).
@@ -983,6 +983,19 @@ Mixing across categories is allowed — see `defineBookConfig({ extraStyles: ['c
 ### Component prop reference (v3.5.0+)
 
 Prop tables for components added in v3.5.0. The Props interface lives in each component's `.astro` file under `package/components/`. Source of truth is the file; this table is a quick lookup.
+
+#### `VersionSelector`
+
+An opt-in Preact island for books that actually publish multiple deployed
+versions. `Base.astro` does not mount it. The consumer passes
+`versions?: readonly VersionEntry[]`; an omitted or empty list renders nothing.
+
+| Entry field | Type | Required | Description |
+|---|---|---|---|
+| `href` | `string` | yes | Fully resolved destination for the deployed version |
+| `label` | `string` | yes | Human-readable release label |
+| `date` | `string` | yes | Human-readable release date |
+| `current` | `boolean` | no | Marks the version represented by the current page; otherwise the first entry is used |
 
 #### `PreReleaseBanner`
 

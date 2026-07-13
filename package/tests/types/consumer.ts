@@ -33,11 +33,27 @@ import {
   questionSchema,
 } from '@brandon_m_behring/book-scaffold-astro';
 import { defineBookSchemas } from '@brandon_m_behring/book-scaffold-astro/schemas';
+import VersionSelector, {
+  type VersionEntry,
+  type VersionSelectorProps,
+} from '@brandon_m_behring/book-scaffold-astro/components/VersionSelector';
 
 declare const glossaryTerm: GlossaryTerm;
 declare const routeToggles: RouteToggles;
 declare const partialRouteToggles: PartialRouteToggles;
 declare const question: Question;
+
+const version: VersionEntry = {
+  href: '/versions/v4/',
+  label: 'v4',
+  date: '2026-07-13',
+  current: true,
+};
+export const versionSelectorProps: VersionSelectorProps = { versions: [version] };
+export const versionSelectorComponent: typeof VersionSelector = VersionSelector;
+
+// @ts-expect-error VersionEntry takes a resolved href, not the retired stub id field
+export const invalidVersionEntry: VersionEntry = { id: 'v4', label: 'v4', date: '2026-07-13' };
 
 // Each line must keep erroring; if one stops, that symbol degraded to `any`.
 // @ts-expect-error GlossaryTerm is a real object type, never a number
