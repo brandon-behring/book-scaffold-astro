@@ -7,8 +7,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { dirname, join, relative as relativePath, resolve, sep } from 'node:path';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import {
@@ -126,29 +126,37 @@ async function readRoute(root, route) {
 }
 
 test('#157: Base resolves image precedence/base exactly once and emits exact corpus markers', async () => {
-  // Clone the known-green corpus fixture under the workspace. This preserves
-  // Astro's content virtual-module setup while keeping the test isolated from
-  // the corpus suite, which Node may run concurrently.
-  const fixture = join(packageRoot, 'tests', 'fixtures', 'corpus');
+  // Build a dedicated empty-content corpus under the workspace. Do not clone
+  // the shared corpus fixture: its fail-loud tests intentionally create
+  // transient invalid entries while Node runs test files concurrently.
   const sandbox = await mkdtemp(join(packageRoot, '.test-og-base-'));
   const root = join(sandbox, 'consumer');
   try {
-    const generated = new Set([
-      '.astro',
-      'node_modules',
-      'dist',
-      '.test-debug-dist',
-      '.test-dist-root',
-      '.test-dist-canary',
-    ]);
-    await cp(fixture, root, {
-      recursive: true,
-      filter(source) {
-        const first = relativePath(fixture, source).split(sep)[0];
-        return !generated.has(first);
-      },
-    });
+    await mkdir(root, { recursive: true });
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({
+        name: 'og-base-fixture',
+        private: true,
+        type: 'module',
+        dependencies: {
+          '@brandon_m_behring/book-scaffold-astro': '*',
+          '@astrojs/mdx': '^5.0.3',
+          '@astrojs/preact': '^5.1.1',
+          astro: '^6.1.7',
+          preact: '^10.29.1',
+        },
+      }, null, 2),
+    );
     await mkdir(join(root, 'src', 'pages'), { recursive: true });
+    await mkdir(join(root, 'src', 'content'), { recursive: true });
+    await writeFile(
+      join(root, 'src', 'content.config.ts'),
+      `import { defineBookSchemas } from '@brandon_m_behring/book-scaffold-astro/schemas';
+import corpus from '../corpus.mjs';
+export const collections = defineBookSchemas({ corpus }).collections;
+`,
+    );
     await writeFile(
       join(root, 'corpus.mjs'),
       `import { defineBookCorpus } from '@brandon_m_behring/book-scaffold-astro';
