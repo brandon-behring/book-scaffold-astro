@@ -108,6 +108,25 @@ test('defineBookCorpus rejects invalid, duplicate, reserved, and unknown ids/fie
   assert.ok(RESERVED_CORPUS_BOOK_IDS.includes('_og'));
 });
 
+test('defineBookCorpus reserves scaffold-owned content collection roots', () => {
+  const roots = {
+    questions: 'dedicated questions collection root',
+    glossary: 'dedicated glossary collection root',
+    frontmatter: 'shared frontmatter collection root',
+  };
+
+  for (const [id, ownership] of Object.entries(roots)) {
+    assert.ok(RESERVED_CORPUS_BOOK_IDS.includes(id), `${id} must remain reserved`);
+    assert.throws(
+      () => defineBookCorpus({ preset: 'minimal', books: [{ id, title: 'Collision' }] }),
+      (error) =>
+        error.message.includes(`src/content/${id}/`) &&
+        error.message.includes(ownership),
+      `${id} must explain why the collection root cannot also own chapters`,
+    );
+  }
+});
+
 test('defineBookCorpus validates book metadata and apparatus routes', () => {
   assert.throws(
     () => defineBookCorpus({ preset: 'minimal', books: [{ id: 'ok', title: '   ' }] }),

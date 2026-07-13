@@ -134,6 +134,10 @@ export const { collections } = defineBookSchemas({ corpus });
 The manifest's preset is an explicit preset source. If a composed Style also
 sets a preset, it must match the manifest.
 
+Book ids may not be `questions`, `glossary`, or `frontmatter`; those names own
+shared scaffold collection roots beneath `src/content/`, rather than chapter
+directories. `defineBookCorpus` rejects such collisions before content sync.
+
 Existing Recipe 21 chapter URLs remain
 `/chapters/<book>/<slug>/`; no redirect is needed. In corpus mode, generated
 labels, references, tips, and exercise data use the versioned envelope:

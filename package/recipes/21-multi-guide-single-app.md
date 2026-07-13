@@ -73,7 +73,9 @@ v5; per-book variants are deliberately unsupported.
 
 - `books` must be non-empty; its order is display/navigation order;
 - each `id` is unique and matches `[a-z0-9]+(?:-[a-z0-9]+)*`;
-- `assets`, `chapters`, `search`, `_astro`, `_og`, and `pagefind` are reserved;
+- `assets`, `chapters`, `search`, `questions`, `glossary`, `frontmatter`,
+  `_astro`, `_og`, and `pagefind` are reserved; the three content names own
+  scaffold collection roots and cannot also identify chapter directories;
 - every title is non-blank; and
 - each `apparatus` list is duplicate-free and uses only known route names.
 

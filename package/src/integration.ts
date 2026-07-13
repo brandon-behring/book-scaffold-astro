@@ -25,6 +25,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { AstroIntegration } from 'astro';
 import {
+  BOOK_PRESETS,
   BookConfigError,
   CORPUS_APPARATUS_ROUTES,
   type CorpusApparatusRoute,
@@ -32,7 +33,11 @@ import {
   type BookScaffoldIntegrationOptions,
   type SiblingBooks,
 } from './types.js';
-import { CORPUS_APPARATUS_TOGGLE_BY_ROUTE } from './lib/corpus.js';
+import {
+  assertBookCorpus,
+  CORPUS_APPARATUS_TOGGLE_BY_ROUTE,
+  CORPUS_OWNED_ROUTE_FIELDS,
+} from './lib/corpus.js';
 import { PROFILES } from './profiles/index.js';
 import { normalizeFrontmatterConfig } from './lib/define-style.js';
 import { resolveGithubRepo, DEFAULT_GITHUB_BRANCH } from './lib/repo-url.js';
@@ -278,6 +283,32 @@ function resolvePage(file: string): string {
 export function bookScaffoldIntegration(
   opts: BookScaffoldIntegrationOptions,
 ): AstroIntegration {
+  if (!BOOK_PRESETS.includes(opts.profile)) {
+    throw new BookConfigError(
+      `bookScaffoldIntegration profile must be one of ${BOOK_PRESETS.join(' | ')} ` +
+        `(got ${JSON.stringify(opts.profile)}).`,
+    );
+  }
+  if (opts.corpus !== undefined) {
+    assertBookCorpus(opts.corpus);
+    if (opts.corpus.preset !== opts.profile) {
+      throw new BookConfigError(
+        `bookScaffoldIntegration corpus preset ${JSON.stringify(opts.corpus.preset)} ` +
+          `does not match profile ${JSON.stringify(opts.profile)}. ` +
+          'One preset applies to the whole corpus.',
+      );
+    }
+    const incompatible = CORPUS_OWNED_ROUTE_FIELDS.filter((field) =>
+      Object.prototype.hasOwnProperty.call(opts, field),
+    );
+    if (incompatible.length > 0) {
+      throw new BookConfigError(
+        `Corpus mode owns ${incompatible.join(', ')}; remove the explicit ` +
+          `${incompatible.length === 1 ? 'override' : 'overrides'} so injected routes and navigation agree.`,
+      );
+    }
+  }
+
   const {
     profile,
     corpus,
@@ -331,12 +362,6 @@ export function bookScaffoldIntegration(
   // Corpus manifests speak in public URL slugs while RouteToggles uses the
   // historical camelCase `practiceExam` key. Derive the inherited public set
   // through the explicit map; never infer it with string inclusion.
-  if (corpus && apparatusRoutes !== undefined) {
-    throw new BookConfigError(
-      'Corpus mode owns apparatusRoutes; remove the explicit override and use each ' +
-        'manifest book.apparatus as a subset of the globally enabled route toggles.',
-    );
-  }
   if (corpus) {
     for (const book of corpus.books) {
       for (const route of book.apparatus ?? []) {

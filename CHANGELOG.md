@@ -16,7 +16,8 @@ mode is opt-in and follows the public contract in Recipe 21.
   `defineBookSchemas`. Registered books receive namespaced collection ids,
   `/chapters/<book>/<slug>/` chapters, per-book landing/index/apparatus routes,
   local `<BookLink>` resolution, book-aware navigation and metadata, and one
-  Pagefind index with explicit `book` filters.
+  Pagefind index with explicit `book` filters. Scaffold-owned collection roots
+  (`questions`, `glossary`, and `frontmatter`) are reserved as book ids.
 - Labels, references, tips, exercises, questions, and glossary data are scoped
   to the current book. Corpus JSON uses a strict versioned
   `{ schemaVersion, books }` envelope; content-derived CLI commands accept

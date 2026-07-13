@@ -105,8 +105,10 @@ both config entrypoints fail with the same diagnostic.
 
 - `books` is non-empty and array order is navigation/display order.
 - `id` is unique and matches `[a-z0-9]+(?:-[a-z0-9]+)*`.
-- The ids `assets`, `chapters`, `search`, `_astro`, `_og`, and `pagefind` are
-  reserved.
+- The ids `assets`, `chapters`, `search`, `questions`, `glossary`,
+  `frontmatter`, `_astro`, `_og`, and `pagefind` are reserved. The three
+  content names belong to scaffold collection roots and cannot simultaneously
+  be chapter-owner directories.
 - `title` is non-blank.
 - `apparatus` is a duplicate-free subset of the scaffold's known apparatus
   routes.

@@ -20,7 +20,7 @@ import { bookScaffoldIntegration } from './integration.js';
 import { PROFILES } from './profiles/index.js';
 import { composeStyles, type Style } from './lib/define-style.js';
 import { BUILTIN_STYLES } from './styles/built-in.js';
-import { assertBookCorpus } from './lib/corpus.js';
+import { assertBookCorpus, CORPUS_OWNED_ROUTE_FIELDS } from './lib/corpus.js';
 
 /**
  * v4.5.0: Default portfolio backlink baked into the scaffold. Rendered in
@@ -122,7 +122,7 @@ export async function defineBookConfig(
           `the composed Style preset ${JSON.stringify(profile)}. One preset applies to the whole corpus.`,
       );
     }
-    const incompatible = ['chapterRoute', 'bookField', 'apparatusRoute', 'apparatusRoutes'].filter((field) =>
+    const incompatible = CORPUS_OWNED_ROUTE_FIELDS.filter((field) =>
       Object.prototype.hasOwnProperty.call(opts, field),
     );
     if (incompatible.length > 0) {
@@ -275,11 +275,18 @@ export async function defineBookConfig(
       siblingBooks: opts.siblingBooks,
       // v4.17.0 (#112): per-book exam-domain taxonomy for the questions collection.
       examDomains: opts.examDomains as readonly string[] | undefined,
-      // v4.26.0 (#80): book-aware nav route patterns (undefined → single-book defaults).
-      chapterRoute: opts.chapterRoute as string | undefined,
-      bookField: opts.bookField as string | undefined,
-      apparatusRoute: opts.apparatusRoute as string | undefined,
-      apparatusRoutes: opts.apparatusRoutes as readonly string[] | undefined,
+      // v4.26.0 (#80): book-aware nav route patterns (undefined → single-book
+      // defaults). Corpus mode owns these fields, so do not manufacture own
+      // properties with undefined values when handing the validated manifest
+      // to the independently exported integration.
+      ...(corpus
+        ? {}
+        : {
+            chapterRoute: opts.chapterRoute as string | undefined,
+            bookField: opts.bookField as string | undefined,
+            apparatusRoute: opts.apparatusRoute as string | undefined,
+            apparatusRoutes: opts.apparatusRoutes as readonly string[] | undefined,
+          }),
     }),
     ...mergedExtraIntegrations,
   ];

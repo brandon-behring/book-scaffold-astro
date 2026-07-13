@@ -1398,8 +1398,9 @@ defineBookSchemas({ corpus });
 
 `defineBookCorpus` eagerly validates, brands, and deeply freezes the value.
 `books` is non-empty and ordered; ids are unique kebab-case values; application
-route names are reserved; titles are non-blank; and apparatus names are a
-duplicate-free closed subset. A composed Style preset must match the manifest.
+route names and the `questions`, `glossary`, and `frontmatter` collection roots
+are reserved; titles are non-blank; and apparatus names are a duplicate-free
+closed subset. A composed Style preset must match the manifest.
 Per-book presets, Styles, Markdown plugins, integrations, `site`, `base`, and
 exam-domain taxonomies are outside the homogeneous v5 contract.
 

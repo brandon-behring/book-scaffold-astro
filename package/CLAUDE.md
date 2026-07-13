@@ -44,6 +44,8 @@ registered first path segment is the book identity and generates an entry id
 `book:` frontmatter or hand-write a `generateId`; a legacy `book:` value may
 remain only when it matches the path. Questions and glossary entries use
 `src/content/{questions,glossary}/<book>/...` and the same namespacing rule.
+Consequently, `questions`, `glossary`, and `frontmatter` are reserved book ids:
+those directories belong to scaffold content collections, not chapter owners.
 
 Keep every lookup book-scoped: navigation/previous-next, labels, references,
 tips, exercises, questions, and glossary entries must select the current

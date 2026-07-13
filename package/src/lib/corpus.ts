@@ -15,14 +15,28 @@ const BOOK_CORPUS_BRAND = Symbol.for(
   '@brandon_m_behring/book-scaffold-astro/BookCorpus/v1',
 );
 
-/** First-segment names owned by the application rather than a corpus book. */
+/**
+ * First-segment names owned by application routes/assets or shared content
+ * collection roots rather than a corpus book.
+ */
 export const RESERVED_CORPUS_BOOK_IDS = Object.freeze([
   'assets',
   'chapters',
   'search',
+  'questions',
+  'glossary',
+  'frontmatter',
   '_astro',
   '_og',
   'pagefind',
+] as const);
+
+/** Route metadata derived from the corpus contract, never consumer-overridden. */
+export const CORPUS_OWNED_ROUTE_FIELDS = Object.freeze([
+  'chapterRoute',
+  'bookField',
+  'apparatusRoute',
+  'apparatusRoutes',
 ] as const);
 
 /**
@@ -43,6 +57,11 @@ export const CORPUS_APPARATUS_TOGGLE_BY_ROUTE = Object.freeze({
 
 const RESERVED = new Set<string>(RESERVED_CORPUS_BOOK_IDS);
 const APPARATUS = new Set<string>(CORPUS_APPARATUS_ROUTES);
+const RESERVED_CONTENT_ROOTS: Readonly<Record<string, string>> = Object.freeze({
+  questions: 'src/content/questions/ is the dedicated questions collection root',
+  glossary: 'src/content/glossary/ is the dedicated glossary collection root',
+  frontmatter: 'src/content/frontmatter/ is the shared frontmatter collection root',
+});
 const TOP_LEVEL_KEYS = new Set(['preset', 'books']);
 const BRANDED_CORPUS_KEYS = new Set(['__bookCorpusVersion', 'preset', 'books']);
 const CORPUS_ARTIFACT_KEYS = new Set(['schemaVersion', 'books']);
@@ -99,8 +118,10 @@ function validateBook(value: unknown, index: number): CorpusBook {
     );
   }
   if (RESERVED.has(id)) {
+    const reason = RESERVED_CONTENT_ROOTS[id] ?? 'the scaffold owns that route or asset namespace';
     throw new BookConfigError(
-      `${label}.id ${JSON.stringify(id)} is reserved; choose a book-specific id.`,
+      `${label}.id ${JSON.stringify(id)} is reserved because ${reason}; ` +
+        'choose a book-specific id.',
     );
   }
 
