@@ -23,15 +23,16 @@
  *   - Version marker (`__styleVersion`) — future API-shape changes can
  *     be detected at composition time without breaking existing styles.
  *
- * See `recipes/15-defining-styles.md` for usage patterns + MIGRATION-v3-to-v4.md
- * for migration from the v3 `preset:` shorthand.
+ * See `recipes/15-defining-styles.md` for usage patterns and the migration
+ * guides for version-specific breaking changes.
  */
 import type { AstroIntegration, AstroUserConfig } from 'astro';
-import type {
-  BookPreset,
-  NumberStyle,
-  ReleaseStatusConfig,
-  RouteToggles,
+import {
+  BookConfigError,
+  type BookPreset,
+  type NumberStyle,
+  type ReleaseStatusConfig,
+  type RouteToggles,
 } from '../types.js';
 
 // ===== Branded nominal type =====
@@ -126,11 +127,6 @@ export interface Style {
    *  scalar fields override. */
   readonly markdown?: AstroUserConfig['markdown'];
 
-  /** Reserved legacy metadata. It is composed but has no runtime or
-   *  create-book effect: create-book chooses wrangler.toml from its CLI
-   *  preset before a consumer Style exists (#180).
-   *  @deprecated Inert in v4; scheduled for removal in v5. */
-  readonly deploy?: 'pages' | 'workers';
   /**
    * v4.26.2 (#149; style inheritance fixed in v4.26.3): release-state
    * banner. Shallow override (last defined wins); `false` suppresses a
@@ -172,7 +168,6 @@ export type StyleInput = Omit<Style, typeof StyleBrand | '__styleVersion'>;
  *     preset: 'research-portfolio',
  *     site: 'https://guides.brandon-behring.dev/',
  *     routes: { frontmatter: { enabled: true, prefix: '' } },
- *     deploy: 'pages',
  *   });
  *
  *   // guides/foo/astro.config.mjs
@@ -193,6 +188,9 @@ export type StyleInput = Omit<Style, typeof StyleBrand | '__styleVersion'>;
  * See `recipes/15-defining-styles.md` for the full pattern catalog.
  */
 export function defineStyle(opts: StyleInput): Style {
+  if (Object.prototype.hasOwnProperty.call(opts, 'deploy')) {
+    throw removedDeployError('defineStyle');
+  }
   return { __styleVersion: 1, ...opts } as Style;
 }
 
@@ -207,7 +205,7 @@ export function defineStyle(opts: StyleInput): Style {
  *   - Top-level `defineBookConfig` fields beat any style (handled in config.ts)
  *
  * Per-key merge strategy:
- *   - `preset`, `numberStyle`, `site`, `deploy`, `mdxComponentsModule`, `name`, `releaseStatus`
+ *   - `preset`, `numberStyle`, `site`, `mdxComponentsModule`, `name`, `releaseStatus`
  *     → shallow override (last defined wins; `releaseStatus: false` suppresses)
  *   - `routes` → per-route spread (each route key independently overridable)
  *   - `katexMacros` → per-macro spread (each macro key independently overridable)
@@ -226,12 +224,18 @@ export function composeStyles(styles: readonly Style[]): Style {
   const merged: Record<string, unknown> = {};
 
   for (const style of styles) {
+    // A v4 Style can arrive from a separately built workspace package without
+    // passing through this version's defineStyle(). Reject its removed field
+    // instead of silently reviving the inert v4 behavior (#211).
+    if (Object.prototype.hasOwnProperty.call(style, 'deploy')) {
+      throw removedDeployError('composeStyles');
+    }
+
     // Shallow override for primitives + readonly-scalar fields.
     if (style.name !== undefined) merged.name = style.name;
     if (style.preset !== undefined) merged.preset = style.preset;
     if (style.numberStyle !== undefined) merged.numberStyle = style.numberStyle;
     if (style.site !== undefined) merged.site = style.site;
-    if (style.deploy !== undefined) merged.deploy = style.deploy;
     if (style.releaseStatus !== undefined) {
       merged.releaseStatus = style.releaseStatus;
     }
@@ -282,6 +286,15 @@ export function composeStyles(styles: readonly Style[]): Style {
   }
 
   return defineStyle(merged as StyleInput);
+}
+
+function removedDeployError(context: string): BookConfigError {
+  return new BookConfigError(
+    `book-scaffold-astro v5 removed ${context}({ deploy }) because the field never ` +
+      'controlled deployment. Remove it and configure wrangler.toml or your deployment ' +
+      'platform directly. See https://github.com/brandon-behring/book-scaffold-astro/' +
+      'blob/main/package/MIGRATION-v4-to-v5.md.',
+  );
 }
 
 /**

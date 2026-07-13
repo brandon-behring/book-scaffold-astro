@@ -91,29 +91,31 @@ export async function defineBookConfig(
     throw v3MigrationError(opts as Record<string, unknown>);
   }
 
-  // #180: the top-level field was documented as functional but has always
-  // been stripped before Astro sees it. Warn only when the consumer writes
-  // the field explicitly; built-in styles still carry historical metadata,
-  // and warning every normal consumer would turn the signal into noise.
+  // v5 (#211): fail loud for JavaScript-authored configs too. BookConfigOptions
+  // must retain an Astro escape-hatch index signature, so removing the named
+  // TypeScript field alone would otherwise let this obsolete key leak to Astro.
   if (Object.prototype.hasOwnProperty.call(opts, 'deploy')) {
-    // eslint-disable-next-line no-console
-    console.warn(
-      'book-scaffold-astro: defineBookConfig({ deploy }) is inert and deprecated; ' +
-        'create-book chooses wrangler.toml from its CLI preset. Remove this field ' +
-        'before upgrading to v5 (#180).',
+    throw new BookConfigError(
+      'book-scaffold-astro v5 removed defineBookConfig({ deploy }) because the field ' +
+        'never controlled deployment. Remove it and configure wrangler.toml or your ' +
+        'deployment platform directly. See https://github.com/brandon-behring/' +
+        'book-scaffold-astro/blob/main/package/MIGRATION-v4-to-v5.md.',
     );
   }
 
-  // 1. Compose the style chain. During v4, a preset-less chain bridges through
-  //    BOOK_PRESET / BOOK_PROFILE / .env and finally the warned minimal fallback.
-  //    A composed preset always wins. v5 removes the final fallback (#179).
+  // 1. Compose the style chain. A composed preset always wins; otherwise the
+  //    required resolver checks BOOK_PRESET / BOOK_PROFILE / .env (#212).
   const composed = composeStyles((opts.styles as readonly Style[] | undefined) ?? []);
 
   // 2. Apply top-level opts on top of composed (top-level wins for shared fields).
-  const profile = resolvePreset(composed.preset) as (typeof BOOK_PRESETS)[number];
   const corpus = opts.corpus;
   if (corpus !== undefined) {
     assertBookCorpus(corpus);
+  }
+  // The shared corpus manifest is itself an explicit preset source. A Style
+  // remains higher precedence so a disagreement can fail below (#80/#212).
+  const profile = resolvePreset(composed.preset ?? corpus?.preset) as (typeof BOOK_PRESETS)[number];
+  if (corpus !== undefined) {
     if (corpus.preset !== profile) {
       throw new BookConfigError(
         `defineBookConfig corpus preset ${JSON.stringify(corpus.preset)} does not match ` +
@@ -315,7 +317,6 @@ export async function defineBookConfig(
     numberStyle: _numberStyle,
     site: _site,
     routes: _routes,
-    deploy: _deploy,
     mdxComponentsModule: _mdxComponentsModule,
     extraIntegrations: _extraIntegrations,
     extraStyles: _extraStyles,
@@ -352,7 +353,6 @@ export async function defineBookConfig(
   void _numberStyle;
   void _site;
   void _routes;
-  void _deploy;
   void _mdxComponentsModule;
   void _extraIntegrations;
   void _extraStyles;

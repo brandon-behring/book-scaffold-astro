@@ -178,3 +178,5 @@ export const guardDefineBookSchemas: number = defineBookSchemas;
 defineStyle({ numberStyle: 'per-kind' });
 // @ts-expect-error numberStyle rejects values outside shared | per-kind
 defineStyle({ numberStyle: 'separate' });
+// @ts-expect-error v5 removed inert deployment metadata from Style
+defineStyle({ deploy: 'pages' });

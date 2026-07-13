@@ -2,7 +2,7 @@
 
 **npm package** for long-form technical books. Astro + MDX + Paged.js + Pagefind with Tufte-inspired typography, profile-aware pedagogy (academic vs tools-comparative), KaTeX math, BibTeX citations, and Cloudflare Workers + Static Assets deploy.
 
-**Current release**: [`@brandon_m_behring/book-scaffold-astro`](https://www.npmjs.com/package/@brandon_m_behring/book-scaffold-astro) — npm's `latest` tag is canonical; [`CHANGELOG.md`](CHANGELOG.md) records every release. The v4 line is **breaking** vs v3: `preset:` shorthand was replaced by typed `defineStyle()` composition. Migrating? → [`MIGRATION-v3-to-v4.md`](package/MIGRATION-v3-to-v4.md). Sibling CLI: [`@brandon_m_behring/create-book`](https://www.npmjs.com/package/@brandon_m_behring/create-book). Both publish in lock-step from a main-reachable version tag. See [`PACKAGE_DESIGN.md`](PACKAGE_DESIGN.md) for the full API contract.
+**Current release**: [`@brandon_m_behring/book-scaffold-astro`](https://www.npmjs.com/package/@brandon_m_behring/book-scaffold-astro) — npm's `latest` tag is canonical; [`CHANGELOG.md`](CHANGELOG.md) records every release. The v4 line is **breaking** vs v3: `preset:` shorthand was replaced by typed `defineStyle()` composition. Migration guides: [`v3 → v4`](package/MIGRATION-v3-to-v4.md) and [`v4 → v5`](package/MIGRATION-v4-to-v5.md). Sibling CLI: [`@brandon_m_behring/create-book`](https://www.npmjs.com/package/@brandon_m_behring/create-book). Both publish in lock-step from a main-reachable version tag. See [`PACKAGE_DESIGN.md`](PACKAGE_DESIGN.md) for the full API contract.
 
 ## Start a new book
 
@@ -29,13 +29,16 @@ export default await defineBookConfig({
 ```ts
 // src/content.config.ts (2 lines)
 import { defineBookSchemas } from '@brandon_m_behring/book-scaffold-astro/schemas';
-export const { collections } = defineBookSchemas();
+export const { collections } = defineBookSchemas({ preset: 'academic' });
 ```
 
-```
+```dotenv
 # .env
-BOOK_PROFILE=academic
+BOOK_PRESET=academic
 ```
+
+The `.env` value is an optional shared alternative to the explicit schema
+argument; v5 does not choose `minimal` when every preset source is absent.
 
 ## What ships in the package
 

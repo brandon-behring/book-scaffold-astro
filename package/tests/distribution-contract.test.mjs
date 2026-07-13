@@ -34,6 +34,7 @@ test('toolkit tarball ships both agent-guide names and both scoped licenses', ()
     'AGENTS.md',
     'LICENSE',
     'LICENSE-CONTENT',
+    'MIGRATION-v4-to-v5.md',
     'dist/demo.mjs',
     'dist/demo.d.ts',
     'styles/demo.css',

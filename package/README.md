@@ -18,7 +18,8 @@ Available presets are `academic`, `tools`, `minimal`, `course-notes`, and
 [repository README](https://github.com/brandon-behring/book-scaffold-astro)
 for the current release overview, and
 [PACKAGE_DESIGN.md](https://github.com/brandon-behring/book-scaffold-astro/blob/main/PACKAGE_DESIGN.md)
-for the complete API contract.
+for the complete API contract. Upgrading an existing v4 book? Follow
+[MIGRATION-v4-to-v5.md](./MIGRATION-v4-to-v5.md).
 
 Astro builds emit a Cloudflare-compatible `dist/_headers` with audited
 security defaults. A consumer-owned `public/_headers` wins unchanged;

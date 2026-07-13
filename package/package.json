@@ -170,7 +170,8 @@
     "README.md",
     "LICENSE",
     "LICENSE-CONTENT",
-    "LATEX_TO_MDX_MAPPING.md"
+    "LATEX_TO_MDX_MAPPING.md",
+    "MIGRATION-v4-to-v5.md"
   ],
   "scripts": {
     "build": "tsup",

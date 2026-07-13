@@ -232,6 +232,10 @@ Wraps Astro's `defineConfig`; composes a Style chain, threads the resolved profi
 
 **v4.0.0 BREAKING CHANGE**: the v3.x `preset:` / `profile:` shorthand was removed. Pass styles via `styles: [<presetName>Style]` instead. See [`MIGRATION-v3-to-v4.md`](package/MIGRATION-v3-to-v4.md) for the migration recipe and [`recipes/15-defining-styles.md`](package/recipes/15-defining-styles.md) for the Style composition pattern.
 
+**v5.0.0 BREAKING CHANGES**: a valid preset must resolve explicitly and the
+inert `deploy` configuration field is removed. See
+[`MIGRATION-v4-to-v5.md`](package/MIGRATION-v4-to-v5.md).
+
 ### Signature
 
 ```ts
@@ -293,11 +297,6 @@ export interface BookConfigOptions extends Omit<AstroUserConfig, 'integrations' 
   /** Frontmatter field supplying :book and :slug route-token context. */
   bookField?: string;
 
-  /** Optional. RESERVED (#50, #180) — accepted and style-chain-merged, but has no
-   *  runtime effect. The wrangler.toml shape is set at scaffold time by create-book
-   *  from the profile name; this field does not change it.
-   *  @deprecated Remove before v5. */
-  deploy?: 'pages' | 'workers';
 }
 
 export function defineBookConfig(opts: BookConfigOptions): Promise<AstroUserConfig>;
@@ -308,7 +307,8 @@ export function defineBookConfig(opts: BookConfigOptions): Promise<AstroUserConf
 1. Detect v3 API usage (`preset` or `profile` at top level) → throw `BookConfigError` with auto-suggested replacement: exact `styles: [<presetName>Style]` line + missing import, plus link to MIGRATION-v3-to-v4.md.
 2. Compose the Style chain via `composeStyles(opts.styles ?? [])`, applying the per-key merge strategy (see §4a).
 3. Apply top-level `opts` fields on top of composed style (consumer per-book override wins).
-4. Resolve `preset` from composed style; throw `BookConfigError` if unknown.
+4. Resolve a required `preset` from the composed Style, corpus manifest,
+   environment, or `.env`; throw `BookConfigError` if absent or unknown.
 5. Require `site` to be set after composition; throw otherwise.
 6. Build the package's integration list: `[mdx(), preact(), bookScaffoldIntegration({ preset, routes, extraStyles, mdxComponentsModule, securityHeaders })]`.
 7. Thread `securityHeaders`, `siblingBooks`, `chapterRoute`, and `bookField` to the integration without forwarding them to Astro's own config. Security-header omission means defaults, `false` means no scaffold emission, and `{ contentSecurityPolicy }` replaces only the default CSP. Non-enumerable resolved metadata exposes the evaluated sibling registry and chapter-route contract to CLI tooling, avoiding source-text parsing of computed/spread config.
@@ -320,6 +320,12 @@ export function defineBookConfig(opts: BookConfigOptions): Promise<AstroUserConf
 ### Errors / common mistakes
 
 - **`BookConfigError: v3 API detected. Replace this: ... With this: ...`** — passed `preset:` or `profile:` at top level. The error includes the exact replacement code. See MIGRATION-v3-to-v4.md.
+- **`BookConfigError: no book preset was resolved`** — add a built-in Style,
+  pass the same explicit preset to `defineBookSchemas`, share a corpus manifest,
+  or set `BOOK_PRESET`.
+- **`BookConfigError: v5 removed ... { deploy }`** — delete the inert field
+  and configure `wrangler.toml` or the deployment platform directly. See
+  MIGRATION-v4-to-v5.md.
 - **`BookConfigError: site is required`** — neither top-level `site` nor any composed Style provided one. Add `site: 'https://...'` to the call or to a shared Style.
 - **`BookConfigError: unknown preset "X"`** — composed Style's `preset` field is invalid. Use one of the 5 built-in styles or `defineStyle({ preset: 'academic', ... })`.
 - **Consumer adds remark/rehype plugin via `markdown.remarkPlugins`**: package list ordering matters; consumer plugins run **after** package's KaTeX plugins. If you need a different order, choose a non-katex preset (e.g., `toolsStyle`) and wire math manually.
@@ -389,8 +395,6 @@ export interface Style {
   readonly extraIntegrations?: readonly AstroIntegration[];
   readonly mdxComponentsModule?: string;
   readonly markdown?: AstroUserConfig['markdown'];
-  /** @deprecated Reserved metadata with no runtime effect; remove before v5. */
-  readonly deploy?: 'pages' | 'workers';
   /** Scoped consumer-side metadata; ignored by toolkit; survives merge as shallow override.
    *  Preserves typo protection on known fields (closed shape — no public index signature). */
   readonly extra?: Readonly<Record<string, unknown>>;
@@ -411,7 +415,7 @@ When `composeStyles([s1, s2, s3])` runs (left-to-right; top-level `defineBookCon
 
 | Field | Strategy |
 |---|---|
-| `name`, `preset`, `site`, `deploy`, `mdxComponentsModule` | Shallow override (last wins) |
+| `name`, `preset`, `site`, `mdxComponentsModule` | Shallow override (last wins) |
 | `routes` | Per-route spread |
 | `routes.frontmatter` | Per-route spread; later value (boolean OR object) wholly replaces earlier |
 | `katexMacros` | Object spread (per-macro override) |
@@ -932,7 +936,9 @@ await import(path.resolve(here, handlers[sub]));
 5. `.env` file `BOOK_PROFILE`
 6. `defineBookSchemas({ preset })` in `src/content.config.{ts,mjs,js}`
 7. `defineBookSchemas({ profile })` in `src/content.config.ts` (alias)
-8. `'minimal'` fallback
+
+If all seven sources are absent, v5 exits with an actionable configuration
+error. It never selects `minimal` implicitly.
 
 **chaptersBase chain** (both `validate` and `build-labels`):
 

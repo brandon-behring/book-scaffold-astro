@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 import {
   academicStyle,
   defineBookConfig,
+  defineBookCorpus,
   defineStyle,
   BookConfigError,
 } from '../dist/index.mjs';
@@ -35,34 +36,45 @@ test('#179: a composed preset wins over an invalid environment value', async () 
   }
 });
 
-test('#179: a preset-less style chain bridges through process environment', async () => {
-  const saved = process.env.BOOK_PRESET;
-  process.env.BOOK_PRESET = 'tools';
+test('#212: a preset-less style chain resolves process env and its profile alias', async () => {
+  const savedPreset = process.env.BOOK_PRESET;
+  const savedProfile = process.env.BOOK_PROFILE;
   try {
-    const config = await defineBookConfig({
-      styles: [defineStyle({ site: 'https://test.invalid' })],
-    });
-    assert.equal(integrationMetadata(config).preset, 'tools');
+    for (const [key, value] of [
+      ['BOOK_PRESET', 'tools'],
+      ['BOOK_PROFILE', 'course-notes'],
+    ]) {
+      delete process.env.BOOK_PRESET;
+      delete process.env.BOOK_PROFILE;
+      process.env[key] = value;
+      const config = await defineBookConfig({
+        styles: [defineStyle({ site: 'https://test.invalid' })],
+      });
+      assert.equal(integrationMetadata(config).preset, value);
+    }
   } finally {
-    if (saved === undefined) delete process.env.BOOK_PRESET;
-    else process.env.BOOK_PRESET = saved;
+    if (savedPreset === undefined) delete process.env.BOOK_PRESET;
+    else process.env.BOOK_PRESET = savedPreset;
+    if (savedProfile === undefined) delete process.env.BOOK_PROFILE;
+    else process.env.BOOK_PROFILE = savedProfile;
   }
 });
 
-test('#179: .env bridges preset-less config and exhausted resolution warns once then uses minimal', () => {
-  for (const withDotenv of [true, false]) {
+test('#212: .env resolves both canonical preset and profile alias', () => {
+  for (const [assignment, expected] of [
+    ['BOOK_PRESET=course-notes\n', 'course-notes'],
+    ['BOOK_PROFILE=academic\n', 'academic'],
+  ]) {
     const root = mkdtempSync(join(tmpdir(), 'book-scaffold-preset-'));
     try {
-      if (withDotenv) writeFileSync(join(root, '.env'), 'BOOK_PRESET=course-notes\n');
+      writeFileSync(join(root, '.env'), assignment);
       const source = `
         import { defineBookConfig, defineStyle } from ${JSON.stringify(DIST_INDEX_URL)};
         delete process.env.BOOK_PRESET;
         delete process.env.BOOK_PROFILE;
-        for (let i = 0; i < 2; i++) {
-          const config = await defineBookConfig({ styles: [defineStyle({ site: 'https://test.invalid' })] });
-          const integration = config.integrations.find((item) => item.name === 'book-scaffold-astro');
-          console.log(integration.__bookScaffoldResolvedConfig.preset);
-        }
+        const config = await defineBookConfig({ styles: [defineStyle({ site: 'https://test.invalid' })] });
+        const integration = config.integrations.find((item) => item.name === 'book-scaffold-astro');
+        console.log(integration.__bookScaffoldResolvedConfig.preset);
       `;
       const result = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
         cwd: root,
@@ -72,17 +84,40 @@ test('#179: .env bridges preset-less config and exhausted resolution warns once 
         ),
       });
       assert.equal(result.status, 0, result.stderr);
-      const expected = withDotenv ? 'course-notes\ncourse-notes\n' : 'minimal\nminimal\n';
-      assert.equal(result.stdout, expected);
-      const warningCount = (result.stderr.match(/fallback will be removed in v5/g) ?? []).length;
-      assert.equal(warningCount, withDotenv ? 0 : 1);
+      assert.equal(result.stdout, `${expected}\n`);
+      assert.equal(result.stderr, '');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   }
 });
 
-test('#179: invalid fallback candidate fails with the preset enum', async () => {
+test('#212: exhausted preset resolution fails with actionable guidance', () => {
+  const root = mkdtempSync(join(tmpdir(), 'book-scaffold-preset-'));
+  try {
+    const source = `
+      import { defineBookConfig, defineStyle } from ${JSON.stringify(DIST_INDEX_URL)};
+      delete process.env.BOOK_PRESET;
+      delete process.env.BOOK_PROFILE;
+      await defineBookConfig({ styles: [defineStyle({ site: 'https://test.invalid' })] });
+    `;
+    const result = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
+      cwd: root,
+      encoding: 'utf8',
+      env: Object.fromEntries(
+        Object.entries(process.env).filter(([key]) => key !== 'BOOK_PRESET' && key !== 'BOOK_PROFILE'),
+      ),
+    });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /no book preset was resolved/i);
+    assert.match(result.stderr, /defineBookSchemas.*BOOK_PRESET/s);
+    assert.match(result.stderr, /MIGRATION-v4-to-v5\.md/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('#212: invalid explicit environment candidate fails with the preset enum', async () => {
   const saved = process.env.BOOK_PRESET;
   process.env.BOOK_PRESET = 'bogus';
   try {
@@ -96,6 +131,18 @@ test('#179: invalid fallback candidate fails with the preset enum', async () => 
   }
 });
 
+test('#80/#212: a corpus manifest is an explicit preset source', async () => {
+  const corpus = defineBookCorpus({
+    preset: 'tools',
+    books: [{ id: 'guide', title: 'Guide' }],
+  });
+  const config = await defineBookConfig({
+    corpus,
+    styles: [defineStyle({ site: 'https://test.invalid' })],
+  });
+  assert.equal(integrationMetadata(config).preset, 'tools');
+});
+
 test('#175: resolved integration metadata carries top-level-over-style numberStyle', async () => {
   const config = await defineBookConfig({
     styles: [academicStyle, defineStyle({ numberStyle: 'per-kind' })],
@@ -106,8 +153,11 @@ test('#175: resolved integration metadata carries top-level-over-style numberSty
     preset: 'academic',
     numberStyle: 'shared',
     siblingBooks: {},
+    corpus: null,
     chapterRoute: '/chapters/:id/',
     bookField: 'book',
+    apparatusRoute: '/:route/',
+    apparatusRoutes: [],
   });
   assert.equal(
     Object.prototype.propertyIsEnumerable.call(
@@ -186,6 +236,7 @@ test('#175/#190: Vite loader reads composed metadata, evaluated base, and defaul
           labels: './vendor/design-labels.json',
         },
       },
+      corpus: null,
       chapterRoute: '/:id/',
       bookField: 'volume',
       base: '/library/books',
@@ -203,6 +254,7 @@ test('#175/#190: Vite loader reads composed metadata, evaluated base, and defaul
       preset: 'minimal',
       numberStyle: 'shared',
       siblingBooks: {},
+      corpus: null,
       chapterRoute: '/chapters/:id/',
       bookField: 'book',
       base: '/',
@@ -217,6 +269,7 @@ test('#175/#190: Vite loader reads composed metadata, evaluated base, and defaul
       preset: null,
       numberStyle: 'shared',
       siblingBooks: {},
+      corpus: null,
       chapterRoute: '/chapters/:id/',
       bookField: 'book',
       base: 'standalone/',

@@ -46,7 +46,6 @@ defineStyle({
   extraIntegrations?: readonly AstroIntegration[];
   mdxComponentsModule?: string;
   markdown?: AstroUserConfig['markdown'];
-  deploy?: 'pages' | 'workers';      // RESERVED (#50, #180) — no runtime effect; wrangler shape is set at scaffold time by profile
   extra?: Record<string, unknown>;   // scoped consumer-side metadata
 });
 ```
@@ -122,7 +121,7 @@ Different fields have different merge semantics. Documented:
 
 | Field | Strategy |
 |---|---|
-| `name`, `preset`, `site`, `deploy`, `mdxComponentsModule` | Shallow override (last defined wins) |
+| `name`, `preset`, `site`, `mdxComponentsModule` | Shallow override (last defined wins) |
 | `releaseStatus` | Shallow override (last defined object replaces the whole earlier object); `false` suppresses an inherited banner |
 | `routes` | Per-route spread (each route key independently overridable) |
 | `routes.frontmatter` | Per-route spread; later value (boolean OR object) wholly replaces earlier |
@@ -158,10 +157,10 @@ defineBookConfig({ styles: [researchPortfolioStyle], ... });
 defineBookConfig({ styles: [BUILTIN_STYLES['research-portfolio']], ... });
 ```
 
-Each built-in style has a `name` matching its preset and a `preset` field. Its
-historical `deploy` value is reserved metadata only; it does not alter a
-generated or existing deployment. `create-book --preset` selects the initial
-`wrangler.toml`, after which the consumer owns that file (#180).
+Each built-in style has a `name` matching its preset and a `preset` field. In
+v5, a valid preset must resolve from a Style, corpus manifest, environment, or
+`.env`; there is no implicit `minimal` fallback. `create-book --preset` still
+selects the initial `wrangler.toml`, after which the consumer owns that file.
 
 ---
 
@@ -214,6 +213,7 @@ The v4.x release line is explicitly the iteration window for this API. Use it.
 ## See also
 
 - `MIGRATION-v3-to-v4.md` — step-by-step migration from v3 `preset:` shorthand
+- `MIGRATION-v4-to-v5.md` — explicit preset and removed `deploy` migration
 - `PACKAGE_DESIGN.md §4` — `defineBookConfig` API reference
 - `PACKAGE_DESIGN.md §4a` — `defineStyle` API reference
 - `recipes/12-where-to-file-issues.md` — the broader consumer-driven evolution loop this fits into
