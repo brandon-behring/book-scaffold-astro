@@ -195,6 +195,8 @@ export async function defineBookConfig(
       title: opts.title,
       // v4.23.0 (#135): sidebar brand subtitle.
       subtitle: opts.subtitle,
+      // v4.27.0 (#149): release-state banner (top-level beats the style chain).
+      releaseStatus: opts.releaseStatus ?? composed.releaseStatus,
       description: opts.description,
       portfolio: resolvedPortfolio,
       // v4.6.0: book-level author + SEO config (ogImage, twitterHandle),
@@ -261,6 +263,8 @@ export async function defineBookConfig(
     // v4.5.0: strip new landing-related opts so they don't leak into AstroUserConfig.
     title: _title,
     subtitle: _subtitle,
+    // v4.27.0 (#149): strip the release-state banner config.
+    releaseStatus: _releaseStatus,
     description: _description,
     portfolio: _portfolio,
     // v4.6.0: strip new book-level SEO opts (author + seo block).
@@ -291,6 +295,7 @@ export async function defineBookConfig(
   void _katexMacros;
   void _title;
   void _subtitle;
+  void _releaseStatus;
   void _description;
   void _portfolio;
   void _author;

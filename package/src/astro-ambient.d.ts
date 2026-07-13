@@ -34,6 +34,8 @@ declare module 'virtual:book-scaffold/book-config' {
     title: string | null;
     /** v4.23.0 (#135): sidebar brand subtitle (Sidebar.astro). */
     subtitle: string | null;
+    /** v4.27.0 (#149): release-state banner; Base.astro renders <PreReleaseBanner> when non-null. */
+    releaseStatus: { state: 'alpha' | 'beta' | 'rc' | 'locked'; dismissAt?: string; message?: string } | null;
     description: string | null;
     portfolio: { url: string; label: string } | false;
     enabledRoutes: readonly string[];
