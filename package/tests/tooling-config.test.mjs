@@ -155,12 +155,15 @@ test('#175: invalid numberStyle values fail at config and tooling boundaries', a
         `chapterRoute: '', bookField: 'book' } }] };\n`,
     );
     await assert.rejects(loadResolvedBookConfig(root), /invalid chapterRoute.*non-empty string/);
+
+    writeFileSync(join(root, 'astro.config.mjs'), 'export default { base: 42 };\n');
+    await assert.rejects(loadResolvedBookConfig(root), /invalid Astro base 42.*expected a string/);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });
 
-test('#175: Vite loader reads composed style metadata and defaults without integration', async () => {
+test('#175/#190: Vite loader reads composed metadata, evaluated base, and defaults', async () => {
   const root = mkdtempSync(join(tmpdir(), 'book-scaffold-config-'));
   try {
     writeFileSync(
@@ -169,8 +172,9 @@ test('#175: Vite loader reads composed style metadata and defaults without integ
         `const key = ['de', 'sign'].join('');\n` +
         `const labels = ['./vendor', 'design-labels.json'].join('/');\n` +
         `const chapterRoute = ['/', ':id', '/'].join('');\n` +
+        `const mount = ['/library', 'books'].join('/');\n` +
         `export default await defineBookConfig({ styles: [minimalStyle, defineStyle({ numberStyle: 'per-kind' })], ` +
-        `site: 'https://test.invalid', chapterRoute, bookField: 'volume', ` +
+        `site: 'https://test.invalid', base: mount, chapterRoute, bookField: 'volume', ` +
         `siblingBooks: { [key]: { url: 'https://hub.example/library/design/', labels } } });\n`,
     );
     assert.deepEqual(await loadResolvedBookConfig(root), {
@@ -184,6 +188,7 @@ test('#175: Vite loader reads composed style metadata and defaults without integ
       },
       chapterRoute: '/:id/',
       bookField: 'volume',
+      base: '/library/books',
       integrationFound: true,
     });
 
@@ -200,16 +205,21 @@ test('#175: Vite loader reads composed style metadata and defaults without integ
       siblingBooks: {},
       chapterRoute: '/chapters/:id/',
       bookField: 'book',
+      base: '/',
       integrationFound: true,
     });
 
-    writeFileSync(join(root, 'astro.config.mjs'), 'export default { site: "https://test.invalid" };\n');
+    writeFileSync(
+      join(root, 'astro.config.mjs'),
+      'export default { site: "https://test.invalid", base: "standalone/" };\n',
+    );
     assert.deepEqual(await loadResolvedBookConfig(root), {
       preset: null,
       numberStyle: 'shared',
       siblingBooks: {},
       chapterRoute: '/chapters/:id/',
       bookField: 'book',
+      base: 'standalone/',
       integrationFound: false,
     });
   } finally {

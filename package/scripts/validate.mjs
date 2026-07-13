@@ -25,6 +25,8 @@
  *   9. Learning-objective anchors (#130) — when a chapter declares frontmatter
  *      `los:` entries with `anchor:` slugs, the declared set and the prose's
  *      MDX anchor-comment marker set must agree in both directions.
+ *  10. Authored root-absolute href/src targets (#190) — under a non-root Astro
+ *      base, literal Markdown, HTML, and JSX targets must stay inside that base.
  *
  * Run from the consumer's project root. Closes #8 (was resolving paths
  * from the package's own directory inside node_modules — false negatives
@@ -35,11 +37,11 @@
  *   book-scaffold validate --preset academic
  *   BOOK_REPO_ROOT=/abs/path npx book-scaffold validate
  *
- * Exit code = total failure count (0 = pass, >=1 = errors).
+ * Exit code = total failure count capped at 255 (0 = pass, >=1 = errors).
  */
 import { readFile, access } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve, dirname, join } from 'node:path';
+import { resolve, dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { unified } from 'unified';
@@ -48,12 +50,19 @@ import remarkMdx from 'remark-mdx';
 import { walkMdx, readChaptersBase, readBookSchemaConfig } from './walk-mdx.mjs';
 import { readEnvFile } from './read-env.mjs';
 import { loadResolvedBookConfig } from './resolve-book-config.mjs';
+import {
+  findAuthoredTargets,
+  normalizeAstroBase,
+  rootTargetEscapesBase,
+  rootTargetPathname,
+  suggestBaseContainedTarget,
+} from './authored-links.mjs';
 
 // --help / -h: non-mutating (closes #14).
 const USAGE = `Usage: book-scaffold validate [--preset <name>]
 
 Pre-flight content validator. Checks Cite keys, XRef ids, Figure srcs,
-internal markdown links, and (when BOOK_REPO_ROOT is set) CodeRef paths.
+internal authored links, and (when BOOK_REPO_ROOT is set) CodeRef paths.
 
 Options:
   --preset <name>    academic | tools | minimal | course-notes | research-portfolio
@@ -65,7 +74,7 @@ Env:
   BOOK_PROFILE       Backward-compat alias for BOOK_PRESET.
   BOOK_REPO_ROOT     Absolute path to a sibling code repo for CodeRef checks.
 
-Exit code = total failure count.
+Exit code = total failure count, capped at 255 so failures never wrap to success.
 `;
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
@@ -303,12 +312,11 @@ const validTopLevelRoutes = new Set([
   '/', '/chapters/', '/references/', '/search/', '/print/', '/convergence/',
 ]);
 
-// ===== Pattern helpers (regex-based; cheap, good enough for MDX) =====
+// ===== Pattern helpers for component-specific checks =====
 const RE_CITE = /<Cite[^>]+key=["']([^"']+)["']/g;
 const RE_XREF = /<XRef[^>]+id=["']([^"']+)["']/g;
 const RE_FIGURE = /<Figure[^>]+src=["']([^"']+)["']/g;
 const RE_CODEREF = /<CodeRef[^>]+path=["']([^"']+)["'](?:[^>]*line=\{(\d+)\})?(?:[^>]*lineEnd=\{(\d+)\})?/g;
-const RE_MD_LINK = /\[(?:[^\]]*)\]\((\/[^)\s#]+)(?:#[^)]*)?\)/g;
 // #121: a <Theorem> opening tag — capture its attributes to assert a
 // resolvable kind= (or legacy type=) is present.
 const RE_THEOREM = /<Theorem\b([^>]*)>/g;
@@ -328,6 +336,59 @@ async function fileExists(p) {
 
 function lineOf(content, idx) {
   return content.slice(0, idx).split('\n').length;
+}
+
+const ASTRO_BASE = normalizeAstroBase(TOOLING_CONFIG.base);
+
+function authoredFormat(file) {
+  return extname(file).toLowerCase() === '.md' ? 'md' : 'mdx';
+}
+
+function collectAuthoredTargets(file, content) {
+  try {
+    return findAuthoredTargets(content, { format: authoredFormat(file) });
+  } catch (error) {
+    const line = error?.line ?? error?.place?.start?.line ?? error?.position?.start?.line ?? 1;
+    const detail = String(error?.reason ?? error?.message ?? error).split('\n')[0];
+    fail(file, line, `Could not parse authored links as ${authoredFormat(file).toUpperCase()}: ${detail}`);
+    return [];
+  }
+}
+
+function validateAuthoredTargets(file, content, targets) {
+  for (const violation of targets) {
+    if (!rootTargetEscapesBase(violation.target, ASTRO_BASE)) continue;
+    const suggested = suggestBaseContainedTarget(violation.target, ASTRO_BASE);
+    fail(
+      file,
+      lineOf(content, violation.index),
+      `Authored ${violation.kind} ${JSON.stringify(violation.target)} escapes configured Astro base ` +
+        `${JSON.stringify(ASTRO_BASE)}. Use ${JSON.stringify(suggested)}, ` +
+        'import.meta.env.BASE_URL in JSX, or a base-aware component. ' +
+        'Validation does not rewrite authored URLs (#190).',
+    );
+  }
+}
+
+function validateInternalMarkdownLinks(file, content, targets) {
+  for (const authored of targets) {
+    if (authored.kind !== 'Markdown link destination') continue;
+    const pathname = rootTargetPathname(authored.target);
+    if (pathname === null) continue;
+    const baseRelativeTarget =
+      ASTRO_BASE !== '/' && (pathname === ASTRO_BASE || pathname.startsWith(`${ASTRO_BASE}/`))
+        ? pathname.slice(ASTRO_BASE.length) || '/'
+        : pathname;
+    const target = baseRelativeTarget.replace(/\/$/, '') || '/';
+    if (validTopLevelRoutes.has(`${target}/`) || validTopLevelRoutes.has(target)) continue;
+    const chMatch = target.match(/^\/chapters\/(.+)$/);
+    if (chMatch && validSlugs.has(chMatch[1])) continue;
+    warn(
+      file,
+      lineOf(content, authored.index),
+      `Internal link ${JSON.stringify(authored.target)} — target may not resolve (check spelling or route)`,
+    );
+  }
 }
 
 /**
@@ -441,6 +502,13 @@ function siblingTargetCandidates(index, fragment) {
 for (const rel of chapterFiles) {
   const abs = join(CHAPTERS_DIR, rel);
   const content = await readFile(abs, 'utf8');
+  const authoredTargets = collectAuthoredTargets(rel, content);
+
+  // 10. Root-absolute authored targets under a non-root Astro base (#190).
+  //     Structural parsing covers Markdown link/image destinations, HTML
+  //     href/src, and decoded static JSX strings while excluding code examples.
+  validateAuthoredTargets(rel, content, authoredTargets);
+
   let bookLinks = [];
   if (content.includes('<BookLink')) {
     try {
@@ -477,14 +545,9 @@ for (const rel of chapterFiles) {
     }
   }
 
-  // 4. Internal markdown links resolve
-  for (const m of content.matchAll(RE_MD_LINK)) {
-    const target = m[1].replace(/\/$/, '');
-    if (validTopLevelRoutes.has(target + '/') || validTopLevelRoutes.has(target)) continue;
-    const chMatch = target.match(/^\/chapters\/(.+)$/);
-    if (chMatch && validSlugs.has(chMatch[1])) continue;
-    warn(rel, lineOf(content, m.index), `Internal link "${m[1]}" — target may not resolve (check spelling or route)`);
-  }
+  // 4. Internal Markdown links resolve. Reuse the structural authored-target
+  //    traversal so code examples and comments cannot create false warnings.
+  validateInternalMarkdownLinks(rel, content, authoredTargets);
 
   // 5. CodeRef path + line bounds (only when BOOK_REPO_ROOT set)
   if (REPO_ROOT) {
@@ -773,6 +836,11 @@ let questionsChecked = 0;
       const front = fm ? fm[1] : '';
       const qrel = `questions/${rel}`;
 
+      // Questions do not run the legacy link-resolution advisory, so keep the
+      // #190 root-base contract fully inert by parsing only for a non-root base.
+      const authoredTargets = ASTRO_BASE === '/' ? [] : collectAuthoredTargets(qrel, content);
+      validateAuthoredTargets(qrel, content, authoredTargets);
+
       const idMatch = front.match(/^id\s*:\s*["']?([^"'\n]+?)["']?\s*$/m);
       if (idMatch) {
         const id = idMatch[1].trim();
@@ -848,4 +916,4 @@ console.error(
     `(profile=${PROFILE}, number-style=${TOOLING_CONFIG.numberStyle}):`,
 );
 errors.forEach((e) => console.error(format(e)));
-process.exit(errors.length);
+process.exit(Math.min(errors.length, 255));

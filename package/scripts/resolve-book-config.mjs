@@ -8,6 +8,7 @@ export const DEFAULT_TOOLING_CONFIG = Object.freeze({
   siblingBooks: Object.freeze({}),
   chapterRoute: '/chapters/:id/',
   bookField: 'book',
+  base: '/',
   integrationFound: false,
 });
 
@@ -51,6 +52,17 @@ function resolveNonEmptyString(value, fallback, field, configPath) {
     throw new Error(
       `book-scaffold tooling: ${configPath} resolved invalid ${field} ` +
         `${JSON.stringify(value)}; expected a non-empty string.`,
+    );
+  }
+  return value;
+}
+
+function resolveBase(value, configPath) {
+  if (value == null || value === '') return '/';
+  if (typeof value !== 'string') {
+    throw new Error(
+      `book-scaffold tooling: ${configPath} resolved invalid Astro base ` +
+        `${JSON.stringify(value)}; expected a string.`,
     );
   }
   return value;
@@ -135,15 +147,16 @@ export async function loadResolvedBookConfig(projectRoot = process.cwd()) {
   const integrations = Array.isArray(loaded.config?.integrations)
     ? loaded.config.integrations.flat(Infinity)
     : [];
+  const base = resolveBase(loaded.config?.base, configPath);
   const integration = integrations.find((candidate) => candidate?.name === 'book-scaffold-astro');
-  if (!integration) return { ...DEFAULT_TOOLING_CONFIG };
+  if (!integration) return { ...DEFAULT_TOOLING_CONFIG, base };
 
   const metadata = integration.__bookScaffoldResolvedConfig;
   if (!metadata) {
     // A config can contain an older scaffold integration with no metadata.
     // Preserve the historical numbering default rather than treating upgrade
     // sequencing as a config error.
-    return { ...DEFAULT_TOOLING_CONFIG, integrationFound: true };
+    return { ...DEFAULT_TOOLING_CONFIG, base, integrationFound: true };
   }
 
   const numberStyle = metadata.numberStyle ?? 'shared';
@@ -165,6 +178,7 @@ export async function loadResolvedBookConfig(projectRoot = process.cwd()) {
       'bookField',
       configPath,
     ),
+    base,
     integrationFound: true,
   };
 }
