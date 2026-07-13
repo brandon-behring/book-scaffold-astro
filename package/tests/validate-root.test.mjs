@@ -16,14 +16,15 @@
  */
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const VALIDATE_SCRIPT = resolve(__dirname, '..', 'scripts', 'validate.mjs');
+const DIST_INDEX_URL = pathToFileURL(resolve(__dirname, '..', 'dist', 'index.mjs')).href;
 
 /** Set up a minimal book fixture at `root`. Two chapters; clean baseline. */
 function setupCleanFixture(root) {
@@ -293,6 +294,79 @@ status: implemented
     );
     const result = spawnSync('node', [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 10_000 });
     assert.equal(result.status, 0, `id-in-labels + label-override theorems should pass\nstderr: ${result.stderr}`);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#176): quoted and braced literal n= values must match labels.json', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    writeFileSync(
+      join(tmp, 'src', 'data', 'labels.json'),
+      JSON.stringify({
+        quoted: { display: 'Theorem 3.1', number: '3.1' },
+        braced: { display: 'Theorem 3.2', number: '3.2' },
+        numeric: { display: 'Theorem 3.3', number: '3.3' },
+      }),
+    );
+    writeFileSync(
+      join(tmp, 'src', 'content', 'chapters', 'week03.mdx'),
+      `---
+week: 3
+title: Literals
+status: implemented
+---
+<Theorem id="quoted" kind="theorem" n="9.9">Stale.</Theorem>
+<Theorem id="braced" kind="theorem" n={'3.2'}>Matches.</Theorem>
+<Theorem id="numeric" kind="theorem" n={8.8}>Stale numeric.</Theorem>
+`,
+    );
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 10_000,
+    });
+    assert.equal(result.status, 2, result.stderr);
+    assert.match(result.stderr, /n="9\.9".*labels\.json numbers it 3\.1/);
+    assert.match(result.stderr, /n="8\.8".*labels\.json numbers it 3\.3/);
+    assert.doesNotMatch(result.stderr, /n="3\.2"/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#176): dynamic n= expressions and label overrides are skipped', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    writeFileSync(
+      join(tmp, 'src', 'data', 'labels.json'),
+      JSON.stringify({
+        identifier: { display: 'Theorem 3.1', number: '3.1' },
+        expression: { display: 'Theorem 3.2', number: '3.2' },
+        custom: { display: 'Custom', number: null },
+      }),
+    );
+    writeFileSync(
+      join(tmp, 'src', 'content', 'chapters', 'week03.mdx'),
+      `---
+week: 3
+title: Dynamic numbers
+status: implemented
+---
+<Theorem id="identifier" kind="theorem" n={computedNumber}>Dynamic identifier.</Theorem>
+<Theorem id="expression" kind="theorem" n={chapter + '.2'}>Dynamic expression.</Theorem>
+<Theorem id="custom" kind="theorem" label="Custom" n="99.9">Override opts out.</Theorem>
+`,
+    );
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 10_000,
+    });
+    assert.equal(result.status, 0, result.stderr);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
@@ -578,5 +652,148 @@ status: implemented
     );
   } finally {
     rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#186/#175): deleted artifacts self-heal with composed per-kind numbering', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    const chapters = join(tmp, 'src', 'content', 'chapters');
+    mkdirSync(chapters, { recursive: true });
+    writeFileSync(
+      join(tmp, 'astro.config.mjs'),
+      `import { defineBookConfig, minimalStyle } from ${JSON.stringify(DIST_INDEX_URL)};\n` +
+        `export default await defineBookConfig({ styles: [minimalStyle], numberStyle: 'per-kind', site: 'https://test.invalid' });\n`,
+    );
+    writeFileSync(
+      join(chapters, 'week03.mdx'),
+      `---
+week: 3
+title: Self heal
+status: implemented
+---
+<Theorem id="heal:thm:a" kind="theorem">A.</Theorem>
+<Theorem id="heal:prop:a" kind="proposition">B.</Theorem>
+<Theorem id="heal:thm:b" kind="theorem">C.</Theorem>
+<XRef id="heal:prop:a" />
+`,
+    );
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    assert.equal(result.status, 0, `stdout: ${result.stdout}\nstderr: ${result.stderr}`);
+    assert.match(result.stdout, /regenerating via build-labels\.mjs/);
+    assert.match(result.stdout, /regenerating via build-bib\.mjs/);
+    assert.match(result.stdout, /number-style=per-kind/);
+    const labels = JSON.parse(readFileSync(join(tmp, 'src', 'data', 'labels.json'), 'utf8'));
+    assert.equal(labels['heal:thm:a'].number, '3.1');
+    assert.equal(labels['heal:prop:a'].number, '3.1');
+    assert.equal(labels['heal:thm:b'].number, '3.2');
+    assert.deepEqual(JSON.parse(readFileSync(join(tmp, 'src', 'data', 'references.json'), 'utf8')), {});
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#186): build-bib self-heal reads BOOK_BIB_PATH from root .env', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    const chapters = join(tmp, 'src', 'content', 'chapters');
+    const bibDir = join(tmp, 'references');
+    mkdirSync(chapters, { recursive: true });
+    mkdirSync(bibDir, { recursive: true });
+    writeFileSync(
+      join(tmp, 'astro.config.mjs'),
+      `import { defineBookConfig, academicStyle } from ${JSON.stringify(DIST_INDEX_URL)};\n` +
+        `export default await defineBookConfig({ styles: [academicStyle], site: 'https://test.invalid' });\n`,
+    );
+    writeFileSync(join(tmp, '.env'), 'BOOK_BIB_PATH=references/custom.bib\n');
+    writeFileSync(
+      join(bibDir, 'custom.bib'),
+      '@article{healed2026, title={Healed bibliography}, author={Ada Lovelace}, year={2026}}\n',
+    );
+    writeFileSync(
+      join(chapters, 'week01.mdx'),
+      `---
+week: 1
+part: foundations
+title: Bibliography heal
+status: implemented
+---
+See <Cite key="healed2026" />.
+`,
+    );
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    assert.equal(result.status, 0, `stdout: ${result.stdout}\nstderr: ${result.stderr}`);
+    const references = JSON.parse(
+      readFileSync(join(tmp, 'src', 'data', 'references.json'), 'utf8'),
+    );
+    assert.equal(references.healed2026.title, 'Healed bibliography');
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#186): child generation failures propagate original diagnostics and exit', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    const chapters = join(tmp, 'src', 'content', 'chapters');
+    mkdirSync(chapters, { recursive: true });
+    writeFileSync(
+      join(chapters, 'week01.mdx'),
+      `---
+week: 1
+title: Broken generation
+status: implemented
+---
+<Theorem id="broken" kind="thereom">Typo.</Theorem>
+`,
+    );
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /kind="thereom" is not one of/);
+    assert.match(result.stderr, /build-labels\.mjs failed.*cannot self-heal/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#179): invalid schema preset and Astro config evaluation errors fail loudly', () => {
+  for (const mode of ['schema', 'astro']) {
+    const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+    try {
+      setupCleanFixture(tmp);
+      if (mode === 'schema') {
+        writeFileSync(
+          join(tmp, 'src', 'content.config.ts'),
+          `defineBookSchemas({ preset: 'bogus' });\n`,
+        );
+      } else {
+        writeFileSync(join(tmp, 'astro.config.mjs'), 'throw new Error("config fixture exploded");\n');
+      }
+      const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], {
+        cwd: tmp,
+        encoding: 'utf8',
+        timeout: 30_000,
+        env: Object.fromEntries(
+          Object.entries(process.env).filter(([key]) => key !== 'BOOK_PRESET' && key !== 'BOOK_PROFILE'),
+        ),
+      });
+      assert.notEqual(result.status, 0);
+      if (mode === 'schema') assert.match(result.stderr, /preset must be one of.*bogus/);
+      else assert.match(result.stderr, /failed to evaluate.*config fixture exploded/);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
   }
 });

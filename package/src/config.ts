@@ -15,7 +15,7 @@ import preact from '@astrojs/preact';
 import sitemap from '@astrojs/sitemap';
 import type { AstroUserConfig } from 'astro';
 import type { BookConfigOptions } from './types.js';
-import { BOOK_PRESETS, BookConfigError } from './types.js';
+import { BOOK_PRESETS, NUMBER_STYLES, BookConfigError, resolvePreset } from './types.js';
 import { bookScaffoldIntegration } from './integration.js';
 import { PROFILES } from './profiles/index.js';
 import { composeStyles, type Style } from './lib/define-style.js';
@@ -103,15 +103,19 @@ export async function defineBookConfig(
     );
   }
 
-  // 1. Compose the style chain. Empty chain returns an empty Style; defaults
-  //    fall back to 'minimal' preset below (matches v3 behavior when no
-  //    BOOK_PROFILE was set anywhere).
+  // 1. Compose the style chain. During v4, a preset-less chain bridges through
+  //    BOOK_PRESET / BOOK_PROFILE / .env and finally the warned minimal fallback.
+  //    A composed preset always wins. v5 removes the final fallback (#179).
   const composed = composeStyles((opts.styles as readonly Style[] | undefined) ?? []);
 
   // 2. Apply top-level opts on top of composed (top-level wins for shared fields).
-  const profile = (opts.styles === undefined && composed.preset === undefined
-    ? 'minimal'
-    : composed.preset ?? 'minimal') as (typeof BOOK_PRESETS)[number];
+  const profile = resolvePreset(composed.preset) as (typeof BOOK_PRESETS)[number];
+  const numberStyle = opts.numberStyle ?? composed.numberStyle ?? 'shared';
+  if (!NUMBER_STYLES.includes(numberStyle)) {
+    throw new BookConfigError(
+      `numberStyle must be one of ${NUMBER_STYLES.join(' | ')} (got ${JSON.stringify(numberStyle)})`,
+    );
+  }
 
   const site = opts.site ?? composed.site;
   if (!site) {
@@ -206,6 +210,7 @@ export async function defineBookConfig(
     sitemap(sitemapOptions),
     bookScaffoldIntegration({
       profile,
+      numberStyle,
       routes: mergedRoutes,
       mdxComponentsModule,
       extraStyles: mergedExtraStyles,
@@ -272,6 +277,7 @@ export async function defineBookConfig(
   // Strip the package-specific options out of the rest before forwarding to Astro.
   const {
     styles: _styles,
+    numberStyle: _numberStyle,
     site: _site,
     routes: _routes,
     deploy: _deploy,
@@ -305,6 +311,7 @@ export async function defineBookConfig(
     ...rest
   } = opts;
   void _styles;
+  void _numberStyle;
   void _site;
   void _routes;
   void _deploy;

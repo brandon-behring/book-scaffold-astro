@@ -14,7 +14,8 @@
  *   5. <CodeRef path="..." line={N} /> — when BOOK_REPO_ROOT set,
  *      path exists + line in bounds.
  *   6. <Theorem> — has a resolvable kind= (or legacy type=); else it would
- *      render an empty label and throw at build (#121).
+ *      render an empty label and throw at build (#121). An id'd theorem must
+ *      resolve in labels.json, and a literal n= must agree with that index.
  *   7. <BookLink book="…" to="…"> (#96) — both props present, and book= is a
  *      key in the consumer's siblingBooks registry (best-effort).
  *   8. Questions collection (#112) — each question's frontmatter `domain` is a
@@ -38,38 +39,11 @@
 import { readFile, access } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 import { walkMdx, readChaptersBase, readBookSchemaConfig } from './walk-mdx.mjs';
-
-/**
- * Best-effort .env reader. Mirrors `readEnvFile` in src/types.ts; kept inline
- * here because scripts/ is shipped as plain JS without compiling src/.
- *
- * Closes #20 — validate.mjs previously skipped the .env fallback that
- * `resolveProfileWithSource` honors, so consumers who set BOOK_PROFILE in
- * .env (per the SKILL.md and scaffold's create-book defaults) saw the CLI
- * silently default to minimal, masking academic-profile errors.
- */
-function readEnvFile(path = '.env') {
-  try {
-    if (!existsSync(path)) return {};
-    const out = {};
-    for (const line of readFileSync(path, 'utf8').split(/\r?\n/)) {
-      const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*?)\s*$/);
-      if (!m) continue;
-      let val = m[2] ?? '';
-      if (
-        (val.startsWith('"') && val.endsWith('"')) ||
-        (val.startsWith("'") && val.endsWith("'"))
-      ) {
-        val = val.slice(1, -1);
-      }
-      out[m[1]] = val;
-    }
-    return out;
-  } catch {
-    return {};
-  }
-}
+import { readEnvFile } from './read-env.mjs';
+import { loadResolvedBookConfig } from './resolve-book-config.mjs';
 
 // --help / -h: non-mutating (closes #14).
 const USAGE = `Usage: book-scaffold validate [--preset <name>]
@@ -78,8 +52,8 @@ Pre-flight content validator. Checks Cite keys, XRef ids, Figure srcs,
 internal markdown links, and (when BOOK_REPO_ROOT is set) CodeRef paths.
 
 Options:
-  --preset <name>    academic | tools | minimal | course-notes
-                     (overrides BOOK_PRESET / BOOK_PROFILE env)
+  --preset <name>    academic | tools | minimal | course-notes | research-portfolio
+                     Legacy override when no scaffold integration is resolved.
   --help, -h         Print this message and exit (non-mutating).
 
 Env:
@@ -113,12 +87,20 @@ const CHAPTERS_DIR = await readChaptersBase(ROOT);
 const PUBLIC_DIR = resolve(ROOT, 'public');
 const DATA_DIR = resolve(ROOT, 'src/data');
 
-// Preset resolution (matches resolvePreset in src/types.ts):
-//   --preset flag > BOOK_PRESET env > BOOK_PROFILE env >
+let TOOLING_CONFIG;
+try {
+  TOOLING_CONFIG = await loadResolvedBookConfig(ROOT);
+} catch (error) {
+  process.stderr.write(`validate: fatal: ${error?.message ?? error}\n`);
+  process.exit(1);
+}
+
+// Preset resolution:
+//   composed Astro-config preset > --preset flag > BOOK_PRESET env > BOOK_PROFILE env >
 //   .env BOOK_PRESET > .env BOOK_PROFILE >
 //   defineBookSchemas({ preset }) in content.config.ts >
 //   defineBookSchemas({ profile }) in content.config.ts (alias) >
-//   'minimal'.
+//   warned v4 compatibility fallback 'minimal'.
 // .env fallback closes #20 — without it, consumers who set BOOK_PROFILE in
 // .env (the documented convenience in SKILL.md + create-book defaults) saw
 // the CLI silently default to minimal, hiding academic-profile errors.
@@ -126,16 +108,35 @@ const DATA_DIR = resolve(ROOT, 'src/data');
 // canonical v4.5+ defineBookSchemas({ preset, chaptersBase }) form had the
 // CLI silently default to minimal, hiding research-portfolio (and any
 // non-env-set) profile errors while astro build applied the correct settings.
-const dotenv = readEnvFile(resolve(ROOT, '.env'));
+const dotenv = readEnvFile(ROOT);
 const schemaConfig = await readBookSchemaConfig(ROOT);
-const PRESET =
+const PRESET_CANDIDATE =
+  TOOLING_CONFIG.preset ??
   presetFromFlag ??
   process.env.BOOK_PRESET ??
   process.env.BOOK_PROFILE ??
   dotenv.BOOK_PRESET ??
   dotenv.BOOK_PROFILE ??
-  schemaConfig.preset ??
-  'minimal';
+  schemaConfig.preset;
+const PRESETS = ['academic', 'tools', 'minimal', 'course-notes', 'research-portfolio'];
+if (presetFlagIdx >= 0 && !presetFromFlag) {
+  process.stderr.write('validate: --preset requires a value.\n');
+  process.exit(2);
+}
+if (PRESET_CANDIDATE && !PRESETS.includes(PRESET_CANDIDATE)) {
+  process.stderr.write(
+    `validate: preset must be one of ${PRESETS.join(' | ')} ` +
+      `(got ${JSON.stringify(PRESET_CANDIDATE)}).\n`,
+  );
+  process.exit(1);
+}
+const PRESET = PRESET_CANDIDATE ?? 'minimal';
+if (!PRESET_CANDIDATE) {
+  process.stderr.write(
+    "validate: no preset resolved; falling back to 'minimal' for v4 compatibility. " +
+      'This fallback will be removed in v5; configure a built-in style or BOOK_PRESET.\n',
+  );
+}
 // Alias kept for downstream message text only; the resolution above is canonical.
 const PROFILE = PRESET;
 const REPO_ROOT = process.env.BOOK_REPO_ROOT ?? null;
@@ -213,6 +214,37 @@ const warnings = [];
 const fail = (file, line, msg) => errors.push({ file, line, msg });
 const warn = (file, line, msg) => warnings.push({ file, line, msg });
 
+// ===== Self-heal missing generated artifacts (#186) =====
+// These files are intentionally gitignored. Direct `book-scaffold validate`
+// bypasses npm's prevalidate lifecycle, so rebuild each missing artifact before
+// loading it. Existing files remain untouched; child diagnostics and failures
+// are propagated verbatim instead of becoming downstream unknown-id noise.
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+function regenerate(scriptName, artifact) {
+  process.stdout.write(`validate: ${artifact} is missing — regenerating via ${scriptName} (#186)\n`);
+  const result = spawnSync(process.execPath, [join(scriptDir, scriptName)], {
+    cwd: ROOT,
+    env: process.env,
+    encoding: 'utf8',
+  });
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
+  if (result.error || result.status !== 0) {
+    const detail = result.error ? `: ${result.error.message}` : '';
+    process.stderr.write(
+      `validate: ${scriptName} failed (exit ${result.status ?? 1})${detail} — cannot self-heal.\n`,
+    );
+    process.exit(result.status ?? 1);
+  }
+}
+
+if (!existsSync(join(DATA_DIR, 'labels.json'))) {
+  regenerate('build-labels.mjs', 'src/data/labels.json');
+}
+if (!existsSync(join(DATA_DIR, 'references.json'))) {
+  regenerate('build-bib.mjs', 'src/data/references.json');
+}
+
 // ===== Load reference data (graceful when missing) =====
 async function loadJson(path) {
   try {
@@ -265,6 +297,29 @@ async function fileExists(p) {
 
 function lineOf(content, idx) {
   return content.slice(0, idx).split('\n').length;
+}
+
+/**
+ * Return a statically knowable n= value. Quoted strings and braced
+ * string/numeric literals are safe to compare; identifiers, calls,
+ * interpolation, and all other expressions are deliberately skipped.
+ */
+function literalTheoremNumber(attrs) {
+  const quoted = attrs.match(/\bn\s*=\s*(["'])(.*?)\1/);
+  if (quoted) return quoted[2];
+
+  const braced = attrs.match(/\bn\s*=\s*\{\s*([^}]*?)\s*\}/);
+  if (!braced) return null;
+  const expression = braced[1].trim();
+  const stringLiteral = expression.match(/^(["'`])([\s\S]*)\1$/);
+  if (stringLiteral) {
+    if (stringLiteral[1] === '`' && stringLiteral[2].includes('${')) return null;
+    return stringLiteral[2];
+  }
+  if (/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(expression)) {
+    return String(Number(expression));
+  }
+  return null;
 }
 
 // #96: best-effort siblingBooks registry keys from astro.config.mjs, so the
@@ -359,11 +414,31 @@ for (const rel of chapterFiles) {
       );
     }
     const thmId = attrs.match(/\bid=["']([^"']+)["']/);
-    if (thmId && !/\blabel\s*=\s*["']/.test(attrs) && !labels[thmId[1]]) {
+    const hasLabelOverride = /\blabel\s*=/.test(attrs);
+    if (thmId && !hasLabelOverride && !labels[thmId[1]]) {
       fail(
         rel,
         lineOf(content, m.index),
         `<Theorem id="${thmId[1]}"> — not in labels.json; heading silently renders unnumbered. Run build:labels, or fix the id.`,
+      );
+    }
+    // #176: compare only literal n= values. Dynamic expressions cannot be
+    // evaluated reliably by this intentionally regex-based validator, and a
+    // label= override explicitly opts out of labels.json auto-numbering.
+    const explicitNumber = hasLabelOverride ? null : literalTheoremNumber(attrs);
+    const indexedNumber = thmId ? labels[thmId[1]]?.number : null;
+    if (
+      thmId &&
+      explicitNumber !== null &&
+      indexedNumber != null &&
+      explicitNumber !== String(indexedNumber)
+    ) {
+      fail(
+        rel,
+        lineOf(content, m.index),
+        `<Theorem id="${thmId[1]}" n="${explicitNumber}"> — labels.json numbers it ` +
+          `${indexedNumber}, and the rendered heading + every XRef use the index. ` +
+          'Drop the stale n= (auto-numbering wins) or re-run build:labels.',
       );
     }
   }
@@ -544,46 +619,6 @@ let questionsChecked = 0;
   }
 }
 
-// ===== v4.6.0 (issue #77): missing-prereq re-framing =====
-//
-// When errors are downstream symptoms of a missing artifact (references.json
-// or labels.json), abort with ONE leading error pointing at the prereq
-// instead of printing 25 "Unknown bibkey" / "Unknown XRef" symptoms. Single
-// clean signal: fix the prereq. Per D12 of the v4.6.0 plan.
-{
-  if (PROFILE === 'academic') {
-    const refsPath = join(DATA_DIR, 'references.json');
-    const hasBibkeyErrors = errors.some((e) => /Unknown bibkey/.test(e.msg));
-    if (hasBibkeyErrors && !existsSync(refsPath)) {
-      console.error(
-        `\n✗ Validate cannot run: src/data/references.json is missing.\n\n` +
-          `This file is generated from bibliography.bib by 'npm run build:bib'.\n` +
-          `Run that first, OR adopt the prevalidate npm hook convention so\n` +
-          `'npm run validate' regenerates it automatically:\n\n` +
-          `  "prevalidate": "npm run build:bib && npm run build:labels --if-present"\n` +
-          `  "validate": "book-scaffold validate"\n\n` +
-          `See package/recipes/19-prevalidate-hook.md.\n`,
-      );
-      process.exit(1);
-    }
-  }
-  const labelsPath = join(DATA_DIR, 'labels.json');
-  // #126: also collapse <Theorem id> not-in-labels errors (they share the
-  // "not in labels.json" phrase) under the same missing-prereq message.
-  const hasXrefErrors = errors.some((e) => /not in labels\.json/.test(e.msg));
-  if (hasXrefErrors && !existsSync(labelsPath)) {
-    console.error(
-      `\n✗ Validate cannot run: src/data/labels.json is missing.\n\n` +
-        `This file is generated from <Theorem id="..."> and <Figure id="..."> markers\n` +
-        `in chapter MDX by 'npm run build:labels'. Run that first, OR adopt the\n` +
-        `prevalidate npm hook convention so 'npm run validate' regenerates it:\n\n` +
-        `  "prevalidate": "npm run build:bib && npm run build:labels --if-present"\n\n` +
-        `See package/recipes/19-prevalidate-hook.md.\n`,
-    );
-    process.exit(1);
-  }
-}
-
 // ===== Report =====
 const format = ({ file, line, msg }) => `  ${file}:${line}  ${msg}`;
 if (warnings.length > 0) {
@@ -592,9 +627,15 @@ if (warnings.length > 0) {
 }
 if (errors.length === 0) {
   const qNote = questionsChecked > 0 ? ` + ${questionsChecked} question(s)` : '';
-  console.log(`validate: ✓ ${chapterFiles.length} chapter(s)${qNote} checked (profile=${PROFILE}); no errors.`);
+  console.log(
+    `validate: ✓ ${chapterFiles.length} chapter(s)${qNote} checked ` +
+      `(profile=${PROFILE}, number-style=${TOOLING_CONFIG.numberStyle}); no errors.`,
+  );
   process.exit(0);
 }
-console.error(`validate: ✗ ${errors.length} error(s) in ${chapterFiles.length} chapter(s) (profile=${PROFILE}):`);
+console.error(
+  `validate: ✗ ${errors.length} error(s) in ${chapterFiles.length} chapter(s) ` +
+    `(profile=${PROFILE}, number-style=${TOOLING_CONFIG.numberStyle}):`,
+);
 errors.forEach((e) => console.error(format(e)));
 process.exit(errors.length);

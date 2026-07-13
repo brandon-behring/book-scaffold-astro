@@ -124,21 +124,19 @@ test('v4.6.0 Layer D: research-portfolio preset adds prevalidate hook', async ()
   );
 });
 
-test('v4.6.0 Layer D: tools preset does NOT add prevalidate (no cite-key validation)', async () => {
-  const r = runCli(['demo-tools-46-d', '--preset=tools'], workRoot);
-  assert.equal(r.status, 0, `expected exit 0; stderr: ${r.stderr}`);
-  const pkgPath = join(workRoot, 'demo-tools-46-d', 'package.json');
-  const pkg = JSON.parse(await readFile(pkgPath, 'utf8'));
-  assert.equal(
-    pkg.scripts.prevalidate,
-    undefined,
-    'tools profile has no bib pipeline — prevalidate would be a no-op',
-  );
-  assert.match(
-    pkg.scripts.prebuild,
-    /build:bib/,
-    'non-academic profiles keep the explicit prebuild chain',
-  );
+test('#186: every preset emits the same prevalidate and prebuild lifecycle', async () => {
+  for (const preset of ['academic', 'tools', 'minimal', 'course-notes', 'research-portfolio']) {
+    const name = `demo-${preset}-186`;
+    const r = runCli([name, `--preset=${preset}`], workRoot);
+    assert.equal(r.status, 0, `${preset}: expected exit 0; stderr: ${r.stderr}`);
+    const pkg = JSON.parse(await readFile(join(workRoot, name, 'package.json'), 'utf8'));
+    assert.equal(
+      pkg.scripts.prevalidate,
+      'npm run build:bib --if-present && npm run build:labels --if-present',
+      `${preset}: uniform generated-artifact lifecycle`,
+    );
+    assert.equal(pkg.scripts.prebuild, 'npm run validate --if-present');
+  }
 });
 
 // ===== #38: --preset as alias of --profile =====

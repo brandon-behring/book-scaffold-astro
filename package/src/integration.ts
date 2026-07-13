@@ -206,6 +206,7 @@ export function bookScaffoldIntegration(
 ): AstroIntegration {
   const {
     profile,
+    numberStyle = 'shared',
     routes: userOverrides = {},
     extraStyles = [],
     mdxComponentsModule,
@@ -251,7 +252,7 @@ export function bookScaffoldIntegration(
     frontmatter: fmEnabled,
   };
 
-  return {
+  const integration: AstroIntegration = {
     name: 'book-scaffold-astro',
     hooks: {
       'astro:config:setup': ({ injectScript, injectRoute, updateConfig, config }) => {
@@ -358,4 +359,17 @@ export function bookScaffoldIntegration(
       },
     },
   };
+
+  // Internal bridge for package CLI tools. Vite's loadConfigFromFile evaluates
+  // the consumer's real Astro config; build-labels and validate then find this
+  // metadata on the resolved integration instead of re-parsing style source.
+  // Non-enumerable keeps it out of Astro's own config serialization/debugging.
+  Object.defineProperty(integration, '__bookScaffoldResolvedConfig', {
+    value: Object.freeze({ preset: profile, numberStyle }),
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  });
+
+  return integration;
 }

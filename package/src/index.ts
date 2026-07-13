@@ -26,6 +26,7 @@ export { bookScaffoldIntegration } from './integration.js';
 export type {
   BookProfile,
   BookPreset,         // v3.4.0 — canonical name (alias of BookProfile, closes #9)
+  NumberStyle,
   BookConfigOptions,
   ReleaseStatusConfig,
   BookSchemasOptions,
@@ -35,6 +36,7 @@ export type {
 export {
   BOOK_PROFILES,
   BOOK_PRESETS,       // v3.4.0 — alias of BOOK_PROFILES
+  NUMBER_STYLES,
   BookConfigError,
   resolveProfile,
   resolvePreset,      // v3.4.0 — canonical resolver (accepts both preset + profile)
