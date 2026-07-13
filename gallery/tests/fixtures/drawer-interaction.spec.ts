@@ -86,6 +86,21 @@ test.describe('nav drawer controller (#183, v4.26.0 #80)', () => {
     await expect(page.locator(TOGGLE), 'focus must return to the opener').toBeFocused();
   });
 
+  test('mobile: role=button toggle activates with Space without scrolling', async ({ page }) => {
+    test.skip(!onMobile(page), 'drawer applies below 80rem');
+    await page.goto(CH);
+    await page.locator(TOGGLE).focus();
+    const before = await page.evaluate(() => window.scrollY);
+
+    await page.keyboard.press('Space');
+    await expect(page.locator(DRAWER)).toHaveClass(/\bis-open\b/);
+    expect(await page.evaluate(() => window.scrollY)).toBe(before);
+
+    await page.locator(TOGGLE).focus();
+    await page.keyboard.press('Space');
+    await expectClosed(page);
+  });
+
   test('mobile: backdrop and dismiss both close via [data-nav-close]', async ({ page }) => {
     test.skip(!onMobile(page), 'drawer applies below 80rem');
     await page.goto(CH);
