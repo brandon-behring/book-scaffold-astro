@@ -21,6 +21,34 @@ for the current release overview, and
 for the complete API contract. Upgrading an existing v4 book? Follow
 [MIGRATION-v4-to-v5.md](./MIGRATION-v4-to-v5.md).
 
+v5 requires an explicit preset. A built-in/custom Style, schema option,
+`BOOK_PRESET`, or corpus manifest may supply it; an absent preset fails instead
+of silently selecting `minimal`. The deprecated v4 `deploy` book/Style field is
+removed—configure the real provider surface and Astro `site`/`base` instead.
+
+## Multi-book corpora
+
+Several books can share one app, deployment, preset/Style chain, and Pagefind
+index through one branded manifest:
+
+```ts
+import { defineBookCorpus } from '@brandon_m_behring/book-scaffold-astro';
+
+export const corpus = defineBookCorpus({
+  preset: 'research-portfolio',
+  books: [
+    { id: 'evaluation', title: 'Evaluation Engineering' },
+    { id: 'llm-apps', title: 'LLM Application Engineering' },
+  ],
+});
+```
+
+Pass that same `corpus` to `defineBookConfig` and `defineBookSchemas`.
+Namespaced chapters, apparatus routes, navigation, generated JSON, diagnostics,
+local `<BookLink>` targets, and Pagefind results remain book-scoped. See
+[Recipe 21](./recipes/21-multi-guide-single-app.md) for content layout, route
+ownership, `--book` tooling, shared sources, and migration.
+
 Astro builds emit a Cloudflare-compatible `dist/_headers` with audited
 security defaults. A consumer-owned `public/_headers` wins unchanged;
 `defineBookConfig({ securityHeaders: false })` disables scaffold emission,
