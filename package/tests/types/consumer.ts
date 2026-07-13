@@ -24,9 +24,12 @@
  */
 import type {
   GlossaryTerm,
+  BookConfigOptions,
   PartialRouteToggles,
   Question,
+  ReleaseStatusConfig,
   RouteToggles,
+  StyleInput,
 } from '@brandon_m_behring/book-scaffold-astro';
 import {
   glossarySchema,
@@ -38,6 +41,14 @@ declare const glossaryTerm: GlossaryTerm;
 declare const routeToggles: RouteToggles;
 declare const partialRouteToggles: PartialRouteToggles;
 declare const question: Question;
+declare const releaseStatus: ReleaseStatusConfig;
+
+// Public opt-out must be accepted both on a Style and at book level.
+export const suppressedStyleStatus: StyleInput = { releaseStatus: false };
+export const suppressedBookStatus: BookConfigOptions = {
+  site: 'https://example.invalid',
+  releaseStatus: false,
+};
 
 // Each line must keep erroring; if one stops, that symbol degraded to `any`.
 // @ts-expect-error GlossaryTerm is a real object type, never a number
@@ -48,6 +59,8 @@ export const guardRouteToggles: number = routeToggles;
 export const guardPartialRouteToggles: number = partialRouteToggles;
 // @ts-expect-error Question is a real object type, never a number
 export const guardQuestion: number = question;
+// @ts-expect-error ReleaseStatusConfig is a real object type, never a number
+export const guardReleaseStatus: number = releaseStatus;
 // @ts-expect-error glossarySchema is a real zod schema, never a number
 export const guardGlossarySchema: number = glossarySchema;
 // @ts-expect-error questionSchema is a real zod schema, never a number

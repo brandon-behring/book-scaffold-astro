@@ -122,7 +122,8 @@ Different fields have different merge semantics. Documented:
 
 | Field | Strategy |
 |---|---|
-| `name`, `preset`, `site`, `deploy`, `mdxComponentsModule` | Shallow override (last wins) |
+| `name`, `preset`, `site`, `deploy`, `mdxComponentsModule` | Shallow override (last defined wins) |
+| `releaseStatus` | Shallow override (last defined object replaces the whole earlier object); `false` suppresses an inherited banner |
 | `routes` | Per-route spread (each route key independently overridable) |
 | `routes.frontmatter` | Per-route spread; later value (boolean OR object) wholly replaces earlier |
 | `katexMacros` | Object spread (per-macro override) |

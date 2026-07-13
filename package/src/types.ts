@@ -27,6 +27,18 @@ export type BookPreset = BookProfile;
 export const BOOK_PRESETS = BOOK_PROFILES;
 
 /**
+ * v4.26.2 (#149): book-level release state rendered by
+ * `<PreReleaseBanner>` across every page.
+ *
+ * Style inheritance and explicit suppression were fixed in v4.26.3.
+ */
+export interface ReleaseStatusConfig {
+  state: 'alpha' | 'beta' | 'rc' | 'locked';
+  dismissAt?: string;
+  message?: string;
+}
+
+/**
  * Options for `defineBookConfig`. See PACKAGE_DESIGN.md §4.
  *
  * Note on the index signature: `AstroUserConfig` carries generic parameters
@@ -152,12 +164,12 @@ export interface BookConfigOptions {
    */
   subtitle?: string;
   /**
-   * v4.27.0 (#149): book-level release state. When set, Base.astro renders
-   * the existing <PreReleaseBanner> site-wide (top of <body>) with these
-   * props — previously the banner was author-import-only, so auto-layout
-   * consumers (ssm-foundations) had no way to wire it. Omit for no banner.
+   * v4.26.2 (#149; style inheritance fixed in v4.26.3): book-level release
+   * state. When set, Base.astro renders the existing <PreReleaseBanner>
+   * site-wide (top of <body>) with these props. Omit to inherit from the
+   * composed style chain; set `false` to suppress an inherited banner.
    */
-  releaseStatus?: { state: 'alpha' | 'beta' | 'rc' | 'locked'; dismissAt?: string; message?: string };
+  releaseStatus?: ReleaseStatusConfig | false;
   /**
    * v4.5.0: Book description. Read by the auto-injected `/` landing page (lead paragraph + <meta description>).
    * Optional; landing renders no description paragraph if unset.
@@ -309,9 +321,9 @@ export interface BookScaffoldIntegrationOptions {
   /** v4.23.0 (#135): sidebar brand subtitle, propagated via the book-config
    *  virtual module to Sidebar.astro. */
   subtitle?: string;
-  /** v4.27.0 (#149): release-state banner, propagated via the book-config
-   *  virtual module; Base.astro renders <PreReleaseBanner> when set. */
-  releaseStatus?: { state: 'alpha' | 'beta' | 'rc' | 'locked'; dismissAt?: string; message?: string };
+  /** v4.26.2 (#149; style inheritance fixed in v4.26.3): resolved
+   *  release-state banner propagated via the book-config virtual module. */
+  releaseStatus?: ReleaseStatusConfig;
   /** v4.5.0: book description, propagated to `/` landing via vite.define. */
   description?: string;
   /**
