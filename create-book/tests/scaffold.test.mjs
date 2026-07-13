@@ -205,6 +205,76 @@ test('#181: scaffolded self-docs pin links to the installed toolkit version', as
   }
 });
 
+// ===== #206: author metadata, dual licenses, and D12 guide symmetry =====
+
+test('#206: --author supports equals and separated forms and reaches package + licenses', async () => {
+  const cases = [
+    ['demo-author-equals-206', '--author=Ada Lovelace', 'Ada Lovelace'],
+    ['demo-author-space-206', '--author', 'Grace Hopper', 'Grace Hopper'],
+  ];
+  for (const [name, flag, value, expected = value] of cases) {
+    const args = [name, '--preset=minimal', flag];
+    if (flag === '--author') args.push(value);
+    const result = runCli(args, workRoot);
+    assert.equal(result.status, 0, `${name}: ${result.stderr}`);
+    const dir = join(workRoot, name);
+    const pkg = JSON.parse(await readFile(join(dir, 'package.json'), 'utf8'));
+    assert.equal(pkg.author, expected);
+    assert.match(await readFile(join(dir, 'LICENSE'), 'utf8'), new RegExp(expected));
+    assert.match(await readFile(join(dir, 'LICENSE-CONTENT'), 'utf8'), new RegExp(expected));
+  }
+});
+
+test('#206: omitted author uses neutral Book contributors attribution', async () => {
+  const name = 'demo-author-default-206';
+  const result = runCli([name, '--preset=minimal'], workRoot);
+  assert.equal(result.status, 0, result.stderr);
+  const dir = join(workRoot, name);
+  const pkg = JSON.parse(await readFile(join(dir, 'package.json'), 'utf8'));
+  assert.equal(pkg.author, 'Book contributors');
+  assert.match(await readFile(join(dir, 'LICENSE-CONTENT'), 'utf8'), /Book contributors/);
+});
+
+test('#206: empty --author values fail loudly', () => {
+  for (const args of [
+    ['demo-empty-author-206-a', '--author='],
+    ['demo-empty-author-206-b', '--author'],
+  ]) {
+    const result = runCli(args, workRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /--author requires a non-empty name/);
+  }
+});
+
+test('D12: every preset emits CLAUDE.md plus a valid AGENTS.md pointer', async () => {
+  for (const preset of ['academic', 'tools', 'minimal', 'course-notes', 'research-portfolio']) {
+    const name = `demo-guides-d12-${preset}`;
+    const result = runCli([name, `--preset=${preset}`], workRoot);
+    assert.equal(result.status, 0, `${preset}: ${result.stderr}`);
+    const dir = join(workRoot, name);
+    assert.ok(await exists(join(dir, 'CLAUDE.md')), `${preset}: missing CLAUDE.md`);
+    const pointer = await readFile(join(dir, 'AGENTS.md'), 'utf8');
+    assert.match(pointer, /\[?`?CLAUDE\.md`?\]?\(CLAUDE\.md\)/, `${preset}: invalid pointer`);
+  }
+});
+
+// ===== #207: turnkey generated PDF pipeline =====
+
+test('#207: every preset receives build-before-render PDF scripts and dependencies', async () => {
+  for (const preset of ['academic', 'tools', 'minimal', 'course-notes', 'research-portfolio']) {
+    const name = `demo-pdf-207-${preset}`;
+    const result = runCli([name, `--preset=${preset}`], workRoot);
+    assert.equal(result.status, 0, `${preset}: ${result.stderr}`);
+    const pkg = JSON.parse(await readFile(join(workRoot, name, 'package.json'), 'utf8'));
+    assert.equal(pkg.scripts.prepdf, 'npm run build');
+    assert.match(pkg.scripts['pdf:render'], /pagedjs-cli http:\/\/localhost:4321\/print\//);
+    assert.match(pkg.scripts['pdf:render'], /dist-pdf\/book\.pdf/);
+    assert.equal(pkg.scripts.pdf, 'start-server-and-test preview http://localhost:4321/ pdf:render');
+    assert.equal(pkg.devDependencies['pagedjs-cli'], '^0.4.3');
+    assert.equal(pkg.devDependencies['start-server-and-test'], '^3.0.11');
+  }
+});
+
 test('#38: help text mentions --preset before --profile', async () => {
   const r = runCli(['--help'], workRoot);
   assert.equal(r.status, 0);

@@ -161,9 +161,11 @@
     "pedagogy",
     "examples",
     "CLAUDE.md",
+    "AGENTS.md",
     "README.md",
-    "LATEX_TO_MDX_MAPPING.md",
-    "examples"
+    "LICENSE",
+    "LICENSE-CONTENT",
+    "LATEX_TO_MDX_MAPPING.md"
   ],
   "scripts": {
     "build": "tsup",

@@ -24,7 +24,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ===== Args =====
 
-const HELP = `Usage: npx @brandon_m_behring/create-book <name> [--preset=...|--profile=...]
+const HELP = `Usage: npx @brandon_m_behring/create-book <name> [--preset=...|--profile=...] [--author=NAME]
 
 Arguments:
   <name>           Book repo name. Becomes the new directory + package name.
@@ -33,6 +33,8 @@ Options:
   --preset=NAME    academic | tools | minimal | course-notes | research-portfolio
                    (default: minimal). Canonical vocabulary as of v3.4.0; alias of --profile.
   --profile=NAME   Backward-compatible alias of --preset.
+  --author=NAME    Book author or organization (also accepts --author NAME).
+                   Defaults to "Book contributors".
   --version, -v    Print the CLI version.
   --help, -h       This message.
 
@@ -44,8 +46,10 @@ function parseArgs(argv) {
   // v3.6.1 (closes #38): accept --preset as canonical alias of --profile.
   // Internal variable name stays `profile` for back-compat with downstream
   // template code; the canonical user-facing vocabulary is preset.
-  const args = { name: null, profile: 'minimal' };
-  for (const a of argv.slice(2)) {
+  const args = { name: null, profile: 'minimal', author: 'Book contributors' };
+  const tokens = argv.slice(2);
+  for (let i = 0; i < tokens.length; i += 1) {
+    const a = tokens[i];
     if (a === '--help' || a === '-h') {
       process.stdout.write(HELP);
       process.exit(0);
@@ -59,6 +63,21 @@ function parseArgs(argv) {
     const profMatch = a.match(/^--profile=(.+)$/);
     if (profMatch) {
       args.profile = profMatch[1];
+      continue;
+    }
+    const authorMatch = a.match(/^--author=(.*)$/);
+    if (authorMatch) {
+      args.author = authorMatch[1].trim();
+      continue;
+    }
+    if (a === '--author') {
+      const value = tokens[i + 1];
+      if (!value || value.startsWith('--')) {
+        process.stderr.write('create-book: --author requires a non-empty name.\n');
+        process.exit(2);
+      }
+      args.author = value.trim();
+      i += 1;
       continue;
     }
     if (a.startsWith('--')) {
@@ -96,8 +115,7 @@ const PROFILE_DEFAULTS = {
 
 // ===== Templates =====
 
-function makeTemplates(name, profile, toolkitVersion) {
-  const ctx = { name, profile, toolkitVersion };
+function makeTemplates(name, profile, toolkitVersion, author) {
 
   // v4.0.0: scaffolded astro.config.mjs imports the built-in style matching
   // the chosen preset. Map preset name → camelCase export.
@@ -121,6 +139,8 @@ function makeTemplates(name, profile, toolkitVersion) {
   "version": "0.1.0",
   "type": "module",
   "private": true,
+  "author": ${JSON.stringify(author)},
+  "license": "MIT",
   "scripts": {
     "predev": "npm run build:bib --if-present && npm run build:labels --if-present",${
       // v4.6.0: academic + research-portfolio scaffolds add a `prevalidate`
@@ -144,7 +164,10 @@ function makeTemplates(name, profile, toolkitVersion) {
     "validate": "book-scaffold validate",
     "dev": "astro dev",
     "build": "astro build && pagefind --site dist",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "prepdf": "npm run build",
+    "pdf:render": "mkdir -p dist-pdf && pagedjs-cli http://localhost:4321/print/ -o dist-pdf/book.pdf",
+    "pdf": "start-server-and-test preview http://localhost:4321/ pdf:render"
   },
   "dependencies": {
     "@brandon_m_behring/book-scaffold-astro": "^${toolkitVersion}",
@@ -163,6 +186,10 @@ function makeTemplates(name, profile, toolkitVersion) {
     "remark-math": "^6.0.0"`
         : ''
     }
+  },
+  "devDependencies": {
+    "pagedjs-cli": "^0.4.3",
+    "start-server-and-test": "^3.0.11"
   }
 }
 `,
@@ -230,6 +257,7 @@ Built with [\`@brandon_m_behring/book-scaffold-astro\`](https://github.com/brand
 \`\`\`bash
 npm install
 npm run dev    # http://localhost:4321
+npm run pdf    # build + preview + render dist-pdf/book.pdf
 \`\`\`
 
 ## Authoring
@@ -251,6 +279,12 @@ ${usesPages ? `npx wrangler pages deploy ./dist --project-name=${name}` : 'npx w
 \`\`\`
 
 See \`wrangler.toml\` for deploy config (this scaffold uses the ${usesPages ? 'Cloudflare **Pages**' : 'Cloudflare **Workers** + Static Assets'} shape — default for the ${profile} preset).
+
+## Licensing
+
+Code, configuration, and scripts are MIT-licensed; authored book content and
+documentation are CC BY 4.0. See \`LICENSE\` and \`LICENSE-CONTENT\`. The
+generated attribution is **${author}** (set with \`--author\` when scaffolding).
 `,
 
     'CLAUDE.md': `# ${name} — AI authoring guide
@@ -267,6 +301,62 @@ This book is built with \`@brandon_m_behring/book-scaffold-astro\` (${profile} p
 - Decision log: \`decisions/\` — numbered ADRs (see \`decisions/README.md\`); record significant choices here
 
 **Toolkit reference:** [PACKAGE_DESIGN.md](https://github.com/brandon-behring/book-scaffold-astro/blob/v${toolkitVersion}/PACKAGE_DESIGN.md) — single source of truth for the API. File issues at https://github.com/brandon-behring/book-scaffold-astro/issues with label \`consumer:${name}\`.
+`,
+
+    'AGENTS.md': `# AGENTS.md
+
+The canonical, cross-tool authoring guide is [\`CLAUDE.md\`](CLAUDE.md) in this
+directory. Read and follow it before changing this book. The guide is
+agent-agnostic despite its filename; this pointer exists so tools that discover
+\`AGENTS.md\` load the same instructions without maintaining two copies.
+`,
+
+    'LICENSE': `MIT License
+
+Copyright (c) 2026 ${author}
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+This license covers code, configuration, scripts, and tooling. Book content
+and substantive documentation are licensed separately under CC BY 4.0; see
+LICENSE-CONTENT.
+`,
+
+    'LICENSE-CONTENT': `Creative Commons Attribution 4.0 International License (CC BY 4.0)
+
+Copyright (c) 2026 ${author}
+
+This license covers prose and content collections under \`src/content/\`,
+substantive documentation, and other authored book material. Code and
+configuration are licensed separately under MIT; see LICENSE.
+
+You are free to share and adapt this material for any purpose, including
+commercially, provided that you give appropriate credit, link to the license,
+and indicate whether changes were made. You may not apply additional legal or
+technological restrictions.
+
+Full legal code: https://creativecommons.org/licenses/by/4.0/legalcode
+Human-readable summary: https://creativecommons.org/licenses/by/4.0/
+
+Suggested attribution: "${name} by ${author}, licensed under CC BY 4.0."
 `,
 
     // v4.0.0 (#50): per-preset wrangler.toml shape. Academic / tools / minimal
@@ -633,6 +723,10 @@ async function main() {
     );
     process.exit(2);
   }
+  if (!args.author) {
+    process.stderr.write('create-book: --author requires a non-empty name.\n');
+    process.exit(2);
+  }
   if (!/^[a-z0-9][a-z0-9_-]*$/i.test(args.name)) {
     process.stderr.write(
       `create-book: invalid name ${JSON.stringify(args.name)}; ` +
@@ -650,7 +744,7 @@ async function main() {
   }
 
   const toolkitVersion = await readSelfVersion();
-  const templates = makeTemplates(args.name, args.profile, toolkitVersion);
+  const templates = makeTemplates(args.name, args.profile, toolkitVersion, args.author);
 
   await mkdir(targetDir, { recursive: true });
   await writeAll(targetDir, templates);

@@ -28,7 +28,9 @@
   },
   "files": [
     "bin",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "LICENSE-CONTENT"
   ],
   "scripts": {
     "test": "node --test tests/*.test.mjs"

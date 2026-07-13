@@ -168,6 +168,7 @@ jobs:
 
           npm install
           npm run build
+          npm run pdf
 
           # Hard assertions: prove the scaffolded book actually emitted what
           # consumers will see. Each assertion guards a class of failure from
@@ -175,6 +176,7 @@ jobs:
           test -f dist/index.html                            # landing page (#28)
           test -f dist/chapters/week01-hello-world/index.html # chapter route (#28)
           test -f dist/references/index.html                  # bib pipeline (#39 et al)
+          test -s dist-pdf/book.pdf                           # turnkey PDF pipeline (#207)
           echo "Pre-publish smoke OK: scaffolded academic book built end-to-end against $TARBALL"
 
       - name: Publish @brandon_m_behring/book-scaffold-astro

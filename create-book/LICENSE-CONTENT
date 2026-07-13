@@ -1,0 +1,18 @@
+Creative Commons Attribution 4.0 International License (CC BY 4.0)
+
+Copyright (c) 2026 Brandon Behring
+
+This license covers substantive prose and documentation templates distributed
+with `@brandon_m_behring/create-book`. Executable code, configuration, and code
+templates are licensed separately under MIT; see LICENSE.
+
+You are free to share and adapt this material for any purpose, including
+commercially, provided that you give appropriate credit, link to the license,
+and indicate whether changes were made. You may not apply additional legal or
+technological restrictions.
+
+Full legal code: https://creativecommons.org/licenses/by/4.0/legalcode
+Human-readable summary: https://creativecommons.org/licenses/by/4.0/
+
+Suggested attribution: "Based on book-scaffold-astro by Brandon Behring,
+licensed under CC BY 4.0."
