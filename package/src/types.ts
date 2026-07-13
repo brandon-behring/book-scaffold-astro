@@ -30,6 +30,59 @@ export const BOOK_PRESETS = BOOK_PROFILES;
 export type NumberStyle = 'shared' | 'per-kind';
 export const NUMBER_STYLES = ['shared', 'per-kind'] as const satisfies readonly NumberStyle[];
 
+/** Scaffold-owned book routes that may be enabled per corpus book (#80). */
+export const CORPUS_APPARATUS_ROUTES = [
+  'references',
+  'print',
+  'convergence',
+  'tips',
+  'exercises',
+  'practice-exam',
+  'glossary',
+  'flashcards',
+  'answers',
+] as const;
+export type CorpusApparatusRoute = (typeof CORPUS_APPARATUS_ROUTES)[number];
+
+/** Consumer-authored metadata for one book in a corpus manifest. */
+export interface CorpusBookInput {
+  id: string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  author?: string;
+  image?: string;
+  apparatus?: readonly CorpusApparatusRoute[];
+}
+
+/** Frozen, validated book metadata returned by `defineBookCorpus`. */
+export interface CorpusBook extends Omit<CorpusBookInput, 'apparatus'> {
+  readonly id: string;
+  readonly title: string;
+  readonly subtitle?: string;
+  readonly description?: string;
+  readonly author?: string;
+  readonly image?: string;
+  readonly apparatus?: readonly CorpusApparatusRoute[];
+}
+
+/** Input accepted by `defineBookCorpus`. One preset applies to the whole app. */
+export interface BookCorpusInput {
+  preset: BookPreset;
+  books: readonly CorpusBookInput[];
+}
+
+/**
+ * Branded, deeply frozen corpus registry shared by Astro and content config.
+ * The string version marker is intentionally serializable through Vite's
+ * virtual module and inspectable by plain-Node CLI tooling.
+ */
+export interface BookCorpus {
+  readonly __bookCorpusVersion: 1;
+  readonly preset: BookPreset;
+  readonly books: readonly CorpusBook[];
+}
+
 /**
  * A sibling book with an optional vendored label index for cross-book
  * `<BookLink>` validation (#147).
@@ -123,6 +176,12 @@ export interface BookConfigOptions {
    */
   styles?: readonly Style[];
   /**
+   * v5.0.0 (#80): opt into one-app/one-build corpus mode. Define the value
+   * once with `defineBookCorpus` and pass the same object to
+   * `defineBookSchemas({ corpus })`.
+   */
+  corpus?: BookCorpus;
+  /**
    * v4.27.0 (#175): theorem-family counter strategy. `shared` preserves the
    * amsthm-style sequence used through v4.26; `per-kind` gives theorem,
    * proposition, lemma, and each other theorem kind an independent sequence.
@@ -142,16 +201,6 @@ export interface BookConfigOptions {
    * Closes #3 (v3.3.0).
    */
   routes?: PartialRouteToggles;
-  /**
-   * v4.0.0 (#50): RESERVED — accepted and style-chain-merged, but currently
-   * has NO runtime effect (#180). The wrangler.toml shape is decided once, at
-   * scaffold time, by `create-book` from the profile name (academic/tools/
-   * minimal → Workers; course-notes/research-portfolio → Pages); setting this
-   * field changes nothing afterward. Wire-or-remove is a v5 decision.
-   * @deprecated Inert in v4; remove this option before v5. Deployment shape
-   * is chosen by create-book or by the consumer's own deployment files.
-   */
-  deploy?: 'pages' | 'workers';
   /**
    * Optional explicit path to the consumer's MDX-components map (relative
    * to project root). When omitted, the toolkit auto-detects one of
@@ -366,13 +415,17 @@ export interface BookSchemasOptions {
   preset?: BookPreset;
   /** Backward-compat alias for `preset`. */
   profile?: BookProfile;
-  /** Defaults to `'./src/content/chapters'`. */
+  /** Defaults to `'./src/content/chapters'`, or `'./src/content'` in corpus mode. */
   chaptersBase?: string;
+  /** v5.0.0 (#80): the same branded manifest passed to `defineBookConfig`. */
+  corpus?: BookCorpus;
 }
 
 /** Options for the internal `bookScaffoldIntegration`. See PACKAGE_DESIGN.md §6. */
 export interface BookScaffoldIntegrationOptions {
   profile: BookProfile;
+  /** v5.0.0 (#80): resolved one-app corpus manifest. */
+  corpus?: BookCorpus;
   /** Resolved theorem-family counter strategy exposed to package CLI tooling. */
   numberStyle?: NumberStyle;
   /**
@@ -486,8 +539,8 @@ function readEnvFile(path = '.env'): Record<string, string> {
 }
 
 /**
- * Resolve preset from explicit args → env → .env → the v4 compatibility
- * default. Throws on invalid values.
+ * Resolve a required preset from explicit args → env → .env.
+ * Throws when the selected value is invalid or every source is absent.
  *
  * v3.4.0 (closes #9): canonical resolver. Accepts both `preset` and `profile`
  * (back-compat) explicit args; reads both `BOOK_PRESET` (preferred) and
@@ -500,47 +553,42 @@ function readEnvFile(path = '.env'): Record<string, string> {
  *   4. process.env.BOOK_PROFILE
  *   5. .env BOOK_PRESET
  *   6. .env BOOK_PROFILE
- *   7. 'minimal' (v4 compatibility bridge; warns once per process)
+ *
+ * v5.0.0 (#212): there is deliberately no implicit `minimal` fallback. A
+ * missing preset can otherwise make CI validate and render against a schema
+ * that the author never selected.
  */
-const PRESET_FALLBACK_WARNING = Symbol.for('book-scaffold-astro:preset-fallback-warning');
-
 export function resolvePreset(
   explicitPreset?: BookPreset,
   explicitProfile?: BookProfile,
 ): BookPreset {
   let candidate: string | undefined =
     explicitPreset ?? explicitProfile ?? process.env.BOOK_PRESET ?? process.env.BOOK_PROFILE;
-  let source: 'param' | 'env' | 'dotenv' | 'default' = 'default';
-  if (explicitPreset || explicitProfile) source = 'param';
-  else if (process.env.BOOK_PRESET || process.env.BOOK_PROFILE) source = 'env';
 
   if (!candidate) {
     const env = readEnvFile();
     const fromFile = env.BOOK_PRESET ?? env.BOOK_PROFILE;
     if (fromFile) {
       candidate = fromFile;
-      source = 'dotenv';
     }
   }
 
-  candidate = candidate ?? 'minimal';
+  if (!candidate) {
+    throw new BookConfigError(
+      'book-scaffold-astro: no book preset was resolved. Add a built-in Style to ' +
+        '`defineBookConfig({ styles: [...] })` and pass the same preset to ' +
+        '`defineBookSchemas({ preset: "..." })`, pass one `defineBookCorpus` manifest ' +
+        'to both entrypoints, or set BOOK_PRESET in the ' +
+        `environment or .env. Valid presets: ${BOOK_PRESETS.join(' | ')}. ` +
+        'See https://github.com/brandon-behring/book-scaffold-astro/blob/main/' +
+        'package/MIGRATION-v4-to-v5.md.',
+    );
+  }
 
   if (!BOOK_PRESETS.includes(candidate as BookPreset)) {
     throw new BookConfigError(
       `preset must be one of ${BOOK_PRESETS.join(' | ')} (got ${JSON.stringify(candidate)})`,
     );
-  }
-  if (source === 'default') {
-    const warningState = globalThis as unknown as Record<symbol, boolean | undefined>;
-    if (!warningState[PRESET_FALLBACK_WARNING]) {
-      warningState[PRESET_FALLBACK_WARNING] = true;
-      // eslint-disable-next-line no-console
-      console.warn(
-        "book-scaffold-astro: no preset resolved; falling back to 'minimal' for v4 " +
-          'compatibility. This fallback will be removed in v5. Add a built-in style to ' +
-          'defineBookConfig and pass the same preset to defineBookSchemas, or set BOOK_PRESET.',
-      );
-    }
   }
   return candidate as BookPreset;
 }

@@ -21,21 +21,53 @@ import type { Provenance } from '../../src/schemas.js';
 import Chapter from '../../layouts/Chapter.astro';
 import Base from '../../layouts/Base.astro';
 import ProvenanceBlock from '../../components/Provenance.astro';
+import bookConfig from 'virtual:book-scaffold/book-config';
+import { corpusBookIdOf, resolveCorpusBook } from '../../src/lib/corpus';
 
-const BOOK_PRESET = import.meta.env.BOOK_PRESET ?? 'minimal';
+const BOOK_PRESET = import.meta.env.BOOK_PRESET;
+if (!BOOK_PRESET) {
+  throw new Error('book-scaffold runtime is missing the integration-defined BOOK_PRESET.');
+}
 const USE_CHAPTER_LAYOUT = ['academic', 'research-portfolio'].includes(BOOK_PRESET);
 
 export async function getStaticPaths() {
   const chapters = await getCollection('chapters', (entry) => !entry.data.draft);
-  return chapters.map((entry) => ({
-    params: { slug: entry.id },
-    props: { entry },
-  }));
+  return chapters.map((entry) => {
+    if (!bookConfig.corpus) {
+      return {
+        params: { slug: entry.id },
+        props: { entry, book: null },
+      };
+    }
+    const bookId = corpusBookIdOf(bookConfig.corpus, entry.id);
+    if (!bookId) {
+      throw new Error(
+        `Chapter entry ${JSON.stringify(entry.id)} does not start with a registered corpus book id.`,
+      );
+    }
+    const slug = entry.id.slice(bookId.length + 1);
+    if (!slug) {
+      throw new Error(`Chapter entry ${JSON.stringify(entry.id)} has no book-local slug.`);
+    }
+    return {
+      params: { book: bookId, slug },
+      props: { entry, book: resolveCorpusBook(bookConfig.corpus, bookId) },
+    };
+  });
 }
 
-const { entry } = Astro.props;
+const { entry, book } = Astro.props;
 const { Content, headings } = await render(entry);
 const Layout = USE_CHAPTER_LAYOUT ? Chapter : Base;
+const layoutProps = USE_CHAPTER_LAYOUT
+  ? { entry, headings, bookId: book?.id }
+  : {
+      title: entry.data.title,
+      description: entry.data.description,
+      ogImage: (entry.data as { image?: string }).image,
+      ogType: 'article',
+      bookId: book?.id,
+    };
 
 // v4.8.0: per-chapter provenance audit trail. Rendered here (not in a single
 // layout) so it reaches BOTH layout paths — Chapter.astro (academic/
@@ -43,7 +75,7 @@ const Layout = USE_CHAPTER_LAYOUT ? Chapter : Base;
 // always rendered; absent `provenance` → the component's fallback.
 const provenance = (entry.data as { provenance?: Provenance }).provenance ?? null;
 ---
-<Layout entry={entry} headings={headings}>
+<Layout {...layoutProps}>
   <Content />
   <ProvenanceBlock data={provenance} />
 </Layout>

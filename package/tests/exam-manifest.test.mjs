@@ -101,6 +101,16 @@ test('deriveDomainRouting normalizes the base — /foo and /foo/ both yield /foo
   ]);
 });
 
+test('deriveDomainRouting inserts the corpus book namespace without changing single-book defaults', () => {
+  assert.deepEqual(
+    deriveDomainRouting([mcq('a1', 'd', 'shared')], '/canary/', 'evaluation').d,
+    [{ label: 'shared', href: '/canary/chapters/evaluation/shared/' }],
+  );
+  assert.deepEqual(deriveDomainRouting([mcq('a1', 'd', 'shared')]).d, [
+    { label: 'shared', href: '/chapters/shared/' },
+  ]);
+});
+
 test('spreadBlueprint spreads count evenly across pool domains (min 1 each)', () => {
   const pool = buildExamManifest([
     mcq('q1', 'arrays', 1),

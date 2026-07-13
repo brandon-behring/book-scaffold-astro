@@ -1,5 +1,7 @@
 ---
 import { normalizeBase } from '../src/lib/nav-href';
+import bookConfig from 'virtual:book-scaffold/book-config';
+import { corpusBookHasApparatusRoute, corpusBookIdFromPath } from '../src/lib/corpus';
 /**
  * Term — inline glossary cross-link (v4.19.0, #115).
  *
@@ -19,8 +21,23 @@ interface Props {
 }
 const { id } = Astro.props;
 const baseUrl = normalizeBase(import.meta.env.BASE_URL);
+const currentBook = bookConfig.corpus
+  ? corpusBookIdFromPath(bookConfig.corpus, Astro.url.pathname, baseUrl)
+  : null;
+if (
+  bookConfig.corpus &&
+  (!currentBook ||
+    !corpusBookHasApparatusRoute(
+      bookConfig.corpus,
+      currentBook,
+      'glossary',
+      bookConfig.apparatusRoutes,
+    ))
+) {
+  throw new Error(`<Term id="${id}"> requires the current corpus book's glossary route.`);
+}
 ---
-<a href={`${baseUrl}glossary#term-${id}`} class="term-link"><slot /></a>
+<a href={`${baseUrl}${currentBook ? `${currentBook}/` : ''}glossary#term-${id}`} class="term-link"><slot /></a>
 
 <style>
   .term-link {

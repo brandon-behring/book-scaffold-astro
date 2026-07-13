@@ -11,18 +11,31 @@
  */
 import Base from '../layouts/Base.astro';
 import { normalizeBase } from '../src/lib/nav-href';
+import bookConfig from 'virtual:book-scaffold/book-config';
+import { selectBookArtifact } from '../src/lib/corpus';
+
+interface Props { bookId?: string; }
+const { bookId } = Astro.props;
 
 // v4.4.0 fix: use Vite's import.meta.glob with a project-root-relative
 // path. The previous `../../../src/data/tips.json` resolution failed when
 // the auto-injected route was processed from node_modules (or any context
 // other than a workspace symlink). `/src/data/...` is consumer-project-rooted
 // in Vite's resolver and works across all consumer build contexts.
-const tipsModules = import.meta.glob<{ default: Array<{ n: number; title: string; chapter: string; preview: string }> }>(
+type TipIndexEntry = { n: number; title: string; chapter: string; preview: string };
+const tipsModules = import.meta.glob<{ default: unknown }>(
   '/src/data/tips.json',
   { eager: true },
 );
 const tipsEntry = tipsModules['/src/data/tips.json'];
-const tips = tipsEntry?.default ?? [];
+const tips = tipsEntry
+  ? selectBookArtifact<TipIndexEntry[]>(
+      tipsEntry.default,
+      bookConfig.corpus,
+      bookId,
+      'src/data/tips.json',
+    )
+  : [];
 const loadError = tipsEntry
   ? null
   : 'src/data/tips.json not found — run `npx book-scaffold build-tips` to generate.';
@@ -30,7 +43,7 @@ const loadError = tipsEntry
 // #142: chapter back-links must prefix the deploy base.
 const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 ---
-<Base title="Tips" description="Numbered tips from this book, drawn from <Tip> instances in chapters.">
+<Base title="Tips" description="Numbered tips from this book, drawn from <Tip> instances in chapters." bookId={bookId}>
   <article class="prose">
     <h1>Tips</h1>
     {loadError && (
@@ -51,7 +64,7 @@ const baseUrl = normalizeBase(import.meta.env.BASE_URL);
               <p class="tips-index-preview">{tip.preview}</p>
             )}
             <p class="tips-index-meta">
-              From <a href={`${baseUrl}chapters/${tip.chapter}/`}>{tip.chapter}</a>
+              From <a href={`${baseUrl}chapters/${bookId ? `${bookId}/` : ''}${tip.chapter}/`}>{tip.chapter}</a>
             </p>
           </li>
         ))}

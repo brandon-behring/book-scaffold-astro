@@ -41,14 +41,25 @@ test('no injected page emits its own <main> (Base owns the landmark)', async () 
 
 test('Base.astro wraps both branches in exactly one <main>', async () => {
   const src = await readFile(join(LAYOUTS_DIR, 'Base.astro'), 'utf8');
-  assert.match(
-    src,
-    /<main class="layout-main"><slot \/><\/main>/,
-    'sidebar branch should wrap the slot in <main class="layout-main">',
+  const template = src.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '');
+  assert.equal(
+    [...template.matchAll(/^\s*<main(?:\s|>)/gm)].length,
+    2,
+    'the two mutually exclusive layout branches should each own one <main>',
+  );
+  assert.equal(
+    [...template.matchAll(/^\s*(?:><slot \/>)?<\/main>/gm)].length,
+    2,
+    'each conditional <main> must close exactly once',
   );
   assert.match(
-    src,
-    /<main><slot \/><\/main>/,
-    'no-sidebar (full-bleed) branch should also wrap the slot in <main>',
+    template,
+    /<main\s+class="layout-main"\s+data-pagefind-body=\{pagefindFilter \? true : undefined\}\s+data-pagefind-filter=\{pagefindFilter\}\s*>\s*<slot \/><\/main>/,
+    'sidebar branch should wrap the slot in a Pagefind-scoped <main class="layout-main">',
+  );
+  assert.match(
+    template,
+    /\) : \(\s*<main\s+data-pagefind-body=\{pagefindFilter \? true : undefined\}\s+data-pagefind-filter=\{pagefindFilter\}\s*>\s*<slot \/><\/main>/,
+    'no-sidebar branch should wrap the slot in its own Pagefind-scoped <main>',
   );
 });

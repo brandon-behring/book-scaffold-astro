@@ -20,7 +20,7 @@
  *   <BookLink book="design" to="chapters/patterns/#layered">the layered pattern</BookLink>.
  */
 import bookConfig from 'virtual:book-scaffold/book-config';
-import { resolveBookHref } from '../src/lib/book-link';
+import { resolveBookHref, resolveCorpusBookHref } from '../src/lib/book-link';
 
 interface Props {
   book: string;
@@ -28,6 +28,9 @@ interface Props {
 }
 
 const { book, to } = Astro.props;
-const href = resolveBookHref(bookConfig.siblingBooks, book, to);
+const localBook = bookConfig.corpus?.books.some((candidate) => candidate.id === book) ?? false;
+const href = localBook
+  ? resolveCorpusBookHref(book, to, import.meta.env.BASE_URL)
+  : resolveBookHref(bookConfig.siblingBooks, book, to);
 ---
-<a href={href} rel="external noopener" class="book-link"><slot /></a>
+<a href={href} rel={localBook ? undefined : 'external noopener'} class="book-link"><slot /></a>

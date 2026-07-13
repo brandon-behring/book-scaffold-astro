@@ -232,6 +232,10 @@ Wraps Astro's `defineConfig`; composes a Style chain, threads the resolved profi
 
 **v4.0.0 BREAKING CHANGE**: the v3.x `preset:` / `profile:` shorthand was removed. Pass styles via `styles: [<presetName>Style]` instead. See [`MIGRATION-v3-to-v4.md`](package/MIGRATION-v3-to-v4.md) for the migration recipe and [`recipes/15-defining-styles.md`](package/recipes/15-defining-styles.md) for the Style composition pattern.
 
+**v5.0.0 BREAKING CHANGES**: a valid preset must resolve explicitly and the
+inert `deploy` configuration field is removed. See
+[`MIGRATION-v4-to-v5.md`](package/MIGRATION-v4-to-v5.md).
+
 ### Signature
 
 ```ts
@@ -293,11 +297,6 @@ export interface BookConfigOptions extends Omit<AstroUserConfig, 'integrations' 
   /** Frontmatter field supplying :book and :slug route-token context. */
   bookField?: string;
 
-  /** Optional. RESERVED (#50, #180) — accepted and style-chain-merged, but has no
-   *  runtime effect. The wrangler.toml shape is set at scaffold time by create-book
-   *  from the profile name; this field does not change it.
-   *  @deprecated Remove before v5. */
-  deploy?: 'pages' | 'workers';
 }
 
 export function defineBookConfig(opts: BookConfigOptions): Promise<AstroUserConfig>;
@@ -308,7 +307,8 @@ export function defineBookConfig(opts: BookConfigOptions): Promise<AstroUserConf
 1. Detect v3 API usage (`preset` or `profile` at top level) → throw `BookConfigError` with auto-suggested replacement: exact `styles: [<presetName>Style]` line + missing import, plus link to MIGRATION-v3-to-v4.md.
 2. Compose the Style chain via `composeStyles(opts.styles ?? [])`, applying the per-key merge strategy (see §4a).
 3. Apply top-level `opts` fields on top of composed style (consumer per-book override wins).
-4. Resolve `preset` from composed style; throw `BookConfigError` if unknown.
+4. Resolve a required `preset` from the composed Style, corpus manifest,
+   environment, or `.env`; throw `BookConfigError` if absent or unknown.
 5. Require `site` to be set after composition; throw otherwise.
 6. Build the package's integration list: `[mdx(), preact(), bookScaffoldIntegration({ preset, routes, extraStyles, mdxComponentsModule, securityHeaders })]`.
 7. Thread `securityHeaders`, `siblingBooks`, `chapterRoute`, and `bookField` to the integration without forwarding them to Astro's own config. Security-header omission means defaults, `false` means no scaffold emission, and `{ contentSecurityPolicy }` replaces only the default CSP. Non-enumerable resolved metadata exposes the evaluated sibling registry and chapter-route contract to CLI tooling, avoiding source-text parsing of computed/spread config.
@@ -320,6 +320,12 @@ export function defineBookConfig(opts: BookConfigOptions): Promise<AstroUserConf
 ### Errors / common mistakes
 
 - **`BookConfigError: v3 API detected. Replace this: ... With this: ...`** — passed `preset:` or `profile:` at top level. The error includes the exact replacement code. See MIGRATION-v3-to-v4.md.
+- **`BookConfigError: no book preset was resolved`** — add a built-in Style,
+  pass the same explicit preset to `defineBookSchemas`, share a corpus manifest,
+  or set `BOOK_PRESET`.
+- **`BookConfigError: v5 removed ... { deploy }`** — delete the inert field
+  and configure `wrangler.toml` or the deployment platform directly. See
+  MIGRATION-v4-to-v5.md.
 - **`BookConfigError: site is required`** — neither top-level `site` nor any composed Style provided one. Add `site: 'https://...'` to the call or to a shared Style.
 - **`BookConfigError: unknown preset "X"`** — composed Style's `preset` field is invalid. Use one of the 5 built-in styles or `defineStyle({ preset: 'academic', ... })`.
 - **Consumer adds remark/rehype plugin via `markdown.remarkPlugins`**: package list ordering matters; consumer plugins run **after** package's KaTeX plugins. If you need a different order, choose a non-katex preset (e.g., `toolsStyle`) and wire math manually.
@@ -389,8 +395,6 @@ export interface Style {
   readonly extraIntegrations?: readonly AstroIntegration[];
   readonly mdxComponentsModule?: string;
   readonly markdown?: AstroUserConfig['markdown'];
-  /** @deprecated Reserved metadata with no runtime effect; remove before v5. */
-  readonly deploy?: 'pages' | 'workers';
   /** Scoped consumer-side metadata; ignored by toolkit; survives merge as shallow override.
    *  Preserves typo protection on known fields (closed shape — no public index signature). */
   readonly extra?: Readonly<Record<string, unknown>>;
@@ -411,7 +415,7 @@ When `composeStyles([s1, s2, s3])` runs (left-to-right; top-level `defineBookCon
 
 | Field | Strategy |
 |---|---|
-| `name`, `preset`, `site`, `deploy`, `mdxComponentsModule` | Shallow override (last wins) |
+| `name`, `preset`, `site`, `mdxComponentsModule` | Shallow override (last wins) |
 | `routes` | Per-route spread |
 | `routes.frontmatter` | Per-route spread; later value (boolean OR object) wholly replaces earlier |
 | `katexMacros` | Object spread (per-macro override) |
@@ -932,7 +936,9 @@ await import(path.resolve(here, handlers[sub]));
 5. `.env` file `BOOK_PROFILE`
 6. `defineBookSchemas({ preset })` in `src/content.config.{ts,mjs,js}`
 7. `defineBookSchemas({ profile })` in `src/content.config.ts` (alias)
-8. `'minimal'` fallback
+
+If all seven sources are absent, v5 exits with an actionable configuration
+error. It never selects `minimal` implicitly.
 
 **chaptersBase chain** (both `validate` and `build-labels`):
 
@@ -1355,30 +1361,153 @@ Open at the package-publishing level (handled at Phase B start):
 
 ---
 
-## 15a. Deferred scope (post-v4.x)
-
-The package is in its v4.x **iteration window** — small additive changes triggered by consumer signal. Anything architecturally invasive ships in v5.x or later, and only after repeated independent demand. Items deferred during the v4.x cycle:
-
-### Multi-book corpus routing + schema (#80, accepted for v5)
+## 15a. Multi-book corpus public contract (v5)
 
 The second-consumer trigger fired through `guides-ai-engineering`, alongside the
-DLAI Study Notes pilot. The decision-complete public contract now lives in
+DLAI Study Notes pilot. The v5 source implementation follows the public
+contract below; changes require an explicit design amendment. This section does
+not claim that v5 has been published—the package version and changelog remain
+the authority for registry availability.
+
+### Configuration and manifest
+
+A corpus is one Astro application, one build/deployment, one homogeneous preset
+and Style chain, and one ordered registry. Consumers create the registry once
+and pass the same branded value to both configuration entrypoints:
+
+```ts
+interface BookCorpusInput {
+  preset: BookPreset;
+  books: readonly CorpusBookInput[];
+}
+
+interface CorpusBookInput {
+  id: string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  author?: string;
+  image?: string;
+  apparatus?: readonly CorpusApparatusRoute[];
+}
+
+const corpus = defineBookCorpus({ preset: 'tools', books: [/* ordered */] });
+await defineBookConfig({ corpus, site: 'https://guides.example/' });
+defineBookSchemas({ corpus });
+```
+
+`defineBookCorpus` eagerly validates, brands, and deeply freezes the value.
+`books` is non-empty and ordered; ids are unique kebab-case values; application
+route names and the `questions`, `glossary`, and `frontmatter` collection roots
+are reserved; titles are non-blank; and apparatus names are a duplicate-free
+closed subset. A composed Style preset must match the manifest.
+Per-book presets, Styles, Markdown plugins, integrations, `site`, `base`, and
+exam-domain taxonomies are outside the homogeneous v5 contract.
+
+The main entry exports `defineBookCorpus`, manifest/entry/path resolvers,
+book-entry filters, apparatus selectors, `selectBookArtifact`, the closed
+apparatus/reserved-id constants, and their public types. Unknown book identity
+always fails or returns an explicit `null` from the nullable identity helpers;
+it is never inferred from an unregistered path.
+
+### Content identity and routes
+
+Corpus `defineBookSchemas` defaults `chaptersBase` to `./src/content` and loads
+only `src/content/<registered-book>/**/*.{md,mdx}`. It generates entry ids as
+`<book>/<local-id>`, where the local id is an explicit string `slug` or the
+nested path below the book directory without its extension. Questions and
+glossary collections use `<book>/<local-id>` beneath their own book folders.
+The path is authoritative; no required `book` frontmatter is added, and a
+legacy field may only agree with the path-derived owner.
+
+Convergence collateral uses `changelog/<book>/patterns.yaml` and
+`changelog/<book>/tools/*.yaml`. Each book receives distinct internal content
+collections; the legacy root-level paths are single-book only. Flashcard
+localStorage is likewise keyed by deployment base and manifest book.
+
+The canonical route table (before Astro `base`) is:
+
+| Surface | Pattern |
+|---|---|
+| Corpus landing/index | `/` and `/chapters/` |
+| Book landing/index | `/<book>/` and `/chapters/<book>/` |
+| Chapter | `/chapters/<book>/<slug>/` |
+| Search | `/search/` with optional `?book=<id>` |
+| Book apparatus | `/<book>/<route>/` |
+
+Manifest ids are the only source of static book/apparatus params. Corpus mode
+owns `chapterRoute = /chapters/:id/` and
+`apparatusRoute = /:book/:route/`; explicit `chapterRoute`, `bookField`, or
+`apparatusRoute`/`apparatusRoutes` overrides are rejected. A consumer
+filesystem page may still override an injected page through Astro precedence,
+but then owns identical params, canonical URLs, Pagefind metadata, and
+base-prefix behavior.
+
+The closed apparatus slugs are `references`, `print`, `convergence`, `tips`,
+`exercises`, `practice-exam`, `glossary`, `flashcards`, and `answers`. Omission
+inherits the application-enabled subset; an empty array exposes none; an
+explicit list narrows the book. Naming an application-disabled route is an
+error. Navigation, previous/next, metadata, questions, glossary, convergence,
+flashcard state, and apparatus renderers select the current book and never
+cross namespaces implicitly.
+
+`BookLink` resolves a manifest-owned key locally and a `siblingBooks` key to its
+external origin. Local chapter targets insert the book into the shared chapter
+namespace; other relative targets live below `/<book>/`. Absolute, empty,
+query-only, fragment-only, and traversal targets fail. A key cannot be both
+local and external.
+
+### Generated data, diagnostics, and search
+
+Corpus-mode `labels.json`, `references.json`, `sources.json`, `tips.json`, and
+`exercises.json` keep their filenames and wrap existing payloads in:
+
+```json
+{ "schemaVersion": 1, "books": { "book-id": {} } }
+```
+
+Producers iterate manifest order. `build-labels`, `build-bib`, `build-tips`,
+`build-exercises`, and `validate` accept `--book <id>` only in corpus mode and
+default to all books. A selected producer updates that key in an existing valid
+envelope while retaining other registered keys; a full run rewrites all keys.
+Human diagnostics use `[book:<id>]` and an explicitly named `[book:corpus]`
+aggregate. Figure and notebook conversion remain application-wide.
+
+`bibliography.bib` (or `BOOK_BIB_PATH`) and `sources/manifest.yaml` remain one
+root-level authoring input each. `build-bib` parses them once and writes the
+payload beneath every selected namespace; renderers still select a book before
+lookup. Per-book bibliography/source inputs are not part of v5.
+
+Search uses one Pagefind index. Each book page carries a `book:<id>` filter;
+corpus landing content carries `surface:corpus`. `/search/` defaults to all
+books, accepts only registered filters, and starts book-originated searches in
+that namespace. Built Pagefind URLs already contain Astro `base` and are never
+post-rewritten.
+
+### Compatibility and operational guide
+
+Corpus mode is opt-in. A single-book application retains its v4 chapter and
+flat apparatus routes, content base, and generated JSON shapes; `--book` is an
+invocation error there. Migrating the v4 Recipe 21 workaround removes the
+hand-written collection/`generateId` but deliberately preserves
+`/chapters/<book>/<slug>/`, so no redirects are needed.
+
+See [`package/recipes/21-multi-guide-single-app.md`](package/recipes/21-multi-guide-single-app.md)
+for configuration, route/apparatus/search behavior, CLI examples, and the
+six-step migration. The design gate and release tests are recorded in
 [`docs/plans/active/v5-corpus-contract.md`](docs/plans/active/v5-corpus-contract.md).
 
-The accepted direction is one app / one build / one homogeneous preset, with a
-shared `defineBookCorpus` manifest, path-derived book identity, canonical
-Recipe 21 URLs (`/chapters/<book>/<slug>/`), per-book indexes, book-scoped
-artifacts and diagnostics, and a single Pagefind index with book filters.
-Single-book behavior remains compatible; corpus behavior is opt-in. #158 and
-#157 consume the corpus identity contract after the v5 core rather than
-expanding the v5.0 implementation gate.
+## 15b. Deferred scope
 
 ### AnkiCard component + extract-cards CLI (closed #16, deferred)
 
 **Requested shape**: ship `<AnkiCard>` MDX component + `book-scaffold extract-cards` CLI from the DLAI pilot to the scaffold.
 
 **Why deferred**:
-- The component is feasible (one-line export, no profile coupling, ~100 LOC). The CLI is harder: it depends on #15's per-book grouping, and adds a non-trivial runtime dependency (a `.apkg` builder — Python `anki` library or a Node port).
+- The component is feasible (one-line export, no profile coupling, ~100 LOC).
+  Corpus grouping now provides stable book identity, but the CLI still adds a
+  non-trivial runtime dependency (a `.apkg` builder — Python `anki` library or
+  a Node port).
 - The scaffold's scope is "books as MDX + Astro + pluggable profiles". Deck-export sync is a workflow-specific feature, more like "export to Notion" or "sync to Roam" than infrastructure every consumer needs.
 - Until DLAI proves the pattern out in production, the right home is a consumer-side recipe ([Recipe 20](package/recipes/20-anki-export.md)) describing how to roll your own `<AnkiCard>` component + a project-local `scripts/extract-anki.mjs` using `getCollection('chapters')`.
 

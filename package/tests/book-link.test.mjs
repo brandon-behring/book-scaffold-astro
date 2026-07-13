@@ -11,7 +11,7 @@
  */
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { resolveBookHref } from '../dist/index.mjs';
+import { resolveBookHref, resolveCorpusBookHref } from '../dist/index.mjs';
 
 const SIBLINGS = { design: 'https://design.example', handbook: 'https://hb.example/' };
 const DESCRIPTORS = {
@@ -59,4 +59,45 @@ test('resolveBookHref: invalid descriptor entries fail loud', () => {
     () => resolveBookHref({ design: { labels: './labels.json' } }, 'design', 'x'),
     /invalid siblingBooks entry.*\{ url:/s,
   );
+});
+
+test('resolveCorpusBookHref: chapters use the shared chapter namespace', () => {
+  assert.equal(
+    resolveCorpusBookHref('evaluation', 'chapters/foo#bar'),
+    '/chapters/evaluation/foo/#bar',
+  );
+  assert.equal(
+    resolveCorpusBookHref('evaluation', 'chapters/foo?mode=review#bar', '/canary/'),
+    '/canary/chapters/evaluation/foo/?mode=review#bar',
+  );
+  assert.equal(resolveCorpusBookHref('evaluation', 'chapters'), '/chapters/evaluation/');
+});
+
+test('resolveCorpusBookHref: non-chapter targets stay under the book namespace', () => {
+  assert.equal(
+    resolveCorpusBookHref('llm-app-engineering', 'glossary/term#definition'),
+    '/llm-app-engineering/glossary/term/#definition',
+  );
+  assert.equal(
+    resolveCorpusBookHref('llm-app-engineering', 'references'),
+    '/llm-app-engineering/references/',
+  );
+});
+
+test('resolveCorpusBookHref: invalid local targets fail loud', () => {
+  for (const target of [
+    '',
+    '   ',
+    '/chapters/foo',
+    '//example.test/foo',
+    'https://example.test/foo',
+    '../foo',
+    'chapters/../foo',
+    'chapters/%2e%2e/foo',
+    'chapters/%2Ffoo',
+    '?book=foo',
+    '#fragment',
+  ]) {
+    assert.throws(() => resolveCorpusBookHref('evaluation', target), /invalid local corpus target/);
+  }
 });

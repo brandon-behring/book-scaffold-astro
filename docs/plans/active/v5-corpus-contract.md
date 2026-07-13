@@ -105,8 +105,10 @@ both config entrypoints fail with the same diagnostic.
 
 - `books` is non-empty and array order is navigation/display order.
 - `id` is unique and matches `[a-z0-9]+(?:-[a-z0-9]+)*`.
-- The ids `assets`, `chapters`, `search`, `_astro`, `_og`, and `pagefind` are
-  reserved.
+- The ids `assets`, `chapters`, `search`, `questions`, `glossary`,
+  `frontmatter`, `_astro`, `_og`, and `pagefind` are reserved. The three
+  content names belong to scaffold collection roots and cannot simultaneously
+  be chapter-owner directories.
 - `title` is non-blank.
 - `apparatus` is a duplicate-free subset of the scaffold's known apparatus
   routes.
@@ -154,6 +156,13 @@ Questions, glossary entries, and other collection-backed apparatus use the
 same `<book>/<local-id>` convention when corpus mode is active. A book without
 that apparatus may omit its directory.
 
+Convergence uses `changelog/<book>/patterns.yaml` and
+`changelog/<book>/tools/*.yaml` in corpus mode. Those paths become separate
+internal collections per manifest book, so repeated pattern ids and tool
+filenames cannot bleed across dashboards. Root-level v4 convergence paths
+remain single-book only. Flashcard persistence is likewise keyed by deployment
+base and manifest book.
+
 ## Route table
 
 All generated links are resolved through Astro's normalized `base`. The paths
@@ -182,7 +191,8 @@ apparatusRoute = /:book/:route/
 ```
 
 Those happen to preserve the Recipe 21 chapter route while making apparatus
-book-specific. Explicit `chapterRoute`, `bookField`, or `apparatusRoute`
+book-specific. Explicit `chapterRoute`, `bookField`, `apparatusRoute`, or
+`apparatusRoutes`
 overrides are rejected in corpus mode because alternate patterns would make
 the injected route table disagree with navigation. They remain supported for
 v5 single-book applications and v4-style consumer-owned routing.
@@ -305,6 +315,36 @@ needed for the blessed recipe.
   designed now and implemented after the v5 corpus core.
 - #210's Anki authoring/export contract remains parked and out of scope.
 
+## Implementation clarifications
+
+The implementation audit recorded these decisions so the public contract is
+unambiguous at the code boundary:
+
+- `ApparatusRoute` is the existing scaffold-owned closed set: `references`,
+  `print`, `convergence`, `tips`, `exercises`, `practice-exam`, `glossary`,
+  `flashcards`, and `answers`. An omitted per-book `apparatus` inherits the
+  application-enabled subset; an explicit empty list enables none. A per-book
+  entry naming an application-disabled route is a configuration error rather
+  than a dead link. Dynamic apparatus routes emit paths only for books that
+  expose them.
+- `examDomains` remains application-wide in v5, like the preset and Markdown
+  pipeline. Question and glossary entry ids are book-prefixed and their routes
+  select the current book, but heterogeneous per-book taxonomies are deferred.
+- `bibliography.bib` (or `BOOK_BIB_PATH`) and `sources/manifest.yaml` remain
+  corpus-shared authoring inputs for the zero-restructure Recipe 21 migration.
+  Their parsed values are stored beneath every selected book key; renderers and
+  validation must still select a book namespace before resolving a citation.
+- `--book` applies to the content-derived commands in this contract:
+  `validate`, `build-labels`, `build-bib`, `build-tips`, and
+  `build-exercises`. Figure and notebook conversion are application-wide asset
+  transforms and remain outside corpus identity. A selected build updates only
+  that key in an existing valid envelope and preserves other registered keys;
+  a full build rewrites all keys in manifest order.
+- For a local corpus target, `<BookLink book="evaluation" to="chapters/foo#bar">`
+  resolves to `/chapters/evaluation/foo/#bar`; other relative targets resolve
+  below `/<book>/`. Empty, absolute, traversal, query-only, and fragment-only
+  `to` values fail loudly. External `siblingBooks` retain their v4 semantics.
+
 ## Implementation and release gates
 
 The v5 implementation is complete only when:
@@ -320,4 +360,3 @@ The v5 implementation is complete only when:
 7. a Recipe 21 fixture migrates without changing its public chapter URLs; and
 8. #211 and #212 ship with one reviewed v5 migration guide and lock-step package
    versions.
-

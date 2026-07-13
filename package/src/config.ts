@@ -20,6 +20,7 @@ import { bookScaffoldIntegration } from './integration.js';
 import { PROFILES } from './profiles/index.js';
 import { composeStyles, type Style } from './lib/define-style.js';
 import { BUILTIN_STYLES } from './styles/built-in.js';
+import { assertBookCorpus, CORPUS_OWNED_ROUTE_FIELDS } from './lib/corpus.js';
 
 /**
  * v4.5.0: Default portfolio backlink baked into the scaffold. Rendered in
@@ -90,26 +91,55 @@ export async function defineBookConfig(
     throw v3MigrationError(opts as Record<string, unknown>);
   }
 
-  // #180: the top-level field was documented as functional but has always
-  // been stripped before Astro sees it. Warn only when the consumer writes
-  // the field explicitly; built-in styles still carry historical metadata,
-  // and warning every normal consumer would turn the signal into noise.
+  // v5 (#211): fail loud for JavaScript-authored configs too. BookConfigOptions
+  // must retain an Astro escape-hatch index signature, so removing the named
+  // TypeScript field alone would otherwise let this obsolete key leak to Astro.
   if (Object.prototype.hasOwnProperty.call(opts, 'deploy')) {
-    // eslint-disable-next-line no-console
-    console.warn(
-      'book-scaffold-astro: defineBookConfig({ deploy }) is inert and deprecated; ' +
-        'create-book chooses wrangler.toml from its CLI preset. Remove this field ' +
-        'before upgrading to v5 (#180).',
+    throw new BookConfigError(
+      'book-scaffold-astro v5 removed defineBookConfig({ deploy }) because the field ' +
+        'never controlled deployment. Remove it and configure wrangler.toml or your ' +
+        'deployment platform directly. See https://github.com/brandon-behring/' +
+        'book-scaffold-astro/blob/main/package/MIGRATION-v4-to-v5.md.',
     );
   }
 
-  // 1. Compose the style chain. During v4, a preset-less chain bridges through
-  //    BOOK_PRESET / BOOK_PROFILE / .env and finally the warned minimal fallback.
-  //    A composed preset always wins. v5 removes the final fallback (#179).
+  // 1. Compose the style chain. A composed preset always wins; otherwise the
+  //    required resolver checks BOOK_PRESET / BOOK_PROFILE / .env (#212).
   const composed = composeStyles((opts.styles as readonly Style[] | undefined) ?? []);
 
   // 2. Apply top-level opts on top of composed (top-level wins for shared fields).
-  const profile = resolvePreset(composed.preset) as (typeof BOOK_PRESETS)[number];
+  const corpus = opts.corpus;
+  if (corpus !== undefined) {
+    assertBookCorpus(corpus);
+  }
+  // The shared corpus manifest is itself an explicit preset source. A Style
+  // remains higher precedence so a disagreement can fail below (#80/#212).
+  const profile = resolvePreset(composed.preset ?? corpus?.preset) as (typeof BOOK_PRESETS)[number];
+  if (corpus !== undefined) {
+    if (corpus.preset !== profile) {
+      throw new BookConfigError(
+        `defineBookConfig corpus preset ${JSON.stringify(corpus.preset)} does not match ` +
+          `the composed Style preset ${JSON.stringify(profile)}. One preset applies to the whole corpus.`,
+      );
+    }
+    const incompatible = CORPUS_OWNED_ROUTE_FIELDS.filter((field) =>
+      Object.prototype.hasOwnProperty.call(opts, field),
+    );
+    if (incompatible.length > 0) {
+      throw new BookConfigError(
+        `Corpus mode owns ${incompatible.join(', ')}; remove the explicit ` +
+          `${incompatible.length === 1 ? 'override' : 'overrides'} so injected routes and navigation agree.`,
+      );
+    }
+    const siblingKeys = new Set(Object.keys((opts.siblingBooks as Record<string, unknown> | undefined) ?? {}));
+    const duplicateOwner = corpus.books.find((book) => siblingKeys.has(book.id));
+    if (duplicateOwner) {
+      throw new BookConfigError(
+        `Book id ${JSON.stringify(duplicateOwner.id)} exists in both corpus.books and siblingBooks. ` +
+          'A key must be either local or externally deployed, never both.',
+      );
+    }
+  }
   const numberStyle = opts.numberStyle ?? composed.numberStyle ?? 'shared';
   if (!NUMBER_STYLES.includes(numberStyle)) {
     throw new BookConfigError(
@@ -210,6 +240,7 @@ export async function defineBookConfig(
     sitemap(sitemapOptions),
     bookScaffoldIntegration({
       profile,
+      corpus,
       numberStyle,
       routes: mergedRoutes,
       mdxComponentsModule,
@@ -244,11 +275,18 @@ export async function defineBookConfig(
       siblingBooks: opts.siblingBooks,
       // v4.17.0 (#112): per-book exam-domain taxonomy for the questions collection.
       examDomains: opts.examDomains as readonly string[] | undefined,
-      // v4.26.0 (#80): book-aware nav route patterns (undefined → single-book defaults).
-      chapterRoute: opts.chapterRoute as string | undefined,
-      bookField: opts.bookField as string | undefined,
-      apparatusRoute: opts.apparatusRoute as string | undefined,
-      apparatusRoutes: opts.apparatusRoutes as readonly string[] | undefined,
+      // v4.26.0 (#80): book-aware nav route patterns (undefined → single-book
+      // defaults). Corpus mode owns these fields, so do not manufacture own
+      // properties with undefined values when handing the validated manifest
+      // to the independently exported integration.
+      ...(corpus
+        ? {}
+        : {
+            chapterRoute: opts.chapterRoute as string | undefined,
+            bookField: opts.bookField as string | undefined,
+            apparatusRoute: opts.apparatusRoute as string | undefined,
+            apparatusRoutes: opts.apparatusRoutes as readonly string[] | undefined,
+          }),
     }),
     ...mergedExtraIntegrations,
   ];
@@ -282,10 +320,10 @@ export async function defineBookConfig(
   // Strip the package-specific options out of the rest before forwarding to Astro.
   const {
     styles: _styles,
+    corpus: _corpus,
     numberStyle: _numberStyle,
     site: _site,
     routes: _routes,
-    deploy: _deploy,
     mdxComponentsModule: _mdxComponentsModule,
     extraIntegrations: _extraIntegrations,
     extraStyles: _extraStyles,
@@ -318,10 +356,10 @@ export async function defineBookConfig(
     ...rest
   } = opts;
   void _styles;
+  void _corpus;
   void _numberStyle;
   void _site;
   void _routes;
-  void _deploy;
   void _mdxComponentsModule;
   void _extraIntegrations;
   void _extraStyles;

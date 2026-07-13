@@ -2,6 +2,64 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [5.0.0] — 2026-07-13
+
+Major release — **first-class multi-book corpora plus two deliberate
+configuration removals.** Existing single-book routes and flat generated-data
+shapes remain unchanged after the required configuration migration. Corpus
+mode is opt-in and follows the public contract in Recipe 21.
+
+### Added
+
+- **Manifest-backed corpus mode (#80).** `defineBookCorpus` creates one ordered,
+  validated, deeply frozen registry that is shared by `defineBookConfig` and
+  `defineBookSchemas`. Registered books receive namespaced collection ids,
+  `/chapters/<book>/<slug>/` chapters, per-book landing/index/apparatus routes,
+  local `<BookLink>` resolution, book-aware navigation and metadata, and one
+  Pagefind index with explicit `book` filters. Scaffold-owned collection roots
+  (`questions`, `glossary`, and `frontmatter`) are reserved as book ids.
+- Labels, references, tips, exercises, questions, glossary, convergence
+  collateral, and flashcard progress are scoped to the current book. Corpus
+  convergence uses `changelog/<book>/`; flashcard storage keys include the
+  deployment base and manifest book. Corpus JSON uses a strict versioned
+  `{ schemaVersion, books }` envelope; content-derived CLI commands accept
+  `--book <id>` while preserving their v4 flat output and invocation behavior
+  for single-book projects.
+- Recipe 21, the package design contract, and the v4-to-v5 migration guide now
+  document manifest ownership, content layout, route identity, shared sources,
+  generated artifacts, diagnostics, search, and migration from the former
+  consumer-owned `generateId` workaround.
+
+### Breaking changes
+
+- **A preset is now mandatory (#212).** The implicit `minimal` fallback and its
+  v4 deprecation warning are removed. Supply a preset through a built-in or
+  custom Style, the corpus manifest, `defineBookSchemas`, `BOOK_PRESET`, or the
+  backward-compatible `BOOK_PROFILE` alias; a missing or conflicting value
+  fails with an actionable configuration error.
+- **The inert `deploy` option is removed (#211).** Delete it from book configs
+  and shared Styles. Deployment continues to be configured through
+  `wrangler.toml`, provider settings/workflows, and Astro's real `site`/`base`
+  values; JavaScript objects that retain `deploy` fail with a migration error.
+- Corpus mode owns `chapterRoute`, `bookField`, `apparatusRoute`, and
+  `apparatusRoutes`; remove those overrides when adopting a manifest. A
+  manifest book may instead narrow its enabled apparatus with `apparatus`, and
+  an omitted value inherits the application's enabled route set.
+
+See [`package/MIGRATION-v4-to-v5.md`](package/MIGRATION-v4-to-v5.md) for the
+required single-book edits and the six-step Recipe 21 corpus migration.
+
+### Tests
+
+- A real two-book research-portfolio fixture builds at both root and non-root
+  Astro bases, deliberately reuses local slugs and content ids, and proves
+  route presence, per-book chapter/apparatus/data isolation, Pagefind filters,
+  base-contained URLs, and fail-loud invalid ownership.
+- Unit and contract coverage exercises manifest/schema invariants, route and
+  artifact selection, CLI book scoping and diagnostics, cross-book links,
+  strict corpus envelopes, migration errors, and unchanged single-book
+  behavior.
+
 ## [4.31.0] — 2026-07-13
 
 ### Added

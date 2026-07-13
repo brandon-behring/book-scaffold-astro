@@ -56,6 +56,23 @@ test('walkMdx: recurses into subdirs with forward-slash separator', async () => 
   assert.deepEqual(files, ['sub/deeper/leaf.md', 'sub/mid.mdx', 'top.mdx']);
 });
 
+test('walkMdx: matches Astro hidden-path exclusions for underscore and dot segments', async () => {
+  const dir = join(workRoot, 'hidden');
+  await mkdir(join(dir, '_drafts', 'nested'), { recursive: true });
+  await mkdir(join(dir, 'visible', '_private'), { recursive: true });
+  await mkdir(join(dir, '.drafts', 'nested'), { recursive: true });
+  await mkdir(join(dir, 'visible', '.private'), { recursive: true });
+  await writeFile(join(dir, '_chapter.mdx'), '');
+  await writeFile(join(dir, '.chapter.mdx'), '');
+  await writeFile(join(dir, '_drafts', 'nested', 'draft.mdx'), '');
+  await writeFile(join(dir, 'visible', '_private', 'draft.mdx'), '');
+  await writeFile(join(dir, '.drafts', 'nested', 'draft.mdx'), '');
+  await writeFile(join(dir, 'visible', '.private', 'draft.mdx'), '');
+  await writeFile(join(dir, 'visible', 'chapter.mdx'), '');
+  const files = await collect(walkMdx(dir));
+  assert.deepEqual(files, ['visible/chapter.mdx']);
+});
+
 test('walkMdx: missing dir returns gracefully (zero yields)', async () => {
   const files = await collect(walkMdx(join(workRoot, 'does-not-exist')));
   assert.deepEqual(files, []);

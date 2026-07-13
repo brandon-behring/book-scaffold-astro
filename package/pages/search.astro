@@ -12,15 +12,24 @@
  */
 import Base from '../layouts/Base.astro';
 import { normalizeBase } from '../src/lib/nav-href';
+import bookConfig from 'virtual:book-scaffold/book-config';
 
 // #142: Pagefind writes its bundle to dist/pagefind/, served under the deploy
 // base — so the asset URLs must prefix BASE_URL or they 404 under a non-root base.
 const baseUrl = normalizeBase(import.meta.env.BASE_URL);
+const corpusBooks = bookConfig.corpus?.books ?? [];
+const corpusBookIds = corpusBooks.map((book) => book.id);
+const searchOwner = bookConfig.title ?? (bookConfig.corpus ? 'Book corpus' : 'book-scaffold-astro');
+const searchDescription = bookConfig.corpus
+  ? 'Full-text search across the books in this corpus. All queries run in the browser.'
+  : 'Full-text search across the book. Indexed via Pagefind at build time; all queries run in the browser.';
 ---
 
 <Base
-  title="Search · book-template-astro"
-  description="Full-text search across the book. Indexed via Pagefind at build time; all queries run in the browser."
+  title={`Search · ${searchOwner}`}
+  description={searchDescription}
+  showSidebar={!bookConfig.corpus}
+  pagefindSurface={bookConfig.corpus ? 'corpus' : undefined}
 >
   <link rel="stylesheet" href={`${baseUrl}pagefind/pagefind-ui.css`} slot="head" />
 
@@ -31,20 +40,55 @@ const baseUrl = normalizeBase(import.meta.env.BASE_URL);
       build time and is less than 100 KB total — queries never leave
       the page.
     </p>
+    {bookConfig.corpus && (
+      <label class="search-book-filter" for="search-book">
+        <span>Book</span>
+        <select id="search-book" name="book">
+          <option value="">All books</option>
+          {corpusBooks.map((book) => <option value={book.id}>{book.title}</option>)}
+        </select>
+      </label>
+    )}
     <div id="search"></div>
   </div>
 
   <script src={`${baseUrl}pagefind/pagefind-ui.js`} is:inline></script>
-  <script is:inline>
+  <script is:inline define:vars={{ corpusBookIds }}>
     // Initialize after the Pagefind bundle has loaded.
     window.addEventListener('DOMContentLoaded', () => {
       if (typeof window.PagefindUI === 'function') {
-        new window.PagefindUI({
+        var params = new URLSearchParams(window.location.search);
+        var requestedBook = params.get('book');
+        var selectedBook = requestedBook && corpusBookIds.indexOf(requestedBook) !== -1
+          ? requestedBook
+          : '';
+        if (requestedBook && !selectedBook) {
+          params.delete('book');
+          var canonicalQuery = params.toString();
+          history.replaceState(null, '', location.pathname + (canonicalQuery ? '?' + canonicalQuery : '') + location.hash);
+        }
+
+        var ui = new window.PagefindUI({
           element: '#search',
           showImages: false,
           showSubResults: true,
           resetStyles: false,
         });
+        if (selectedBook) ui.triggerFilters({ book: [selectedBook] });
+
+        var selector = document.getElementById('search-book');
+        if (selector) {
+          selector.value = selectedBook;
+          selector.addEventListener('change', function () {
+            selectedBook = selector.value;
+            var next = new URLSearchParams(window.location.search);
+            if (selectedBook) next.set('book', selectedBook);
+            else next.delete('book');
+            var query = next.toString();
+            history.replaceState(null, '', location.pathname + (query ? '?' + query : '') + location.hash);
+            ui.triggerFilters(selectedBook ? { book: [selectedBook] } : {});
+          });
+        }
       } else {
         document.getElementById('search').innerHTML =
           '<p><em>Search index not found. Run <code>npm run build</code> first; dev mode does not include the index.</em></p>';
@@ -56,6 +100,23 @@ const baseUrl = normalizeBase(import.meta.env.BASE_URL);
     /* Tame PagefindUI defaults to match the book's typography + palette. */
     .pagefind-ui__form {
       margin-top: var(--space-4);
+    }
+    .search-book-filter {
+      display: grid;
+      gap: var(--space-1);
+      max-width: 24rem;
+      margin: var(--space-5) 0 var(--space-3);
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
+      font-weight: 600;
+    }
+    .search-book-filter select {
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-bg-subtle);
+      color: var(--color-text);
+      font: inherit;
     }
     .pagefind-ui__search-input {
       font-family: var(--font-body) !important;

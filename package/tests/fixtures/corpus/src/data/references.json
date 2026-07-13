@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "books": {
+    "evaluation": {
+      "shared2026": {
+        "id": "shared2026",
+        "type": "article-journal",
+        "author": [{ "family": "Evaluator", "given": "Eve" }],
+        "issued": { "date-parts": [[2026]] },
+        "title": "Evaluation-only reference sentinel"
+      }
+    },
+    "llm-app-engineering": {
+      "shared2026": {
+        "id": "shared2026",
+        "type": "article-journal",
+        "author": [{ "family": "Engineer", "given": "Lee" }],
+        "issued": { "date-parts": [[2025]] },
+        "title": "LLM-only reference sentinel"
+      }
+    }
+  }
+}

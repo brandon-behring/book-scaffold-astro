@@ -20,6 +20,12 @@
 import { getCollection } from 'astro:content';
 import { selectPartExercises } from '../src/lib/part-review';
 import { normalizeBase } from '../src/lib/nav-href';
+import bookConfig from 'virtual:book-scaffold/book-config';
+import {
+  corpusBookIdFromPath,
+  localCorpusEntryId,
+  selectBookArtifact,
+} from '../src/lib/corpus';
 
 interface Props {
   /** The part to aggregate. Number (tools/minimal/…) or string (academic enum). */
@@ -32,18 +38,40 @@ const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 
 // Reuse the build-exercises index (keyed by chapter slug). Project-root-relative
 // glob (the tips.astro / exercises.astro lesson) so it resolves across consumers.
-const exModules = import.meta.glob<{ default: Record<string, Array<{ id: string; problem: string }>> }>(
+type ExerciseIndex = Record<string, Array<{ id: string; problem: string }>>;
+const exModules = import.meta.glob<{ default: unknown }>(
   '/src/data/exercises.json',
   { eager: true },
 );
 const exEntry = exModules['/src/data/exercises.json'];
-const byChapter = exEntry?.default ?? {};
+const currentBook = bookConfig.corpus
+  ? corpusBookIdFromPath(bookConfig.corpus, Astro.url.pathname, baseUrl)
+  : null;
+if (bookConfig.corpus && !currentBook) {
+  throw new Error('<PartReview> requires a canonical corpus book route.');
+}
+const byChapter = exEntry
+  ? selectBookArtifact<ExerciseIndex>(
+      exEntry.default,
+      bookConfig.corpus,
+      currentBook,
+      'src/data/exercises.json',
+    )
+  : {};
 const hasIndex = Boolean(exEntry);
 
 // Filter this part's chapters, sort to book order, and join the index — pure +
 // unit-tested in src/lib/part-review.ts (`part` is String-coerced, so a
 // number-vs-string prop can't silently miss). This component just renders it.
-const chapters = await getCollection('chapters', (e) => !e.data.draft);
+const allChapters = await getCollection('chapters', (e) => !e.data.draft);
+const chapters = currentBook && bookConfig.corpus
+  ? allChapters
+      .filter((entry) => entry.id.startsWith(`${currentBook}/`))
+      .map((entry) => ({
+        ...entry,
+        id: localCorpusEntryId(bookConfig.corpus!, currentBook, entry.id),
+      }))
+  : allChapters;
 const { groups, total } = selectPartExercises(chapters, byChapter, part);
 const heading = title ?? `Part ${part} Review`;
 ---
@@ -67,7 +95,7 @@ const heading = title ?? `Part ${part} Review`;
       </p>
       {groups.map((g) => (
         <section class="part-review-chapter">
-          <h3 class="part-review-chapter-title"><a href={`${baseUrl}chapters/${g.chapter}/`}>{g.chapter}</a></h3>
+          <h3 class="part-review-chapter-title"><a href={`${baseUrl}chapters/${currentBook ? `${currentBook}/` : ''}${g.chapter}/`}>{g.chapter}</a></h3>
           <ol class="part-review-list">
             {g.exercises.map((ex) => (
               <li id={`review-${ex.id}`} class="part-review-item">

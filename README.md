@@ -2,7 +2,7 @@
 
 **npm package** for long-form technical books. Astro + MDX + Paged.js + Pagefind with Tufte-inspired typography, profile-aware pedagogy (academic vs tools-comparative), KaTeX math, BibTeX citations, and Cloudflare Workers + Static Assets deploy.
 
-**Current release**: [`@brandon_m_behring/book-scaffold-astro`](https://www.npmjs.com/package/@brandon_m_behring/book-scaffold-astro) — npm's `latest` tag is canonical; [`CHANGELOG.md`](CHANGELOG.md) records every release. The v4 line is **breaking** vs v3: `preset:` shorthand was replaced by typed `defineStyle()` composition. Migrating? → [`MIGRATION-v3-to-v4.md`](package/MIGRATION-v3-to-v4.md). Sibling CLI: [`@brandon_m_behring/create-book`](https://www.npmjs.com/package/@brandon_m_behring/create-book). Both publish in lock-step from a main-reachable version tag. See [`PACKAGE_DESIGN.md`](PACKAGE_DESIGN.md) for the full API contract.
+**Current release**: [`@brandon_m_behring/book-scaffold-astro`](https://www.npmjs.com/package/@brandon_m_behring/book-scaffold-astro) — npm's `latest` tag is canonical; [`CHANGELOG.md`](CHANGELOG.md) records every release. v5 requires an explicit preset, removes the inert `deploy` config field, and adds opt-in first-class multi-book corpora. Migration guides: [`v3 → v4`](package/MIGRATION-v3-to-v4.md) and [`v4 → v5`](package/MIGRATION-v4-to-v5.md). Sibling CLI: [`@brandon_m_behring/create-book`](https://www.npmjs.com/package/@brandon_m_behring/create-book). Both publish in lock-step from a main-reachable version tag. See [`PACKAGE_DESIGN.md`](PACKAGE_DESIGN.md) for the full API contract.
 
 ## Start a new book
 
@@ -13,12 +13,12 @@ npm install
 npm run dev
 ```
 
-`--preset` (or the backward-compatible `--profile` alias) is one of `academic` / `tools` / `minimal` / `course-notes` / `research-portfolio`. `--author` accepts either `--author=NAME` or `--author NAME` and defaults to `Book contributors`. The complete starter tree includes a v4 `astro.config.mjs`, paired agent guides, scoped licenses, and a turnkey PDF command. See [recipes/15-defining-styles.md](package/recipes/15-defining-styles.md) for the Style composition pattern.
+`--preset` (or the backward-compatible `--profile` alias) is one of `academic` / `tools` / `minimal` / `course-notes` / `research-portfolio`. `--author` accepts either `--author=NAME` or `--author NAME` and defaults to `Book contributors`. The complete starter tree includes the current explicit-preset `astro.config.mjs`, paired agent guides, scoped licenses, and a turnkey PDF command. See [recipes/15-defining-styles.md](package/recipes/15-defining-styles.md) for the Style composition pattern.
 
 ## Consumer config (what you own)
 
 ```js
-// astro.config.mjs (3 lines — v4.0.0)
+// astro.config.mjs (v5)
 import { defineBookConfig, academicStyle } from '@brandon_m_behring/book-scaffold-astro';
 export default await defineBookConfig({
   styles: [academicStyle],
@@ -29,25 +29,56 @@ export default await defineBookConfig({
 ```ts
 // src/content.config.ts (2 lines)
 import { defineBookSchemas } from '@brandon_m_behring/book-scaffold-astro/schemas';
-export const { collections } = defineBookSchemas();
+export const { collections } = defineBookSchemas({ preset: 'academic' });
 ```
 
-```
+```dotenv
 # .env
-BOOK_PROFILE=academic
+BOOK_PRESET=academic
 ```
+
+The `.env` value is an optional shared alternative to the explicit schema
+argument; v5 does not choose `minimal` when every preset source is absent.
+
+## Multiple books, one app (v5)
+
+Corpus mode gives several books one Astro build, deployment, preset/Style
+chain, Pagefind index, and ordered manifest while preserving
+`/chapters/<book>/<slug>/` URLs:
+
+```ts
+// src/book-corpus.ts
+import { defineBookCorpus } from '@brandon_m_behring/book-scaffold-astro';
+
+export const corpus = defineBookCorpus({
+  preset: 'research-portfolio',
+  books: [
+    { id: 'evaluation', title: 'Evaluation Engineering' },
+    { id: 'llm-apps', title: 'LLM Application Engineering' },
+  ],
+});
+```
+
+Pass the same branded `corpus` object to `defineBookConfig({ corpus })` and
+`defineBookSchemas({ corpus })`. Chapters live beneath
+`src/content/<book>/`; questions and glossary entries use their own
+`<collection>/<book>/` namespaces. Routes, navigation, generated artifacts,
+cross-book links, and search results stay book-scoped. See
+[Recipe 21](package/recipes/21-multi-guide-single-app.md) for the full setup and
+[the v4 → v5 guide](package/MIGRATION-v4-to-v5.md) for migration.
 
 ## What ships in the package
 
 - **65 Astro components + 8 Preact components** — 70 individually exported `./components/<Name>` entries for citations, figures, pedagogy, study tools, and navigation, plus `DemoFrame` / `Slider` / `StatCards` and `useThemeColors` through the opt-in `./demo` barrel
 - **13 exported stylesheets**, loaded where their ownership belongs: preset/profile integration, the base layout, opt-in routes, their component, or an explicit demo import
 - **Default pages** auto-injected: `/references` / `/search` / `/print` / `/chapters` (all five presets); `/convergence` (tools); optional frontmatter and study-guide routes
+- **Opt-in corpus routing** — ordered book landings, namespaced chapters and apparatus, scoped generated data, local cross-book links, and one Pagefind index with per-book filters
 - **Profile-aware Zod schemas** — academic 7-state status / tools volatility + T1-T4 source tiers
 - **Tufte three-tier layout** — 60ch (default) / 66ch (≥90rem) / 78ch (≥120rem), with a book-aware desktop sidebar and mobile drawer
 - **KaTeX 37-macro library** (academic + research-portfolio presets)
 - **BibTeX citation pipeline** via citation-js (academic profile)
 - **Pagefind full-text search** + **Paged.js PDF export**
-- **`book-scaffold` CLI** dispatcher with sub-commands: `validate`, `build-labels`, `build-bib`, `build-figures`, `build-tips`, `build-exercises`, `render-notebooks`
+- **`book-scaffold` CLI** dispatcher with sub-commands: `validate`, `build-labels`, `build-bib`, `build-figures`, `build-tips`, `build-exercises`, `render-notebooks`; content-derived commands accept `--book` in corpus mode
 - **Cloudflare deploy templates**: Workers + Static Assets for academic/tools/minimal; Pages for course-notes/research-portfolio
 - **Warm–Tol semantic palette + Okabe–Ito 8-series figure palette** (color-vision-deficiency-friendly; light + dark modes)
 
@@ -89,7 +120,13 @@ The generated `wrangler.toml` is preset-aware: academic/tools/minimal use Worker
 
 For Brandon's books, the public URL follows a per-project-subdomain pattern: each book deploys to `<repo-slug>.brandon-behring.dev`. See [the Subdomain convention in brandon-behring.dev/README.md](https://github.com/brandon-behring/brandon-behring.dev#subdomain-convention) for the slug rule, dashboard click-path, and registry. Consumer books built from this scaffold should follow the same pattern unless deploying to a different domain.
 
-The reference books consume `@brandon_m_behring/book-scaffold-astro` on the current v4 major with ≤5 lines of book-side config. The v3.5/v3.6 cycle added [`double-ml-time-series`](https://github.com/brandon-behring/double-ml-time-series) as the third pilot — first non-SSM academic book through the scaffold, surfacing #20/#22/#24 in 24 hours.
+The v5 single-book contract keeps the same thin consumer shape after the
+explicit-preset migration. Multi-guide consumers can replace their custom
+collection ids and route plumbing with the shared corpus manifest documented
+in Recipe 21. The v3.5/v3.6 cycle added
+[`double-ml-time-series`](https://github.com/brandon-behring/double-ml-time-series)
+as the third pilot — first non-SSM academic book through the scaffold,
+surfacing #20/#22/#24 in 24 hours.
 
 ## Provenance
 
@@ -100,6 +137,8 @@ Version arc:
 - **v3.0** (2026-05-19) — npm-package pivot. Two packages (`book-scaffold-astro` + `create-book`) at lock-step versions. v2.0's 15 design decisions stay; v3.0 adds 6 more (Q1–Q6 in [`PACKAGE_DESIGN.md`](PACKAGE_DESIGN.md)).
 - **v3.3–v3.5** (2026-05-19) — closed all v3.2 follow-on issues (#1–#14) + added `course-notes` (v3.3.0, #4) and `research-portfolio` (v3.5.0, #6) presets driven by the DLAI and prompt-injection-portfolio pilots.
 - **v3.5.2–v3.6.0** (2026-05-22) — `double-ml-time-series` pilot batch. v3.5.2 makes `/chapters` schema-aware for academic profile (#24); v3.5.3 honors `.env BOOK_PROFILE` in `validate` (#20); v3.6.0 adds the `katexMacros` extension point for non-SSM math notation (#22). Releases moved to OIDC trusted publishing on tag push.
+- **v4.0–v4.31** (2026-05-23 to 2026-07-13) — typed Style composition, expanded book and study-guide primitives, stronger route/validation/deployment contracts, interactive-demo infrastructure, and the vector-first figure system.
+- **v5.0** (2026-07-13) — first-class manifest-backed corpora, mandatory explicit preset resolution, and removal of inert `deploy` configuration (#80, #211, #212).
 
 ## API reference
 

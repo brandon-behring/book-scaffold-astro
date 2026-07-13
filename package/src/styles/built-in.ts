@@ -27,37 +27,30 @@ import type { BookPreset } from '../types.js';
 export const academicStyle: Style = defineStyle({
   name: 'academic',
   preset: 'academic',
-  deploy: 'workers',
 });
 
 /** Tools preset — AI-CLI comparison content with volatility + sources. */
 export const toolsStyle: Style = defineStyle({
   name: 'tools',
   preset: 'tools',
-  deploy: 'workers',
 });
 
 /** Minimal preset — single-author essays / manifestos. */
 export const minimalStyle: Style = defineStyle({
   name: 'minimal',
   preset: 'minimal',
-  deploy: 'workers',
 });
 
-/** Course-notes preset — chapters derived from a video course / MOOC / book.
- *  `deploy` is retained as deprecated metadata only (#180). */
+/** Course-notes preset — chapters derived from a video course / MOOC / book. */
 export const courseNotesStyle: Style = defineStyle({
   name: 'course-notes',
   preset: 'course-notes',
-  deploy: 'pages',
 });
 
-/** Research-portfolio preset — academic structure + tools-style provenance + portfolio components.
- *  `deploy` is retained as deprecated metadata only (#180); frontmatter routes remain enabled. */
+/** Research-portfolio preset — academic structure + tools-style provenance + portfolio components. */
 export const researchPortfolioStyle: Style = defineStyle({
   name: 'research-portfolio',
   preset: 'research-portfolio',
-  deploy: 'pages',
   routes: { frontmatter: { enabled: true, prefix: 'frontmatter' } },
 });
 

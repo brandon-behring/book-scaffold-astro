@@ -26,7 +26,12 @@ import { getAllChapters } from '../src/lib/chapters';
 import ChapterHeader from '../components/ChapterHeader.astro';
 import mdxComponents from 'virtual:book-scaffold/mdx-components';
 
-const chapters = await getAllChapters();
+interface Props { bookId?: string; }
+const { bookId } = Astro.props;
+const allChapters = await getAllChapters();
+const chapters = bookId
+  ? allChapters.filter((entry) => entry.id.startsWith(`${bookId}/`))
+  : allChapters;
 const rendered = await Promise.all(
   chapters.map(async (entry) => {
     const { Content } = await render(entry);
@@ -35,7 +40,7 @@ const rendered = await Promise.all(
 );
 ---
 
-<Base title="Book (print edition)" description="Full book rendered as a single paginated document for PDF export.">
+<Base title="Book (print edition)" description="Full book rendered as a single paginated document for PDF export." bookId={bookId}>
   <div class="prose print-edition">
     {rendered.map(({ entry, Content }) => (
       <section class="chapter-print">

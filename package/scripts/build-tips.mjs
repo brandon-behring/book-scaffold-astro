@@ -24,6 +24,13 @@
 import { writeFile, mkdir, readFile } from 'node:fs/promises';
 import { resolve, dirname, basename } from 'node:path';
 import { walkMdx, readChaptersBase } from './walk-mdx.mjs';
+import { loadResolvedBookConfig } from './resolve-book-config.mjs';
+import {
+  assertLegacyBookMatches,
+  frontmatterSlug,
+  mergeCorpusArtifact,
+  resolveBookSelection,
+} from './corpus-tooling.mjs';
 
 const USAGE = `Usage: book-scaffold build-tips
 
@@ -36,6 +43,7 @@ Env:
   BOOK_TIPS_OUT       Override output path (default: src/data/tips.json).
 
 Options:
+  --book <id>       In corpus mode, rebuild only one registered book.
   --help, -h          Print this message and exit (non-mutating).
 `;
 
@@ -45,8 +53,8 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 }
 
 const CWD = process.cwd();
-const CHAPTERS_DIR = await readChaptersBase(CWD);
 const OUTPUT_PATH = process.env.BOOK_TIPS_OUT ?? 'src/data/tips.json';
+let DIAGNOSTIC_SCOPE = null;
 
 /**
  * Extract <Tip n="..." title="..."> tags and their body content from MDX.
@@ -104,38 +112,102 @@ function extractTips(source, chapterSlug) {
 }
 
 async function main() {
-  const allTips = [];
-  for await (const rel of walkMdx(CHAPTERS_DIR)) {
-    const chapterPath = resolve(CHAPTERS_DIR, rel);
-    const chapterSlug = basename(rel).replace(/\.mdx?$/, '');
-    let source;
-    try {
-      source = await readFile(chapterPath, 'utf8');
-    } catch {
-      continue;
-    }
-    allTips.push(...extractTips(source, chapterSlug));
-  }
+  const toolingConfig = await loadResolvedBookConfig(CWD);
+  if (toolingConfig.corpus) DIAGNOSTIC_SCOPE = 'corpus';
+  const selection = resolveBookSelection(toolingConfig, process.argv.slice(2), 'build-tips');
+  DIAGNOSTIC_SCOPE = selection.corpus ? 'corpus' : null;
+  const chaptersRoot = await readChaptersBase(CWD, { corpus: selection.corpus });
+  const runs = selection.corpus
+    ? selection.books.map((book) => ({ book, dir: resolve(chaptersRoot, book.id) }))
+    : [{ book: null, dir: chaptersRoot }];
+  const values = new Map();
+  let corpusTotal = 0;
 
-  // Sort by n; warn on duplicates (don't fail — the index page just shows duplicates).
-  allTips.sort((a, b) => a.n - b.n);
-  const seenN = new Set();
-  for (const tip of allTips) {
-    if (seenN.has(tip.n)) {
-      process.stderr.write(`build-tips: WARN duplicate Tip n="${tip.n}" (last wins on /tips index)\n`);
+  for (const run of runs) {
+    const allTips = [];
+    for await (const rel of walkMdx(run.dir)) {
+      const chapterPath = resolve(run.dir, rel);
+      let source;
+      try {
+        source = await readFile(chapterPath, 'utf8');
+      } catch {
+        continue;
+      }
+      if (run.book) {
+        assertLegacyBookMatches(
+          source,
+          run.book,
+          `[book:${run.book.id}] ${resolve(CWD, chapterPath).replace(`${CWD}/`, '')}`,
+        );
+      }
+      const fileLabel = run.book
+        ? `[book:${run.book.id}] ${resolve(CWD, chapterPath).replace(`${CWD}/`, '')}`
+        : resolve(CWD, chapterPath).replace(`${CWD}/`, '');
+      const chapterSlug = run.book
+        ? frontmatterSlug(source, fileLabel) ?? rel.replace(/\.mdx?$/, '')
+        : basename(rel).replace(/\.mdx?$/, '');
+      allTips.push(...extractTips(source, chapterSlug));
     }
-    seenN.add(tip.n);
+
+    // Sort by n; warn on duplicates (don't fail — the index page just shows duplicates).
+    allTips.sort((a, b) => a.n - b.n);
+    const seenN = new Set();
+    for (const tip of allTips) {
+      if (seenN.has(tip.n)) {
+        const prefix = run.book ? `[book:${run.book.id}] ` : '';
+        process.stderr.write(
+          `${prefix}build-tips: WARN duplicate Tip n="${tip.n}" (last wins on /tips index)\n`,
+        );
+      }
+      seenN.add(tip.n);
+    }
+
+    if (run.book) {
+      values.set(run.book.id, allTips);
+      corpusTotal += allTips.length;
+      process.stdout.write(
+        `[book:${run.book.id}] build-tips: ${allTips.length} ` +
+          `tip${allTips.length === 1 ? '' : 's'} → ${OUTPUT_PATH}\n`,
+      );
+    } else {
+      values.set('', allTips);
+    }
   }
 
   const outPath = resolve(CWD, OUTPUT_PATH);
+  const output = selection.corpus
+    ? await mergeCorpusArtifact({
+        path: outPath,
+        corpus: selection.corpus,
+        requestedBook: selection.requestedBook,
+        values,
+        emptyValue: () => [],
+        artifact: OUTPUT_PATH,
+        validateValue: Array.isArray,
+      })
+    : values.get('');
   await mkdir(dirname(outPath), { recursive: true });
-  await writeFile(outPath, JSON.stringify(allTips, null, 2) + '\n');
-  process.stdout.write(`build-tips: ${allTips.length} tip${allTips.length === 1 ? '' : 's'} → ${OUTPUT_PATH}\n`);
+  await writeFile(outPath, JSON.stringify(output, null, 2) + '\n');
+  if (selection.corpus) {
+    process.stdout.write(
+      `[book:corpus] build-tips: ${corpusTotal} ` +
+        `tip${corpusTotal === 1 ? '' : 's'} across ${selection.books.length} ` +
+        `book${selection.books.length === 1 ? '' : 's'} → ${OUTPUT_PATH}\n`,
+    );
+  } else {
+    const allTips = values.get('');
+    process.stdout.write(
+      `build-tips: ${allTips.length} tip${allTips.length === 1 ? '' : 's'} → ${OUTPUT_PATH}\n`,
+    );
+  }
 }
 
 main().catch((err) => {
-  console.error('build-tips: failed');
-  console.error(err.message ?? err);
+  const message = String(err?.message ?? err);
+  const prefix = DIAGNOSTIC_SCOPE ? `[book:${DIAGNOSTIC_SCOPE}] ` : '';
+  console.error(
+    message.startsWith('[book:') ? message : `${prefix}build-tips: failed: ${message}`,
+  );
   process.exit(1);
 });
 

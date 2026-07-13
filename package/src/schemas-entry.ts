@@ -16,7 +16,7 @@
  * academic-profile consumers from seeing `File not found` errors for
  * collections they don't use.
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { defineCollection } from 'astro:content';
 import { glob, file } from 'astro/loaders';
 
@@ -54,8 +54,49 @@ function isYamlEmpty(path: string): boolean {
   }
 }
 
+function assertCorpusConvergenceLayout(books: readonly { id: string }[]): void {
+  const registered = new Set(books.map((book) => book.id));
+  const legacy = existsSync('./changelog/patterns.yaml')
+    ? ['./changelog/patterns.yaml']
+    : [];
+  if (
+    existsSync('./changelog/tools') &&
+    readdirSync('./changelog/tools', { withFileTypes: true }).some(
+      (entry) =>
+        entry.isFile() &&
+        entry.name.endsWith('.yaml') &&
+        !(registered.has('tools') && entry.name === 'patterns.yaml'),
+    )
+  ) {
+    legacy.push('./changelog/tools/*.yaml');
+  }
+  if (legacy.length > 0) {
+    throw new Error(
+      `Corpus convergence collateral must be book-owned; move ${legacy.join(' and ')} ` +
+        'to changelog/<book>/patterns.yaml and changelog/<book>/tools/.',
+    );
+  }
+
+  if (!existsSync('./changelog')) return;
+  for (const entry of readdirSync('./changelog', { withFileTypes: true })) {
+    if (!entry.isDirectory() || registered.has(entry.name)) continue;
+    const base = `./changelog/${entry.name}`;
+    if (existsSync(`${base}/patterns.yaml`) || existsSync(`${base}/tools`)) {
+      throw new Error(
+        `Corpus convergence collateral owner ${JSON.stringify(entry.name)} is not a ` +
+          `registered book. Known books: ${books.map((book) => book.id).join(', ')}.`,
+      );
+    }
+  }
+}
+
 import type { BookSchemasOptions } from './types.js';
 import { resolvePreset } from './types.js';
+import { assertBookCorpus, corpusCollectionEntryId } from './lib/corpus.js';
+import {
+  corpusChangelogCollection,
+  corpusPatternsCollection,
+} from './lib/corpus-collateral.js';
 import {
   academicChapterSchema,
   toolsChapterSchema,
@@ -118,9 +159,19 @@ export function frontmatterCollection(
  * consumer extends via object spread and Zod `.extend()` (see PACKAGE_DESIGN.md §5).
  */
 export function defineBookSchemas(opts: BookSchemasOptions = {}) {
-  // v3.4.0 (#9): resolvePreset accepts both `preset` and `profile` (alias).
-  const profile = resolvePreset(opts.preset, opts.profile);
-  const chaptersBase = opts.chaptersBase ?? './src/content/chapters';
+  // v5.0.0 (#80): a corpus manifest is the one preset/identity source shared
+  // with Astro config. Single-book callers keep the existing resolver path.
+  const corpus = opts.corpus;
+  if (corpus !== undefined) assertBookCorpus(corpus);
+  const explicitProfile = opts.preset ?? opts.profile;
+  if (corpus && explicitProfile !== undefined && explicitProfile !== corpus.preset) {
+    throw new Error(
+      `defineBookSchemas preset ${JSON.stringify(explicitProfile)} does not match ` +
+        `corpus preset ${JSON.stringify(corpus.preset)}.`,
+    );
+  }
+  const profile = corpus?.preset ?? resolvePreset(opts.preset, opts.profile);
+  const chaptersBase = opts.chaptersBase ?? (corpus ? './src/content' : './src/content/chapters');
 
   // v3.3.0: schemas are owned by per-profile modules under src/profiles/,
   // re-exported via schemas.ts. Schema dispatch lives here (rather than
@@ -138,8 +189,23 @@ export function defineBookSchemas(opts: BookSchemasOptions = {}) {
   const chapters = defineCollection({
     loader: glob({
       // Exclude underscore-prefixed files (standard "hidden" convention).
-      pattern: ['**/*.{md,mdx}', '!**/_*'],
+      pattern: corpus
+        ? [
+            ...corpus.books.map((book) => `${book.id}/**/*.{md,mdx}`),
+            '!**/_*',
+          ]
+        : ['**/*.{md,mdx}', '!**/_*'],
       base: chaptersBase,
+      ...(corpus
+        ? {
+            generateId: ({ entry, data }: { entry: string; data: Record<string, unknown> }) => {
+              return corpusCollectionEntryId(corpus, entry, data, {
+                label: 'Chapter',
+                slugField: 'slug',
+              });
+            },
+          }
+        : {}),
     }),
     schema: schemaForProfile,
   });
@@ -161,18 +227,43 @@ export function defineBookSchemas(opts: BookSchemasOptions = {}) {
     });
   }
 
-  if (existsSync('./changelog/tools')) {
-    collections.changelog = defineCollection({
-      loader: glob({ pattern: '*.yaml', base: './changelog/tools' }),
-      schema: changelogSchema,
-    });
-  }
+  if (corpus) {
+    // Convergence data is book-owned in corpus mode. Separate collection
+    // names let two books reuse the same pattern ids and tool filenames while
+    // making an accidental global read impossible. Single-book consumers keep
+    // the established root-level authoring paths below.
+    assertCorpusConvergenceLayout(corpus.books);
+    for (const book of corpus.books) {
+      const changelogBase = `./changelog/${book.id}/tools`;
+      if (existsSync(changelogBase)) {
+        collections[corpusChangelogCollection(book.id)] = defineCollection({
+          loader: glob({ pattern: '*.yaml', base: changelogBase }),
+          schema: changelogSchema,
+        });
+      }
 
-  if (existsSync('./changelog/patterns.yaml')) {
-    collections.patterns = defineCollection({
-      loader: file('changelog/patterns.yaml'),
-      schema: patternsSchema,
-    });
+      const patternsPath = `changelog/${book.id}/patterns.yaml`;
+      if (existsSync(`./${patternsPath}`)) {
+        collections[corpusPatternsCollection(book.id)] = defineCollection({
+          loader: file(patternsPath),
+          schema: patternsSchema,
+        });
+      }
+    }
+  } else {
+    if (existsSync('./changelog/tools')) {
+      collections.changelog = defineCollection({
+        loader: glob({ pattern: '*.yaml', base: './changelog/tools' }),
+        schema: changelogSchema,
+      });
+    }
+
+    if (existsSync('./changelog/patterns.yaml')) {
+      collections.patterns = defineCollection({
+        loader: file('changelog/patterns.yaml'),
+        schema: patternsSchema,
+      });
+    }
   }
 
   // v4.17.0 (Tier 3, #112): study-guide `questions` collection. Registered only
@@ -187,8 +278,17 @@ export function defineBookSchemas(opts: BookSchemasOptions = {}) {
   if (existsSync('./src/content/questions')) {
     collections.questions = defineCollection({
       loader: glob({
+        // In corpus mode this intentionally scans the entire dedicated root.
+        // `generateId` is the ownership boundary: a flat file or an unknown
+        // first directory must fail instead of disappearing from the loader.
         pattern: ['**/*.{md,mdx}', '!**/_*'],
         base: './src/content/questions',
+        ...(corpus
+          ? {
+              generateId: ({ entry, data }: { entry: string; data: Record<string, unknown> }) =>
+                corpusCollectionEntryId(corpus, entry, data, { label: 'Question' }),
+            }
+          : {}),
       }),
       schema: refinedQuestionSchema,
     });
@@ -200,8 +300,16 @@ export function defineBookSchemas(opts: BookSchemasOptions = {}) {
   if (existsSync('./src/content/glossary')) {
     collections.glossary = defineCollection({
       loader: glob({
+        // As with questions, discover all non-hidden entries so malformed
+        // corpus ownership is rejected rather than silently ignored.
         pattern: ['**/*.{md,mdx}', '!**/_*'],
         base: './src/content/glossary',
+        ...(corpus
+          ? {
+              generateId: ({ entry, data }: { entry: string; data: Record<string, unknown> }) =>
+                corpusCollectionEntryId(corpus, entry, data, { label: 'Glossary term' }),
+            }
+          : {}),
       }),
       schema: glossarySchema,
     });

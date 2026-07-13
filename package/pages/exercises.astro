@@ -11,16 +11,29 @@
  */
 import Base from '../layouts/Base.astro';
 import { normalizeBase } from '../src/lib/nav-href';
+import bookConfig from 'virtual:book-scaffold/book-config';
+import { selectBookArtifact } from '../src/lib/corpus';
+
+interface Props { bookId?: string; }
+const { bookId } = Astro.props;
 
 // v4.4.0 fix: use Vite's import.meta.glob with a project-root-relative
 // path (same lesson as tips.astro). `/src/data/...` is consumer-project-
 // rooted in Vite's resolver and works across all consumer build contexts.
-const exModules = import.meta.glob<{ default: Record<string, Array<{ id: string; problem: string }>> }>(
+type ExerciseIndex = Record<string, Array<{ id: string; problem: string }>>;
+const exModules = import.meta.glob<{ default: unknown }>(
   '/src/data/exercises.json',
   { eager: true },
 );
 const exEntry = exModules['/src/data/exercises.json'];
-const byChapter = exEntry?.default ?? {};
+const byChapter = exEntry
+  ? selectBookArtifact<ExerciseIndex>(
+      exEntry.default,
+      bookConfig.corpus,
+      bookId,
+      'src/data/exercises.json',
+    )
+  : {};
 const loadError = exEntry
   ? null
   : 'src/data/exercises.json not found — run `npx book-scaffold build-exercises` to generate.';
@@ -31,7 +44,7 @@ const total = chapters.reduce((sum, c) => sum + byChapter[c].length, 0);
 // #142: chapter deep-links must prefix the deploy base.
 const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 ---
-<Base title="Exercises" description="All exercises in this book, grouped by chapter with deep links.">
+<Base title="Exercises" description="All exercises in this book, grouped by chapter with deep links." bookId={bookId}>
   <article class="prose">
     <h1>Exercises</h1>
     {loadError && (
@@ -51,12 +64,12 @@ const baseUrl = normalizeBase(import.meta.env.BASE_URL);
     {chapters.map((chapter) => (
       <section class="exercises-chapter" id={`chapter-${chapter}`}>
         <h2 class="exercises-chapter-title">
-          Chapter: <a href={`${baseUrl}chapters/${chapter}/`}>{chapter}</a>
+          Chapter: <a href={`${baseUrl}chapters/${bookId ? `${bookId}/` : ''}${chapter}/`}>{chapter}</a>
         </h2>
         <ol class="exercises-list">
           {byChapter[chapter].map((ex) => (
             <li class="exercises-item">
-              <a href={`${baseUrl}chapters/${chapter}/#exercise-${ex.id}`} class="exercises-link">
+              <a href={`${baseUrl}chapters/${bookId ? `${bookId}/` : ''}${chapter}/#exercise-${ex.id}`} class="exercises-link">
                 <strong class="exercises-id">Exercise {ex.id}</strong>
                 <span class="exercises-preview">{ex.problem.slice(0, 120)}{ex.problem.length > 120 ? '…' : ''}</span>
               </a>

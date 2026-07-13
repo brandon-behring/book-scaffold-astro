@@ -24,7 +24,20 @@ import { fileURLToPath } from 'node:url';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { AstroIntegration } from 'astro';
-import type { BookScaffoldIntegrationOptions, SiblingBooks } from './types.js';
+import {
+  BOOK_PRESETS,
+  BookConfigError,
+  CORPUS_APPARATUS_ROUTES,
+  type CorpusApparatusRoute,
+  type BookCorpus,
+  type BookScaffoldIntegrationOptions,
+  type SiblingBooks,
+} from './types.js';
+import {
+  assertBookCorpus,
+  CORPUS_APPARATUS_TOGGLE_BY_ROUTE,
+  CORPUS_OWNED_ROUTE_FIELDS,
+} from './lib/corpus.js';
 import { PROFILES } from './profiles/index.js';
 import { normalizeFrontmatterConfig } from './lib/define-style.js';
 import { resolveGithubRepo, DEFAULT_GITHUB_BRANCH } from './lib/repo-url.js';
@@ -110,6 +123,8 @@ function makeBookConfigVitePlugin(config: {
   bookField: string;
   apparatusRoute: string;
   apparatusRoutes: readonly string[];
+  // v5.0.0 (#80): frozen serializable corpus registry, null in single-book mode.
+  corpus: BookCorpus | null;
 }) {
   // Serialize once at plugin-creation time so subsequent load() calls are O(1).
   const serialized = `export default ${JSON.stringify(config)};`;
@@ -175,6 +190,9 @@ const ROUTE_REGISTRY = {
   // Pre-v4.3.0 each consumer wrote this file by hand; all instances were
   // mechanical copies of the same boilerplate.
   chaptersSlug:{ pattern: '/chapters/[...slug]',  file: 'chapters/[...slug].astro' },
+  // v5.0.0 (#80): corpus-only landing and per-book chapter index.
+  corpusBook: { pattern: '/[book]', file: 'book.astro' },
+  corpusChapters: { pattern: '/chapters/[book]', file: 'chapters-book.astro' },
   convergence: { pattern: '/convergence',         file: 'convergence.astro' },
   // v4.3.0 (#70): cross-volume numbered-tips index. Opt-in via
   // routes.tips: true; pairs with build-tips script + <Tip> component.
@@ -265,8 +283,35 @@ function resolvePage(file: string): string {
 export function bookScaffoldIntegration(
   opts: BookScaffoldIntegrationOptions,
 ): AstroIntegration {
+  if (!BOOK_PRESETS.includes(opts.profile)) {
+    throw new BookConfigError(
+      `bookScaffoldIntegration profile must be one of ${BOOK_PRESETS.join(' | ')} ` +
+        `(got ${JSON.stringify(opts.profile)}).`,
+    );
+  }
+  if (opts.corpus !== undefined) {
+    assertBookCorpus(opts.corpus);
+    if (opts.corpus.preset !== opts.profile) {
+      throw new BookConfigError(
+        `bookScaffoldIntegration corpus preset ${JSON.stringify(opts.corpus.preset)} ` +
+          `does not match profile ${JSON.stringify(opts.profile)}. ` +
+          'One preset applies to the whole corpus.',
+      );
+    }
+    const incompatible = CORPUS_OWNED_ROUTE_FIELDS.filter((field) =>
+      Object.prototype.hasOwnProperty.call(opts, field),
+    );
+    if (incompatible.length > 0) {
+      throw new BookConfigError(
+        `Corpus mode owns ${incompatible.join(', ')}; remove the explicit ` +
+          `${incompatible.length === 1 ? 'override' : 'overrides'} so injected routes and navigation agree.`,
+      );
+    }
+  }
+
   const {
     profile,
+    corpus,
     numberStyle = 'shared',
     routes: userOverrides = {},
     extraStyles = [],
@@ -314,6 +359,39 @@ export function bookScaffoldIntegration(
     frontmatter: fmEnabled,
   };
 
+  // Corpus manifests speak in public URL slugs while RouteToggles uses the
+  // historical camelCase `practiceExam` key. Derive the inherited public set
+  // through the explicit map; never infer it with string inclusion.
+  if (corpus) {
+    for (const book of corpus.books) {
+      for (const route of book.apparatus ?? []) {
+        const toggle = CORPUS_APPARATUS_TOGGLE_BY_ROUTE[route];
+        if (!enabledRoutes[toggle]) {
+          throw new BookConfigError(
+            `Corpus book ${JSON.stringify(book.id)} enables apparatus route ` +
+              `${JSON.stringify(route)}, but RouteToggles.${toggle} is disabled. ` +
+              `Enable routes.${toggle} globally or remove the book apparatus entry.`,
+          );
+        }
+      }
+    }
+  }
+  const inheritedCorpusApparatusRoutes: readonly CorpusApparatusRoute[] = corpus
+    ? CORPUS_APPARATUS_ROUTES.filter(
+        (route) => enabledRoutes[CORPUS_APPARATUS_TOGGLE_BY_ROUTE[route]],
+      )
+    : [];
+  const corpusApparatusRoutes: readonly CorpusApparatusRoute[] = corpus
+    ? CORPUS_APPARATUS_ROUTES.filter((route) =>
+        corpus.books.some((book) =>
+          (book.apparatus ?? inheritedCorpusApparatusRoutes).includes(route),
+        ),
+      )
+    : [];
+  const corpusApparatusToggleKeys = new Set<string>(
+    Object.values(CORPUS_APPARATUS_TOGGLE_BY_ROUTE),
+  );
+
   const integration: AstroIntegration = {
     name: 'book-scaffold-astro',
     hooks: {
@@ -340,18 +418,34 @@ export function bookScaffoldIntegration(
         const routesToInject: string[] = [];
         for (const [name, on] of Object.entries(enabledRoutes)) {
           if (!on) continue;
+          if (corpus && corpusApparatusToggleKeys.has(name)) continue;
           routesToInject.push(name);
-          if (name === 'chapters') routesToInject.push('chaptersSlug');
+          if (name === 'chapters') {
+            routesToInject.push('chaptersSlug');
+            if (corpus) routesToInject.push('corpusChapters');
+          }
+          if (name === 'landing' && corpus) routesToInject.push('corpusBook');
         }
         for (const name of routesToInject) {
           const route = ROUTE_REGISTRY[name as keyof typeof ROUTE_REGISTRY];
           if (!route) continue;   // unknown key from a stale override (defensive)
-          const pattern =
+          let pattern =
             name === 'frontmatter' ? frontmatterPatternFromPrefix(fmPrefix) : route.pattern;
+          if (corpus && name === 'chaptersSlug') {
+            pattern = '/chapters/[book]/[...slug]';
+          }
           injectRoute({
             pattern,
             entrypoint: resolvePage(route.file),
           });
+        }
+        if (corpus) {
+          for (const route of corpusApparatusRoutes) {
+            injectRoute({
+              pattern: `/[book]/${route}`,
+              entrypoint: resolvePage(`corpus-apparatus/${route}.astro`),
+            });
+          }
         }
 
         // 3. mdx-components virtual module (issue #2).
@@ -405,8 +499,11 @@ export function bookScaffoldIntegration(
                 // reproduce the single-book `/chapters/<id>/` behavior exactly.
                 chapterRoute: chapterRoute ?? '/chapters/:id/',
                 bookField: bookField ?? 'book',
-                apparatusRoute: apparatusRoute ?? '/:route/',
-                apparatusRoutes: apparatusRoutes ?? [],
+                apparatusRoute: corpus ? '/:book/:route/' : apparatusRoute ?? '/:route/',
+                apparatusRoutes: corpus
+                  ? inheritedCorpusApparatusRoutes
+                  : apparatusRoutes ?? [],
+                corpus: corpus ?? null,
               }),
             ],
             define: {
@@ -457,8 +554,13 @@ export function bookScaffoldIntegration(
       preset: profile,
       numberStyle,
       siblingBooks: siblingBooks ?? {},
-      chapterRoute: chapterRoute ?? '/chapters/:id/',
+      corpus: corpus ?? null,
+      chapterRoute: corpus ? '/chapters/:id/' : chapterRoute ?? '/chapters/:id/',
       bookField: bookField ?? 'book',
+      apparatusRoute: corpus ? '/:book/:route/' : apparatusRoute ?? '/:route/',
+      apparatusRoutes: corpus
+        ? inheritedCorpusApparatusRoutes
+        : apparatusRoutes ?? [],
     }),
     enumerable: false,
     configurable: false,

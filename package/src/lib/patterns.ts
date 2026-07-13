@@ -18,6 +18,10 @@ import {
   patternCategories,
   changeKinds,
 } from '@brandon_m_behring/book-scaffold-astro';
+import {
+  corpusChangelogCollection,
+  corpusPatternsCollection,
+} from './corpus-collateral';
 
 export type PatternEntry = CollectionEntry<'patterns'>;
 export type ToolSlug = (typeof toolSlugs)[number];
@@ -38,8 +42,12 @@ export interface TimelineEntry {
  * change.pattern === slug, sorted by date ascending. A pattern that no
  * tool has adopted yet returns an empty array.
  */
-export async function getPatternTimeline(slug: string): Promise<TimelineEntry[]> {
-  const tools = await getCollection('changelog');
+export async function getPatternTimeline(
+  slug: string,
+  bookId?: string,
+): Promise<TimelineEntry[]> {
+  const collection = bookId ? corpusChangelogCollection(bookId) : 'changelog';
+  const tools = await getCollection(collection as 'changelog');
   const out: TimelineEntry[] = [];
   for (const entry of tools) {
     const tool = entry.data.tool;
@@ -67,8 +75,9 @@ export async function getPatternTimeline(slug: string): Promise<TimelineEntry[]>
  * unconverged patterns (by slug). Within each bucket, preserves
  * manifest order.
  */
-export async function getAllPatterns(): Promise<PatternEntry[]> {
-  const all = await getCollection('patterns');
+export async function getAllPatterns(bookId?: string): Promise<PatternEntry[]> {
+  const collection = bookId ? corpusPatternsCollection(bookId) : 'patterns';
+  const all = await getCollection(collection as 'patterns');
   return all.sort((a, b) => {
     const aDate = a.data.convergence_date?.getTime();
     const bDate = b.data.convergence_date?.getTime();
@@ -98,10 +107,10 @@ export function emptyPatternsByCategory(): Record<PatternCategory, PatternEntry[
  * still emitted with an empty array so the dashboard can render
  * honest "no patterns yet" placeholders without checking undefined.
  */
-export async function getPatternsByCategory(): Promise<
+export async function getPatternsByCategory(bookId?: string): Promise<
   Record<PatternCategory, PatternEntry[]>
 > {
-  const all = await getAllPatterns();
+  const all = await getAllPatterns(bookId);
   const grouped = emptyPatternsByCategory();
   for (const p of all) {
     const cat = p.data.category ?? 'other';

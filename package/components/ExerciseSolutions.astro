@@ -30,6 +30,10 @@
  *
  * Family: book-genre (cross-profile).
  */
+import bookConfig from 'virtual:book-scaffold/book-config';
+import { normalizeBase } from '../src/lib/nav-href';
+import { corpusBookIdFromPath, selectBookArtifact } from '../src/lib/corpus';
+
 interface Props {
   /** v4.4.0: if true, auto-collect exercises from src/data/exercises.json
    *  (scoped to the current chapter via Astro.url.pathname). Default false
@@ -46,14 +50,24 @@ let autoError: string | null = null;
 
 if (auto) {
   const path = Astro.url.pathname;
-  const m = path.match(/^\/chapters\/([^/]+)\//);
-  chapterSlug = m ? m[1] : '';
+  const baseUrl = normalizeBase(import.meta.env.BASE_URL);
+  const relativePath = path.startsWith(baseUrl)
+    ? path.slice(baseUrl.length)
+    : path.replace(/^\/+/, '');
+  const currentBook = bookConfig.corpus
+    ? corpusBookIdFromPath(bookConfig.corpus, path, baseUrl)
+    : null;
+  const corpusMatch = currentBook
+    ? relativePath.match(new RegExp(`^chapters/${currentBook}/(.+?)/?$`))
+    : null;
+  const singleMatch = relativePath.match(/^chapters\/([^/]+)\//);
+  chapterSlug = corpusMatch ? corpusMatch[1] : singleMatch ? singleMatch[1] : '';
   if (!chapterSlug) {
     autoError = `<ExerciseSolutions auto /> requires a /chapters/<slug>/ URL; got ${path}.`;
   } else {
     // v4.4.0 fix: project-root-relative import via Vite's import.meta.glob
     // (the previous `../../../src/data/exercises.json` failed in node_modules contexts).
-    const exModules = import.meta.glob<{ default: Record<string, Array<{ id: string; problem: string }>> }>(
+    const exModules = import.meta.glob<{ default: unknown }>(
       '/src/data/exercises.json',
       { eager: true },
     );
@@ -61,7 +75,13 @@ if (auto) {
     if (!exEntry) {
       autoError = `src/data/exercises.json not found — run \`npx book-scaffold build-exercises\` first.`;
     } else {
-      exercises = exEntry.default[chapterSlug] ?? [];
+      const byChapter = selectBookArtifact<Record<string, Array<{ id: string; problem: string }>>>(
+        exEntry.default,
+        bookConfig.corpus,
+        currentBook,
+        'src/data/exercises.json',
+      );
+      exercises = byChapter[chapterSlug] ?? [];
     }
   }
 }

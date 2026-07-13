@@ -25,18 +25,23 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { shuffle } from '../src/lib/exam-engine';
 import type { FlashcardRef } from '../src/lib/flashcards';
 
-const STORAGE_KEY = 'book:flashcards:known';
+const DEFAULT_STORAGE_KEY = 'book:flashcards:known';
 
 interface Props {
   /** Deck manifest (buildFlashcardDeck output) — card ids + fronts only. */
   deck: FlashcardRef[];
+  /**
+   * Persistence namespace. Corpus routes pass a base- and book-specific key
+   * so repeated local glossary ids never share or erase another book's state.
+   */
+  storageKey?: string;
 }
 
 type Phase = 'idle' | 'deck';
 
-function readKnown(): Set<string> {
+function readKnown(storageKey: string): Set<string> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return new Set();
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return new Set();
@@ -46,15 +51,18 @@ function readKnown(): Set<string> {
   }
 }
 
-function writeKnown(known: Set<string>): void {
+function writeKnown(storageKey: string, known: Set<string>): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...known]));
+    localStorage.setItem(storageKey, JSON.stringify([...known]));
   } catch {
     /* localStorage unavailable — keep in-memory state only */
   }
 }
 
-export default function Flashcards({ deck }: Props) {
+export default function Flashcards({ deck, storageKey = DEFAULT_STORAGE_KEY }: Props) {
+  if (typeof storageKey !== 'string' || storageKey.trim().length === 0) {
+    throw new Error('Flashcards: storageKey must be a non-empty string.');
+  }
   const [phase, setPhase] = useState<Phase>('idle');
   const [order, setOrder] = useState<string[]>([]);
   const [pos, setPos] = useState(0);
@@ -67,12 +75,12 @@ export default function Flashcards({ deck }: Props) {
     // Intersect the stored bucket with the CURRENT deck: a term deleted from
     // the glossary would otherwise inflate "marked known" forever (even past
     // deck.length) — evict stale ids on mount and persist the cleaned set.
-    const stored = readKnown();
+    const stored = readKnown(storageKey);
     const deckIds = new Set(deck.map((c) => c.id));
     const cleaned = new Set([...stored].filter((id) => deckIds.has(id)));
-    if (cleaned.size !== stored.size) writeKnown(cleaned);
+    if (cleaned.size !== stored.size) writeKnown(storageKey, cleaned);
     setKnown(cleaned);
-  }, []);
+  }, [deck, storageKey]);
 
   function requireRoot(): HTMLElement {
     const r = ref.current?.closest<HTMLElement>('[data-flashcards-root]');
@@ -138,7 +146,7 @@ export default function Flashcards({ deck }: Props) {
     if (knewIt) next.add(id);
     else next.delete(id);
     setKnown(next);
-    writeKnown(next);
+    writeKnown(storageKey, next);
     if (pos < order.length - 1) goTo(pos + 1);
     else end();
   }
@@ -159,7 +167,7 @@ export default function Flashcards({ deck }: Props) {
   function resetKnown(): void {
     const next = new Set<string>();
     setKnown(next);
-    writeKnown(next);
+    writeKnown(storageKey, next);
   }
 
   if (deck.length === 0) {

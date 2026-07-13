@@ -20,7 +20,7 @@ const chapterRoute = (bookConfig as { chapterRoute?: string }).chapterRoute ?? '
 const bookField = (bookConfig as { bookField?: string }).bookField ?? 'book';
 const baseUrl = normalizeBase(import.meta.env.BASE_URL);
 
-const { prev, next } = await getNeighbors(currentId, { bookField });
+const { prev, next } = await getNeighbors(currentId, { bookField, corpus: bookConfig.corpus });
 // Resolve hrefs in frontmatter (casts here, never in the JSX expression container).
 const prevHref = prev
   ? chapterHref({ id: prev.id, data: prev.data as Record<string, unknown> }, chapterRoute, baseUrl, bookField)

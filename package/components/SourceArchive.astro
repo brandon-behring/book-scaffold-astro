@@ -19,14 +19,44 @@ import {
   TIER_DESCRIPTIONS,
 } from '../src/lib/sources';
 
-const grouped = await getSourcesByTier();
+interface SerializedSource {
+  id: string;
+  tier: (typeof sourceTiers)[number];
+  title: string;
+  url: string;
+  author?: string;
+  publish_date?: string | Date;
+  captured_at?: string | Date;
+  tool?: string;
+  perma_cc?: string;
+}
 
-function formatDate(d: Date | undefined): string {
+interface Props { sources?: unknown[]; }
+const { sources } = Astro.props;
+const grouped = sources
+  ? Object.fromEntries(
+      sourceTiers.map((tier) => [
+        tier,
+        (sources as SerializedSource[])
+          .filter((source) => source.tier === tier)
+          .map((source) => ({ id: source.id, data: source })),
+      ]),
+    ) as Record<(typeof sourceTiers)[number], Array<{ id: string; data: SerializedSource }>>
+  : await getSourcesByTier();
+
+function asDate(d: string | Date | undefined): Date | undefined {
+  if (!d) return undefined;
+  return d instanceof Date ? d : new Date(d);
+}
+
+function formatDate(value: string | Date | undefined): string {
+  const d = asDate(value);
   if (!d) return '—';
   return d.toISOString().slice(0, 10);
 }
 
-function year(d: Date | undefined): string | null {
+function year(value: string | Date | undefined): string | null {
+  const d = asDate(value);
   if (!d) return null;
   return String(d.getUTCFullYear());
 }

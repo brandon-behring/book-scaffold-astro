@@ -59,6 +59,7 @@ export interface RoutingChapter {
 export function deriveDomainRouting(
   entries: readonly (QuestionLike & { data: Pick<Question, 'id' | 'chapter' | 'domain'> })[],
   baseUrl = '/',
+  bookId?: string,
 ): Record<string, RoutingChapter[]> {
   // #142: normalize so a no-trailing-slash base ('/foo') still yields '/foo/chapters/'
   // rather than '/foochapters/' (Astro does NOT guarantee a trailing slash on base).
@@ -72,7 +73,9 @@ export function deriveDomainRouting(
     seen.add(key);
     (out[e.data.domain] ??= []).push({
       label,
-      href: typeof e.data.chapter === 'string' ? `${base}chapters/${e.data.chapter}/` : null,
+      href: typeof e.data.chapter === 'string'
+        ? `${base}chapters/${bookId ? `${bookId}/` : ''}${e.data.chapter}/`
+        : null,
     });
   }
   return out;

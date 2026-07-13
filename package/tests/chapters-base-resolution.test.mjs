@@ -57,6 +57,37 @@ test('readChaptersBase: missing content.config returns default', async () => {
   );
 });
 
+test('#80: corpus mode defaults to the shared content root', async () => {
+  await withProject(
+    () => {},
+    async (root) => {
+      assert.equal(
+        await readChaptersBase(root, { corpus: { books: [] } }),
+        resolve(root, 'src/content'),
+      );
+    },
+  );
+});
+
+test('#80: corpus mode still honors BOOK_CHAPTERS_DIR', async () => {
+  await withProject(
+    () => {},
+    async (root) => {
+      const previous = process.env.BOOK_CHAPTERS_DIR;
+      process.env.BOOK_CHAPTERS_DIR = './corpus-content';
+      try {
+        assert.equal(
+          await readChaptersBase(root, { corpus: { books: [] } }),
+          resolve(root, 'corpus-content'),
+        );
+      } finally {
+        if (previous === undefined) delete process.env.BOOK_CHAPTERS_DIR;
+        else process.env.BOOK_CHAPTERS_DIR = previous;
+      }
+    },
+  );
+});
+
 test('readChaptersBase: default defineBookSchemas config returns default', async () => {
   await withProject(
     (root) => {

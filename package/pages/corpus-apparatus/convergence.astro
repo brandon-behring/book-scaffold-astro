@@ -1,0 +1,15 @@
+---
+import bookConfig from 'virtual:book-scaffold/book-config';
+import { corpusBookHasApparatusRoute } from '../../src/lib/corpus';
+import ConvergencePage from '../convergence.astro';
+
+export function getStaticPaths() {
+  if (!bookConfig.corpus) return [];
+  return bookConfig.corpus.books
+    .filter((book) => corpusBookHasApparatusRoute(bookConfig.corpus!, book.id, 'convergence', bookConfig.apparatusRoutes))
+    .map((book) => ({ params: { book: book.id }, props: { bookId: book.id } }));
+}
+
+const { bookId } = Astro.props;
+---
+<ConvergencePage bookId={bookId} />

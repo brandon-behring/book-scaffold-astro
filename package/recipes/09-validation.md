@@ -115,7 +115,7 @@ For pre-commit: add to `.pre-commit-config.yaml`:
 
 ## Preset / chaptersBase resolution (v4.7.0+, #75)
 
-The validator evaluates `astro.config.*` through Vite first. A resolved scaffold integration supplies the composed preset and `numberStyle`, so CLI tooling sees the same Style chain as the Astro build. The evaluated Astro `base` is read from that same config regardless of whether the scaffold integration is present; omission defaults to `/`. Without such an integration, the legacy preset chain remains: `--preset` → process `BOOK_PRESET`/`BOOK_PROFILE` → root `.env` → the literal value in `defineBookSchemas` → a warned `minimal` v4 compatibility fallback. Every selected value is checked against the five-preset enum; config-evaluation failures stop validation instead of silently using defaults.
+The validator evaluates `astro.config.*` through Vite first. A resolved scaffold integration supplies the composed preset and `numberStyle`, so CLI tooling sees the same Style chain as the Astro build. The evaluated Astro `base` is read from that same config regardless of whether the scaffold integration is present; omission defaults to `/`. Without such an integration, the preset chain remains: `--preset` → process `BOOK_PRESET`/`BOOK_PROFILE` → root `.env` → the literal value in `defineBookSchemas`. Every selected value is checked against the five-preset enum; an absent preset, an invalid value, or config-evaluation failure stops validation instead of silently selecting `minimal`.
 
 `chaptersBase` resolution still consults `BOOK_CHAPTERS_DIR`, content configuration, then `src/content/chapters`. The v4.5+ canonical form is:
 

@@ -67,9 +67,18 @@ test('Term: requires id: string prop', () => {
   assert.match(src, /id:\s*string/);
 });
 
-test('Term: links to the base-aware /glossary#term-<id> anchor (#140)', () => {
+test('Term: links to book-local glossary in corpus and legacy glossary in single-book mode', () => {
   const src = readComponent('Term');
-  assert.match(src, /\$\{baseUrl\}glossary#term-\$\{id\}/);
+  assert.match(
+    src,
+    /const currentBook = bookConfig\.corpus[\s\S]*?corpusBookIdFromPath\([\s\S]*?: null;/,
+  );
+  assert.ok(
+    src.includes("`${baseUrl}${currentBook ? `${currentBook}/` : ''}glossary#term-${id}`"),
+    'corpus pages must prefix the glossary with the current book; currentBook=null preserves /glossary',
+  );
+  assert.match(src, /corpusBookHasApparatusRoute\([\s\S]*?'glossary'/);
+  assert.match(src, /requires the current corpus book's glossary route/);
 });
 
 test('Term: renders .term-link and a slot', () => {

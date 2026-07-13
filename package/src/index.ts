@@ -30,6 +30,11 @@ export type {
   SiblingBookDescriptor,
   SiblingBookEntry,
   SiblingBooks,
+  BookCorpusInput,
+  BookCorpus,
+  CorpusBookInput,
+  CorpusBook,
+  CorpusApparatusRoute,
   BookConfigOptions,
   ReleaseStatusConfig,
   SecurityHeadersConfig,
@@ -41,10 +46,28 @@ export {
   BOOK_PROFILES,
   BOOK_PRESETS,       // v3.4.0 — alias of BOOK_PROFILES
   NUMBER_STYLES,
+  CORPUS_APPARATUS_ROUTES,
   BookConfigError,
   resolveProfile,
   resolvePreset,      // v3.4.0 — canonical resolver (accepts both preset + profile)
 } from './types.js';
+
+// v5.0.0 (#80): one-app/one-build corpus manifest and pure identity helpers.
+export {
+  defineBookCorpus,
+  assertBookCorpus,
+  resolveCorpusBook,
+  corpusBookIdOf,
+  corpusBookIdFromPath,
+  corpusApparatusRoutesForBook,
+  corpusBookHasApparatusRoute,
+  selectBookArtifact,
+  localCorpusEntryId,
+  filterCorpusEntries,
+  corpusCollectionEntryId,
+  CORPUS_APPARATUS_TOGGLE_BY_ROUTE,
+  RESERVED_CORPUS_BOOK_IDS,
+} from './lib/corpus.js';
 
 // Profile-kit: defineProfile helper (v3.3.0) for consumers writing their
 // own profile modules (advanced) or extending toolkit-shipped ones.
@@ -135,7 +158,7 @@ export { ssmMacros } from './lib/katex-macros.js';
 // v4.16.0 (#96), extended in #147: cross-book link resolution.
 // resolveBookHref accepts both legacy URL strings and { url, labels? }
 // descriptors, throwing on an unknown book instead of emitting a dead link.
-export { resolveBookHref } from './lib/book-link.js';
+export { resolveBookHref, resolveCorpusBookHref } from './lib/book-link.js';
 
 // v4.26.0 (#80): pure route-href resolver for the book-aware navigation.
 // chapterHref/apparatusHref turn declarative token patterns (chapterRoute /

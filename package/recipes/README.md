@@ -26,8 +26,8 @@ Terse pointers into canonical code for the most common book-authoring workflows.
 | 18 | [Chapter route ownership](18-chapter-route-ownership.md) | any | When to override the auto-injected `/chapters/[...slug]/` route |
 | 19 | [Prevalidate hook](19-prevalidate-hook.md) | any | Wire `prevalidate` to run `build:bib` + `build:labels` before `validate` |
 | 20 | [Anki deck export (consumer-side)](20-anki-export.md) | any (esp. course-notes, research-portfolio) | Roll-your-own `<AnkiCard>` + extractor; scaffold deliberately doesn't ship this |
-| 21 | [Multiple guides in one app](21-multi-guide-single-app.md) | any | `generateId` namespacing over one collection; flat-slug footgun; interim until multibook (#80) |
-| 22 | [Responsive navigation and multi-book routing](22-responsive-nav-and-multibook-routing.md) | any | Mobile/desktop nav, base-aware route ownership, and the interim multi-book routing contract |
+| 21 | [Multiple books in one app](21-multi-guide-single-app.md) | any | First-class `defineBookCorpus`: routes, scoped data/search, `--book`, and v4 migration |
+| 22 | [Responsive navigation and custom routing](22-responsive-nav-and-multibook-routing.md) | any | Mobile/desktop nav and the v4-compatible consumer-owned route-token API |
 | 23 | [Interactive demo substrate](23-interactive-demo-substrate.md) | any | Opt-in Preact shell, slider, stat cards, theme colors, a11y, and reduced motion |
 | 24 | [Figure authoring standard](24-figure-authoring-standard.md) | any | Warm–Tol semantics, Okabe–Ito series, dual-theme exports, contrast, and accessible descriptions |
 

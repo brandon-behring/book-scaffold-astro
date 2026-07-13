@@ -31,6 +31,15 @@ declare module 'astro:content' {
  */
 declare module 'virtual:book-scaffold/book-config' {
   type SiblingBookEntry = string | { url: string; labels?: string };
+  type CorpusBook = {
+    readonly id: string;
+    readonly title: string;
+    readonly subtitle?: string;
+    readonly description?: string;
+    readonly author?: string;
+    readonly image?: string;
+    readonly apparatus?: readonly string[];
+  };
   const bookConfig: {
     title: string | null;
     /** v4.23.0 (#135): sidebar brand subtitle (Sidebar.astro). */
@@ -53,6 +62,20 @@ declare module 'virtual:book-scaffold/book-config' {
     siblingBooks: Record<string, SiblingBookEntry>;
     /** v4.17.0 (#112): per-book exam-domain taxonomy for the questions collection. */
     examDomains: readonly string[];
+    /** Chapter href token pattern resolved by the integration. */
+    chapterRoute: string;
+    /** Frontmatter field used by legacy multi-book chapter navigation. */
+    bookField: string;
+    /** Per-book apparatus href token pattern. */
+    apparatusRoute: string;
+    /** Inherited public apparatus slugs (manifest book values may override). */
+    apparatusRoutes: readonly string[];
+    /** v5.0.0 (#80): null for a single book, ordered registry for a corpus. */
+    corpus: {
+      readonly __bookCorpusVersion: 1;
+      readonly preset: string;
+      readonly books: readonly CorpusBook[];
+    } | null;
   };
   export default bookConfig;
 }

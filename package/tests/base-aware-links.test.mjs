@@ -38,7 +38,11 @@ test('ChapterNav prev/next route through the nav-href resolver, book-aware (#80)
   assert.match(src, /chapterHref\(\{ id: prev\.id/, 'prev href must resolve via chapterHref');
   assert.match(src, /chapterHref\(\{ id: next\.id/, 'next href must resolve via chapterHref');
   assert.doesNotMatch(src, /\$\{baseUrl\}chapters\//, 'must NOT hardcode the single-book /chapters/ pattern');
-  assert.match(src, /getNeighbors\(currentId, \{ bookField \}\)/, 'neighbors must be book-scoped');
+  assert.match(
+    src,
+    /getNeighbors\(currentId, \{ bookField, corpus: bookConfig\.corpus \}\)/,
+    'neighbors must be scoped by both the legacy book field and corpus ownership',
+  );
 });
 
 // #142: v4.24.0 made nav *components* base-aware but left the injected *route
@@ -90,7 +94,10 @@ test('build-labels emits base-less chapter refs into labels.json (#142)', () => 
 test('exam-manifest routes through an injected baseUrl, not a hardcoded root (#142)', () => {
   const src = readFileSync(new URL('../src/lib/exam-manifest.ts', import.meta.url), 'utf8');
   assert.match(src, /baseUrl = '\/'/, 'deriveDomainRouting must take a baseUrl param (default "/")');
-  assert.match(src, /\$\{base\}chapters\/\$\{e\.data\.chapter\}\//, 'href must be `${base}chapters/${chapter}/`');
+  assert.ok(
+    src.includes("`${base}chapters/${bookId ? `${bookId}/` : ''}${e.data.chapter}/`"),
+    'href must preserve the single-book path while optionally inserting a corpus book id',
+  );
   assert.doesNotMatch(src, /\? `\/chapters\//, 'must not hardcode a root-absolute `/chapters/...`');
 });
 

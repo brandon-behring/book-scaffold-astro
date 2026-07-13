@@ -19,10 +19,6 @@ import {
   defineStyle,
   composeStyles,
   normalizeFrontmatterConfig,
-  academicStyle,
-  toolsStyle,
-  minimalStyle,
-  courseNotesStyle,
   researchPortfolioStyle,
   BUILTIN_STYLES,
 } from '../dist/index.mjs';
@@ -53,7 +49,6 @@ test('defineStyle: preserves all known optional fields', () => {
     extraIntegrations: [],
     mdxComponentsModule: 'src/x.ts',
     markdown: { remarkPlugins: [], rehypePlugins: [] },
-    deploy: 'pages',
     releaseStatus: { state: 'beta', message: 'Preview' },
     extra: { foo: 'bar' },
   });
@@ -65,7 +60,6 @@ test('defineStyle: preserves all known optional fields', () => {
   assert.deepEqual(s.katexMacros, { '\\E': '\\mathbb{E}' });
   assert.deepEqual(s.extraStyles, ['a.css']);
   assert.equal(s.mdxComponentsModule, 'src/x.ts');
-  assert.equal(s.deploy, 'pages');
   assert.deepEqual(s.releaseStatus, { state: 'beta', message: 'Preview' });
   assert.deepEqual(s.extra, { foo: 'bar' });
 });
@@ -112,12 +106,18 @@ test('composeStyles: numberStyle shallow-override (last wins)', () => {
   assert.equal(merged.numberStyle, 'shared');
 });
 
-test('composeStyles: deploy shallow-override (last wins)', () => {
-  const merged = composeStyles([
-    defineStyle({ deploy: 'workers' }),
-    defineStyle({ deploy: 'pages' }),
-  ]);
-  assert.equal(merged.deploy, 'pages');
+test('#211: defineStyle rejects the removed deploy field in JavaScript configs', () => {
+  assert.throws(
+    () => defineStyle({ deploy: 'pages' }),
+    /v5 removed defineStyle\(\{ deploy \}\).*wrangler\.toml/i,
+  );
+});
+
+test('#211: composeStyles rejects v4 Style objects carrying deploy metadata', () => {
+  assert.throws(
+    () => composeStyles([{ __styleVersion: 1, preset: 'tools', deploy: 'workers' }]),
+    /v5 removed composeStyles\(\{ deploy \}\).*wrangler\.toml/i,
+  );
 });
 
 test('composeStyles: undefined values do NOT override set values', () => {
@@ -369,20 +369,14 @@ test('BUILTIN_STYLES: each style has the __styleVersion marker', () => {
   }
 });
 
-test('BUILTIN_STYLES.academic: deploy = workers', () => {
-  assert.equal(academicStyle.deploy, 'workers');
-});
-
-test("BUILTIN_STYLES['research-portfolio']: deploy = pages", () => {
-  assert.equal(researchPortfolioStyle.deploy, 'pages');
-});
-
 test("BUILTIN_STYLES['research-portfolio']: routes.frontmatter enabled by default", () => {
   assert.equal(researchPortfolioStyle.routes?.frontmatter?.enabled, true);
 });
 
-test("BUILTIN_STYLES['course-notes']: deploy = pages", () => {
-  assert.equal(courseNotesStyle.deploy, 'pages');
+test('#211: built-in styles contain no removed deploy metadata', () => {
+  for (const style of Object.values(BUILTIN_STYLES)) {
+    assert.equal(Object.hasOwn(style, 'deploy'), false);
+  }
 });
 
 // ===== Composition with built-in styles =====
@@ -394,7 +388,6 @@ test('Composition: BUILTIN_STYLES.research-portfolio + custom style overrides', 
   });
   const merged = composeStyles([researchPortfolioStyle, customStyle]);
   assert.equal(merged.preset, 'research-portfolio');         // from built-in
-  assert.equal(merged.deploy, 'pages');                      // from built-in
   assert.equal(merged.site, 'https://my-portfolio.example/'); // from custom
   assert.deepEqual(merged.routes.frontmatter, { enabled: true, prefix: '' }); // overrides built-in's prefix:'frontmatter'
 });
