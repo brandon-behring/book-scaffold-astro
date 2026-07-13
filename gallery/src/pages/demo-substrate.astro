@@ -1,0 +1,63 @@
+---
+import Gallery from '../layouts/Gallery.astro';
+import DemoSubstrateFixture from '../components/DemoSubstrateFixture.tsx';
+import '@brandon_m_behring/book-scaffold-astro/styles/demo.css';
+---
+
+<Gallery title="Interactive demo substrate">
+  <p>
+    The #143 opt-in surface: consumer-owned domain logic composed with the
+    shared figure shell, labelled range control, semantic statistics, SVG
+    token helpers, theme-color hook, and reduced-motion plumbing.
+  </p>
+
+  <section data-gallery="demo-substrate">
+    <h2 class="gallery-state">Interactive, themed, reduced-motion aware</h2>
+    <DemoSubstrateFixture client:load />
+  </section>
+
+  <style is:global>
+    .demo-gallery-status {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .demo-gallery-status p {
+      flex: 1 1 18rem;
+      margin: 0;
+      color: var(--color-text-muted);
+      font-family: var(--font-code);
+      font-size: var(--text-sm);
+    }
+
+    .demo-gallery-pulse {
+      width: 0.75rem;
+      height: 0.75rem;
+      background: var(--color-link);
+      border-radius: 50%;
+      animation: demo-gallery-pulse 1s ease-in-out infinite alternate;
+    }
+
+    .demo-gallery-toggle {
+      padding: var(--space-2) var(--space-3);
+      color: var(--color-text);
+      background: var(--color-bg-subtle);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .demo-gallery-toggle:focus-visible {
+      outline: 2px solid var(--color-link);
+      outline-offset: 2px;
+    }
+
+    @keyframes demo-gallery-pulse {
+      from { transform: scale(0.75); }
+      to { transform: scale(1.15); }
+    }
+  </style>
+</Gallery>
