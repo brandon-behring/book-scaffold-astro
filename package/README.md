@@ -49,6 +49,40 @@ local `<BookLink>` targets, and Pagefind results remain book-scoped. See
 [Recipe 21](./recipes/21-multi-guide-single-app.md) for content layout, route
 ownership, `--book` tooling, shared sources, and migration.
 
+## Content readiness and CLI
+
+`book-scaffold qa` combines the existing validation contract with stable
+chapter, link, learning-objective, component, and JSON-fixture metrics. Human
+output is the default; schema-v1 JSON is deterministic and keeps stdout clean
+for CI:
+
+```bash
+npm exec -- book-scaffold qa
+npm --offline exec -- book-scaffold qa --format json
+npm exec -- book-scaffold init-qa
+```
+
+In corpus mode `qa` checks every manifest book by default, while `--book <id>`
+selects one exact id. `init-qa` creates the portfolio-engine interoperability
+file `guide_qa.yaml`; its generated checks use `npm --offline exec` and an
+existing file is preserved unless `--force` is explicit. See
+[Recipe 25](./recipes/25-qa-readiness.md) for verdicts, exit codes, the
+top-level `shared` aggregate, and CI wiring.
+
+The installed `book-scaffold` dispatcher owns these commands:
+
+| Command | Purpose |
+|---|---|
+| `validate` | Pre-flight authored content, references, figures, and links |
+| `qa` | Emit a human or schema-v1 readiness verdict |
+| `init-qa` | Generate deterministic `guide_qa.yaml` interoperability config |
+| `build-labels` | Build cross-reference and heading indexes |
+| `build-bib` | Build bibliography and source-manifest data |
+| `build-tips` | Build the tips index |
+| `build-exercises` | Build the exercises index |
+| `build-figures` | Convert and theme application-wide figure assets |
+| `render-notebooks` | Render application-wide notebook companions |
+
 Astro builds emit a Cloudflare-compatible `dist/_headers` with audited
 security defaults. A consumer-owned `public/_headers` wins unchanged;
 `defineBookConfig({ securityHeaders: false })` disables scaffold emission,
