@@ -1616,17 +1616,34 @@ The accepted design and release gates remain recorded in
 
 ### AnkiCard component + extract-cards CLI (parked #210)
 
-**Requested shape**: ship `<AnkiCard>` MDX component + `book-scaffold extract-cards` CLI from the DLAI pilot to the scaffold.
+**Requested shape**: eventually ship an `<AnkiCard>` MDX component plus a
+`book-scaffold extract-cards` CLI that emits stable, tool-neutral JSON. Direct
+`.apkg` generation remains downstream so the package does not acquire an
+Anki-archive dependency or choose one importer on consumers' behalf.
+
+**Current proof**: the historical `dlai-study-notes` pilot is consumer one. It
+found 154 cards and emitted one `knowledge-graphs-rag.apkg` plus a JSON debug
+artifact. The later pedagogy rebuild replaced that corpus and current `main`
+has no authored `<AnkiCard>` nodes, so this proves feasibility rather than a
+maintained package contract. [Recipe 20](package/recipes/20-anki-export.md)
+records the supported consumer-owned pattern.
 
 **Why deferred**:
-- The component is feasible (one-line export, no profile coupling, ~100 LOC).
-  Corpus grouping now provides stable book identity, but the CLI still adds a
-  non-trivial runtime dependency (a `.apkg` builder — Python `anki` library or
-  a Node port).
+- One consumer proves feasibility, not a package-stable card schema. A second
+  independent workflow must confirm stable identity, front/back, tags, source,
+  book/deck grouping, optional learning metadata, and media/math representation
+  before they become a semver surface.
+- Tool-neutral JSON avoids a package runtime dependency, but downstream `.apkg`
+  generation still varies by importer and remains consumer-owned.
 - The scaffold's scope is "books as MDX + Astro + pluggable profiles". Deck-export sync is a workflow-specific feature, more like "export to Notion" or "sync to Roam" than infrastructure every consumer needs.
-- Until DLAI proves the pattern out in production, the right home is a consumer-side recipe ([Recipe 20](package/recipes/20-anki-export.md)) describing how to roll your own `<AnkiCard>` component + a project-local `scripts/extract-anki.mjs` using `getCollection('chapters')`.
+- Until the second-consumer signal fires, the right home is Recipe 20: a
+  consumer-owned `<AnkiCard>` component and project-local JSON extractor.
 
-**Re-evaluate when**: a 2nd consumer asks for it. At that point, consider shipping a light `build-anki` script (scan-and-emit JSON, no `.apkg`) following the `build-tips` / `build-exercises` pattern.
+**Re-evaluate when**: a second independent consumer beyond the DLAI pilot
+commits to maintaining the workflow and supplies a concrete card schema and
+target import contract. At that point, consider shipping `extract-cards`
+(scan-and-emit JSON, no `.apkg`) following the `build-tips` / `build-exercises`
+pattern.
 
 ---
 
