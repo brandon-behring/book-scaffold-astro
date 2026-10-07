@@ -39,13 +39,14 @@ The profile is read by `import.meta.env.BOOK_PROFILE` at build time. Re-run `npm
 ## 3. Bootstrap a new book (recommended path)
 
 ```bash
-~/.claude/skills/book-scaffold-astro/create-book.sh my-book-name --profile=academic
-cd ~/Claude/my-book-name
+cd ~/Claude
+npx @brandon_m_behring/create-book my-book-name --preset=academic
+cd my-book-name
 npm install
 npm run dev
 ```
 
-That creates a GitHub repo from this template, clones to `~/Claude/`, sets `BOOK_PROFILE` in `.env`, and copies the matching `week01-hello-world.mdx` demo chapter. Visit `localhost:4321`.
+That creates `./my-book-name/`, sets `BOOK_PROFILE` in its `.env` and adds the matching `week01-hello-world.mdx` starter chapter. It creates no GitHub repo: push one yourself when ready. Visit `localhost:4321`.
 
 ## 4. Customize for your book
 
