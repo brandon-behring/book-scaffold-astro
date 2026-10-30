@@ -789,3 +789,26 @@ test('#158: validation runs through the injected core and fatal/config failures 
     /no validateJsonSchema adapter/,
   );
 });
+
+test('#230: qa parses TeX braces exactly when the resolved config says math', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'qa-math-'));
+  try {
+    cpSync(resolve(FIXTURES, 'single'), root, { recursive: true });
+    writeFileSync(
+      join(root, 'src/content/chapters/math.mdx'),
+      '---\ntitle: "Math"\nstatus: implemented\n---\n\nThe policy stays near $\\pi_{\\text{ref}}$ and costs $1{,}000$ tokens.\n',
+    );
+    const run = (math) => runQa(singleOptions('course-notes', {
+      root,
+      chaptersRoot: resolve(root, 'src/content/chapters'),
+      // runQa prefers the validation result's resolved config, as in real runs.
+      validationResult: { ...validation('course-notes'), toolingConfig: { ...config('course-notes'), math } },
+      toolingConfig: { ...config('course-notes'), math },
+    }));
+    const parseFailures = (result) => (JSON.stringify(result).match(/qa\.links\.parse_failed/g) ?? []).length;
+    assert.equal(parseFailures(await run(true)), 0, 'math: true parses the braces as TeX');
+    assert.ok(parseFailures(await run(false)) > 0, 'math: false reads the braces as MDX expressions');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

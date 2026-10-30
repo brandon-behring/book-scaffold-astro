@@ -2,6 +2,37 @@
 
 All notable changes to `book-scaffold-astro`. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [5.2.1] — 2026-10-30
+
+### Fixed
+
+- **Authored-link parsing now follows the book's actual math setup (#230).**
+  Since 4.30.0 (#190), `book-scaffold validate` and `book-scaffold qa` parsed
+  chapters with the TeX grammar only for the academic and research-portfolio
+  presets. A course-notes or tools book that installs `remark-math` through
+  its own `markdown.remarkPlugins` had valid braces such as
+  `$\pi_{\text{ref}}$` and `$1{,}000$` read as MDX expressions, so
+  validation failed and the build stopped. `defineBookConfig` now resolves a
+  `math` flag (true when `remark-math` is among the remark plugins it installs,
+  whether from the preset's KaTeX wiring, a composed style, or the consumer)
+  and both tools read it. Configs without scaffold metadata keep the preset
+  default.
+
+### Added
+
+- `defineBookConfig({ math })`: an explicit boolean that overrides the
+  detection. Non-boolean values fail with a configuration error.
+
+### Tests
+
+- Detection from the plugin function, a `[plugin, options]` tuple and the
+  package name; academic detected through its KaTeX wiring; explicit
+  `math: false` overriding detection; the Vite loader passing the flag through
+  (and `null` without metadata); `validate` accepting TeX braces in a
+  course-notes book with `remark-math` while a math-free course-notes book
+  still checks links between dollar signs; `qa` parsing TeX braces exactly when
+  the resolved config says math. Package suite: 756 passing; create-book: 32.
+
 ## [5.2.0] — 2026-07-13
 
 ### Added

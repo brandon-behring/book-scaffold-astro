@@ -5,8 +5,10 @@ import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import remarkMath from 'remark-math';
 import {
   academicStyle,
+  courseNotesStyle,
   defineBookConfig,
   defineBookCorpus,
   defineStyle,
@@ -152,6 +154,7 @@ test('#175: resolved integration metadata carries top-level-over-style numberSty
   assert.deepEqual(integrationMetadata(config), {
     preset: 'academic',
     numberStyle: 'shared',
+    math: true, // #230: academic installs remark-math through its KaTeX wiring
     siblingBooks: {},
     corpus: null,
     chapterRoute: '/chapters/:id/',
@@ -232,6 +235,7 @@ test('#175/#190: Vite loader reads composed metadata, evaluated base, and defaul
     assert.deepEqual(await loadResolvedBookConfig(root), {
       preset: 'minimal',
       numberStyle: 'per-kind',
+      math: false, // #230: no remark-math installed
       siblingBooks: {
         design: {
           url: 'https://hub.example/library/design/',
@@ -259,6 +263,7 @@ test('#175/#190: Vite loader reads composed metadata, evaluated base, and defaul
     assert.deepEqual(await loadResolvedBookConfig(root), {
       preset: 'minimal',
       numberStyle: 'shared',
+      math: null, // #230: no math metadata -> preset default in tooling
       siblingBooks: {},
       corpus: null,
       chapterRoute: '/chapters/:id/',
@@ -278,6 +283,7 @@ test('#175/#190: Vite loader reads composed metadata, evaluated base, and defaul
     assert.deepEqual(await loadResolvedBookConfig(root), {
       preset: null,
       numberStyle: 'shared',
+      math: null, // #230: no math metadata -> preset default in tooling
       siblingBooks: {},
       corpus: null,
       chapterRoute: '/chapters/:id/',
@@ -299,6 +305,56 @@ test('#175: Vite loader fails loudly when Astro config evaluation fails', async 
   try {
     writeFileSync(join(root, 'astro.config.mjs'), 'throw new Error("fixture exploded");\n');
     await assert.rejects(loadResolvedBookConfig(root), /failed to evaluate.*fixture exploded/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+const REMARK_MATH_URL = import.meta.resolve('remark-math');
+
+test('#230: math is detected from the remark plugins a config installs', async () => {
+  const site = 'https://test.invalid';
+  const math = async (opts) =>
+    integrationMetadata(await defineBookConfig({ styles: [courseNotesStyle], site, ...opts })).math;
+  assert.equal(await math({}), false, 'course-notes without remark-math renders no math');
+  assert.equal(await math({ markdown: { remarkPlugins: [remarkMath] } }), true);
+  assert.equal(await math({ markdown: { remarkPlugins: [[remarkMath, {}]] } }), true, 'tuple form');
+  assert.equal(await math({ markdown: { remarkPlugins: ['remark-math'] } }), true, 'package-name form');
+  assert.equal(
+    integrationMetadata(await defineBookConfig({ styles: [academicStyle], site })).math,
+    true,
+    'academic installs remark-math through its KaTeX wiring',
+  );
+});
+
+test('#230: an explicit math option wins over detection and must be boolean', async () => {
+  const site = 'https://test.invalid';
+  const off = await defineBookConfig({
+    styles: [courseNotesStyle], site, math: false, markdown: { remarkPlugins: [remarkMath] },
+  });
+  assert.equal(integrationMetadata(off).math, false);
+  const on = await defineBookConfig({ styles: [courseNotesStyle], site, math: true });
+  assert.equal(integrationMetadata(on).math, true);
+  await assert.rejects(
+    defineBookConfig({ styles: [courseNotesStyle], site, math: 'yes' }),
+    (error) => error instanceof BookConfigError && /math must be a boolean/.test(error.message),
+  );
+  assert.equal('math' in off, false, 'math is stripped from the Astro config');
+});
+
+test('#230: the Vite loader passes the resolved math flag to tooling', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'book-scaffold-config-'));
+  try {
+    writeFileSync(
+      join(root, 'astro.config.mjs'),
+      `import { defineBookConfig, courseNotesStyle } from ${JSON.stringify(DIST_INDEX_URL)};\n` +
+        `import remarkMath from ${JSON.stringify(REMARK_MATH_URL)};\n` +
+        `export default await defineBookConfig({ styles: [courseNotesStyle], site: 'https://test.invalid', ` +
+        `markdown: { remarkPlugins: [remarkMath] } });\n`,
+    );
+    assert.equal((await loadResolvedBookConfig(root)).math, true);
+    writeFileSync(join(root, 'astro.config.mjs'), `export default { base: '/' };\n`);
+    assert.equal((await loadResolvedBookConfig(root)).math, null, 'no scaffold metadata: no opinion');
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

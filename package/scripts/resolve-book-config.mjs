@@ -13,6 +13,9 @@ export const DEFAULT_TOOLING_CONFIG = Object.freeze({
   apparatusRoutes: Object.freeze([]),
   enabledRoutes: Object.freeze([]),
   frontmatterRoute: '/frontmatter/[slug]',
+  // v5.2.1 (#230): null = no scaffold metadata; tooling then falls back to
+  // the preset default (academic, research-portfolio).
+  math: null,
   base: '/',
   integrationFound: false,
 });
@@ -75,6 +78,17 @@ function assertPreset(value, configPath) {
         `${JSON.stringify(value)}; expected ${PRESETS.join(' | ')}.`,
     );
   }
+}
+
+function resolveMath(value, configPath) {
+  if (value == null) return null;
+  if (typeof value !== 'boolean') {
+    throw new Error(
+      `book-scaffold tooling: ${configPath} resolved invalid math flag ` +
+        `${JSON.stringify(value)}; expected true | false.`,
+    );
+  }
+  return value;
 }
 
 function resolveNonEmptyString(value, fallback, field, configPath) {
@@ -287,6 +301,7 @@ export async function loadResolvedBookConfig(projectRoot = process.cwd()) {
   return {
     preset,
     numberStyle,
+    math: resolveMath(metadata.math, configPath),
     siblingBooks: resolveSiblingBooks(metadata.siblingBooks, configPath),
     corpus: resolveCorpus(metadata.corpus, preset, configPath),
     chapterRoute: resolveNonEmptyString(
