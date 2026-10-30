@@ -280,13 +280,16 @@ function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function mathEnabled(preset) {
+// v5.2.1 (#230): same rule as validate — the resolved config's math flag
+// (detected or explicit) wins; without metadata the preset default applies.
+function mathEnabled(preset, config) {
+  if (typeof config?.math === 'boolean') return config.math;
   return preset === 'academic' || preset === 'research-portfolio';
 }
 
-function mdxParser(preset) {
+function mdxParser(preset, config) {
   const processor = unified().use(remarkParse).use(remarkMdx);
-  if (mathEnabled(preset)) processor.use(remarkMath);
+  if (mathEnabled(preset, config)) processor.use(remarkMath);
   return processor;
 }
 
@@ -569,7 +572,7 @@ async function inspectChapter({
   try {
     result.targets = findAuthoredTargets(source, {
       format: extname(file).toLowerCase() === '.md' ? 'md' : 'mdx',
-      math: mathEnabled(preset),
+      math: mathEnabled(preset, config),
     }).filter((target) => LINK_KINDS.has(target.kind));
   } catch (error) {
     result.parseDiagnostics.push(diagnostic({
@@ -606,7 +609,7 @@ async function inspectChapter({
 }
 
 async function collectChapters({ root, chaptersRoot, corpus, preset, config }) {
-  const parser = mdxParser(preset);
+  const parser = mdxParser(preset, config);
   const headingProcessor = await createMarkdownProcessor({ syntaxHighlight: false });
   const runs = corpus
     ? corpus.books.map((book) => ({ book, dir: resolve(chaptersRoot, book.id) }))
