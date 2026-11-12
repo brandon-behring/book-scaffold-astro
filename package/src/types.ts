@@ -296,6 +296,15 @@ export interface BookConfigOptions {
    */
   securityHeaders?: SecurityHeadersConfig | false;
   /**
+   * v5.2.1 (#230): whether chapters use TeX math (`$…$`, `$$…$$`). Package
+   * tooling (`validate`, `qa`) parses authored links with the same grammar,
+   * so valid braces such as `$\pi_{\text{ref}}$` are not read as MDX
+   * expressions. Omit to detect it: true when `remark-math` is among the
+   * resolved remark plugins (the academic and research-portfolio presets add
+   * it; any other preset gets it when the consumer wires it in `markdown`).
+   */
+  math?: boolean;
+  /**
    * v4.5.0: Book description. Read by the auto-injected `/` landing page (lead paragraph + <meta description>).
    * Optional; landing renders no description paragraph if unset.
    */
@@ -447,6 +456,12 @@ export interface BookScaffoldIntegrationOptions {
   corpus?: BookCorpus;
   /** Resolved theorem-family counter strategy exposed to package CLI tooling. */
   numberStyle?: NumberStyle;
+  /**
+   * v5.2.1 (#230): resolved TeX-math flag exposed to package CLI tooling.
+   * `defineBookConfig` always passes it; omitted, the preset default applies
+   * (academic and research-portfolio render math).
+   */
+  math?: boolean;
   /**
    * Per-route override; merged into the profile's defaults.
    * v4.0.0: `routes.frontmatter` widened to `boolean | { enabled, prefix? }`

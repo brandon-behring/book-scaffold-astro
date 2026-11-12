@@ -313,6 +313,9 @@ export function bookScaffoldIntegration(
     profile,
     corpus,
     numberStyle = 'shared',
+    // v5.2.1 (#230): defineBookConfig always resolves it; direct callers
+    // that omit it get the preset default below.
+    math,
     routes: userOverrides = {},
     extraStyles = [],
     mdxComponentsModule,
@@ -555,6 +558,7 @@ export function bookScaffoldIntegration(
     value: Object.freeze({
       preset: profile,
       numberStyle,
+      math: math ?? (profile === 'academic' || profile === 'research-portfolio'),
       siblingBooks: siblingBooks ?? {},
       corpus: corpus ?? null,
       chapterRoute: corpus ? '/chapters/:id/' : chapterRoute ?? '/chapters/:id/',

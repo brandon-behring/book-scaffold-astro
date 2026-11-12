@@ -1222,3 +1222,52 @@ test('validate (#179): invalid schema preset and Astro config evaluation errors 
     }
   }
 });
+
+const REMARK_MATH_URL = import.meta.resolve('remark-math');
+
+function setupCourseNotesConfig(root, base, { math }) {
+  writeFileSync(
+    join(root, 'astro.config.mjs'),
+    `import { defineBookConfig, courseNotesStyle } from ${JSON.stringify(DIST_INDEX_URL)};\n` +
+      (math ? `import remarkMath from ${JSON.stringify(REMARK_MATH_URL)};\n` : '') +
+      `export default await defineBookConfig({ styles: [courseNotesStyle], site: 'https://test.invalid', ` +
+      `base: ${JSON.stringify(base)}` +
+      (math ? `, markdown: { remarkPlugins: [remarkMath] }` : '') +
+      ` });\n`,
+  );
+}
+
+test('validate (#230): course-notes with remark-math parses TeX braces as math', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    setupCourseNotesConfig(tmp, '/', { math: true });
+    writeLinkFixture(
+      tmp,
+      'week03.mdx',
+      `The router reads $4000 \\times 250 = 1{,}000{,}000$ tokens and the policy stays near $\\pi_{\\text{ref}}$.
+
+$$\\cos\\theta = \\frac{A \\cdot B}{\\lVert A\\rVert\\,\\lVert B\\rVert}$$`,
+    );
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 30_000 });
+    assert.equal(result.status, 0, `stdout: ${result.stdout}\nstderr: ${result.stderr}`);
+    assert.match(result.stdout, /profile=course-notes/);
+    assert.doesNotMatch(result.stderr, /Could not parse authored links/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('validate (#230): course-notes without math still checks links between dollar signs', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'book-scaffold-validate-'));
+  try {
+    setupCleanFixture(tmp);
+    setupCourseNotesConfig(tmp, '/library/books/', { math: false });
+    writeLinkFixture(tmp, 'week03.mdx', 'Plans cost $5 and [the outside page](/outside/) costs $10.');
+    const result = spawnSync(process.execPath, [VALIDATE_SCRIPT], { cwd: tmp, encoding: 'utf8', timeout: 30_000 });
+    assert.equal(result.status, 1, `stdout: ${result.stdout}\nstderr: ${result.stderr}`);
+    assert.match(result.stderr, /escapes configured Astro base/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});

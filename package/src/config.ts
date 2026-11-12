@@ -84,6 +84,25 @@ will evolve based on real friction reports.`,
   );
 }
 
+/**
+ * v5.2.1 (#230): true when an Astro remark-plugin entry is remark-math.
+ * Entries may be the plugin function, a `[plugin, options]` tuple, or the
+ * package name. remark-math's default export is the named function
+ * `remarkMath`; matching on the name rather than identity also recognizes a
+ * consumer's own copy of the package.
+ *
+ * @example
+ * isRemarkMathPlugin(remarkMath)            // true
+ * isRemarkMathPlugin([remarkMath, {}])      // true
+ * isRemarkMathPlugin('remark-math')         // true
+ * isRemarkMathPlugin(remarkGfm)             // false
+ */
+function isRemarkMathPlugin(entry: unknown): boolean {
+  const plugin = Array.isArray(entry) ? entry[0] : entry;
+  if (typeof plugin === 'string') return plugin === 'remark-math';
+  return typeof plugin === 'function' && plugin.name === 'remarkMath';
+}
+
 export async function defineBookConfig(
   opts: BookConfigOptions,
 ): Promise<AstroUserConfig> {
@@ -236,6 +255,25 @@ export async function defineBookConfig(
   // payload, which intentionally exposes only ogImage + twitterHandle.
   const ogCards = normalizeOgCardsConfig(opts.seo?.ogCards);
 
+  // v5.2.1 (#230): the book renders TeX math when remark-math is among the
+  // remark plugins this config will install (profile KaTeX wiring, composed
+  // styles, or the consumer's own `markdown`). Package tooling must parse
+  // authored links with the same grammar, or valid `$\pi_{\text{ref}}$`
+  // braces read as MDX expressions and fail validation. An explicit
+  // top-level `math` wins over detection.
+  if (opts.math !== undefined && typeof opts.math !== 'boolean') {
+    throw new BookConfigError(
+      `defineBookConfig math must be a boolean (got ${JSON.stringify(opts.math)}).`,
+    );
+  }
+  const math =
+    opts.math ??
+    [
+      ...remarkPlugins,
+      ...(composedMarkdown.remarkPlugins ?? []),
+      ...(userMarkdown.remarkPlugins ?? []),
+    ].some(isRemarkMathPlugin);
+
   const integrations = [
     mdx(),
     preact(),
@@ -248,6 +286,7 @@ export async function defineBookConfig(
       profile,
       corpus,
       numberStyle,
+      math,
       routes: mergedRoutes,
       mdxComponentsModule,
       extraStyles: mergedExtraStyles,
@@ -354,6 +393,8 @@ export async function defineBookConfig(
     releaseStatus: _releaseStatus,
     // v4.27.0 (#188): consumed by the scaffold integration at build:done.
     securityHeaders: _securityHeaders,
+    // v5.2.1 (#230): consumed by package tooling via integration metadata.
+    math: _math,
     description: _description,
     portfolio: _portfolio,
     // v4.6.0: strip new book-level SEO opts (author + seo block).

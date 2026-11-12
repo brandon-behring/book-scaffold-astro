@@ -307,7 +307,12 @@ const PRESET = PRESET_CANDIDATE;
 context.preset = PRESET;
 // Alias kept for downstream message text only; the resolution above is canonical.
 const PROFILE = PRESET;
-const MATH_ENABLED = PROFILE === 'academic' || PROFILE === 'research-portfolio';
+// v5.2.1 (#230): parse authored links with the grammar the book renders.
+// The resolved config says whether remark-math is installed (detected or
+// explicit); without scaffold metadata the preset default applies.
+const MATH_ENABLED = typeof TOOLING_CONFIG.math === 'boolean'
+  ? TOOLING_CONFIG.math
+  : PROFILE === 'academic' || PROFILE === 'research-portfolio';
 const REPO_ROOT = ENV.BOOK_REPO_ROOT ?? null;
 const corpusDependencyParser = unified().use(remarkParse).use(remarkMdx);
 if (MATH_ENABLED) corpusDependencyParser.use(remarkMath);
