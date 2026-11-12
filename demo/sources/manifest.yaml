@@ -22,7 +22,7 @@
 #   T4-conjecture      — blog posts, tweets, or unverified claims
 #
 # Validation: see `sources` collection in src/content.config.ts.
-# Methodology: see ~/.claude/skills/book-scaffold-astro/pedagogy/source-tiers.md
+# Methodology: see package/pedagogy/source-tiers.md at the repo root
 
 - id: gwern-sidenote
   url: https://gwern.net/sidenote

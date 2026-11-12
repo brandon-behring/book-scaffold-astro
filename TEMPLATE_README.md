@@ -2,10 +2,11 @@
 
 This repository is a **GitHub template** for long-form technical books.
 A new book is created from it via "Use this template" → "Create a new
-repository" on GitHub, or via the `book-scaffold-astro` Claude skill:
+repository" on GitHub, or with the `create-book` CLI, which the `book-scaffold-astro` Claude
+skill also runs:
 
 ```bash
-~/.claude/skills/book-scaffold-astro/create-book.sh <your-book-name>
+npx @brandon_m_behring/create-book <your-book-name> --preset=academic
 ```
 
 This file is the one-page orientation for someone starting a new book.
